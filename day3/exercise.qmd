@@ -148,6 +148,10 @@ Two vectors are orthogonal iff their dot product is exactly 0. For B5, set $\mat
 First compute the scalar coefficient $\dfrac{\mathbf{u}\cdot\mathbf{v}}{\mathbf{v}\cdot\mathbf{v}}$ = `sum(u*v)/sum(v*v)`, then multiply it by the vector `v`. The leftover `u - proj` should dot to 0 with `v`.
 :::
 
+::: {.callout-tip collapse="true" title="Hint 6 — cosine vs distance, and the similarity matrix (R1/R2)"}
+For **R1**, recall that cosine similarity divides out each vector's length, so it sees only **direction**; Euclidean distance [`norm_vec(s1 - s2)`] keeps the magnitude, so doubling depth inflates it. For **R2**, the slick route is to **normalise every column to unit length** with [`apply`](https://rdrr.io/r/base/apply.html), then [`crossprod`](https://rdrr.io/r/base/crossprod.html)`(U)` computes all pairwise dot products at once — and a dot product of unit vectors *is* their cosine, so that matrix is the cosine-similarity matrix. Or simply call `cos_sim` on each of the three pairs.
+:::
+
 ## Solutions
 
 ::: {.callout-note collapse="true" title="Solution"}
@@ -180,17 +184,28 @@ leftover          # 0 4
 sum(leftover*b)   # 0
 ```
 
-**R1.** `s2` is essentially `2 * s1`, i.e. the *same direction* in gene space; cosine similarity measures direction and so reports ~1, whereas Euclidean distance measures absolute separation and is inflated by the doubled magnitude.
+**R1.** `s2` is essentially `2 * s1`, i.e. the *same direction* in gene space; cosine similarity measures direction and so reports ~1, whereas Euclidean distance measures absolute separation and is inflated by the doubled magnitude. With `set.seed(1)` the block prints (your numbers match if you used the same seed):
 
-**R2.** One compact way:
+```r
+cos_sim(s1, s2)     # 0.9956318   (near 1: same direction)
+cos_sim(s1, s3)     # 0.8509409   (lower: unrelated)
+norm_vec(s1 - s2)   # 91.50956    (large: s2 is ~twice as big)
+norm_vec(s1 - s3)   # 42.95346    (smaller, yet s3 is the unrelated one!)
+```
+So cosine ranks `s1`–`s2` as most similar ($0.996 > 0.851$), but Euclidean distance ranks them as *least* similar ($91.5 > 43.0$) — fooled by the depth difference.
+
+**R2.** One compact way — normalise each sample column to unit length, then the matrix of pairwise cross products is exactly the cosine-similarity matrix (a unit-vector dot product *is* its cosine):
 
 ```r
 M <- cbind(s1, s2, s3)        # genes in rows, samples in columns
-# normalise each column to unit length, then cross products give cosines
-U <- apply(M, 2, function(v) v / norm_vec(v))
+U <- apply(M, 2, function(v) v / norm_vec(v))   # each column now has norm 1
 round(crossprod(U), 3)        # 3x3 cosine-similarity matrix
+#       s1    s2    s3
+# s1 1.000 0.996 0.851
+# s2 0.996 1.000 0.857
+# s3 0.851 0.857 1.000
 ```
-The `s1`–`s2` entry is near 1; the entries involving `s3` are lower.
+The diagonal is 1 (each sample with itself), the `s1`–`s2` entry is near 1, and every entry involving `s3` is lower — matching the pairwise `cos_sim` calls.
 :::
 
 ## Where this leads

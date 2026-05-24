@@ -127,37 +127,117 @@ Plug $\lambda$ into $A-\lambda I$ and write out the two equations $(A-\lambda I)
 Sum of eigenvalues = trace (sum of diagonal) = `sum(diag(A))`; product of eigenvalues = determinant = [`det`](https://rdrr.io/r/base/det.html)`(A)`. If your two roots fail either check you made an arithmetic error.
 :::
 
-::: {.callout-tip collapse="true" title="Hint 5 — verifying in R"}
-Build matrices with [`matrix`](https://rdrr.io/r/base/matrix.html)`(..., byrow = TRUE)`, multiply with [`%*%`](https://rdrr.io/r/base/matmult.html), and compare `A %*% v` against `lambda * v`. The dot product `sum(v1 * v2)` should be 0 for orthogonal eigenvectors.
+::: {.callout-tip collapse="true" title="Hint 5 — testing a candidate eigenvector (B5)"}
+To check whether a *given* $\mathbf v$ is an eigenvector you do **not** need the characteristic equation. Just compute $A\mathbf v$. If the result is a scalar multiple of $\mathbf v$ — i.e. $A\mathbf v = \lambda\mathbf v$ for some single number $\lambda$ — then $\mathbf v$ is an eigenvector and that $\lambda$ is its eigenvalue. Read $\lambda$ off by comparing each entry.
+:::
+
+::: {.callout-tip collapse="true" title="Hint 6 — no real eigenvalue (B6)"}
+A rotation has no direction it leaves on its own line, so expect no real eigenvalue. In the algebra this shows up as a characteristic equation like $\lambda^2 + 1 = 0$, i.e. $\lambda^2 = -1$, which no real number satisfies. Connect the algebra ("no real root") to the geometry ("every vector is turned").
+:::
+
+::: {.callout-tip collapse="true" title="Hint 7 — verifying in R"}
+Build matrices with [`matrix`](https://rdrr.io/r/base/matrix.html)`(..., byrow = TRUE)`, multiply with [`%*%`](https://rdrr.io/r/base/matmult.html), and compare `A %*% v` against `lambda * v`. The dot product `sum(v1 * v2)` should be 0 for orthogonal eigenvectors. Check the eigenvalues with `sum(diag(A))` (trace) and [`det`](https://rdrr.io/r/base/det.html)`(A)` (determinant).
 :::
 
 ## Solutions
 
 ::: {.callout-note collapse="true" title="Solution"}
 
-**B1.** Diagonal matrix → eigenvalues are the diagonal entries: $\lambda_1 = 4$, $\lambda_2 = 2$. Eigenvectors are the axes: $(1,0)$ for $\lambda=4$ and $(0,1)$ for $\lambda=2$. Geometrically $A$ stretches the x-axis by 4 and the y-axis by 2.
+**B1.** A diagonal matrix already acts like a number on each axis, so we can read the eigenvalues off the diagonal — but let us confirm with the recipe.
 
-**B2.** $\det\begin{pmatrix}3-\lambda & 1\\ 0 & 2-\lambda\end{pmatrix} = (3-\lambda)(2-\lambda) - 0 = 0$, so $\lambda = 3$ or $\lambda = 2$. A triangular matrix shows its eigenvalues on the diagonal.
+Step 1 — form $A-\lambda I$ (subtract $\lambda$ from each diagonal entry):
+$$A - \lambda I = \begin{pmatrix} 4-\lambda & 0 \\ 0 & 2-\lambda \end{pmatrix}.$$
+Step 2 — characteristic equation: $\det(A-\lambda I) = (4-\lambda)(2-\lambda) - 0\cdot0 = (4-\lambda)(2-\lambda) = 0$. A product is zero when a factor is zero, so $\lambda_1 = 4$ or $\lambda_2 = 2$.
+Step 3 — eigenvectors. For $\lambda=4$: $(A-4I)\mathbf v = \begin{pmatrix}0&0\\0&-2\end{pmatrix}\mathbf v = \mathbf 0$. The second row says $-2v_2=0\Rightarrow v_2=0$; $v_1$ is free, so $\mathbf v_1 = (1,0)$. For $\lambda=2$: $\begin{pmatrix}2&0\\0&0\end{pmatrix}\mathbf v=\mathbf 0$ gives $v_1=0$, so $\mathbf v_2=(0,1)$.
+Step 4 — check: $A(1,0)=(4,0)=4(1,0)$ ✓ and $A(0,1)=(0,2)=2(0,1)$ ✓. Trace $4+2=6=\lambda_1+\lambda_2$ ✓; $\det=4\cdot2=8=\lambda_1\lambda_2$ ✓.
+Geometrically $A$ stretches the x-axis by 4 and the y-axis by 2.
+
+**B2.**
+Step 1 — form $A-\lambda I = \begin{pmatrix}3-\lambda & 1\\ 0 & 2-\lambda\end{pmatrix}$.
+Step 2 — determinant: $\det = (3-\lambda)(2-\lambda) - (1)(0) = (3-\lambda)(2-\lambda)$. Setting it to zero gives $\lambda = 3$ or $\lambda = 2$ directly (the lower-left $0$ kills the cross term). This illustrates the general fact: a **triangular** matrix shows its eigenvalues on the diagonal.
+Step 3 — (eigenvectors, for completeness) For $\lambda=3$: $\begin{pmatrix}0&1\\0&-1\end{pmatrix}\mathbf v=\mathbf 0\Rightarrow v_2=0$, so $\mathbf v=(1,0)$. For $\lambda=2$: $\begin{pmatrix}1&1\\0&0\end{pmatrix}\mathbf v=\mathbf 0\Rightarrow v_1+v_2=0$, so $\mathbf v=(1,-1)$.
+Step 4 — check: trace $3+2=5=3+2$ ✓; $\det = 3\cdot2-1\cdot0 = 6 = 3\cdot2$ ✓.
 
 **B3.**
-(a) $(2-\lambda)^2 - 1 = \lambda^2 - 4\lambda + 3 = (\lambda-3)(\lambda-1)=0 \Rightarrow \lambda = 3, 1$.
-(b) For $\lambda=3$: $A-3I = \begin{pmatrix}-1&1\\1&-1\end{pmatrix}$, row 1 gives $-v_1+v_2=0$, so $\mathbf{v}_1=(1,1)$. For $\lambda=1$: $A-I=\begin{pmatrix}1&1\\1&1\end{pmatrix}$, row 1 gives $v_1+v_2=0$, so $\mathbf{v}_2=(1,-1)$.
-(c) $(1)(1)+(1)(-1) = 0$ → orthogonal. ✓ (expected: $A$ is symmetric).
-(d) trace $= 2+2 = 4 = 3+1$ ✓; $\det = 2\cdot2 - 1\cdot1 = 3 = 3\cdot1$ ✓.
+(a) Step 1 — $A-\lambda I = \begin{pmatrix}2-\lambda & 1\\ 1 & 2-\lambda\end{pmatrix}$.
+Step 2 — characteristic equation:
+$$\det(A-\lambda I) = (2-\lambda)(2-\lambda) - (1)(1) = (2-\lambda)^2 - 1.$$
+Expand: $(2-\lambda)^2 = 4 - 4\lambda + \lambda^2$, so the equation is $\lambda^2 - 4\lambda + 4 - 1 = \lambda^2 - 4\lambda + 3 = 0$.
+Factor: we need two numbers multiplying to $3$ and adding to $4$ → $1$ and $3$, so $(\lambda-1)(\lambda-3)=0$, giving $\lambda = 3$ and $\lambda = 1$.
+(b) Step 3 — eigenvectors.
+For $\lambda=3$: $A-3I = \begin{pmatrix}2-3 & 1\\ 1 & 2-3\end{pmatrix} = \begin{pmatrix}-1&1\\1&-1\end{pmatrix}$. The system $(A-3I)\mathbf v=\mathbf 0$ has row 1: $-v_1 + v_2 = 0 \Rightarrow v_2 = v_1$. (Row 2, $v_1 - v_2 = 0$, says the same thing — expected, since the matrix is singular.) Pick $v_1 = 1$: $\mathbf v_1 = (1,1)$.
+For $\lambda=1$: $A-I = \begin{pmatrix}1&1\\1&1\end{pmatrix}$. Row 1: $v_1 + v_2 = 0 \Rightarrow v_2 = -v_1$. Pick $v_1=1$: $\mathbf v_2 = (1,-1)$.
+(c) Orthogonality: $\mathbf v_1 \cdot \mathbf v_2 = (1)(1) + (1)(-1) = 1 - 1 = 0$ → orthogonal ✓ (expected, since $A$ is symmetric).
+(d) Checks: trace $= 2+2 = 4 = 3+1$ ✓; $\det = 2\cdot2 - 1\cdot1 = 3 = 3\cdot1$ ✓.
+Verify the relation: $A\mathbf v_1 = \begin{pmatrix}2&1\\1&2\end{pmatrix}\begin{pmatrix}1\\1\end{pmatrix} = \begin{pmatrix}3\\3\end{pmatrix} = 3\mathbf v_1$ ✓.
 
-**B4.** First matrix: $\det\begin{pmatrix}1-\lambda & 2\\ 2 & 1-\lambda\end{pmatrix} = (1-\lambda)^2 - 4 = \lambda^2 - 2\lambda - 3 = (\lambda-3)(\lambda+1) = 0$, so $\lambda = 3$ or $\lambda = -1$. Second matrix: $\det\begin{pmatrix}2-\lambda & 1\\ 1 & -\lambda\end{pmatrix} = (2-\lambda)(-\lambda) - 1 = \lambda^2 - 2\lambda - 1 = 0$. This does not factor over the integers, so use the formula: $\lambda = \frac{2 \pm \sqrt{4+4}}{2} = 1 \pm \sqrt{2}$. (Both eigenvalues are real, as they must be for a symmetric matrix.)
+**B4.** *First matrix* $A=\begin{pmatrix}1&2\\2&1\end{pmatrix}$.
+Step 1 — $A-\lambda I = \begin{pmatrix}1-\lambda & 2\\ 2 & 1-\lambda\end{pmatrix}$.
+Step 2 — $\det = (1-\lambda)^2 - (2)(2) = (1-\lambda)^2 - 4$. Expand: $(1-\lambda)^2 = 1 - 2\lambda + \lambda^2$, so $\lambda^2 - 2\lambda + 1 - 4 = \lambda^2 - 2\lambda - 3 = 0$.
+Factor: two numbers multiplying to $-3$ and adding to $-2$ → $-3$ and $+1$, so $(\lambda-3)(\lambda+1) = 0$, giving $\lambda = 3$ or $\lambda = -1$.
+Check: trace $1+1=2=3+(-1)$ ✓; $\det = 1-4 = -3 = 3\cdot(-1)$ ✓.
 
-**B5.** $A\mathbf{v} = \begin{pmatrix}0&1\\-2&3\end{pmatrix}\begin{pmatrix}1\\2\end{pmatrix} = \begin{pmatrix}0\cdot1+1\cdot2\\-2\cdot1+3\cdot2\end{pmatrix} = \begin{pmatrix}2\\4\end{pmatrix} = 2\begin{pmatrix}1\\2\end{pmatrix}$. So $\mathbf{v}$ is an eigenvector with $\lambda = 2$.
+*Second matrix* $A=\begin{pmatrix}2&1\\1&0\end{pmatrix}$.
+Step 1 — $A-\lambda I = \begin{pmatrix}2-\lambda & 1\\ 1 & -\lambda\end{pmatrix}$.
+Step 2 — $\det = (2-\lambda)(-\lambda) - (1)(1) = -2\lambda + \lambda^2 - 1 = \lambda^2 - 2\lambda - 1 = 0$.
+This does not factor over the integers (no integer pair multiplies to $-1$ and adds to $-2$), so use the quadratic formula $\lambda = \frac{-B \pm \sqrt{B^2 - 4C}}{2}$ with $B=-2$, $C=-1$:
+$$\lambda = \frac{2 \pm \sqrt{(-2)^2 - 4(1)(-1)}}{2} = \frac{2 \pm \sqrt{4 + 4}}{2} = \frac{2 \pm \sqrt{8}}{2} = \frac{2 \pm 2\sqrt2}{2} = 1 \pm \sqrt2.$$
+So $\lambda = 1 + \sqrt2 \approx 2.414$ and $\lambda = 1 - \sqrt2 \approx -0.414$. Both are real, as they must be for a symmetric matrix. Check: trace $2+0=2 = (1+\sqrt2)+(1-\sqrt2)$ ✓; $\det = 0-1 = -1 = (1+\sqrt2)(1-\sqrt2) = 1 - 2$ ✓.
 
-**B6.** $\det\begin{pmatrix}-\lambda & -1\\ 1 & -\lambda\end{pmatrix} = \lambda^2 - (-1)(1) = \lambda^2 + 1 = 0 \Rightarrow \lambda^2 = -1$. No real solution (it needs $\sqrt{-1}$). Geometrically a $90^\circ$ rotation moves **every** direction, so no real vector comes back as a multiple of itself — hence no real eigenvalue/eigenvector.
+**B5.** No characteristic equation needed — just multiply and see whether the output is a multiple of the input.
+$$A\mathbf{v} = \begin{pmatrix}0&1\\-2&3\end{pmatrix}\begin{pmatrix}1\\2\end{pmatrix} = \begin{pmatrix}0\cdot1+1\cdot2\\ -2\cdot1+3\cdot2\end{pmatrix} = \begin{pmatrix}0+2\\ -2+6\end{pmatrix} = \begin{pmatrix}2\\4\end{pmatrix}.$$
+Now $\begin{pmatrix}2\\4\end{pmatrix} = 2\begin{pmatrix}1\\2\end{pmatrix} = 2\mathbf v$. The output is exactly $2$ times the input, so $\mathbf v=(1,2)$ is an eigenvector with $\lambda = 2$.
 
-**B7.** $(5-\lambda)^2 - 16 = \lambda^2 - 10\lambda + 9 = (\lambda-9)(\lambda-1) = 0 \Rightarrow \lambda = 9, 1$. For $\lambda=9$: $C-9I=\begin{pmatrix}-4&4\\4&-4\end{pmatrix}$ → $v_2 = v_1$ → $\mathbf{v}=(1,1)$. For $\lambda=1$: $\mathbf{v}=(1,-1)$. The direction of **greatest variation** is the eigenvector with the **largest** eigenvalue, $\mathbf{v}=(1,1)$ with $\lambda = 9$; the variance along that axis is 9. (Checks: trace $=10=9+1$, $\det = 25-16 = 9 = 9\cdot1$.)
+**B6.**
+Step 1 — $A-\lambda I = \begin{pmatrix}0-\lambda & -1\\ 1 & 0-\lambda\end{pmatrix} = \begin{pmatrix}-\lambda & -1\\ 1 & -\lambda\end{pmatrix}$.
+Step 2 — $\det = (-\lambda)(-\lambda) - (-1)(1) = \lambda^2 - (-1) = \lambda^2 + 1 = 0$, so $\lambda^2 = -1$.
+There is **no real** number whose square is $-1$ (it would need $\sqrt{-1}$), so $A$ has no real eigenvalue, and hence no real eigenvector.
+Geometric meaning: $A$ rotates every direction by $90^\circ$, so no real vector comes back lying on its own line — there is no special unrotated direction, which is exactly why the characteristic equation has no real root.
 
-**R1.** `sum(diag(A))` returns 4 and `det(A)` returns 3, matching $3+1$ and $3\cdot1$.
+**B7.**
+Step 1 — $C-\lambda I = \begin{pmatrix}5-\lambda & 4\\ 4 & 5-\lambda\end{pmatrix}$.
+Step 2 — $\det = (5-\lambda)^2 - (4)(4) = (5-\lambda)^2 - 16$. Expand: $(5-\lambda)^2 = 25 - 10\lambda + \lambda^2$, so $\lambda^2 - 10\lambda + 25 - 16 = \lambda^2 - 10\lambda + 9 = 0$.
+Factor: two numbers multiplying to $9$ and adding to $10$ → $1$ and $9$, so $(\lambda-9)(\lambda-1)=0$, giving $\lambda = 9$ and $\lambda = 1$.
+Step 3 — eigenvectors.
+For $\lambda=9$: $C-9I = \begin{pmatrix}5-9 & 4\\ 4 & 5-9\end{pmatrix} = \begin{pmatrix}-4&4\\4&-4\end{pmatrix}$. Row 1: $-4v_1 + 4v_2 = 0 \Rightarrow v_2 = v_1$. Pick $v_1=1$: $\mathbf v_1=(1,1)$.
+For $\lambda=1$: $C-I = \begin{pmatrix}4&4\\4&4\end{pmatrix}$. Row 1: $4v_1 + 4v_2 = 0 \Rightarrow v_2 = -v_1$. Pick $v_1=1$: $\mathbf v_2=(1,-1)$.
+Step 4 — interpretation: the direction of **greatest variation** is the eigenvector with the **largest** eigenvalue, $\mathbf v_1=(1,1)$ with $\lambda = 9$; the variance along that axis is $9$. Checks: trace $=5+5=10=9+1$ ✓; $\det = 25-16 = 9 = 9\cdot1$ ✓; orthogonal: $(1)(1)+(1)(-1)=0$ ✓.
 
-**R2.** `sum(diag(C))` is 10 ($=9+1$), `det(C)` is 9 ($=9\cdot1$). With `v <- c(1,1)` and `lambda <- 9`, `C %*% v` returns `9 9` $= 9\cdot(1,1)$.
+**R1.** Build $A$ from B3 and use the two invariants.
 
-**R3.** Each `A %*% v` is the input rotated $90^\circ$; e.g. `(1,0) -> (0,1)`, `(2,1) -> (-1,2)`. None lands on the same line as its input, confirming there is no real eigenvector.
+```r
+A <- matrix(c(2, 1,
+              1, 2), nrow = 2, byrow = TRUE)
+sum(diag(A))    # 4   -> equals lambda1 + lambda2 = 3 + 1
+det(A)          # 3   -> equals lambda1 * lambda2 = 3 * 1
+```
+Both match the B3 eigenvalues 3 and 1.
+
+**R2.** Build $C$, check trace/det, then verify the leading eigenpair directly.
+
+```r
+C <- matrix(c(5, 4,
+              4, 5), nrow = 2, byrow = TRUE)
+sum(diag(C))    # 10  -> = 9 + 1
+det(C)          # 9   -> = 9 * 1
+
+v      <- c(1, 1)   # leading eigenvector from B7
+lambda <- 9
+C %*% v             # 9 9
+lambda * v          # 9 9   -> identical, so C v = 9 v
+```
+The trace (10) and determinant (9) match $9+1$ and $9\cdot1$, and $C\mathbf v = 9\mathbf v$ confirms the eigenpair.
+
+**R3.** Multiply the rotation by several vectors and look at where each lands.
+
+```r
+A <- matrix(c(0, -1,
+              1,  0), nrow = 2, byrow = TRUE)
+A %*% c(1, 0)   #  0 1   -> x-axis swings to the y-axis
+A %*% c(2, 1)   # -1 2   -> not a multiple of (2,1)
+A %*% c(3, 3)   # -3 3   -> not a multiple of (3,3)
+```
+Each output is the input rotated $90^\circ$; none lands on the same line as its input (no scalar $\lambda$ makes $A\mathbf v=\lambda\mathbf v$ for real $\mathbf v$), confirming there is no real eigenvector — exactly the B6 conclusion.
 :::
 
 ## Where this leads

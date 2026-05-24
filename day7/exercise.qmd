@@ -254,20 +254,92 @@ No row is undefined here — every base appears as a "from" base at least once. 
 
 **R answers.**
 
-**R1./R2.** The R outputs `x0 %*% P` etc. reproduce $(0.8,0.2)$, $(0.76,0.24)$ and the Part-B vectors exactly. For Part B:
+**R1.** Confirm the by-hand `B2`/`B3` answers. Step the 2-state chain one step at a time and read off the result:
+```r
+P <- matrix(c(0.8, 0.2,
+              0.6, 0.4), nrow = 2, byrow = TRUE)
+x0 <- c(1, 0)
+x1 <- x0 %*% P
+x1
+#      [,1] [,2]
+# [1,]  0.8  0.2     # matches B2: x1 = (0.8, 0.2)
+x2 <- x1 %*% P
+x2
+#      [,1] [,2]
+# [1,] 0.76 0.24     # matches B3: x2 = (0.76, 0.24)
+```
+Each entry is the dot of the previous vector with a column of `P`, exactly the
+hand calculation: `(0.8)(0.8) + (0.2)(0.6) = 0.76`, `(0.8)(0.2) + (0.2)(0.4) = 0.24`.
+
+**R2.** Build the 3-state DNA matrix from Part B, check the row sums, and
+reproduce `x1`, `x2` from `B6`:
 ```r
 P3 <- matrix(c(0.1,0.6,0.3,
                0.4,0.4,0.2,
                0.5,0.5,0.0), 3, byrow = TRUE,
              dimnames = list(c("A","C","G"), c("A","C","G")))
-rowSums(P3)                 # 1 1 1
-c(0,1,0) %*% P3             # 0.4 0.4 0.2
-(c(0,1,0) %*% P3) %*% P3    # 0.30 0.50 0.20
+rowSums(P3)
+#   A C G
+#   1 1 1                    # valid: every row sums to 1
+c(0,1,0) %*% P3
+#        A   C   G
+# [1,] 0.4 0.4 0.2           # matches B6: x1 = C-row of P3
+(c(0,1,0) %*% P3) %*% P3
+#        A   C   G
+# [1,] 0.3 0.5 0.2           # matches B6: x2 = (0.30, 0.50, 0.20)
 ```
 
-**R3.** `N`/`Phat` match B9/B10. With the 9-base sequence every base is seen as a "from" base, so no `NaN` appears. A `NaN` row arises **only** when a base never occurs as a "from" base (its row total is 0, so dividing gives $0/0$). Real analyses use long sequences and/or **pseudocounts** (add a small constant to every count) to avoid this.
+**R3.** Reproduce the count matrix `N` and the estimate `Phat`, and find the
+`NaN` rule:
+```r
+seq   <- c("G","A","A","C","G","T","A","A","C")
+bases <- c("A","C","G","T")
+from <- factor(seq[-length(seq)], levels = bases)
+to   <- factor(seq[-1],           levels = bases)
+N <- table(from, to)
+N
+#       to
+# from   A C G T
+#    A   2 2 0 0      # matches B9
+#    C   0 0 1 0
+#    G   1 0 0 1
+#    T   1 0 0 0
+Phat <- N / rowSums(N)
+round(Phat, 3)
+#       to
+# from   A   C   G   T
+#    A 0.5 0.5 0.0 0.0    # matches B10
+#    C 0.0 0.0 1.0 0.0
+#    G 0.5 0.0 0.0 0.5
+#    T 1.0 0.0 0.0 0.0
+```
+With this 9-base sequence every base is seen as a "from" base (each row total
+is $\ge 1$), so **no row of `Phat` contains `NaN`**. A `NaN` row arises **only**
+when a base never occurs as a "from" base: its row total is 0, so dividing
+gives $0/0=$ `NaN`. (Try `seq <- c("A","C","A","C")` — base `G` and `T` never
+appear, and their `Phat` rows are all `NaN`.) Real analyses use long sequences
+and/or **pseudocounts** (add a small constant to every count) to avoid this.
 
-**R4.** With `n = 20000`, `Phat` matches `Ptrue` to roughly two decimals. With `n = 200` the estimate is noticeably noisy (entries can be off by 0.1 or more); with `n = 200000` it is very tight. This is the law of large numbers: more observed transitions → more accurate maximum-likelihood estimates of each $p_{ij}$.
+**R4.** Re-estimate `Phat` from the simulated genome at three lengths and watch
+the accuracy. The largest "true" error is the biggest absolute difference
+`max(abs(Phat - Ptrue))`:
+```r
+# with n = 200      : Phat is noticeably noisy, e.g.
+round(Phat, 3)
+#        A     C     G     T
+# A  0.281 0.219 0.250 0.250     # several entries off Ptrue by ~0.05-0.15
+# ...
+# max(abs(Phat - Ptrue))  ~ 0.10-0.15
+
+# with n = 20000    : close to Ptrue
+# max(abs(Phat - Ptrue))  ~ 0.01      (about two decimals)
+
+# with n = 200000   : very tight
+# max(abs(Phat - Ptrue))  ~ 0.003     (about three decimals)
+```
+As the sequence gets longer the estimate `Phat` converges to `Ptrue`. This is
+the law of large numbers: more observed transitions out of each base → more
+accurate maximum-likelihood estimates $\hat p_{ij} = N_{ij}/\sum_k N_{ik}$.
 :::
 
 ## Where this leads

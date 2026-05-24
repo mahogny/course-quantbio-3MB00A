@@ -156,23 +156,84 @@ Total variance = `sum(ec$values)`. The share along the leading axis is `ec$value
 
 ::: {.callout-note collapse="true" title="Solution"}
 
-**B1.** Each hand eigenvector has length $\sqrt{1^2+1^2} = \sqrt2$, so the unit versions are $(1,1)/\sqrt2 \approx (0.707, 0.707)$ and $(1,-1)/\sqrt2 \approx (0.707, -0.707)$. R may flip a sign on either.
+**B1.** R returns **unit-length** eigenvectors, so divide each hand vector by its length. Each has length $\lVert(1,\pm1)\rVert = \sqrt{1^2+1^2} = \sqrt2$.
+For $\lambda=3$: $(1,1)/\sqrt2 = (1/\sqrt2,\ 1/\sqrt2) \approx (0.707,\ 0.707)$.
+For $\lambda=1$: $(1,-1)/\sqrt2 = (1/\sqrt2,\ -1/\sqrt2) \approx (0.707,\ -0.707)$.
+So `eigen(A)$vectors` should print roughly these columns. R may flip the sign of either whole column (an eigenvector is only defined up to sign and scale) — same direction, still correct.
 
-**B2.** $(4-\lambda)^2 - 4 = 0 \Rightarrow 4-\lambda = \pm2 \Rightarrow \lambda = 6, 2$. The leading eigenvector (for $\lambda = 6$) is $(1,1)$ — the main axis of variation. (Checks: trace $8 = 6+2$, det $16-4 = 12 = 6\cdot2$.)
+**B2.** Find the eigenvalues with the characteristic equation, step by step.
+Step 1 — $C-\lambda I = \begin{pmatrix}4-\lambda & 2\\ 2 & 4-\lambda\end{pmatrix}$.
+Step 2 — $\det = (4-\lambda)^2 - (2)(2) = (4-\lambda)^2 - 4 = 0$. So $(4-\lambda)^2 = 4 \Rightarrow 4-\lambda = \pm2$.
+Taking $4-\lambda = 2$ gives $\lambda = 2$; taking $4-\lambda = -2$ gives $\lambda = 6$. So $\lambda = 6$ and $\lambda = 2$.
+Step 3 — leading eigenvector (largest eigenvalue, $\lambda=6$): $C-6I = \begin{pmatrix}-2&2\\2&-2\end{pmatrix}$, row 1 gives $-2v_1+2v_2=0\Rightarrow v_2=v_1$, so $\mathbf v=(1,1)$ — the main axis of variation. (The other, for $\lambda=2$, is $(1,-1)$.)
+Step 4 — checks: trace $4+4 = 8 = 6+2$ ✓; $\det = 4\cdot4 - 2\cdot2 = 12 = 6\cdot2$ ✓.
 
-**R1.** `eigen(A)$vectors[, 1]` prints `0.7071068 0.7071068` (or its negative), matching B1.
+**R1.** Run block 1 and read off the first eigenvector column.
 
-**R2.** With `lambda <- e$values[2]` and `v <- e$vectors[, 2]`, both `A %*% v` and `lambda * v` equal $1\cdot v$, and `all.equal(...)` is `TRUE`.
+```r
+A <- matrix(c(2, 1, 1, 2), nrow = 2, byrow = TRUE)
+eigen(A)$vectors[, 1]   # 0.7071068 0.7071068   (or its negative)
+```
+This matches the B1 prediction $(1,1)/\sqrt2 \approx (0.707, 0.707)$, up to an overall sign.
 
-**R3.** For `A <- matrix(c(2,1,0,3), 2, byrow = TRUE)`, `eigen(A)$vectors` are **not** orthogonal, so `crossprod(eigen(A)$vectors)` is **not** the identity. The orthogonality guarantee only holds for **symmetric** matrices (spectral theorem); this $A$ is not symmetric.
+**R2.** Repeat the verification for the **second** eigenpair (index 2).
 
-**R4.** `ec$values[1] / sum(ec$values)` is about `0.939` — roughly 94% of the variance lies along the leading axis, because the two genes are strongly correlated (a thin, elongated cloud).
+```r
+e <- eigen(A)
+lambda <- e$values[2]    # 1
+v      <- e$vectors[, 2] # eigenvector for lambda = 1, e.g. (0.707, -0.707)
 
-**R5.** With `sd = 1.5`, gene 2 is noisier and less tied to gene 1, so the cloud becomes rounder; the leading eigenvalue's *share* of total variance drops from about 0.94 to about 0.82. The two genes share less common variation, so the single leading axis no longer dominates as strongly. (Push the noise much higher and the noisy gene's own variance eventually dominates instead — try `sd = 4` and watch the leading axis swing toward the gene-2 direction.)
+A %*% v                  # equals lambda * v
+lambda * v               # same numbers
+all.equal(as.vector(A %*% v), lambda * v)   # TRUE
+```
+Both `A %*% v` and `lambda * v` give the same vector ($1\cdot v = v$ here), and `all.equal` returns `TRUE`, confirming $A\mathbf v = \lambda\mathbf v$ for the second pair too.
 
-**R6.** `all.equal(C, ec$vectors %*% diag(ec$values) %*% t(ec$vectors))` returns `TRUE` — the symmetric reconstruction $V\Lambda V^\top$ rebuilds the covariance matrix exactly (within floating-point tolerance).
+**R3.** Build the non-symmetric matrix and test orthogonality with `crossprod` ($V^\top V$).
 
-**R7.** `eigen(matrix(c(0,-1,1,0), 2, byrow = TRUE))$values` returns **complex** numbers `0+1i` and `0-1i`. A $90^\circ$ rotation moves every real direction, so it has no real eigenvector; the eigenvalues are imaginary, consistent with the characteristic equation $\lambda^2 + 1 = 0$ from Day 5.
+```r
+A <- matrix(c(2, 1, 0, 3), nrow = 2, byrow = TRUE)   # not symmetric
+crossprod(eigen(A)$vectors)
+#       [,1]  [,2]
+# [1,] 1.000 0.707
+# [2,] 0.707 1.000
+```
+The off-diagonal entries are **not** 0, so the result is **not** the identity — the eigenvectors are **not** orthogonal. The orthogonality guarantee comes from the spectral theorem, which applies only to **symmetric** matrices; this $A$ is not symmetric, so it does not hold.
+
+**R4.** Compute the share of total variance carried by the leading axis.
+
+```r
+ec$values[1] / sum(ec$values)   # ~ 0.939
+```
+About 94% of the variance lies along the leading axis, because the two genes are strongly correlated, producing a thin, elongated cloud. This is exactly what PCA reports as "proportion of variance explained by PC1".
+
+**R5.** Rebuild the cloud with more noise on gene 2 and recompute the share.
+
+```r
+set.seed(1)
+n  <- 200
+g1 <- rnorm(n)
+g2 <- 0.8 * g1 + rnorm(n, sd = 1.5)   # noisier than before
+X  <- cbind(g1, g2)
+ec <- eigen(cov(X))
+ec$values[1] / sum(ec$values)         # ~ 0.82  (was ~0.94)
+```
+With `sd = 1.5`, gene 2 is noisier and less tied to gene 1, so the cloud becomes rounder and the leading eigenvalue's *share* of total variance drops from about 0.94 to about 0.82 — the two genes share less common variation, so the single leading axis no longer dominates as strongly. (Push the noise much higher and the noisy gene's own variance eventually dominates instead — try `sd = 4` and watch the leading axis swing toward the gene-2 direction.)
+
+**R6.** Reconstruct the symmetric covariance matrix from its eigen-decomposition and compare.
+
+```r
+all.equal(C, ec$vectors %*% diag(ec$values) %*% t(ec$vectors))   # TRUE
+```
+It returns `TRUE`: the symmetric reconstruction $V\Lambda V^\top$ rebuilds the covariance matrix exactly (within floating-point tolerance). Because $C$ is symmetric its eigenvectors are orthonormal, so $V^{-1}=V^\top$ and the transpose form works — no `solve()` needed.
+
+**R7.** Decompose the $90^\circ$ rotation and inspect the eigenvalues.
+
+```r
+eigen(matrix(c(0, -1, 1, 0), nrow = 2, byrow = TRUE))$values
+# [1] 0+1i 0-1i
+```
+The eigenvalues are **complex** ($0+1i$ and $0-1i$), not real. A $90^\circ$ rotation moves every real direction, so it has no real eigenvector; the imaginary eigenvalues are exactly what the Day-5 characteristic equation $\lambda^2 + 1 = 0$ (i.e. $\lambda = \pm i$) predicted.
 :::
 
 ## Where this leads

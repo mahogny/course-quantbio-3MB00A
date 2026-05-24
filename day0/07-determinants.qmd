@@ -1,0 +1,208 @@
+---
+title: "Warm-up: determinants"
+format:
+  html:
+    toc: true
+    code-copy: true
+    code-overflow: wrap
+    highlight-style: github
+---
+
+## Goal
+
+- Compute the determinant of a $2\times2$ matrix using one short formula.
+- Compute the determinant of a $3\times3$ matrix by cofactor expansion.
+- Recognise when a determinant is $0$ and know what that means in one sentence.
+
+## The rule
+
+For a $2\times2$ matrix the determinant is **one number**, found by:
+$$
+\det\begin{bmatrix} a & b \\ c & d \end{bmatrix} = ad - bc.
+$$
+
+Multiply the two numbers on the **main diagonal** ($a$ and $d$), then subtract
+the product of the other two ($b$ and $c$). That is it.
+
+**Tiny worked example.**
+$$
+\det\begin{bmatrix} 2 & 1 \\ 3 & 4 \end{bmatrix}
+= (2)(4) - (1)(3) = 8 - 3 = 5.
+$$
+
+For a $3\times3$ matrix we use **cofactor expansion along the first row**:
+$$
+\det\begin{bmatrix} a & b & c \\ d & e & f \\ g & h & i \end{bmatrix}
+= a\det\begin{bmatrix} e & f \\ h & i \end{bmatrix}
+- b\det\begin{bmatrix} d & f \\ g & i \end{bmatrix}
++ c\det\begin{bmatrix} d & e \\ g & h \end{bmatrix}.
+$$
+
+Note the signs: **plus, minus, plus**. Each small determinant is just the
+$2\times2$ rule again, on the matrix you get by **crossing out** the row and
+column of the front number.
+
+**What $\det = 0$ means.** If $\det(A) = 0$ the matrix is called *singular*: a
+system $A\mathbf{x}=\mathbf{b}$ then has **no unique solution**. If
+$\det(A) \neq 0$ there is exactly one solution. For now just compute the
+number; the meaning comes later.
+
+## Drills
+
+Work these on paper. Start at the top — the first ones are almost trivial.
+
+**2×2 determinants**
+
+1. $\det\begin{bmatrix} 1 & 0 \\ 0 & 1 \end{bmatrix}$
+2. $\det\begin{bmatrix} 2 & 0 \\ 0 & 3 \end{bmatrix}$
+3. $\det\begin{bmatrix} 5 & 0 \\ 0 & 4 \end{bmatrix}$
+4. $\det\begin{bmatrix} 1 & 2 \\ 0 & 3 \end{bmatrix}$
+5. $\det\begin{bmatrix} 2 & 1 \\ 1 & 2 \end{bmatrix}$
+6. $\det\begin{bmatrix} 3 & 2 \\ 1 & 4 \end{bmatrix}$
+7. $\det\begin{bmatrix} 4 & 1 \\ 2 & 3 \end{bmatrix}$
+8. $\det\begin{bmatrix} 6 & 5 \\ 2 & 2 \end{bmatrix}$
+9. $\det\begin{bmatrix} -1 & 2 \\ 3 & 1 \end{bmatrix}$
+10. $\det\begin{bmatrix} 2 & -3 \\ -1 & 4 \end{bmatrix}$
+
+**Is the determinant zero?**
+
+11. $\det\begin{bmatrix} 1 & 2 \\ 2 & 4 \end{bmatrix}$ — is it $0$?
+12. $\det\begin{bmatrix} 3 & 1 \\ 6 & 2 \end{bmatrix}$ — is it $0$?
+13. $\det\begin{bmatrix} 2 & 1 \\ 4 & 3 \end{bmatrix}$ — is it $0$?
+
+**3×3 determinants (cofactor expansion)**
+
+14. $\det\begin{bmatrix} 1 & 0 & 0 \\ 0 & 1 & 0 \\ 0 & 0 & 1 \end{bmatrix}$
+15. $\det\begin{bmatrix} 2 & 0 & 0 \\ 0 & 3 & 0 \\ 0 & 0 & 4 \end{bmatrix}$
+16. $\det\begin{bmatrix} 1 & 2 & 0 \\ 0 & 3 & 1 \\ 0 & 0 & 2 \end{bmatrix}$
+17. $\det\begin{bmatrix} 1 & 2 & 3 \\ 0 & 1 & 4 \\ 0 & 0 & 2 \end{bmatrix}$
+18. $\det\begin{bmatrix} 2 & 1 & 0 \\ 1 & 3 & 1 \\ 0 & 1 & 2 \end{bmatrix}$
+
+## Check in R
+
+In R the function is [`det`](https://rdrr.io/r/base/det.html). You build a
+matrix with [`matrix`](https://rdrr.io/r/base/matrix.html), filling **by
+column** (`byrow = FALSE` is the default), or pass `byrow = TRUE` to fill by
+row as written on paper.
+
+```r
+A <- matrix(c(2, 1,
+              3, 4), nrow = 2, byrow = TRUE)
+det(A)
+# [1] 5      (matches drill-style example)
+
+B <- matrix(c(1, 2,
+              2, 4), nrow = 2, byrow = TRUE)
+det(B)
+# [1] 0      (singular: rows are multiples of each other)
+
+C <- matrix(c(1, 2, 3,
+              0, 1, 4,
+              0, 0, 2), nrow = 3, byrow = TRUE)
+det(C)
+# [1] 2      (triangular: product of the diagonal)
+```
+
+## Hints
+
+::: {.callout-tip collapse="true" title="Hint 1 — the 2×2 formula"}
+Diagonal product minus anti-diagonal product: $ad - bc$. Write the four numbers
+down first, then plug in.
+:::
+
+::: {.callout-tip collapse="true" title="Hint 2 — a zero in the matrix"}
+If a number is $0$, the term it multiplies is $0$ and disappears. For example
+$\det\begin{bmatrix} a & 0 \\ c & d \end{bmatrix} = ad - 0 = ad$.
+:::
+
+::: {.callout-tip collapse="true" title="Hint 3 — checking for zero determinant"}
+Compute $ad - bc$ as usual. If one row is just a multiple of the other (e.g.
+the second row is $2\times$ the first), the result will be $0$.
+:::
+
+::: {.callout-tip collapse="true" title="Hint 4 — 3×3 sign pattern"}
+Expanding along the top row, the signs are $+,\,-,\,+$. For each front number,
+cross out its row and column and take the $2\times2$ determinant of what is
+left.
+:::
+
+::: {.callout-tip collapse="true" title="Hint 5 — triangular shortcut"}
+If everything below (or above) the diagonal is $0$, the determinant is just the
+product of the diagonal entries. Use this to check drills 14–17.
+:::
+
+## Step-by-step solutions
+
+::: {.callout-note collapse="true" title="Solutions"}
+
+**Drill 1.** $\det\begin{bmatrix} 1 & 0 \\ 0 & 1 \end{bmatrix} = (1)(1) - (0)(0) = 1 - 0 = 1.$
+
+**Drill 2.** $(2)(3) - (0)(0) = 6 - 0 = 6.$
+
+**Drill 3.** $(5)(4) - (0)(0) = 20 - 0 = 20.$
+
+**Drill 4.** $(1)(3) - (2)(0) = 3 - 0 = 3.$
+
+**Drill 5.** $(2)(2) - (1)(1) = 4 - 1 = 3.$
+
+**Drill 6.** $(3)(4) - (2)(1) = 12 - 2 = 10.$
+
+**Drill 7.** $(4)(3) - (1)(2) = 12 - 2 = 10.$
+
+**Drill 8.** $(6)(2) - (5)(2) = 12 - 10 = 2.$
+
+**Drill 9.** $(-1)(1) - (2)(3) = -1 - 6 = -7.$
+
+**Drill 10.** $(2)(4) - (-3)(-1) = 8 - 3 = 5.$
+
+**Drill 11.** $(1)(4) - (2)(2) = 4 - 4 = 0.$ **Yes**, the determinant is $0$
+(the second row is $2\times$ the first).
+
+**Drill 12.** $(3)(2) - (1)(6) = 6 - 6 = 0.$ **Yes**, it is $0$ (second row is
+$2\times$ the first).
+
+**Drill 13.** $(2)(3) - (1)(4) = 6 - 4 = 2.$ **No**, it is $2 \neq 0$.
+
+**Drill 14.** Expand along the top row:
+$$
+1\det\begin{bmatrix} 1 & 0 \\ 0 & 1 \end{bmatrix}
+- 0\det\begin{bmatrix} 0 & 0 \\ 0 & 1 \end{bmatrix}
++ 0\det\begin{bmatrix} 0 & 1 \\ 0 & 0 \end{bmatrix}
+= 1(1) - 0 + 0 = 1.
+$$
+
+**Drill 15.** Top row is $2, 0, 0$:
+$$
+2\det\begin{bmatrix} 3 & 0 \\ 0 & 4 \end{bmatrix} - 0 + 0
+= 2(12 - 0) = 2(12) = 24.
+$$
+(Diagonal shortcut: $2\cdot3\cdot4 = 24$.)
+
+**Drill 16.** Top row $1, 2, 0$:
+$$
+1\det\begin{bmatrix} 3 & 1 \\ 0 & 2 \end{bmatrix}
+- 2\det\begin{bmatrix} 0 & 1 \\ 0 & 2 \end{bmatrix}
++ 0.
+$$
+First minor: $(3)(2)-(1)(0) = 6$. Second minor: $(0)(2)-(1)(0) = 0$.
+So $1(6) - 2(0) + 0 = 6$. (Diagonal shortcut: $1\cdot3\cdot2 = 6$.)
+
+**Drill 17.** Top row $1, 2, 3$:
+$$
+1\det\begin{bmatrix} 1 & 4 \\ 0 & 2 \end{bmatrix}
+- 2\det\begin{bmatrix} 0 & 4 \\ 0 & 2 \end{bmatrix}
++ 3\det\begin{bmatrix} 0 & 1 \\ 0 & 0 \end{bmatrix}.
+$$
+Minors: $(1)(2)-(4)(0) = 2$; $(0)(2)-(4)(0) = 0$; $(0)(0)-(1)(0) = 0$.
+So $1(2) - 2(0) + 3(0) = 2$. (Diagonal shortcut: $1\cdot1\cdot2 = 2$.)
+
+**Drill 18.** Top row $2, 1, 0$:
+$$
+2\det\begin{bmatrix} 3 & 1 \\ 1 & 2 \end{bmatrix}
+- 1\det\begin{bmatrix} 1 & 1 \\ 0 & 2 \end{bmatrix}
++ 0.
+$$
+First minor: $(3)(2)-(1)(1) = 6 - 1 = 5$. Second minor: $(1)(2)-(1)(0) = 2$.
+So $2(5) - 1(2) + 0 = 10 - 2 = 8$.
+
+:::

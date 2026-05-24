@@ -18,7 +18,6 @@ clean:
 # always current. The .quarto/ cache is never added (it is .gitignored).
 gitadd:
 	git add _quarto.yml Makefile styles.css theme.scss .gitignore
-	git add .github/workflows/*.yml
 	git add *.qmd *.md
 	git add intro/*.qmd
 	@if ls intro/images/* >/dev/null 2>&1; then git add intro/images/*; fi
