@@ -5,17 +5,17 @@ all: render gitadd
 
 render:
 	quarto render
+	@touch docs/.nojekyll
 
 preview:
 	quarto preview
 
-# Remove the rendered site and Quarto's caches.
+# Remove the rendered site and Quarto's cache.
 clean:
-	rm -rf _site .quarto
+	rm -rf docs .quarto
 
-# Stage every source file the site is built from. The generated _site/ and
-# .quarto/ are never added (they are .gitignored). Run after a render so the
-# staged sources are known to build.
+# Stage every source file AND the built HTML (docs/) so the committed site is
+# always current. The .quarto/ cache is never added (it is .gitignored).
 gitadd:
 	git add _quarto.yml Makefile styles.css theme.scss .gitignore
 	git add .github/workflows/*.yml
@@ -23,6 +23,7 @@ gitadd:
 	git add intro/*.qmd
 	@if ls intro/images/* >/dev/null 2>&1; then git add intro/images/*; fi
 	git add day*/*.qmd
+	git add docs
 
 help:
 	@echo "Targets:"
