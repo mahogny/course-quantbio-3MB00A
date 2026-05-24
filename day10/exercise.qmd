@@ -1,0 +1,324 @@
+---
+title: "Exercise: Fitting HMMs in R to find CpG islands"
+format:
+  html:
+    toc: true
+    code-copy: true
+    code-overflow: wrap
+    highlight-style: github
+---
+
+## Goal
+
+After this exercise you will be able to:
+
+- Build a 2-state HMM in R with the CRAN
+  [`HMM`](https://cran.r-project.org/package=HMM) package (`initHMM`).
+- **Simulate** genome-like sequence with `simHMM` and recover its likelihood
+  with `forward`.
+- **Decode** the most likely hidden-state path with `viterbi` and read it as a
+  predicted **CpG-island map**.
+- **Learn** the parameters $A$, $B$, $\boldsymbol{\pi}$ from *unlabelled*
+  sequence with `baumWelch`, and recognise local optima and label switching.
+- Verify one of yesterday's by-hand path probabilities against `simHMM`'s logic.
+
+This is an R-heavy day. Run every block, read the output, and answer the
+questions in the comments before opening the solutions.
+
+## Background
+
+We reuse the Day-9 model. States $\{H, L\}$: **H** = "GC-rich
+(CpG-island-like)", **L** = "normal background". Symbols are the bases
+$\{A, C, G, T\}$.
+
+$$
+\boldsymbol{\pi}=\begin{bmatrix}0.5\\0.5\end{bmatrix},\quad
+A=\begin{bmatrix}0.8&0.2\\0.3&0.7\end{bmatrix}\ (HL\times HL),\quad
+B=\begin{bmatrix}0.1&0.4&0.4&0.1\\0.3&0.2&0.2&0.3\end{bmatrix}\ (ACGT).
+$$
+
+The `HMM` package maps one function onto each Day-9 idea: `initHMM` builds the
+model, `simHMM` generates data, `forward` gives the likelihood, `viterbi`
+decodes the best path, and `baumWelch` learns the parameters. Install it once
+with `install.packages("HMM")`.
+
+## Setup
+
+```r
+install.packages("HMM")   # run once
+library(HMM)
+
+states  <- c("H", "L")
+symbols <- c("A", "C", "G", "T")
+
+transProbs <- matrix(c(0.8, 0.2,
+                       0.3, 0.7), nrow = 2, byrow = TRUE,
+                     dimnames = list(states, states))
+
+emissionProbs <- matrix(c(0.1, 0.4, 0.4, 0.1,
+                          0.3, 0.2, 0.2, 0.3), nrow = 2, byrow = TRUE,
+                        dimnames = list(states, symbols))
+
+hmm <- initHMM(States = states, Symbols = symbols,
+               startProbs = c(0.5, 0.5),
+               transProbs = transProbs,
+               emissionProbs = emissionProbs)
+hmm   # inspect: check rows of transProbs and emissionProbs each sum to 1
+```
+
+## In R
+
+### Task 1 — simulate and inspect
+
+```r
+set.seed(1)
+sim <- simHMM(hmm, length = 200)
+
+obs   <- sim$observation     # the bases you "see"
+truth <- sim$states          # the TRUE hidden path (hidden in real life)
+
+head(obs,   20)
+head(truth, 20)
+
+# Q1a: what fraction of the simulated bases are G or C overall?
+mean(obs %in% c("G", "C"))
+
+# Q1b: among positions whose TRUE state is H, what fraction are G or C?
+#      compare with the L positions. Does it match the emission matrix?
+mean(obs[truth == "H"] %in% c("G", "C"))
+mean(obs[truth == "L"] %in% c("G", "C"))
+```
+
+### Task 2 — likelihood with `forward`
+
+```r
+f <- forward(hmm, obs)        # log forward probabilities, states x positions
+dim(f)                        # 2 x 200
+
+# total log-likelihood = log-sum-exp of the final column
+logsumexp <- function(v) { m <- max(v); m + log(sum(exp(v - m))) }
+ll <- logsumexp(f[, length(obs)])
+ll
+# Q2: this is a LOG probability. Why is the raw probability P(obs) so tiny
+#     that we must work in logs? (Recall how fast your Day-9 products shrank.)
+```
+
+### Task 3 — decode the islands with `viterbi`
+
+```r
+path <- viterbi(hmm, obs)
+
+# Q3a: decoding accuracy against the known truth
+mean(path == truth)
+
+# Q3b: read off predicted CpG islands as maximal runs of "H"
+runs <- rle(path)
+runs
+
+# turn runs into island coordinates (start, end, length) for the H runs
+ends   <- cumsum(runs$lengths)
+starts <- ends - runs$lengths + 1
+islands <- data.frame(state = runs$values, start = starts, end = ends,
+                      length = runs$lengths)
+islands[islands$state == "H", ]
+# Q3c: how many predicted islands are there, and how long is the longest?
+```
+
+### Task 4 — learn the parameters with `baumWelch`
+
+Now pretend you never knew $A$ and $B$. Learn them from `obs` alone, starting
+from a deliberately uninformative guess.
+
+```r
+guess <- initHMM(states, symbols,
+                 startProbs    = c(0.5, 0.5),
+                 transProbs    = matrix(c(0.6, 0.4,
+                                          0.4, 0.6), 2, byrow = TRUE,
+                                        dimnames = list(states, states)),
+                 emissionProbs = matrix(rep(0.25, 8), 2, byrow = TRUE,
+                                        dimnames = list(states, symbols)))
+
+bw <- baumWelch(guess, obs, maxIterations = 100)
+
+round(bw$hmm$transProbs,    2)   # learned A
+round(bw$hmm$emissionProbs, 2)   # learned B
+# Q4a: which learned state ended up GC-heavy? Is it called "H" or "L"?
+#      (This is LABEL SWITCHING — the name is arbitrary.)
+# Q4b: decode with the LEARNED model and compare accuracy to Task 3.
+path_learned <- viterbi(bw$hmm, obs)
+mean(path_learned == truth)
+```
+
+### Task 5 — local optima (a pitfall)
+
+```r
+# Try a different starting guess and see if baumWelch lands somewhere else.
+guess2 <- initHMM(states, symbols,
+                  startProbs    = c(0.5, 0.5),
+                  transProbs    = matrix(c(0.9, 0.1,
+                                           0.1, 0.9), 2, byrow = TRUE,
+                                         dimnames = list(states, states)),
+                  emissionProbs = matrix(c(0.4, 0.1, 0.1, 0.4,
+                                           0.1, 0.4, 0.4, 0.1), 2, byrow = TRUE,
+                                         dimnames = list(states, symbols)))
+bw2 <- baumWelch(guess2, obs, maxIterations = 100)
+round(bw2$hmm$emissionProbs, 2)
+# Q5: do bw and bw2 agree (up to label switching)? What does this tell you
+#     about trusting a single baumWelch run?
+```
+
+## Hints
+
+::: {.callout-tip collapse="true" title="Hint 1 — building the model"}
+[`initHMM`](https://cran.r-project.org/package=HMM) takes `States`, `Symbols`,
+`startProbs`, `transProbs`, `emissionProbs`. Use `byrow = TRUE` and `dimnames`
+so the matrices read like the page, and double-check **every row sums to 1** —
+a row summing to 0.99 is a silent bug. See the package
+[reference manual](https://cran.r-project.org/web/packages/HMM/HMM.pdf).
+:::
+
+::: {.callout-tip collapse="true" title="Hint 2 — simHMM returns two things"}
+[`simHMM`](https://cran.r-project.org/package=HMM) returns a list:
+`$observation` (the emitted symbols, your data) and `$states` (the true hidden
+path). You only get `$states` because it is a simulation; on real data the
+states are unknown. Use `set.seed()` so your run is reproducible.
+:::
+
+::: {.callout-tip collapse="true" title="Hint 3 — forward gives LOG probabilities"}
+[`forward`](https://cran.r-project.org/package=HMM) returns a matrix of **log**
+forward probabilities (rows = states, columns = positions). The data
+log-likelihood is the log-sum-exp of the **last column**. Working in logs avoids
+numerical underflow — the same reason your Day-9 products got tiny so fast.
+:::
+
+::: {.callout-tip collapse="true" title="Hint 4 — reading islands off the path"}
+[`viterbi`](https://cran.r-project.org/package=HMM) returns one state label per
+position. [`rle`](https://rdrr.io/r/base/rle.html) (run-length encoding)
+collapses consecutive equal labels into runs; the runs whose value is `"H"` are
+your predicted CpG islands. `cumsum(runs$lengths)` gives each run's end
+coordinate.
+:::
+
+::: {.callout-tip collapse="true" title="Hint 5 — learning and label switching"}
+[`baumWelch`](https://cran.r-project.org/package=HMM) returns `$hmm` (the fitted
+model) and `$difference` (convergence trace). The fitted state called `"H"` is
+**not** guaranteed to be the GC-rich one — decide which is the island state by
+reading `bw$hmm$emissionProbs` (the row with high C and G probability), not by
+its name. As an alternative package with more flexible emissions, see
+[`depmixS4`](https://cran.r-project.org/package=depmixS4).
+:::
+
+## Solutions
+
+::: {.callout-note collapse="true" title="Solution"}
+
+### Task 1 — simulate and inspect
+
+```r
+set.seed(1)
+sim <- simHMM(hmm, length = 200)
+obs   <- sim$observation
+truth <- sim$states
+
+mean(obs %in% c("G", "C"))
+# [1] ~0.49        # overall GC content, a mix of both states
+
+mean(obs[truth == "H"] %in% c("G", "C"))
+# [1] ~0.80        # H emits C or G with prob 0.4 + 0.4 = 0.8
+mean(obs[truth == "L"] %in% c("G", "C"))
+# [1] ~0.40        # L emits C or G with prob 0.2 + 0.2 = 0.4
+```
+
+**Q1a/Q1b:** the per-state GC fractions match the emission matrix ($0.8$ for
+$H$, $0.4$ for $L$). The overall fraction sits in between, weighted by how much
+time the chain spends in each state.
+
+### Task 2 — likelihood
+
+```r
+f  <- forward(hmm, obs)
+logsumexp <- function(v) { m <- max(v); m + log(sum(exp(v - m))) }
+ll <- logsumexp(f[, length(obs)])
+ll
+# [1] roughly -270   (a large negative log-probability)
+```
+
+**Q2:** $P(\mathbf{x})$ is a product of ~200 emission and ~200 transition
+factors, each below 1, so it is around $10^{-117}$ — far smaller than a `double`
+can represent. Working with the **log** keeps the number in a sane range; this
+is exactly why the by-hand products in Day 9 collapsed toward zero so quickly.
+
+### Task 3 — decoding
+
+```r
+path <- viterbi(hmm, obs)
+mean(path == truth)
+# [1] ~0.88        # most positions decoded correctly; not 100% because
+#                  # emissions are genuinely ambiguous
+
+runs <- rle(path)
+ends   <- cumsum(runs$lengths)
+starts <- ends - runs$lengths + 1
+islands <- data.frame(state = runs$values, start = starts, end = ends,
+                      length = runs$lengths)
+islands[islands$state == "H", ]
+#   state start end length
+# 1     H     1   7      7
+# 5     H    33  41      9
+# ...
+```
+
+**Q3:** decoding is good but imperfect because a single base never determines
+the state; Viterbi uses the surrounding context. The number and length of `H`
+runs are your predicted islands (your exact numbers depend on the seed).
+
+### Task 4 — learning
+
+```r
+bw <- baumWelch(guess, obs, maxIterations = 100)
+round(bw$hmm$transProbs, 2)
+round(bw$hmm$emissionProbs, 2)
+# one row of emissionProbs becomes GC-heavy (high C and G), the other flatter;
+# transProbs drift toward sticky diagonals -- close to the true 0.8/0.7,
+# allowing for finite-sample noise and possible label swap.
+
+path_learned <- viterbi(bw$hmm, obs)
+mean(path_learned == truth)
+# [1] ~0.85        # close to the accuracy from the true model
+```
+
+**Q4a:** whichever learned row has high C+G probability **is** the island
+state, regardless of whether the package labelled it `"H"` or `"L"` — that is
+label switching. **Q4b:** decoding with the learned model recovers the truth
+almost as well as the true model, which is the point: we found the structure
+from unlabelled sequence.
+
+### Task 5 — local optima
+
+```r
+bw2 <- baumWelch(guess2, obs, maxIterations = 100)
+round(bw2$hmm$emissionProbs, 2)
+```
+
+**Q5:** the two runs usually find essentially the same solution up to label
+switching, but not always — EM only reaches a **local** optimum, so a poor start
+can land elsewhere. The lesson: run `baumWelch` from **several** initialisations,
+compare the resulting log-likelihoods (via `forward`), and keep the best — never
+trust a single run blindly.
+
+:::
+
+## Where this leads
+
+You have run the full HMM workflow on genome-like data: build, simulate, score,
+decode into an island map, and learn parameters from unlabelled sequence — and
+you have seen the pitfalls (local optima, label switching, choosing the number
+of states). This **closes the linear-algebra block**.
+
+The ideas continue through the course. In **week 2**, PCA replaces discrete
+hidden states with continuous latent directions found via the eigenvectors of
+days 5–6. The **Bayesian-statistics** block generalises today's "infer the
+hidden from the observed" with priors and full posteriors. And **single-cell**
+analysis will segment and annotate cells much as you segmented and annotated a
+genome here. You now hold the complete linear-algebra toolkit the rest of the
+course rests on.

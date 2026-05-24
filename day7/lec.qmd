@@ -1,0 +1,248 @@
+---
+title: "Markov chains: discrete time & transition matrices"
+subtitle: "Day 7 — Quantitative biology"
+author: "Quantitative biology and integrative omics"
+format:
+  revealjs:
+    theme: [simple, ../theme.scss]
+    slide-number: c/t
+    width: 1280
+    height: 720
+    transition: slide
+    transition-speed: fast
+    highlight-style: github
+    code-overflow: wrap
+    code-line-numbers: false
+    incremental: false
+    chalkboard: false
+    menu: true
+---
+
+## About this lecture
+
+A DNA sequence reads `...A C G T A A C ...`. What is the probability the **next** base is a `G`, given the current base is a `C`? A model that answers this is a **Markov chain**.
+
+- **States** and the **Markov property** (the future depends only on the present).
+- The **transition matrix** $P$ — and why its rows sum to 1.
+- Drawing the **state diagram**.
+- One step as a matrix–vector product $\mathbf{x}_{t+1} = \mathbf{x}_t P$; many steps as **powers** of $P$.
+- How to **estimate** $P$ from a real sequence by **counting transitions**.
+
+Today is concept + formulation. Tomorrow (Day 8) we solve these chains in R and find their long-run behaviour.
+
+::: notes
+The hook is a question students can feel: given the current nucleotide, what comes next? That single question is the whole of a first-order Markov model. Stress that today we build the machinery and learn to set it up by hand; the limiting/stationary behaviour is deliberately held back to Day 8. Everything rests on Days 4-6: a step is a matrix-vector product, and the stationary distribution will turn out to be an eigenvector with eigenvalue 1.
+:::
+
+## A biological process that "forgets" {.smaller}
+
+Imagine walking along a genome one base at a time. At each position you are in one of four **states**:
+$$\{\,\mathtt{A},\ \mathtt{C},\ \mathtt{G},\ \mathtt{T}\,\}$$
+
+A **first-order Markov model** of the sequence says:
+
+> the probability of the next base depends **only** on the current base — not on the whole history before it.
+
+- Current base `C` → some chance of `A`, `C`, `G`, `T` next.
+- It does **not** matter what came three bases ago.
+
+This "memorylessness" is the **Markov property**. It is an *assumption* (a model) — real genomes have longer-range structure — but a remarkably useful one.
+
+::: notes
+Define states concretely as the four nucleotides before any abstraction. The Markov property is the one idea to nail today: the future is conditionally independent of the past given the present. Be honest that it is an approximation — codons and motifs create longer dependencies — but it captures a lot (e.g. CpG depletion) and is the foundation for the HMMs in Days 9-10.
+:::
+
+## States and the Markov property {.smaller}
+
+A **Markov chain** is a sequence of random states $X_0, X_1, X_2, \dots$ over a finite set of states, where
+
+$$P(X_{t+1} = j \mid X_t = i,\ X_{t-1}, \dots, X_0) = P(X_{t+1} = j \mid X_t = i).$$
+
+In words: **only the present state matters.** The number $P(X_{t+1}=j \mid X_t=i)$ is the **transition probability** from state $i$ to state $j$, written $p_{ij}$.
+
+A second biology example — **cell states**:
+$$\{\,\text{stem},\ \text{progenitor},\ \text{differentiated}\,\}$$
+At each time step a cell may stay or move to another state, depending only on where it is now.
+
+::: notes
+Now formalise. The conditional-probability line is the definition; read it aloud in plain English. Introduce the notation $p_{ij}$ = probability of going FROM i TO j — the from/to direction is a recurring source of confusion, so fix it now. The cell-state example shows the same framework applies to discrete biological state transitions, which is where single-cell trajectory ideas live.
+:::
+
+## The transition matrix $P$ {.smaller}
+
+Collect every $p_{ij}$ into a square matrix. For DNA, $P$ is $4\times4$ over `A,C,G,T`:
+
+$$
+P = \begin{array}{c c}
+ & \begin{array}{cccc}\ \mathtt{A} & \ \mathtt{C} & \ \mathtt{G} & \ \mathtt{T}\end{array}\\
+\begin{array}{c}\mathtt{A}\\ \mathtt{C}\\ \mathtt{G}\\ \mathtt{T}\end{array} &
+\left(\begin{array}{cccc}
+p_{AA} & p_{AC} & p_{AG} & p_{AT}\\
+p_{CA} & p_{CC} & p_{CG} & p_{CT}\\
+p_{GA} & p_{GC} & p_{GG} & p_{GT}\\
+p_{TA} & p_{TC} & p_{TG} & p_{TT}
+\end{array}\right)
+\end{array}
+$$
+
+**Our convention:** entry in **row $i$, column $j$** is $p_{ij}$ = probability of going **from $i$ (row) to $j$ (column)**.
+
+::: notes
+This is the central object of the next two days. The labelled matrix makes the from-row / to-column convention visual. State the convention explicitly and commit to it — we use ROW vectors and right-multiplication throughout, so rows are "from" and columns are "to". Warn that some textbooks use the transpose; consistency within our course matters more than matching any one book.
+:::
+
+## Rows sum to 1 {.smaller}
+
+From the current state $i$, the next base **must** be one of `A, C, G, T`. So the probabilities leaving state $i$ are a complete probability distribution:
+
+$$\sum_{j} p_{ij} = 1 \qquad \text{for every row } i.$$
+
+A matrix that is (i) non-negative and (ii) has every **row** summing to 1 is called a **stochastic matrix** (or row-stochastic).
+
+$$
+P = \begin{pmatrix}
+0.3 & 0.2 & 0.2 & 0.3\\
+0.1 & 0.4 & 0.4 & 0.1\\
+0.1 & 0.4 & 0.4 & 0.1\\
+0.3 & 0.2 & 0.2 & 0.3
+\end{pmatrix}
+\quad\leftarrow\ \text{each row adds to } 1
+$$
+
+::: notes
+The row-sum-to-1 rule is both a definition and a sanity check students will use constantly: if a row does not sum to 1, the matrix is wrong. Tie it to total probability: you leave each state with certainty, you just don't know to where. Columns do NOT generally sum to 1 — a frequent confusion under our row convention. The example matrix has a built-in CpG-like dip we can revisit.
+:::
+
+## The state diagram {.smaller}
+
+A Markov chain is often drawn as a **directed graph**: one node per state, one arrow per non-zero transition, labelled with its probability.
+
+A tiny 2-state weather-style example for cells — **resting (R)** vs **dividing (D)**:
+
+$$P = \begin{pmatrix} 0.9 & 0.1\\ 0.5 & 0.5 \end{pmatrix}$$
+
+```text
+        0.1
+     ┌────────►
+ (R) 0.9⟲      ⟲0.5 (D)
+     ◄────────┘
+        0.5
+```
+
+- Arrow R→D has weight $0.1$; the self-loop R→R has weight $0.9$. Row R: $0.9+0.1=1$. ✓
+- The diagram and the matrix carry **exactly the same information**.
+
+::: notes
+The diagram is the intuition pump; the matrix is the calculation engine. Show that every arrow leaving a node is one entry of that node's row, and the leaving-arrow weights sum to 1. Self-loops (staying put) are the diagonal entries and are easy to forget. Encourage students to be able to translate freely both ways — diagram to matrix and back — because exam questions go in both directions.
+:::
+
+## State as a distribution vector {.smaller}
+
+Instead of tracking one walker, track a **probability distribution** over states. Write it as a **row vector**:
+
+$$\mathbf{x}_t = \big(\,x_t^{A},\ x_t^{C},\ x_t^{G},\ x_t^{T}\,\big), \qquad \sum_k x_t^{k} = 1.$$
+
+- $\mathbf{x}_t = (1,0,0,0)$ means "currently in state `A` for sure."
+- $\mathbf{x}_t = (0.25,0.25,0.25,0.25)$ means "equally likely to be any base."
+
+Think of it as the composition of a huge pool of independent walkers: the fraction in each state.
+
+::: notes
+The shift from a single walker to a distribution over states is what makes the linear algebra work. Emphasise the row-vector choice (it pairs with right-multiplication on the next slide) and that entries are non-negative and sum to 1. The "fraction of a big pool" picture is the bridge to the biology: $\mathbf{x}_t$ is the expected nucleotide composition, or the fraction of cells in each state.
+:::
+
+## One step: $\mathbf{x}_{t+1} = \mathbf{x}_t P$ {.smaller}
+
+To advance one step, **multiply the state row vector by $P$** (vector on the left):
+
+$$\mathbf{x}_{t+1} = \mathbf{x}_t\, P.$$
+
+Each new entry is a dot product (Day 4) — the chance of *landing* in state $j$, summed over where you came from:
+
+$$x_{t+1}^{\,j} = \sum_i x_t^{\,i}\, p_{ij}.$$
+
+Worked 2-state step with $P=\begin{pmatrix}0.9&0.1\\0.5&0.5\end{pmatrix}$ and $\mathbf{x}_0=(1,0)$ (start resting):
+
+$$\mathbf{x}_1 = (1,0)P = \big(1\cdot0.9 + 0\cdot0.5,\ \ 1\cdot0.1 + 0\cdot0.5\big) = (0.9,\ 0.1).$$
+
+::: notes
+This is THE computation of the whole week and a guaranteed exam skill. Connect to Day 4: $\mathbf{x}_t P$ is a row vector times a matrix, each output entry a dot of the row vector with a COLUMN of P. The summation form makes the "landing in j" interpretation explicit — sum over all origins i weighted by how likely you were there. Make students reproduce the (0.9, 0.1) step by hand. Note that because we use row vectors, the vector goes on the LEFT.
+:::
+
+## Many steps: powers of $P$ {.smaller}
+
+Apply the rule repeatedly:
+
+$$\mathbf{x}_2 = \mathbf{x}_1 P = (\mathbf{x}_0 P)P = \mathbf{x}_0 P^2, \qquad \mathbf{x}_t = \mathbf{x}_0\, P^{t}.$$
+
+So **$t$ steps = the $t$-th power of $P$**. Continuing the example:
+
+$$\mathbf{x}_2 = (0.9,0.1)P = (0.9\cdot0.9 + 0.1\cdot0.5,\ \ 0.9\cdot0.1 + 0.1\cdot0.5) = (0.86,\ 0.14).$$
+
+The entry $(P^t)_{ij}$ is the probability of going from state $i$ to state $j$ in **exactly $t$ steps**.
+
+::: notes
+Powers of P are just "do one step, then another" — composition of transformations from Day 4. Two readings: multiply the distribution forward step by step, OR raise P to a power and read off multi-step transition probabilities directly. Both give the same answer. Hint at Day 8 without proving it: as t grows, $\mathbf{x}_t$ tends to settle down toward a fixed distribution regardless of where it started — that limit is the stationary distribution.
+:::
+
+## Estimating $P$ from data: count transitions {.smaller}
+
+Where does $P$ come from? **Count** consecutive pairs in an observed sequence. For `A C G T A A C`:
+
+| pair | A→C | C→G | G→T | T→A | A→A | A→C |
+|---|---|---|---|---|---|---|
+
+Tally each ordered pair into a $4\times4$ **count matrix** $N$, where $N_{ij}$ = number of times `i` is immediately followed by `j`. Then **normalise each row**:
+
+$$\hat p_{ij} = \frac{N_{ij}}{\sum_k N_{ik}}.$$
+
+This is the **maximum-likelihood estimate**: the observed fraction of `i`-followed-by-`j` among all transitions out of `i`.
+
+::: notes
+Estimation closes the loop from data to model. The recipe is mechanical: slide a window of length 2 along the sequence, tally ordered pairs into N, then divide each row by its own total so it sums to 1. Stress "ordered" pairs (A→C is not C→A) and "consecutive". The row normalisation is exactly what guarantees a valid stochastic matrix. This is the maximum-likelihood estimator, though we just call it "counting".
+:::
+
+## Estimating $P$: a tiny worked count {.smaller}
+
+Sequence `A C G T A A C` has 6 transitions (one per adjacent pair):
+
+`A→C`, `C→G`, `G→T`, `T→A`, `A→A`, `A→C`
+
+Count matrix $N$ (rows = from, cols = to):
+
+$$
+N = \begin{array}{cc}
+ & \begin{array}{cccc}\mathtt{A}&\mathtt{C}&\mathtt{G}&\mathtt{T}\end{array}\\
+\begin{array}{c}\mathtt{A}\\\mathtt{C}\\\mathtt{G}\\\mathtt{T}\end{array}
+&\left(\begin{array}{cccc}
+1 & 2 & 0 & 0\\
+0 & 0 & 1 & 0\\
+0 & 0 & 0 & 1\\
+1 & 0 & 0 & 0
+\end{array}\right)
+\end{array}
+$$
+
+Row `A` has total 3 → $\hat p_{A\bullet} = (1/3,\ 2/3,\ 0,\ 0)$. Rows `C`, `G`, `T` each have a single count → those rows are $(0,0,1,0)$, $(0,0,0,1)$, $(1,0,0,0)$.
+
+::: notes
+Walk through this slowly on the board. List the 6 transitions, tally into N, confirm the A-row got A→A once and A→C twice. Then normalise: only the A row has a choice (divide 1,2 by 3); the other rows have a single observed transition so they become deterministic. Point out the obvious caveat: with so little data the estimates are unreliable and some rows are undefined when a base is never seen — real estimates use long sequences and sometimes pseudocounts.
+:::
+
+## Summary {.smaller}
+
+| Concept | Key fact | Direction / form |
+|---|---|---|
+| State | one of `A,C,G,T` (or a cell state) | — |
+| Markov property | future depends only on present | $P(X_{t+1}\mid X_t,\dots)=P(X_{t+1}\mid X_t)$ |
+| Transition prob. | $p_{ij}$ = from $i$ to $j$ | row $i$, column $j$ |
+| Stochastic matrix | every **row** sums to 1 | $\sum_j p_{ij}=1$ |
+| One step | $\mathbf{x}_{t+1}=\mathbf{x}_t P$ | row vector on the **left** |
+| $t$ steps | $\mathbf{x}_t = \mathbf{x}_0 P^t$ | powers of $P$ |
+| Estimate $P$ | count pairs, normalise rows | $\hat p_{ij}=N_{ij}/\sum_k N_{ik}$ |
+
+**Next (Day 8):** build $P$ in R, take powers, and find the **stationary distribution** $\boldsymbol\pi$ where $\boldsymbol\pi P = \boldsymbol\pi$.
+
+::: notes
+The table is the exam cheat sheet. Re-emphasise the three things students most often get wrong: from=row/to=column, rows (not columns) sum to 1, and the vector multiplies on the LEFT. Preview Day 8: the repeated multiplication settles to a fixed $\boldsymbol\pi$, which we will find two ways — power iteration and as the eigenvector of P-transpose for eigenvalue 1, directly reusing Day 6's eigen().
+:::

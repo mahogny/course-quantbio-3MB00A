@@ -1,0 +1,251 @@
+---
+title: "Eigenvalues in R with eigen()"
+subtitle: "Day 6 — Quantitative biology"
+author: "Quantitative biology and integrative omics"
+format:
+  revealjs:
+    theme: [simple, ../theme.scss]
+    slide-number: c/t
+    width: 1280
+    height: 720
+    transition: slide
+    transition-speed: fast
+    highlight-style: github
+    code-overflow: wrap
+    code-line-numbers: false
+    incremental: false
+    chalkboard: false
+    menu: true
+---
+
+## About this lecture
+
+Yesterday you found eigenvalues **by hand** from $\det(A-\lambda I)=0$. That is essential for the exam — and impossible by hand for anything bigger than $3\times3$. Today R does the arithmetic.
+
+- [`eigen`](https://rdrr.io/r/base/eigen.html) returns **all** eigenvalues and eigenvectors at once.
+- Read its output: `$values` and `$vectors`, and how eigenvectors sit in the **columns**.
+- R sorts eigenvalues from **largest to smallest** — and normalises eigenvectors to **length 1**.
+- **Verify** $A\mathbf{v}=\lambda\mathbf{v}$ in R, and **reconstruct** $A = V\Lambda V^{-1}$ (and $V\Lambda V^\top$ for symmetric $A$).
+- Biology payoff: eigen-decompose a small **covariance matrix** and watch the leading eigenvector point along the **main axis of variation** in a gene-expression scatter (the engine of PCA).
+
+This is a **hands-on R walkthrough**: keep an R session open and run every block.
+
+::: notes
+Frame the day as "yesterday was the concept and the by-hand recipe; today is the tool." Reassure students the by-hand method still matters for the exam, but in practice nobody factors characteristic polynomials of a 50x50 matrix — eigen() does it. The deliverables are: read eigen()'s output confidently, verify it, reconstruct the matrix, and apply it to a covariance matrix. Stress they should reproduce every block live; this is a walkthrough, not a slideshow to watch passively.
+:::
+
+## The function: `eigen()` {.smaller}
+
+Give it a square matrix; get back a list with two parts.
+
+```r
+A <- matrix(c(2, 1,
+              1, 2), nrow = 2, byrow = TRUE)
+e <- eigen(A)
+e
+# eigen() decomposition
+# $values
+# [1] 3 1
+#
+# $vectors
+#            [,1]       [,2]
+# [1,] 0.7071068 -0.7071068
+# [2,] 0.7071068  0.7071068
+```
+
+- `e$values` — the eigenvalues, **largest first**: `3, 1`.
+- `e$vectors` — the eigenvectors, one per **column**, each **length 1**.
+
+::: notes
+Run eigen() on yesterday's worked example so students recognise the answer (3 and 1). Two things to point out immediately: the result is a LIST with $values and $vectors, and the eigenvalues are returned largest-first (this ordering matters for PCA). The 0.707 = 1/sqrt(2) values are the normalised version of yesterday's (1,1) and (1,-1). The next slides unpack reading the vectors and reconciling with the hand answer.
+:::
+
+## Reading `$vectors`: columns, not rows {.smaller}
+
+The eigenvectors are the **columns** of `e$vectors`. The $i$-th column matches the $i$-th eigenvalue.
+
+```r
+e$values[1]        # 3
+e$vectors[, 1]     # 0.7071068 0.7071068   <- eigenvector for lambda = 3
+e$vectors[, 2]     # -0.7071068 0.7071068  <- eigenvector for lambda = 1
+```
+
+- `e$vectors[, 1]` is the eigenvector paired with `e$values[1]`.
+- This is $(1,1)$ from yesterday, scaled to length 1: $1/\sqrt{2} \approx 0.707$.
+
+::: notes
+The most common reading mistake is grabbing a row instead of a column. Drill the indexing: e$vectors[, k] is the k-th eigenvector and pairs with e$values[k]. Then reconcile with yesterday: (0.707, 0.707) is just (1,1) divided by its length sqrt(2). Same direction, unit length. Reassure them both are the "right" eigenvector — direction is what matters.
+:::
+
+## Scale and sign are not unique {.smaller}
+
+R returns **unit-length** eigenvectors, but the **sign** is arbitrary — R might give you $\mathbf{v}$ or $-\mathbf{v}$.
+
+```r
+e$vectors[, 2]            # -0.707  0.707
+-e$vectors[, 2]           #  0.707 -0.707   <- equally valid eigenvector
+```
+
+- Both point along the **same line** (the eigen-direction); both satisfy $A\mathbf{v}=\lambda\mathbf{v}$.
+- So if your hand answer is $(1,-1)$ and R prints $(-0.707, 0.707)$, you are **not wrong** — same direction, opposite sign, unit length.
+
+::: notes
+Pre-empt the panic: "R's eigenvector has the opposite sign to mine!" Both are correct because eigenvectors are defined up to a nonzero scalar, including -1. Show v and -v side by side. This matters later in PCA, where the sign of a principal component is arbitrary and software may flip it between runs or versions. Teach them to compare DIRECTIONS, e.g. by ratio of components or by checking A v = lambda v, not raw numbers.
+:::
+
+## Verify the eigen relation {.smaller}
+
+Never trust output you haven't checked. Confirm $A\mathbf{v} = \lambda\mathbf{v}$ directly:
+
+```r
+lambda <- e$values[1]      # 3
+v      <- e$vectors[, 1]   # unit eigenvector
+
+A %*% v                    # 2.121320 2.121320
+lambda * v                 # 2.121320 2.121320   <- identical
+
+all.equal(as.vector(A %*% v), lambda * v)   # TRUE
+```
+
+- Use [`all.equal`](https://rdrr.io/r/base/all.equal.html), **not** `==`: floating-point arithmetic gives tiny rounding differences.
+
+::: notes
+This is the single most important habit of the day. A %*% v should equal lambda * v. Note A %*% v returns a column matrix, so wrap it in as.vector() to compare with the plain vector lambda * v. Crucially, use all.equal() not == : the two sides agree only to ~15 decimal places because of floating point, so == may return FALSE on values that are equal for all practical purposes. This floating-point lesson recurs all course.
+:::
+
+## Reconstruct $A = V\Lambda V^{-1}$ {.smaller}
+
+Stack eigenvectors as columns of $V$ and eigenvalues on the diagonal of $\Lambda$. Then
+
+$$A = V\,\Lambda\,V^{-1}$$
+
+```r
+V      <- e$vectors
+Lambda <- diag(e$values)        # eigenvalues on the diagonal
+V %*% Lambda %*% solve(V)       # rebuilds A
+#      [,1] [,2]
+# [1,]    2    1
+# [2,]    1    2
+```
+
+- [`diag`](https://rdrr.io/r/base/diag.html) turns the eigenvalue vector into a diagonal matrix $\Lambda$.
+- [`solve`](https://rdrr.io/r/base/solve.html)`(V)` is the inverse $V^{-1}$.
+- This **eigendecomposition** says: $A$ = (change to eigen-coords) → (scale each axis by its $\lambda$) → (change back).
+
+::: notes
+The reconstruction is the "aha" that eigenvectors fully describe the matrix: in the coordinate system of the eigenvectors, A is just a diagonal scaling. V changes into that coordinate system, Lambda scales, V-inverse changes back. Show it literally rebuilds the original A. Mention diag() does double duty (extracts a diagonal from a matrix, or builds a diagonal matrix from a vector). solve(V) is the inverse. Next slide: for symmetric A, the inverse is just the transpose.
+:::
+
+## Symmetric shortcut: $A = V\Lambda V^\top$ {.smaller}
+
+For a **symmetric** matrix, the eigenvectors are orthogonal **and** unit length (R gives them this way), so $V^{-1} = V^\top$. No matrix inverse needed:
+
+$$A = V\,\Lambda\,V^\top$$
+
+```r
+isSymmetric(A)                  # TRUE
+crossprod(V)                    # V^T V = identity (cols are orthonormal)
+V %*% Lambda %*% t(V)           # rebuilds A, using transpose instead of inverse
+```
+
+- [`t`](https://rdrr.io/r/base/t.html)`(V)` is the transpose $V^\top$; [`crossprod`](https://rdrr.io/r/base/crossprod.html)`(V)` computes $V^\top V$.
+- `eigen()` automatically uses a faster, more accurate **symmetric** algorithm when it detects symmetry.
+
+::: notes
+The orthonormal columns of V (for symmetric A) mean V is an orthogonal matrix, so its inverse equals its transpose — cheaper and numerically nicer. Show crossprod(V) is the identity to prove orthonormality, then rebuild A with t(V) instead of solve(V). Mention eigen() checks symmetry and switches to a specialised routine; you can force it with eigen(A, symmetric = TRUE). This symmetric case is exactly what covariance matrices are, leading into the biology demo.
+:::
+
+## Biology: covariance of two genes {.smaller}
+
+Simulate expression of two **co-regulated** genes across cells, then look at the covariance.
+
+```r
+set.seed(1)
+n  <- 200
+g1 <- rnorm(n)                       # gene 1
+g2 <- 0.8 * g1 + rnorm(n, sd = 0.4)  # gene 2 tracks gene 1 (+ noise)
+X  <- cbind(g1, g2)                  # n x 2: rows = cells, cols = genes
+
+C <- cov(X)                          # 2 x 2 covariance matrix (symmetric)
+round(C, 3)
+#       g1    g2
+# g1 0.863 0.683
+# g2 0.683 0.703
+```
+
+- [`cov`](https://rdrr.io/r/stats/cor.html) computes the covariance matrix; it is **symmetric** by construction.
+- Diagonal = variance of each gene; off-diagonal = how they co-vary (positive → rise together).
+
+::: notes
+Build the dataset live: gene 2 is mostly a scaled copy of gene 1 plus noise, so they are positively correlated — a tilted cloud. cov(X) gives the 2x2 covariance, symmetric, with variances on the diagonal and the (positive) covariance off-diagonal. Emphasise X is rows = cells (samples), columns = genes (features); cov() expects that orientation. This sets up the eigen-decomposition on the next slide.
+:::
+
+## The leading eigenvector = main axis of variation {.smaller}
+
+```r
+ec <- eigen(C)
+ec$values            # 1.470  0.096   (variance along each axis)
+pc1 <- ec$vectors[, 1]   # leading eigenvector
+
+plot(X, asp = 1, pch = 19, col = "grey40",
+     xlab = "gene 1", ylab = "gene 2")
+# draw the leading eigen-direction through the cloud's centre
+m <- colMeans(X)
+arrows(m[1], m[2], m[1] + 2*pc1[1], m[2] + 2*pc1[2], col = "red", lwd = 3)
+```
+
+- The **largest** eigenvalue's eigenvector (`ec$vectors[, 1]`) points along the **long axis** of the cloud.
+- Its eigenvalue is the **variance** captured along that direction.
+
+::: notes
+This is the payoff slide. Eigen-decompose the covariance matrix; the leading eigenvalue is the variance along the cloud's long axis, and the leading eigenvector is that axis's direction. Plot the cloud with asp=1 (so it isn't distorted) and draw a red arrow from the data centre along pc1 — it should lie right along the sausage. This is literally how PCA finds its first component. Be careful to say "this is the engine of PCA" and stop there.
+:::
+
+## Foreshadowing PCA (not today) {.smaller}
+
+What you just did **is** the core computation of **Principal Component Analysis**:
+
+| Eigen concept (today) | PCA name (Week 2) |
+|---|---|
+| covariance matrix $C$ | the thing PCA decomposes |
+| leading eigenvector | first **principal component** (PC1) |
+| its eigenvalue | **variance explained** by PC1 |
+| orthogonal eigenvectors | uncorrelated principal axes |
+
+PCA adds **centring**, projecting samples onto these axes (**scores**), and handling many genes at once. We are not doing that yet — today's job was to see that **eigenvectors of the covariance matrix are the axes of variation**.
+
+::: notes
+Make the boundary explicit so students don't think they've already learned PCA. Today: eigen-decomposition of a covariance matrix yields the axes of variation. PCA (week 2) wraps this with mean-centring, projecting the data onto the eigenvectors to get scores, ordering components by variance explained, and scaling to high-dimensional data. The mapping table is the takeaway. Resist any temptation to compute scores today.
+:::
+
+## Numerical notes & gotchas {.smaller}
+
+- **Use `all.equal`, not `==`**, to compare floats — eigen results carry tiny rounding error.
+- **Sign is arbitrary:** R may return $\mathbf{v}$ or $-\mathbf{v}$. Compare directions, not raw numbers.
+- **Ordering:** `eigen()` sorts eigenvalues largest-first **for symmetric matrices**; for general matrices the order is by **modulus** (and values may be complex).
+- **Complex output:** a rotation gives `0+1i`-style complex eigenvalues — expected, no real eigen-direction.
+- **Symmetric flag:** if you *know* $A$ is symmetric, `eigen(A, symmetric = TRUE)` is faster and guarantees real output (avoids tiny imaginary parts from rounding).
+
+::: notes
+A grab-bag of practical warnings. The float-comparison and sign points are the ones that bite beginners hardest, so repeat them. Ordering: for symmetric matrices (our case) eigen sorts descending by value, perfect for PCA; for general matrices it's by modulus and can return complex numbers. Mention symmetric = TRUE as both a speed and a correctness safeguard — covariance matrices are symmetric, but floating point can introduce minuscule imaginary parts that the flag removes.
+:::
+
+## Summary {.smaller}
+
+| Task | R |
+|---|---|
+| Decompose | `e <- eigen(A)` |
+| Eigenvalues (largest first) | `e$values` |
+| Eigenvectors (columns, unit length) | `e$vectors` |
+| The $k$-th eigenvector | `e$vectors[, k]` |
+| Verify | `all.equal(as.vector(A %*% v), lambda * v)` |
+| Reconstruct (general) | `V %*% diag(vals) %*% solve(V)` |
+| Reconstruct (symmetric) | `V %*% diag(vals) %*% t(V)` |
+| Covariance matrix | `cov(X)`  (rows = samples) |
+| Main axis of variation | `eigen(cov(X))$vectors[, 1]` |
+
+**Next (Day 7):** matrices applied **repeatedly** — Markov chains — where the eigenvalue $\lambda = 1$ gives the long-run **stationary distribution**.
+
+::: notes
+The summary is the working cheat-sheet for the exercises. Re-stress: read columns not rows, eigenvectors are unit length with arbitrary sign, verify with all.equal, and reconstruct with solve(V) generally or t(V) when symmetric. The biology one-liner eigen(cov(X))$vectors[,1] is the headline. Preview Day 7: a transition matrix applied over and over drives a system to a steady state, which turns out to be the eigenvector with eigenvalue 1 — eigenvectors return with a new meaning.
+:::

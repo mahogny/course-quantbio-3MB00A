@@ -1,0 +1,262 @@
+---
+title: "Exercise: Linear systems in R and solution spaces"
+format:
+  html:
+    toc: true
+    code-copy: true
+    code-overflow: wrap
+    highlight-style: github
+---
+
+## Goal
+
+After this exercise you will be able to:
+
+- Build a coefficient matrix $A$ and right-hand side $\mathbf{b}$ in R and
+  solve $A\mathbf{x} = \mathbf{b}$ with
+  [`solve`](https://rdrr.io/r/base/solve.html).
+- Verify a solution with matrix multiplication
+  [`%*%`](https://rdrr.io/r/base/matmult.html).
+- Recognise, by hand and in R, which of the **three solution spaces** a system
+  has — **one**, **none**, or **infinitely many** — and tie that to whether a
+  deconvolution problem is exactly-, over-, or under-determined.
+- Find a best-fit answer for an over-determined system with
+  [`qr.solve`](https://rdrr.io/r/base/qr.html) / [`lm`](https://rdrr.io/r/stats/lm.html).
+
+## Background
+
+A bulk expression sample is a mixture of cell types. With known signatures
+(columns of $A$) and a measured bulk profile $\mathbf{b}$, the cell-type
+amounts $\mathbf{x}$ satisfy
+$$
+A\mathbf{x} = \mathbf{b}.
+$$
+
+The shape of $A$ tells you a lot. Let $A$ have $m$ rows (genes / equations) and
+$n$ columns (cell types / unknowns):
+
+- **$m = n$, $A$ non-singular** $\to$ **exactly one** solution
+  (*well-determined*).
+- **$m > n$, equations conflict** $\to$ **no** exact solution
+  (*over-determined*). Use **least squares** for the closest fit.
+- **$m < n$, or $A$ singular** $\to$ **infinitely many** solutions
+  (*under-determined*).
+
+Two key facts:
+
+- $A$ (square) is **singular** when one equation is a combination of the others
+  — it carries no new information. Then $\det A = 0$.
+- The **rank** of $A$ is the number of genuinely independent equations. Full
+  rank ($=n$) with a square $A$ is exactly the unique-solution case.
+
+## By hand
+
+Decide the solution space *before* running any R. For a $2\times 2$ system,
+each equation is a line in the $(x_1, x_2)$ plane; the solutions are where the
+lines meet.
+
+### Problem 1 — classify three systems
+
+For each, state whether it has one, none, or infinitely many solutions, and
+explain in one sentence (lines crossing / parallel / identical).
+
+(a) $\;x_1 + x_2 = 4,\quad x_1 - x_2 = 0$
+
+(b) $\;x_1 + x_2 = 4,\quad 2x_1 + 2x_2 = 7$
+
+(c) $\;x_1 + x_2 = 4,\quad 3x_1 + 3x_2 = 12$
+
+### Problem 2 — which deconvolution scenario?
+
+Match each situation to *one solution / no solution / infinitely many*, and to
+*well- / over- / under-determined*:
+
+(a) You measure 5 marker genes to resolve 3 cell types, data is exact and
+consistent.
+(b) You measure 2 marker genes to resolve 3 cell types.
+(c) You measure 3 marker genes to resolve 3 cell types, signatures all
+distinct and independent.
+
+## In R
+
+### Step 1 — solve a well-determined system
+
+```r
+A <- matrix(c(2, 1,
+              1, 3), nrow = 2, byrow = TRUE)
+b <- c(8, 9)
+
+x <- solve(A, b)
+x
+# expected: 3 2
+
+A %*% x          # should reproduce b = c(8, 9)
+```
+
+### Step 2 — confirm your by-hand classifications
+
+Run each system from **Problem 1** through `solve` and read the result or the
+error message.
+
+```r
+# (a) one solution
+solve(matrix(c(1, 1, 1, -1), 2, byrow = TRUE), c(4, 0))
+
+# (b) no solution (inconsistent, singular A)
+solve(matrix(c(1, 1, 2, 2), 2, byrow = TRUE), c(4, 7))
+# Error: ... system is exactly singular ...
+
+# (c) infinitely many (consistent, singular A)
+solve(matrix(c(1, 1, 3, 3), 2, byrow = TRUE), c(4, 12))
+# Error: ... system is exactly singular ...
+```
+
+Note that `solve` gives the **same** "singular" error for (b) and (c): it
+cannot tell "no solution" from "infinitely many". Use the diagnostics below to
+distinguish them.
+
+### Step 3 — diagnose without solving
+
+```r
+A_bc <- matrix(c(1, 1, 2, 2), nrow = 2, byrow = TRUE)
+det(A_bc)        # ~0  -> singular, so NOT a unique-solution system
+qr(A_bc)$rank    # 1   -> only one independent equation (of 2 unknowns)
+```
+
+Use [`det`](https://rdrr.io/r/base/det.html),
+[`qr`](https://rdrr.io/r/base/qr.html)`$rank`, and
+[`dim`](https://rdrr.io/r/base/dim.html) to characterise a system *before*
+trying to solve it.
+
+### Step 4 — an over-determined system and least squares
+
+Five genes, two cell types, noisy data: no exact solution, so find the best fit.
+
+```r
+A <- matrix(c(2, 1,
+              1, 3,
+              1, 1,
+              3, 2,
+              0, 2), nrow = 5, byrow = TRUE)   # 5 genes, 2 cell types
+b <- c(8.1, 8.9, 5.2, 10.8, 4.1)               # noisy measurements
+
+# solve(A, b) would error: A is not square. Use least squares:
+xhat <- qr.solve(A, b)
+xhat
+
+# Same answer via linear regression (no intercept):
+coef(lm(b ~ A - 1))
+
+# How far off is each equation? (the residuals)
+A %*% xhat - b
+```
+
+We return to least squares and *why* it is the right notion of "closest" when
+we cover projection (Day 3) and regression later.
+
+## Hints
+
+::: {.callout-tip collapse="true" title="Hint 1 — building the matrix"}
+Use [`matrix`](https://rdrr.io/r/base/matrix.html) with `byrow = TRUE` so the
+numbers read in the same row order as the equations. Print the matrix and check
+it against the equations before solving.
+:::
+
+::: {.callout-tip collapse="true" title="Hint 2 — reading the lines (Problem 1)"}
+Two lines either **cross once** (one solution), are **parallel and distinct**
+(no solution), or are the **same line** (infinitely many). Compare the
+coefficient ratios to the right-hand-side ratio: e.g. in (b) the left sides
+differ by a factor 2 but the right sides ($4$ vs $7$) do not.
+:::
+
+::: {.callout-tip collapse="true" title="Hint 3 — what solve's error means"}
+[`solve`](https://rdrr.io/r/base/solve.html) errors with *"system is exactly
+singular"* for **both** no-solution and infinitely-many cases, and with
+*"'a' must be a square matrix"* for any non-square $A$. The error tells you the
+system is not well-determined, but not which of the two singular cases it is.
+:::
+
+::: {.callout-tip collapse="true" title="Hint 4 — distinguishing none vs infinitely many"}
+Both have singular $A$. Check **consistency**: does $\mathbf{b}$ lie in the
+column space? A practical check for these small cases is whether the
+proportionality of the rows of $A$ is also matched by $\mathbf{b}$. In Problem 1,
+(b) breaks it ($4 \to 7$ is not $\times 2$) so **no** solution; (c) preserves it
+($4 \to 12$ is $\times 3$) so **infinitely many**.
+:::
+
+::: {.callout-tip collapse="true" title="Hint 5 — least squares functions"}
+For an over-determined (tall, non-square) $A$, use
+[`qr.solve(A, b)`](https://rdrr.io/r/base/qr.html) or fit a no-intercept
+regression with [`lm(b ~ A - 1)`](https://rdrr.io/r/stats/lm.html) and read
+[`coef`](https://rdrr.io/r/stats/coef.html). The `- 1` drops the intercept so
+the model is purely $A\mathbf{x}$.
+:::
+
+## Solutions
+
+::: {.callout-note collapse="true" title="Solution"}
+
+### Problem 1
+
+(a) **One solution.** Adding the equations: $2x_1 = 4 \Rightarrow x_1 = 2$,
+then $x_2 = 2$. The two lines cross once. (Solution $x_1 = x_2 = 2$.)
+
+(b) **No solution.** Left sides are proportional ($2\times$) but right sides
+are not ($4 \times 2 = 8 \ne 7$). The lines are **parallel and distinct** —
+they never meet.
+
+(c) **Infinitely many.** The second equation is exactly $3\times$ the first
+(including the right side: $3 \times 4 = 12$). It is the **same line**; every
+point on $x_1 + x_2 = 4$ is a solution.
+
+### Problem 2
+
+(a) 5 genes, 3 cell types, consistent $\to$ **over-determined** by shape but
+consistent, so it happens to have **one** solution here (with exact data the
+extra equations agree). With noise it would have **no** exact solution and need
+least squares.
+
+(b) 2 genes, 3 cell types $\to$ **under-determined**, **infinitely many**
+solutions — too few markers to resolve the cell types.
+
+(c) 3 genes, 3 cell types, independent $\to$ **well-determined**, **one**
+solution.
+
+### R
+
+```r
+# Step 1
+A <- matrix(c(2, 1, 1, 3), nrow = 2, byrow = TRUE)
+solve(A, c(8, 9))           # 3 2
+A %*% c(3, 2)               # 8 9  (check)
+
+# Step 2 (a) one solution
+solve(matrix(c(1, 1, 1, -1), 2, byrow = TRUE), c(4, 0))   # 2 2
+# (b) and (c) both throw "system is exactly singular"
+
+# Step 3 diagnostics
+A_bc <- matrix(c(1, 1, 2, 2), nrow = 2, byrow = TRUE)
+det(A_bc)        # 0
+qr(A_bc)$rank    # 1   (< 2 unknowns -> not unique)
+
+# Step 4 least squares (numbers vary slightly with the noisy b)
+A5 <- matrix(c(2,1, 1,3, 1,1, 3,2, 0,2), nrow = 5, byrow = TRUE)
+b5 <- c(8.1, 8.9, 5.2, 10.8, 4.1)
+qr.solve(A5, b5)            # e.g. ~ 2.97 2.03
+coef(lm(b5 ~ A5 - 1))       # same values
+A5 %*% qr.solve(A5, b5) - b5  # small, non-zero residuals
+```
+
+The residuals in Step 4 are **not** zero — that is the signature of an
+over-determined system: no exact fit exists, and least squares returns the
+closest compromise.
+
+:::
+
+## Where this leads
+
+- **Day 3** explains *why* least squares is the right "closest" answer, through
+  the geometry of **vectors, dot products, and projection**.
+- The full treatment of regression and constrained (non-negative) deconvolution
+  comes later in the course; today's unconstrained `solve`/`lm` is the
+  stepping-stone, not the production tool.

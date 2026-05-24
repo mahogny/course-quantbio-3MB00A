@@ -1,0 +1,280 @@
+---
+title: "Solving Markov chains in R: the stationary distribution"
+subtitle: "Day 8 — Quantitative biology"
+author: "Quantitative biology and integrative omics"
+format:
+  revealjs:
+    theme: [simple, ../theme.scss]
+    slide-number: c/t
+    width: 1280
+    height: 720
+    transition: slide
+    transition-speed: fast
+    highlight-style: github
+    code-overflow: wrap
+    code-line-numbers: false
+    incremental: false
+    chalkboard: false
+    menu: true
+---
+
+## About this lecture
+
+Yesterday we built a transition matrix $P$ for a DNA sequence. Today: if you keep stepping the chain, where does it end up? The answer is the **equilibrium nucleotide composition**.
+
+- Build $P$ in R and take **powers** (`%*%`; why `P^n` is wrong; the `expm` package).
+- Watch the state distribution $\mathbf{x}_t$ **converge** no matter where it starts.
+- The **stationary distribution** $\boldsymbol\pi$: the distribution that does not change, $\boldsymbol\pi P = \boldsymbol\pi$.
+- Find $\boldsymbol\pi$ two ways in R:
+  - **(a) power iteration** — keep multiplying by $P$;
+  - **(b) eigenvector** of $P^\top$ for eigenvalue 1 (`eigen`), connecting back to Day 6.
+
+This is a hands-on **R walkthrough** day — keep an R session open and run every block.
+
+::: notes
+The driving question is concrete: iterate the DNA chain forever and read off the equilibrium base composition. Emphasise this is the payoff of Day 7. Two computational routes to $\boldsymbol\pi$ — power iteration and eigenvector — and the whole point is that they agree, and that route (b) is exactly Day 6's eigen() applied to the transpose. Tell students to reproduce every code block.
+:::
+
+## Recap: one step is $\mathbf{x}_{t+1} = \mathbf{x}_t P$ {.smaller}
+
+From Day 7, with row vectors and rows of $P$ summing to 1:
+
+$$\mathbf{x}_{t+1} = \mathbf{x}_t P, \qquad \mathbf{x}_t = \mathbf{x}_0 P^t.$$
+
+A toy DNA-flavoured chain over `{A, C, G, T}` (a CpG-like dip: `G` rarely follows `C`):
+
+```r
+bases <- c("A","C","G","T")
+P <- matrix(c(0.30, 0.20, 0.25, 0.25,
+              0.25, 0.35, 0.05, 0.35,   # C -> G is rare
+              0.25, 0.25, 0.25, 0.25,
+              0.15, 0.30, 0.25, 0.30),
+            nrow = 4, byrow = TRUE,
+            dimnames = list(bases, bases))
+rowSums(P)        # A 1  C 1  G 1  T 1   <- valid transition matrix
+```
+
+::: notes
+Re-establish notation and immediately build a concrete 4x4 P in R. The CpG dip (C->G small) gives the matrix biological meaning and makes the equilibrium non-uniform, which is more interesting than a symmetric toy. Always check rowSums == 1 first — it is the standard validity check and catches typos.
+:::
+
+## Taking powers: `%*%`, not `^` {.smaller}
+
+To advance several steps, multiply by $P$ repeatedly. **`P^n` is wrong** — it squares each entry elementwise.
+
+```r
+x0 <- c(1, 0, 0, 0)          # start: definitely A
+x1 <- x0 %*% P               # one step
+x2 <- x1 %*% P               # two steps
+x2
+
+P2 <- P %*% P                # the 2-step transition MATRIX
+# P^2  would be ELEMENTWISE squaring -- NOT this!
+```
+
+A reusable matrix-power helper (repeated multiplication):
+
+```r
+matpow <- function(M, n) {
+  R <- diag(nrow(M))               # identity
+  for (i in seq_len(n)) R <- R %*% M
+  R
+}
+x0 %*% matpow(P, 10)               # distribution after 10 steps
+```
+
+::: notes
+The single most common bug this week is `P^2` instead of `P %*% P`; show both and contrast the outputs if you can. The matpow helper makes "t steps" trivial and reinforces that a power is just repeated multiplication (composition, Day 4). Students should be comfortable both stepping a vector and powering the matrix.
+:::
+
+## A package shortcut: `expm` {.smaller}
+
+Base R has **no** built-in matrix power. The `expm` package adds the `%^%` operator:
+
+```r
+# install.packages("expm")
+library(expm)
+P %^% 10                      # P raised to the 10th power (matrix power)
+x0 %*% (P %^% 10)             # distribution after 10 steps
+```
+
+- `%^%` is genuine matrix power (it uses `%*%` internally, efficiently).
+- It is **only** for convenience — the loop on the previous slide does the same thing.
+
+::: notes
+Mention expm so students know the idiomatic tool exists, but make clear it is optional: the loop is fully sufficient and shows what is happening. Flag the name clash risk and that %^% comes from expm, not base R. Don't dwell — the conceptual content is the convergence, next.
+:::
+
+## Watch it converge {.smaller}
+
+Step the chain from two **different** starts and print every few steps:
+
+```r
+step_n <- function(x, P, n) { for (i in seq_len(n)) x <- x %*% P; drop(x) }
+
+startA <- c(1, 0, 0, 0)      # start at A
+startT <- c(0, 0, 0, 1)      # start at T
+for (n in c(1, 2, 5, 10, 20)) {
+  cat("n =", n, " from A:", round(step_n(startA, P, n), 3), "\n")
+  cat("n =", n, " from T:", round(step_n(startT, P, n), 3), "\n")
+}
+# By n = 20 both rows are essentially identical:
+# from A: 0.232 0.281 0.194 0.293
+# from T: 0.232 0.281 0.194 0.293
+```
+
+The two starts **forget** where they began and settle on the **same** distribution.
+
+::: notes
+This is the heart of the day. Run it live: two wildly different starting vectors converge to the same numbers within ~20 steps. The biological reading: whatever base you start from, the long-run composition of the chain is the same equilibrium. "Forgetting the start" is the intuitive meaning of convergence to the stationary distribution, and it works for any well-behaved (irreducible, aperiodic) chain.
+:::
+
+## The stationary distribution $\boldsymbol\pi$ {.smaller}
+
+The limit $\boldsymbol\pi$ is **stationary**: stepping it once leaves it unchanged.
+
+$$\boxed{\ \boldsymbol\pi P = \boldsymbol\pi\ }, \qquad \text{with } \sum_k \pi_k = 1,\ \ \pi_k \ge 0.$$
+
+- It is a **fixed point** of "multiply by $P$": once you reach it, you stay.
+- Biologically: the **equilibrium nucleotide composition** of the DNA model — the base frequencies you expect in a very long sequence generated by $P$.
+- For the cell model: the long-run **fraction of cells** in each state.
+
+::: notes
+Define stationarity as the algebraic fixed-point condition pi P = pi, plus the normalisation (non-negative, sums to 1) that makes it a probability distribution. Stress "fixed point": the one distribution that the step map leaves alone, which is why iteration lands there. Give both biological readings — equilibrium base frequencies and equilibrium cell-state fractions — so the abstraction stays grounded.
+:::
+
+## Why $\boldsymbol\pi$ is an eigenvector (recall Day 6) {.smaller}
+
+Rewrite the stationarity condition. $\boldsymbol\pi P = \boldsymbol\pi$ says $\boldsymbol\pi$ is a **left eigenvector** of $P$ with **eigenvalue 1**.
+
+`eigen` in R computes **right** eigenvectors ($M\mathbf{v} = \lambda\mathbf{v}$). Transpose to convert left → right:
+
+$$\boldsymbol\pi P = \boldsymbol\pi \ \Longleftrightarrow\ P^\top \boldsymbol\pi^\top = \boldsymbol\pi^\top.$$
+
+So $\boldsymbol\pi^\top$ is the **right eigenvector of $P^\top$ for eigenvalue 1**.
+
+- Every stochastic matrix has 1 as its largest eigenvalue (Day 6's $\lambda$).
+- Power iteration (repeated $\times P$) is exactly the **power method** picking out this dominant eigenvector.
+
+::: notes
+This is the explicit callback to Day 6. The left-eigenvector / right-eigenvector distinction is the only subtlety: pi multiplies P on the LEFT (row vector), and eigen() works with right eigenvectors, so we transpose. The punchline ties the two days together: power iteration IS the power method from Day 6, automatically converging to the eigenvalue-1 eigenvector — which is why the chain converges to pi.
+:::
+
+## Finding $\boldsymbol\pi$ (a) by power iteration {.smaller}
+
+Just keep multiplying until the vector stops changing:
+
+```r
+pi_power <- function(P, tol = 1e-12, max_iter = 1000) {
+  x <- rep(1 / nrow(P), nrow(P))     # any valid start, e.g. uniform
+  for (i in seq_len(max_iter)) {
+    xn <- x %*% P
+    if (max(abs(xn - x)) < tol) break
+    x <- xn
+  }
+  drop(xn)
+}
+
+pi_hat <- pi_power(P)
+round(pi_hat, 4)        # 0.2323 0.2811 0.1938 0.2928
+sum(pi_hat)             # 1
+pi_hat %*% P            # check: equals pi_hat (stationary!)
+```
+
+::: notes
+Power iteration is the most intuitive method and needs no linear-algebra machinery: start anywhere valid, multiply by P until the change drops below a tolerance. Stress the stopping rule (change below tol) and the final stationarity check pi %*% P == pi. The starting vector does not matter for the answer (we saw convergence is start-independent) — uniform is a convenient choice.
+:::
+
+## Finding $\boldsymbol\pi$ (b) via `eigen(t(P))` {.smaller}
+
+Use the eigen-decomposition (Day 6) of the **transpose**, take the eigenvalue-1 vector, make it real, positive, and sum-to-1:
+
+```r
+e <- eigen(t(P))
+e$values                         # the first is 1 (up to rounding)
+
+v <- Re(e$vectors[, 1])          # eigenvector for lambda = 1 (drop tiny Im part)
+pi_eig <- v / sum(v)             # normalise to a probability distribution
+round(pi_eig, 4)                 # 0.2323 0.2811 0.1938 0.2928  -- same as (a)!
+```
+
+- `t(P)` because $\boldsymbol\pi$ is a **left** eigenvector but `eigen` returns **right** ones.
+- Eigenvectors come out scaled arbitrarily (and possibly negative/complex) → take `Re`, then divide by the **sum** to normalise.
+
+::: notes
+Walk through each line. eigen(t(P)) because of the left/right transpose argument from two slides ago. The eigenvalue-1 vector is typically first since 1 is the largest eigenvalue. The post-processing is the fiddly part students miss: eigenvectors are only defined up to scale and sign and may carry a numerically-tiny imaginary part, so take Re, fix sign if needed, and normalise by sum (NOT by length) to get a probability vector. The two methods agree to all printed digits — that agreement is the lesson.
+:::
+
+## Two methods, same answer {.smaller}
+
+| | Power iteration (a) | Eigenvector (b) |
+|---|---|---|
+| Idea | keep doing $\mathbf{x}\leftarrow\mathbf{x}P$ | solve $\boldsymbol\pi P=\boldsymbol\pi$ exactly |
+| R | loop with `%*%` | `eigen(t(P))` |
+| Needs | nothing extra | Day 6 eigen-decomposition |
+| Normalise | already sums to 1 | divide eigenvector by its **sum** |
+| Intuition | the chain "forgets" its start | fixed point = $\lambda=1$ eigenvector |
+
+```r
+round(pi_hat, 6)        # 0.232342 0.281134 0.193773 0.292751
+round(pi_eig, 6)        # 0.232342 0.281134 0.193773 0.292751
+```
+
+::: notes
+Side-by-side table to cement that these are two routes to one object. Power iteration is conceptually transparent and assumption-light; the eigenvector route is exact and reuses Day 6 but needs the transpose-and-normalise care. They agree to machine precision. Mention there is also a linear-systems route (solve pi(P - I)=0 with a sum-to-1 constraint) tying back to Days 1-2, but the two methods here are enough.
+:::
+
+## Biology: equilibrium base composition {.smaller}
+
+For our matrix, $\boldsymbol\pi \approx (0.232,\ 0.281,\ 0.194,\ 0.293)$:
+
+- A long sequence generated by $P$ would be about **23% A, 28% C, 19% G, 29% T**.
+- `G` is the rarest base — a downstream consequence of the **CpG dip** we put in ($p_{CG}=0.05$).
+- This equilibrium is a property of the **dynamics** ($P$), not of the starting base.
+
+```r
+# Sanity check by simulation: long sequence -> observed frequencies ~ pi
+set.seed(1)
+s <- character(50000); s[1] <- "A"
+for (t in 2:50000) s[t] <- sample(bases, 1, prob = P[s[t-1], ])
+round(prop.table(table(factor(s, levels = bases))), 3)   # close to pi
+```
+
+::: notes
+Bring it home biologically: the stationary distribution is the equilibrium nucleotide composition, and it reflects the transition structure (the CpG dip suppresses G). The simulation cross-check is satisfying: generate a long sequence from P and the empirical base frequencies match pi, confirming the eigenvector/power-iteration answers from a completely different angle. This triangulation (algebra, iteration, simulation) is good scientific practice.
+:::
+
+## Caveats: when is there a unique $\boldsymbol\pi$? {.smaller}
+
+Convergence to a single $\boldsymbol\pi$ regardless of start needs the chain to be:
+
+- **irreducible** — every state reachable from every other (the graph is connected), and
+- **aperiodic** — not locked into a fixed cycle.
+
+Counterexamples:
+
+- $P = \begin{pmatrix}0&1\\1&0\end{pmatrix}$ (periodic): a start at state 1 oscillates $1\to2\to1\to\dots$ and never settles, though $\boldsymbol\pi=(0.5,0.5)$ still satisfies $\boldsymbol\pi P=\boldsymbol\pi$.
+- A chain with two disconnected groups of states has **many** stationary distributions.
+
+Our DNA matrix has all entries positive → both conditions hold → unique $\boldsymbol\pi$.
+
+::: notes
+Keep this light but honest: the clean "always converges to one pi" story needs irreducibility and aperiodicity. The 2-state swap matrix is the classic periodic counterexample — it has a stationary distribution but power iteration oscillates and never converges. Disconnected chains have multiple stationary distributions. A matrix with all-positive entries (like ours) is safely regular, so students' main examples behave well; the caveats are mostly for awareness.
+:::
+
+## Summary {.smaller}
+
+| Concept | Key fact | R |
+|---|---|---|
+| Step | $\mathbf{x}_{t+1}=\mathbf{x}_t P$ | `x %*% P` |
+| Power | $\mathbf{x}_t=\mathbf{x}_0 P^t$ (not `P^t`!) | loop of `%*%`, or `expm::%^%` |
+| Convergence | $\mathbf{x}_t \to \boldsymbol\pi$, start-independent | iterate until stable |
+| Stationary | $\boldsymbol\pi P = \boldsymbol\pi$, $\sum\pi_k=1$ | fixed point |
+| Eigen view | $\boldsymbol\pi^\top$ = right eigenvector of $P^\top$, $\lambda=1$ | `eigen(t(P))`, then `/sum` |
+| Biology | equilibrium base composition | matches long-run simulation |
+
+**Next (Days 9–10):** so far the state was **observed**. In a **Hidden** Markov Model the state is hidden (e.g. "CpG island" vs "background") and we see only emitted symbols — built on exactly this transition machinery.
+
+::: notes
+The table is the cheat sheet for the R-heavy exercise. The three takeaways: use %*% (never ^) for powers, the chain converges to pi independent of start, and pi is the eigenvalue-1 eigenvector of P-transpose (Day 6) as well as the limit of power iteration. Preview HMMs: everything generalises once the state becomes unobserved and only emissions are seen.
+:::

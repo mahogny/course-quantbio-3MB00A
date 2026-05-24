@@ -1,0 +1,260 @@
+---
+title: "Eigenvalues & eigenvectors"
+subtitle: "Day 5 — Quantitative biology"
+author: "Quantitative biology and integrative omics"
+format:
+  revealjs:
+    theme: [simple, ../theme.scss]
+    slide-number: c/t
+    width: 1280
+    height: 720
+    transition: slide
+    transition-speed: fast
+    highlight-style: github
+    code-overflow: wrap
+    code-line-numbers: false
+    incremental: false
+    chalkboard: false
+    menu: true
+---
+
+## About this lecture
+
+Yesterday: a matrix is a **function** that moves vectors around — it stretches, rotates, mixes the axes. Today we hunt for the **special directions** a matrix leaves alone.
+
+- Most vectors get **rotated** by a matrix. A few special ones only get **scaled** — those are **eigenvectors**.
+- The amount of scaling is the **eigenvalue** $\lambda$, and the whole idea is one equation: $A\mathbf{v} = \lambda\mathbf{v}$.
+- How to find them **by hand** for a $2\times2$: the **characteristic equation** $\det(A - \lambda I) = 0$.
+- Why **symmetric** matrices (like a covariance matrix) are special: **real** eigenvalues, **orthogonal** eigenvectors.
+- Biology: the eigenvectors of a covariance matrix point along the **main axes of variation** in a dataset — the seed of PCA (next week).
+
+This is a **concept** day. The exam will ask you to find eigenvalues by hand, so practise the pen-and-paper recipe.
+
+::: notes
+The single mental image for today: a transformation grabs the plane and distorts it, but a couple of special directions don't get knocked off their line — they only get longer or shorter. Those are eigenvectors. Everything else (the characteristic equation, symmetric matrices, the PCA preview) hangs off that one picture. Tell students this is the most exam-heavy by-hand skill of the whole block, so the goal today is to make the recipe automatic. Keep an R session open for the demos but emphasise this is concept day, R fluency is tomorrow.
+:::
+
+## A biology picture first {.smaller}
+
+Measure two genes across many cells and plot each cell as a point (gene 1 on x, gene 2 on y).
+
+- The two genes are **co-regulated**, so the cloud is a tilted, elongated ellipse.
+- There is one direction along which the cells **spread the most** — the long axis of the cloud.
+- And a perpendicular direction with the **least** spread — the short axis.
+
+These two axes are not the x- and y-axes. They are tilted. **Where do they come from?**
+
+They are the **eigenvectors** of the data's **covariance matrix**. Today we learn what that sentence means.
+
+::: notes
+Anchor the whole abstraction in a concrete scatter before any algebra. Two co-regulated genes produce a diagonal sausage-shaped cloud. The intuitive "long axis" and "short axis" of that cloud are exactly the eigenvectors of the covariance matrix, and their lengths (how stretched the cloud is along each) are the eigenvalues. Don't define covariance formally yet — just plant the idea that the interesting directions of a dataset are tilted, and matrices know how to find them. PCA is next week; today is only the mathematical machinery.
+:::
+
+## Most vectors get rotated {.smaller}
+
+Take a matrix $A$ and feed it different input vectors. Watch the **direction** of the output.
+
+$$A = \begin{pmatrix} 2 & 1 \\ 1 & 2 \end{pmatrix}$$
+
+- $A\begin{pmatrix}1\\0\end{pmatrix} = \begin{pmatrix}2\\1\end{pmatrix}$ — pointed along x, came out tilted **up**. Direction changed.
+- $A\begin{pmatrix}0\\1\end{pmatrix} = \begin{pmatrix}1\\2\end{pmatrix}$ — pointed along y, came out tilted. Direction changed.
+- $A\begin{pmatrix}1\\1\end{pmatrix} = \begin{pmatrix}3\\3\end{pmatrix}$ — pointed along the diagonal, came out **on the same line**, just longer!
+
+That last one is special: $A$ only **scaled** it (by 3), without rotating it.
+
+::: notes
+This is the heart of the lecture. Pick a symmetric matrix so the special directions are clean. Show that generic inputs (the x-axis, the y-axis) get tilted, but the diagonal direction (1,1) comes out as (3,3) — exactly 3 times itself, no rotation. Make students feel the contrast: rotation is the rule, pure scaling is the exception, and the exceptional directions are what we care about. The number 3 here is the eigenvalue; (1,1) is the eigenvector. We will also find the other special direction, (1,-1).
+:::
+
+## The definition: $A\mathbf{v} = \lambda\mathbf{v}$ {.smaller}
+
+A nonzero vector $\mathbf{v}$ is an **eigenvector** of $A$ if $A$ only **scales** it:
+
+$$A\mathbf{v} = \lambda\mathbf{v}$$
+
+- $\lambda$ (a scalar) is the **eigenvalue** — the stretch factor for that direction.
+- "Eigen" is German for *own / characteristic*: these are the matrix's own special directions.
+
+Reading the equation: *transforming $\mathbf{v}$ with $A$ gives the same thing as just multiplying $\mathbf{v}$ by the number $\lambda$.* The matrix acts like a plain number **on that direction**.
+
+From the previous slide: $A\begin{pmatrix}1\\1\end{pmatrix} = \begin{pmatrix}3\\3\end{pmatrix} = 3\begin{pmatrix}1\\1\end{pmatrix}$, so $\mathbf{v}=(1,1)$ is an eigenvector with eigenvalue $\lambda = 3$.
+
+::: notes
+Write the defining equation and read it aloud in words several times: applying the matrix equals multiplying by a number, but only for these special vectors. Stress nonzero: the zero vector trivially satisfies it and is excluded by definition. Connect straight back to the (1,1) -> (3,3) example so the equation is not abstract. Mention the etymology — eigen = own — because it demystifies the intimidating word. Note that any nonzero multiple of an eigenvector is also an eigenvector with the same eigenvalue (the whole line is special).
+:::
+
+## The whole line is special {.smaller}
+
+If $\mathbf{v}$ is an eigenvector, so is $2\mathbf{v}$, $-\mathbf{v}$, $0.5\mathbf{v}$ — any nonzero multiple:
+
+$$A(2\mathbf{v}) = 2(A\mathbf{v}) = 2(\lambda\mathbf{v}) = \lambda(2\mathbf{v})$$
+
+- An eigenvector defines a **direction (a line through the origin)**, not one specific arrow.
+- So we are free to pick a convenient representative — usually the simplest integers, or a **unit** vector (length 1).
+- R will hand you the **unit** version by default; on paper we keep nice whole numbers like $(1,1)$.
+
+::: notes
+A frequent source of confusion: students compute (2,2) and panic because R reported (0.707, 0.707). They are the SAME eigenvector — the same direction, different length. Make this explicit now so it doesn't bite tomorrow. The takeaway: an eigenvector is really an eigen-line; we scale it to whatever length is convenient. By hand, pick small integers; R normalises to length 1. Both are correct.
+:::
+
+## Finding eigenvalues: the characteristic equation {.smaller}
+
+Start from $A\mathbf{v} = \lambda\mathbf{v}$. Move everything to one side (write $\lambda\mathbf{v} = \lambda I\mathbf{v}$ so the shapes match):
+
+$$A\mathbf{v} - \lambda I\mathbf{v} = \mathbf{0} \quad\Longrightarrow\quad (A - \lambda I)\mathbf{v} = \mathbf{0}$$
+
+We need a **nonzero** $\mathbf{v}$ that the matrix $(A-\lambda I)$ sends to zero. A matrix can only crush a nonzero vector to zero if it is **singular** — i.e. its determinant is zero:
+
+$$\boxed{\ \det(A - \lambda I) = 0\ }$$
+
+This is the **characteristic equation**. Solving it gives the eigenvalues $\lambda$.
+
+::: notes
+This derivation is worth doing slowly because it explains WHERE the determinant condition comes from — it is not magic. Key logical step: (A - lambda I) v = 0 with v nonzero means the matrix has a nontrivial null space, which means it is not invertible, which means det = 0. Students met determinants and singular matrices in Days 1-2 (when a system has non-unique solutions), so lean on that. The lambda I insertion (rather than just lambda) is the technical detail that trips people up: you subtract lambda from the diagonal.
+:::
+
+## The determinant of a $2\times2$ {.smaller}
+
+For a $2\times2$ matrix the determinant is a single easy formula:
+
+$$\det\begin{pmatrix} a & b \\ c & d \end{pmatrix} = ad - bc$$
+
+To build $A - \lambda I$, **subtract $\lambda$ from each diagonal entry**:
+
+$$A - \lambda I = \begin{pmatrix} a & b \\ c & d \end{pmatrix} - \begin{pmatrix} \lambda & 0 \\ 0 & \lambda \end{pmatrix} = \begin{pmatrix} a-\lambda & b \\ c & d-\lambda \end{pmatrix}$$
+
+So the characteristic equation is:
+
+$$\det(A - \lambda I) = (a-\lambda)(d-\lambda) - bc = 0$$
+
+a **quadratic in $\lambda$** — solve it like any quadratic.
+
+::: notes
+Two mechanical facts they must memorise for the exam: det of a 2x2 is ad - bc, and A - lambda*I just subtracts lambda from the two diagonal entries (off-diagonals untouched). Multiplying out (a-lambda)(d-lambda) - bc always gives a quadratic in lambda, so finding 2x2 eigenvalues is always "set up a quadratic, solve it." Reassure them they already know how to solve quadratics — factor or use the formula. The next slide does a full worked example.
+:::
+
+## Worked example: eigenvalues by hand {.smaller}
+
+$$A = \begin{pmatrix} 2 & 1 \\ 1 & 2 \end{pmatrix}$$
+
+$$\det(A - \lambda I) = (2-\lambda)(2-\lambda) - (1)(1) = \lambda^2 - 4\lambda + 4 - 1 = \lambda^2 - 4\lambda + 3$$
+
+Set to zero and factor:
+
+$$\lambda^2 - 4\lambda + 3 = (\lambda - 3)(\lambda - 1) = 0 \quad\Longrightarrow\quad \lambda_1 = 3,\ \lambda_2 = 1$$
+
+Two eigenvalues: **3** (we already saw the $(1,1)$ direction stretched by 3) and **1**.
+
+::: notes
+Walk every algebraic step on screen: expand (2-lambda)^2, subtract the bc term (1*1=1), collect into lambda^2 - 4 lambda + 3, factor into (lambda-3)(lambda-1). Land on lambda = 3 and lambda = 1, and immediately connect lambda=3 back to the (1,1)->(3,3) demo from earlier so the abstract root has a concrete meaning. This is the canonical exam problem; tell students to reproduce it from memory tonight. Sanity checks (next slide) catch arithmetic slips.
+:::
+
+## Two sanity checks (trace and determinant) {.smaller}
+
+Before trusting your eigenvalues, check them against $A = \begin{pmatrix} 2 & 1 \\ 1 & 2 \end{pmatrix}$:
+
+- **Sum** of eigenvalues = **trace** (sum of the diagonal): $3 + 1 = 4 = 2 + 2$. ✓
+- **Product** of eigenvalues = **determinant** of $A$: $3 \times 1 = 3 = (2)(2) - (1)(1)$. ✓
+
+These two checks catch most arithmetic mistakes for free — use them on the exam.
+
+::: notes
+These checks are cheap insurance and examiners love them. Trace = sum of diagonal = sum of eigenvalues; det = product of eigenvalues. If a student's two roots don't add to the trace, they made an arithmetic error and should redo it. Have them verify on the worked example: 3+1 = 4 = trace, 3*1 = 3 = det. Encourage building this reflex.
+:::
+
+## Finding the eigenvector for each $\lambda$ {.smaller}
+
+Plug each eigenvalue back into $(A - \lambda I)\mathbf{v} = \mathbf{0}$ and solve for $\mathbf{v}$.
+
+For $\lambda = 3$ with $A = \begin{pmatrix} 2 & 1 \\ 1 & 2 \end{pmatrix}$:
+
+$$A - 3I = \begin{pmatrix} 2-3 & 1 \\ 1 & 2-3 \end{pmatrix} = \begin{pmatrix} -1 & 1 \\ 1 & -1 \end{pmatrix}$$
+
+Row 1 says $-v_1 + v_2 = 0$, i.e. $v_2 = v_1$. Pick $v_1 = 1$:
+
+$$\mathbf{v}_1 = \begin{pmatrix} 1 \\ 1 \end{pmatrix} \quad\text{(eigenvector for } \lambda = 3\text{)}$$
+
+::: notes
+The mechanics: substitute the eigenvalue, write out the (now singular) matrix, and read off the relationship between v1 and v2 from any one row — the rows are redundant precisely because the determinant is zero. Here -v1 + v2 = 0 gives v2 = v1, so (1,1). Stress that there is a free choice of scale (the line again); pick the simplest integers. Verify on the spot: A(1,1) = (3,3) = 3(1,1). Next slide does lambda = 1.
+:::
+
+## The second eigenvector {.smaller}
+
+For $\lambda = 1$ with $A = \begin{pmatrix} 2 & 1 \\ 1 & 2 \end{pmatrix}$:
+
+$$A - 1\cdot I = \begin{pmatrix} 1 & 1 \\ 1 & 1 \end{pmatrix}$$
+
+Row 1 says $v_1 + v_2 = 0$, i.e. $v_2 = -v_1$. Pick $v_1 = 1$:
+
+$$\mathbf{v}_2 = \begin{pmatrix} 1 \\ -1 \end{pmatrix} \quad\text{(eigenvector for } \lambda = 1\text{)}$$
+
+**Verify:** $A\begin{pmatrix}1\\-1\end{pmatrix} = \begin{pmatrix}2-1\\1-2\end{pmatrix} = \begin{pmatrix}1\\-1\end{pmatrix} = 1\cdot\mathbf{v}_2$. ✓
+
+Notice: $\mathbf{v}_1\cdot\mathbf{v}_2 = (1)(1) + (1)(-1) = 0$ — the two eigenvectors are **orthogonal**!
+
+::: notes
+Repeat the recipe for the second eigenvalue and always verify by plugging back into A v = lambda v — this is the cheapest possible check and an exam habit worth drilling. Then highlight the punchline: the dot product of the two eigenvectors is zero, so they are perpendicular. This is not a coincidence; it happens because A is symmetric, which is the topic of the next slide and the bridge to covariance/PCA.
+:::
+
+## Symmetric matrices are special {.smaller}
+
+A matrix is **symmetric** if $A = A^\top$ (it equals its own transpose — mirror across the diagonal). Our example $\begin{pmatrix} 2 & 1 \\ 1 & 2 \end{pmatrix}$ is symmetric ($b = c = 1$).
+
+For symmetric matrices (a theorem — the **spectral theorem**):
+
+- All eigenvalues are **real** (no awkward complex numbers).
+- Eigenvectors for **different** eigenvalues are **orthogonal** (perpendicular).
+
+This is exactly what we just saw: real eigenvalues $3, 1$ and perpendicular eigenvectors $(1,1) \perp (1,-1)$.
+
+::: notes
+This slide is the conceptual reward. Define symmetric (A = A transpose). State the spectral theorem in plain terms: symmetric matrices always have real eigenvalues and a full set of mutually perpendicular eigenvectors. No proof — just the fact and the reassurance that nothing weird (complex numbers, tilted non-orthogonal axes) can happen. Point back to the worked example as a live instance. The why-we-care comes next: covariance matrices are symmetric.
+:::
+
+## Why biologists care: covariance is symmetric {.smaller}
+
+For a dataset (e.g. expression of 2 genes across many cells), the **covariance matrix** $C$ summarises spread:
+
+$$C = \begin{pmatrix} \text{var}(g_1) & \text{cov}(g_1,g_2) \\ \text{cov}(g_1,g_2) & \text{var}(g_2) \end{pmatrix}$$
+
+$C$ is **symmetric** (cov$(g_1,g_2)=$ cov$(g_2,g_1)$), so by the spectral theorem:
+
+- its eigenvectors are **orthogonal** → they form clean perpendicular axes,
+- its eigenvalues are **real and positive** → the **amount of variance** along each axis.
+
+The eigenvector with the **largest** eigenvalue points along the **long axis** of the data cloud — the direction of greatest variation. **That is PCA** (taught next week). Today you built its engine.
+
+::: notes
+Close the loop opened on slide 2. The covariance matrix is symmetric by construction, so it inherits all the nice properties: orthogonal eigenvectors and real, non-negative eigenvalues. Interpret eigenvalue = variance captured along that eigen-direction; biggest eigenvalue = the long axis of the cloud = first principal component. Be disciplined: name PCA as the destination but do NOT teach it (centring, projection, scores) — that is week 2. Today's deliverable is "eigen-decomposition of a covariance matrix finds the axes of variation."
+:::
+
+## Special cases & gotchas {.smaller}
+
+- **Repeated eigenvalue:** $\begin{pmatrix} 2 & 0 \\ 0 & 2 \end{pmatrix}$ has $\lambda = 2$ twice. *Every* direction is an eigenvector (it scales everything equally).
+- **Diagonal matrix:** eigenvalues are just the diagonal entries; eigenvectors are the axes.
+- **Complex eigenvalues:** a pure rotation $\begin{pmatrix} 0 & -1 \\ 1 & 0 \end{pmatrix}$ has **no real** eigenvector — it rotates *everything*, leaving no direction fixed. (This can't happen for symmetric matrices.)
+- **Scale freedom:** eigenvectors are only defined up to length and sign.
+
+::: notes
+A short tour of the edge cases so they aren't surprised: a scalar multiple of the identity makes every direction an eigenvector; a diagonal matrix wears its eigenvalues on its diagonal; a pure rotation has complex eigenvalues because no real direction survives unrotated. The last one beautifully reinforces today's opening picture (rotation moves everything) and contrasts with symmetric matrices, which never go complex. Reiterate sign/scale freedom so R's output (which may flip signs) doesn't confuse them tomorrow.
+:::
+
+## Summary {.smaller}
+
+| Concept | Key fact |
+|---|---|
+| Eigenvector | direction $A$ only **scales**, never rotates |
+| Eigen relation | $A\mathbf{v} = \lambda\mathbf{v}$ ($\mathbf{v}\neq\mathbf{0}$) |
+| Eigenvalue | the scaling factor $\lambda$ |
+| Find $\lambda$ (2×2) | solve $\det(A-\lambda I)=0$ — a quadratic |
+| $\det$ of 2×2 | $ad - bc$ |
+| Find $\mathbf{v}$ | solve $(A-\lambda I)\mathbf{v}=\mathbf{0}$, pick nice scale |
+| Checks | $\sum\lambda$ = trace, $\prod\lambda$ = det |
+| Symmetric $A$ | real eigenvalues, **orthogonal** eigenvectors |
+| Biology | eigenvectors of covariance = axes of variation (PCA engine) |
+
+**Next (Day 6):** compute all of this in R with [`eigen`](https://rdrr.io/r/base/eigen.html).
+
+::: notes
+The summary is the exam cheat-sheet. Drill the by-hand pipeline one more time verbally: subtract lambda from the diagonal, take ad-bc, solve the quadratic, plug each lambda back to get the eigenvector, verify and use the trace/det checks. Remind them symmetric = real + orthogonal, and that covariance matrices are the biological payoff. Preview Day 6: eigen() does all the arithmetic instantly, but they must still understand the output, which only makes sense if today's concepts are solid.
+:::

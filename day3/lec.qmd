@@ -1,0 +1,252 @@
+---
+title: "Vectors, dot product & projection"
+subtitle: "Day 3 — Quantitative biology"
+author: "Quantitative biology and integrative omics"
+format:
+  revealjs:
+    theme: [simple, ../theme.scss]
+    slide-number: c/t
+    width: 1280
+    height: 720
+    transition: slide
+    transition-speed: fast
+    highlight-style: github
+    code-overflow: wrap
+    code-line-numbers: false
+    incremental: false
+    chalkboard: false
+    menu: true
+---
+
+## About this lecture
+
+Today we stop *solving* systems and start *seeing* them. We build a geometric picture of the objects we have been pushing around.
+
+- A **vector** is both an arrow and a row of numbers — and a gene-expression profile *is* a vector.
+- **Adding and scaling** vectors.
+- The **length (norm)** of a vector.
+- The **dot product**: one number that measures how two vectors line up.
+- The dot product gives the **angle** between vectors → **cosine similarity**, the workhorse of comparing samples.
+- **Orthogonality** (a right angle = zero dot product).
+- **Projection**: the shadow of one vector on another.
+
+::: notes
+This is the conceptual heart of the linear-algebra block. Days 1–2 were about manipulating equations; today we attach geometry to those numbers so that everything later (PCA, eigenvectors, Markov chains) has a mental picture behind it. Emphasise repeatedly: the same list of numbers is simultaneously an arrow in space and a measurement of a biological sample. There is a quiz for this day because the concepts are slippery; encourage students to do it.
+:::
+
+## A gene-expression profile is a vector
+
+Measure the expression of 3 genes in one tissue sample:
+
+$$\mathbf{x} = \begin{pmatrix} 12 \\ 0 \\ 7 \end{pmatrix} \quad \begin{array}{l}\text{(GeneA = 12)}\\\text{(GeneB = 0)}\\\text{(GeneC = 7)}\end{array}$$
+
+- A **vector** is just an ordered list of numbers. Here, 3 numbers → one point/arrow in 3-D space.
+- A real RNA-seq sample has ~20 000 genes → a vector in 20 000-dimensional space. We cannot draw it, but every rule we learn in 2-D and 3-D still holds.
+- Two ways to read the same object:
+  - **as data**: "this sample's measurements"
+  - **as an arrow**: from the origin to the point $(12, 0, 7)$.
+
+::: notes
+The single most important idea of the day, stated on slide 2: a sample IS a vector. Stress that nothing about the math cares whether the dimension is 2 or 20000 — we draw pictures in 2-D only because we have two eyes. Tell them that "dimension" just means "number of genes / number of measurements". Keep coming back to this profile vector throughout.
+:::
+
+## Vectors as arrows {.smaller}
+
+In 2-D, the vector $\mathbf{v} = \begin{pmatrix} 3 \\ 2 \end{pmatrix}$ is the arrow from the origin to the point $(3, 2)$.
+
+- The numbers are the **components**: move 3 right, 2 up.
+- An arrow has a **direction** and a **length**.
+- We can slide the arrow around, but by convention we draw it starting at the origin.
+
+```r
+# In R a vector is the most basic object
+v <- c(3, 2)
+v
+# [1] 3 2
+```
+
+::: notes
+Draw the arrow on the chalkboard or refer to the slide figure. The point: components ARE instructions for how far to move along each axis. Mention that physicists let arrows float anywhere, but for data we anchor them at the origin so each sample is one fixed point. Note c() builds a vector in R — same word, same idea.
+:::
+
+## Adding vectors = combining profiles
+
+Add component by component:
+
+$$\begin{pmatrix} 3 \\ 2 \end{pmatrix} + \begin{pmatrix} 1 \\ 4 \end{pmatrix} = \begin{pmatrix} 4 \\ 6 \end{pmatrix}$$
+
+- Geometrically: place the tail of the second arrow at the head of the first ("tip-to-tail").
+- Biological reading: if $\mathbf{x}$ is a baseline profile and $\mathbf{d}$ is the change after a drug, then $\mathbf{x} + \mathbf{d}$ is the treated profile.
+
+```r
+c(3, 2) + c(1, 4)
+# [1] 4 6
+```
+
+::: notes
+Vector addition is the tip-to-tail rule. The drug example makes it concrete: differences of expression vectors are themselves vectors, and adding them moves you to a new sample. R adds vectors elementwise with plain +, which matches the math exactly — no special function needed.
+:::
+
+## Scaling a vector
+
+Multiply every component by a scalar:
+
+$$2 \cdot \begin{pmatrix} 3 \\ 2 \end{pmatrix} = \begin{pmatrix} 6 \\ 4 \end{pmatrix}, \qquad -1 \cdot \begin{pmatrix} 3 \\ 2 \end{pmatrix} = \begin{pmatrix} -3 \\ -2 \end{pmatrix}$$
+
+- A scalar $> 1$ **stretches** the arrow; between 0 and 1 **shrinks** it; negative **flips** it.
+- Scaling never changes the *direction* (except the flip) — only the length.
+- Biological reading: doubling a library's sequencing depth scales the whole count vector by ~2; **normalisation** is exactly choosing a scalar to make samples comparable.
+
+```r
+2 * c(3, 2)
+# [1] 6 4
+```
+
+::: notes
+Scaling stretches/shrinks along the same line. The normalisation point is important and previews later material: when we divide each sample by its total counts (or library size) we are rescaling each expression vector. Direction = "what genes are high relative to each other"; length = "overall magnitude / depth".
+:::
+
+## Length of a vector (the norm)
+
+The **length** (or **norm**) of $\mathbf{v}$ comes straight from Pythagoras:
+
+$$\|\mathbf{v}\| = \sqrt{v_1^2 + v_2^2 + \dots + v_n^2}$$
+
+For $\mathbf{v} = \begin{pmatrix} 3 \\ 4 \end{pmatrix}$:  $\|\mathbf{v}\| = \sqrt{9 + 16} = \sqrt{25} = 5$.
+
+```r
+v <- c(3, 4)
+sqrt(sum(v^2))   # 5
+sqrt(sum(v*v))   # same thing
+```
+
+- A vector of length 1 is a **unit vector** — pure direction, no magnitude.
+
+::: notes
+The norm is just the straight-line distance from the origin to the point — Pythagoras in n dimensions. Students already know Pythagoras, so this is a gentle on-ramp. Unit vectors matter because they isolate direction from size, which is exactly what cosine similarity will exploit in a few slides.
+:::
+
+## The dot product {.smaller}
+
+The **dot product** of two vectors multiplies matching components and sums:
+
+$$\mathbf{u} \cdot \mathbf{v} = u_1 v_1 + u_2 v_2 + \dots + u_n v_n$$
+
+Example: $\mathbf{u} = \begin{pmatrix} 3 \\ 2 \end{pmatrix}, \ \mathbf{v} = \begin{pmatrix} 1 \\ 4 \end{pmatrix}$
+$$\mathbf{u}\cdot\mathbf{v} = 3\cdot1 + 2\cdot4 = 3 + 8 = 11$$
+
+- The output is a single **number** (a scalar), not a vector.
+- Note: $\mathbf{v}\cdot\mathbf{v} = v_1^2 + \dots + v_n^2 = \|\mathbf{v}\|^2$ — the dot product of a vector with itself is its length squared.
+
+```r
+u <- c(3, 2); v <- c(1, 4)
+sum(u * v)        # 11
+u %*% v           # 11 (as a 1x1 matrix)
+```
+
+::: notes
+Define the dot product mechanically first (multiply-and-add) before any geometry. Make them compute the 11 by hand. Two key facts to plant: (1) the result is a scalar, (2) dotting a vector with itself recovers length-squared, linking back to the previous slide. In R both sum(u*v) and u %*% v work; %*% returns a 1x1 matrix, sum(u*v) returns a plain number.
+:::
+
+## What does the dot product *mean*?
+
+The geometric identity (this is the key formula of the day):
+
+$$\boxed{\ \mathbf{u} \cdot \mathbf{v} = \|\mathbf{u}\|\,\|\mathbf{v}\|\cos\theta\ }$$
+
+where $\theta$ is the angle between the two arrows.
+
+- Same direction ($\theta = 0$): $\cos\theta = 1$ → dot product is large & positive.
+- Right angle ($\theta = 90^\circ$): $\cos\theta = 0$ → dot product is **zero**.
+- Opposite ($\theta = 180^\circ$): $\cos\theta = -1$ → large & negative.
+
+So the dot product measures **how much two vectors point the same way**, scaled by their lengths.
+
+::: notes
+This boxed identity is the conceptual climax. The two definitions — "multiply-and-add" and "lengths times cosine of angle" — are the same number, and that coincidence is what makes linear algebra powerful. Walk through the three cases (aligned, perpendicular, opposite) slowly. The sign of the dot product alone already tells you whether two profiles broadly agree or disagree.
+:::
+
+## Cosine similarity: comparing two samples {.smaller}
+
+Rearrange the identity to solve for the angle:
+
+$$\cos\theta = \frac{\mathbf{u}\cdot\mathbf{v}}{\|\mathbf{u}\|\,\|\mathbf{v}\|}$$
+
+This is **cosine similarity** — it ranges from $-1$ to $1$ and ignores overall magnitude (it only cares about direction).
+
+- Why biologists love it: two samples of the same cell type have **similar shapes** of expression even if one was sequenced twice as deep. Cosine similarity sees them as nearly identical (close to 1); Euclidean distance would be fooled by the depth difference.
+
+```r
+cos_sim <- function(u, v) sum(u*v) / (sqrt(sum(u^2)) * sqrt(sum(v^2)))
+cos_sim(c(12,0,7), c(6,0,3.5))   # 1  -> same direction, different depth
+```
+
+::: notes
+Cosine similarity is THE payoff of the dot product for omics. Emphasise the depth-invariance: scaling a vector does not change its direction, so cosine similarity is unchanged. That is precisely why it is robust to sequencing-depth differences while raw Euclidean distance is not. The worked R example shows two profiles that differ only by a factor of 2 give cosine similarity exactly 1.
+:::
+
+## Orthogonality = a right angle
+
+Two vectors are **orthogonal** (perpendicular) exactly when their dot product is zero:
+
+$$\mathbf{u}\cdot\mathbf{v} = 0 \iff \theta = 90^\circ$$
+
+Example: $\begin{pmatrix} 2 \\ 0 \end{pmatrix} \cdot \begin{pmatrix} 0 \\ 5 \end{pmatrix} = 2\cdot0 + 0\cdot5 = 0$. Orthogonal.
+
+- Orthogonal directions carry **independent information** — no overlap.
+- This idea returns in force when we build PCA: the principal components are orthogonal axes.
+
+```r
+sum(c(2,0) * c(0,5))   # 0  -> perpendicular
+```
+
+::: notes
+Orthogonality is just "dot product equals zero", but it is one of the most reused ideas in the whole course. Flag forward to PCA: principal axes are chosen to be orthogonal precisely so each captures a non-overlapping piece of the variation. For now, the takeaway is the iff: zero dot product is the same statement as right angle.
+:::
+
+## Projection: the shadow of one vector on another {.smaller}
+
+The **projection** of $\mathbf{u}$ onto $\mathbf{v}$ is the shadow $\mathbf{u}$ casts on the line through $\mathbf{v}$ (imagine light coming straight down):
+
+$$\text{proj}_{\mathbf{v}}\mathbf{u} = \frac{\mathbf{u}\cdot\mathbf{v}}{\mathbf{v}\cdot\mathbf{v}}\;\mathbf{v}$$
+
+- The fraction $\dfrac{\mathbf{u}\cdot\mathbf{v}}{\mathbf{v}\cdot\mathbf{v}}$ is a **scalar**: "how many copies of $\mathbf{v}$".
+- Multiplying by $\mathbf{v}$ turns that scalar into a vector pointing along $\mathbf{v}$.
+- The leftover, $\mathbf{u} - \text{proj}_{\mathbf{v}}\mathbf{u}$, is **orthogonal** to $\mathbf{v}$.
+
+```r
+proj <- function(u, v) (sum(u*v) / sum(v*v)) * v
+proj(c(3,3), c(4,0))   # 3 0  -> shadow on the x-axis
+```
+
+::: notes
+Projection is "drop a perpendicular onto the line through v". Build it in two stages: first the scalar coefficient (how far along v), then re-attach the direction by multiplying by v. The orthogonal-leftover fact is the seed of least-squares regression and Gram–Schmidt later. The R example: projecting (3,3) onto the x-axis vector (4,0) gives (3,0) — the shadow on the floor.
+:::
+
+## Why projection matters biologically
+
+- **Regression / deconvolution**: expressing a sample as "so much of profile A plus so much of profile B" is a sequence of projections.
+- **Removing an unwanted axis**: subtract the projection of every sample onto a technical-artifact direction (e.g. a batch effect) to "regress it out".
+- **PCA preview**: projecting all samples onto the top principal axis is exactly what a PCA scatter plot shows.
+
+The dot product, cosine similarity, orthogonality, and projection are *all the same machinery* viewed from different angles.
+
+::: notes
+Tie the day together. Every later technique in the linear-algebra and PCA blocks is built from these four ideas. Regressing out a batch effect = subtracting a projection; a PCA score = a projection coordinate; comparing cell types = cosine similarity. They are not separate tools, just different uses of the dot product.
+:::
+
+## Summary {.smaller}
+
+| Idea | Formula | Output | Biology |
+|---|---|---|---|
+| Norm | $\|\mathbf{v}\| = \sqrt{\mathbf{v}\cdot\mathbf{v}}$ | scalar | overall magnitude / depth |
+| Dot product | $\mathbf{u}\cdot\mathbf{v} = \sum u_i v_i$ | scalar | agreement of two profiles |
+| Angle | $\cos\theta = \dfrac{\mathbf{u}\cdot\mathbf{v}}{\|\mathbf{u}\|\|\mathbf{v}\|}$ | $[-1,1]$ | cosine similarity of samples |
+| Orthogonal | $\mathbf{u}\cdot\mathbf{v}=0$ | yes/no | independent directions |
+| Projection | $\dfrac{\mathbf{u}\cdot\mathbf{v}}{\mathbf{v}\cdot\mathbf{v}}\mathbf{v}$ | vector | shadow / "how much of v" |
+
+**Next (Day 4):** a *matrix* is a function that transforms whole vectors at once.
+
+::: notes
+The summary table is the one-slide cheat sheet — everything traces back to the dot product. Remind students to do the exercise (by-hand AND R) and the quiz. Preview Day 4: so far we transformed single vectors by hand; tomorrow a matrix will transform vectors wholesale, and matrix-vector multiplication will turn out to be built from these very dot products.
+:::

@@ -1,0 +1,411 @@
+---
+title: "Hidden Markov Models"
+subtitle: "Day 9 — Quantitative biology"
+author: "Quantitative biology and integrative omics"
+format:
+  revealjs:
+    theme: [simple, ../theme.scss]
+    slide-number: c/t
+    width: 1280
+    height: 720
+    transition: slide
+    transition-speed: fast
+    highlight-style: github
+    code-overflow: wrap
+    code-line-numbers: false
+    incremental: false
+    chalkboard: false
+    menu: true
+---
+
+## About this lecture
+
+This is the **last and hardest** topic of the linear-algebra block. By the end
+you will be able to:
+
+- Explain why a **visible** Markov chain (Day 7) is not enough when the thing
+  you care about is **hidden**.
+- Name the four ingredients of a **Hidden Markov Model** (HMM): hidden states,
+  a transition matrix, emission probabilities, and an initial distribution.
+- Tell the **generative story** of an HMM and read off the probability of a
+  single hidden path with its observations.
+- State the **three classic problems** — likelihood, decoding, learning — and
+  which algorithm solves each.
+- Compute the probability of **one specific path** for a tiny 2-state HMM **by
+  hand**.
+
+Notation: hidden states with transition matrix $A$, emission matrix $B$,
+initial distribution $\boldsymbol{\pi}$; hidden sequence $\mathbf{z}$,
+observations $\mathbf{x}$.
+
+::: notes
+Welcome to day nine. This is the conceptual peak of the block, so we go slowly
+and lead with biology. Everything builds directly on the Markov chains from
+days seven and eight — the hidden layer of an HMM *is* exactly that chain. The
+only genuinely new idea today is that we do not get to see the states; we see
+noisy emissions instead. Today is concept and by-hand; tomorrow we fit HMMs in
+R on real-looking genome data.
+:::
+
+## Recap: a visible Markov chain (Day 7) {.smaller}
+
+A Markov chain has **states** and a **transition matrix** $A$ whose rows sum
+to 1. The **Markov property**: the next state depends only on the current one.
+
+Example over DNA bases — suppose we modelled which base follows which:
+
+$$
+A=\begin{array}{c c}
+ & \begin{array}{cccc} \ \ A\ \ & \ \ C\ \ & \ \ G\ \ & \ \ T\ \ \end{array}\\
+\begin{array}{c} A\\ C\\ G\\ T \end{array} &
+\left[\begin{array}{cccc}
+0.3 & 0.2 & 0.3 & 0.2\\
+0.2 & 0.3 & 0.3 & 0.2\\
+0.2 & 0.3 & 0.3 & 0.2\\
+0.3 & 0.2 & 0.2 & 0.3
+\end{array}\right]
+\end{array}
+$$
+
+Crucially, in this chain **the state IS the letter you read**. You observe the
+state directly.
+
+::: notes
+Remind them of the day-seven setup: a transition matrix with rows summing to
+one, and the one-step update being a matrix-vector product. Here I have made
+the *states* be the DNA letters themselves, so there is nothing hidden — you
+read the sequence, you know the state. Hold onto that, because the whole point
+of today is to break it: the states will become things we cannot read off
+directly.
+:::
+
+## The biology: where is the CpG island? {.smaller}
+
+Genomes are not uniform. Some stretches are **GC-rich** ("CpG-island-like",
+often near gene starts); the rest is **normal** background.
+
+You are handed a sequence:
+
+```
+... A T G C G C G C G G C C G C A T A T A A T T A C A ...
+        |________ GC-rich? ________|  |__ normal? __|
+```
+
+You can **see the letters** (A, C, G, T). You **cannot see** the label
+"GC-rich" vs "normal" — that label is the biology you actually want.
+
+The letters are **emissions**. The hidden region label is the **hidden state**.
+
+::: notes
+This is the motivating pairing for both days. A CpG island is a genomic region
+unusually rich in C and G; they often sit at promoters and matter for gene
+regulation. The key observation: nature does not annotate the sequence for you.
+You see A, C, G, T; you must *infer* which segments are islands. So there are
+two layers — a hidden layer of region labels and a visible layer of bases — and
+that is precisely a hidden Markov model.
+:::
+
+## Why the visible chain is not enough
+
+If the label "GC-rich vs normal" were written in the sequence, we would just
+read it — a plain Markov chain over labels (Day 7).
+
+But it is **not** written down. We only get the letters. Two different hidden
+states can emit the **same** letter:
+
+- A "GC-rich" region emits a `G` *often*.
+- A "normal" region emits a `G` *too*, just less often.
+
+So a single `G` does not tell you the state. The state is **hidden**; we must
+**infer** it from the pattern of emissions over a whole stretch.
+
+::: notes
+Hammer the limitation. A visible chain assumes you see the states. Here you do
+not, and the emissions are ambiguous: every base can come from either state,
+only with different probabilities. One letter is nearly useless; it is the
+*run* of letters that betrays the hidden state. That inference problem is what
+the HMM machinery is built to solve.
+:::
+
+## Two layers: the generative picture {.smaller}
+
+An HMM tells a **generative story** in two coupled layers:
+
+```
+hidden:   z1  ->  z2  ->  z3  ->  z4     (a Markov chain: GC-rich / normal)
+           |       |       |       |
+           v       v       v       v
+visible:  x1      x2      x3      x4      (emitted bases: A C G T)
+```
+
+- The **hidden** layer is a Day-7 Markov chain over states (here:
+  `GC-rich`, `normal`), governed by transition matrix $A$.
+- At **each** hidden state, you draw one **emission** (a base) from that
+  state's emission distribution, governed by matrix $B$.
+
+You only ever see the bottom row. The top row is hidden.
+
+::: notes
+This diagram is the mental model for the whole topic. Top row: the hidden chain
+hops between GC-rich and normal according to A, exactly the Markov chain we
+already know. Bottom row: every time we land in a hidden state, that state
+"speaks" a letter, drawn from its own emission distribution B. The arrows down
+are emissions; the arrows across are transitions. We observe only the bottom
+row and must reason backwards to the top.
+:::
+
+## The four ingredients of an HMM {.smaller}
+
+1. **Hidden states** — the things you cannot observe.
+   Here: $\{\text{GC-rich},\ \text{normal}\}$.
+2. **Transition matrix $A$** — how the hidden chain moves, rows sum to 1.
+   $A_{ij}=P(z_{t+1}=j \mid z_t=i)$. *This is the Day-7 Markov chain.*
+3. **Emission matrix $B$** — what each hidden state emits, rows sum to 1.
+   $B_{ik}=P(x_t=k \mid z_t=i)$ (one row per state, one column per symbol).
+4. **Initial distribution $\boldsymbol{\pi}$** — where the chain starts,
+   $\pi_i=P(z_1=i)$, entries sum to 1.
+
+An HMM is the triple $(A, B, \boldsymbol{\pi})$ plus the lists of states and
+symbols.
+
+::: notes
+List the four ingredients and keep emphasising which is old and which is new.
+A and pi are pure Markov-chain objects from day seven. The genuinely new piece
+is B, the emission matrix: for every hidden state, a probability distribution
+over the symbols you can observe. Note both A and B have rows that sum to one,
+but they are different shapes — A is states-by-states, B is states-by-symbols.
+:::
+
+## A tiny concrete 2-state HMM {.smaller}
+
+States $\{H, L\}$ — **H** = "GC-rich (high)", **L** = "normal (low)".
+Symbols: the bases $\{A, C, G, T\}$.
+
+$$
+\boldsymbol{\pi}=\begin{bmatrix} 0.5 \\ 0.5 \end{bmatrix}, \qquad
+A=\begin{array}{cc}
+ & \begin{array}{cc} H & L \end{array}\\
+\begin{array}{c} H\\ L \end{array} &
+\left[\begin{array}{cc} 0.8 & 0.2 \\ 0.3 & 0.7 \end{array}\right]
+\end{array}
+$$
+
+$$
+B=\begin{array}{c}
+ \begin{array}{cccc} \ A\  & \ C\  & \ G\  & \ T\  \end{array}\\
+\begin{array}{c} \end{array}
+\left[\begin{array}{cccc}
+0.1 & 0.4 & 0.4 & 0.1 \\
+0.3 & 0.2 & 0.2 & 0.3
+\end{array}\right]
+\end{array}
+\begin{array}{c} H\\ L \end{array}
+$$
+
+Read $B$: state $H$ emits C or G with prob 0.4 each (GC-rich!); state $L$
+spreads probability more evenly.
+
+::: notes
+This is the example we will compute with by hand, and again in R tomorrow, so
+introduce it carefully. Pi says we start in either state with equal chance. A
+says both states are sticky — H stays H with probability 0.8, L stays L with
+0.7 — which encodes that islands and background come in runs. B is the new
+object: the high state loves C and G, the low state is roughly uniform. Sanity
+check every row sums to one.
+:::
+
+## The generative story, step by step {.smaller}
+
+To **generate** a sequence of length 3 from this HMM:
+
+1. Draw $z_1$ from $\boldsymbol{\pi}$. Say $z_1 = H$.
+2. Emit $x_1$ from row $H$ of $B$. Say $x_1 = G$ (prob 0.4).
+3. Move: draw $z_2$ from row $H$ of $A$. Say $z_2 = H$ (prob 0.8).
+4. Emit $x_2$ from row $H$ of $B$. Say $x_2 = C$ (prob 0.4).
+5. Move: draw $z_3$ from row $H$ of $A$. Say $z_3 = L$ (prob 0.2).
+6. Emit $x_3$ from row $L$ of $B$. Say $x_3 = A$ (prob 0.3).
+
+We **observe** only $\mathbf{x} = (G, C, A)$. The path
+$\mathbf{z} = (H, H, L)$ is hidden.
+
+::: notes
+Walk through generation as a recipe, alternating transition and emission. Start
+state from pi, emit, transition, emit, transition, emit. Each choice has a
+probability attached. The student sees only the emitted letters G C A; the path
+H H L is invisible. The next slide multiplies all those probabilities together,
+which is the single most important by-hand skill for the exam.
+:::
+
+## Probability of ONE path with its emissions {.smaller}
+
+The HMM is a product of independent choices, so multiply along the story.
+For path $\mathbf{z}=(H,H,L)$ and observations $\mathbf{x}=(G,C,A)$:
+
+$$
+P(\mathbf{x},\mathbf{z})
+= \underbrace{\pi_H}_{\text{start}}\,
+  \underbrace{B_{H,G}}_{\text{emit}}\,
+  \underbrace{A_{H,H}}_{\text{move}}\,
+  \underbrace{B_{H,C}}_{\text{emit}}\,
+  \underbrace{A_{H,L}}_{\text{move}}\,
+  \underbrace{B_{L,A}}_{\text{emit}}
+$$
+
+$$
+= 0.5 \times 0.4 \times 0.8 \times 0.4 \times 0.2 \times 0.3 = 0.003840.
+$$
+
+The pattern: **start prob → (emit, transition, emit, transition, …, emit)**.
+One $\boldsymbol{\pi}$, then alternate $B$ and $A$, ending on an emission.
+
+::: notes
+This is THE formula to memorise. The joint probability of a hidden path and its
+observations is just the product of: the initial probability, then for each
+position the emission probability, and between positions the transition
+probability. Count the factors: for length T you get one pi, T emissions, and
+T minus one transitions. Do this multiplication slowly; on the exam this is
+where marks are won. Note the answer is small — products of probabilities
+shrink fast, which is why real implementations work in log space.
+:::
+
+## Three classic problems {.smaller}
+
+Given an HMM and an observed sequence $\mathbf{x}$, three questions:
+
+1. **Likelihood** — how probable is $\mathbf{x}$ under the model,
+   $P(\mathbf{x})$? Summed over **all** hidden paths.
+   → **Forward algorithm**.
+2. **Decoding** — what is the single **most likely hidden path**
+   $\mathbf{z}^\*$? → **Viterbi algorithm**. *(This is what predicts the
+   islands.)*
+3. **Learning** — given only unlabelled $\mathbf{x}$, estimate
+   $(A, B, \boldsymbol{\pi})$. → **Baum–Welch** (an EM algorithm).
+
+Today: the concepts. Tomorrow: all three in R.
+
+::: notes
+Frame the three problems as three different questions you might ask of the same
+model and data. Likelihood scores the whole model; you need it to compare
+models. Decoding gives you the annotation — the most probable sequence of
+hidden labels — which is literally the predicted island map. Learning is the
+hardest: estimating the parameters when you have only raw sequence and no
+labels. Name the algorithm for each but do not derive them; that is beyond
+scope. The R functions tomorrow are forward, viterbi, baumWelch.
+:::
+
+## Why summing over paths matters (likelihood) {.smaller}
+
+The path $(H,H,L)$ is **one** way to produce $\mathbf{x}=(G,C,A)$. But
+$(H,H,H)$, $(L,H,L)$, … could also produce it.
+
+The **likelihood** of the data is the sum over **every** hidden path:
+
+$$
+P(\mathbf{x}) = \sum_{\text{all paths } \mathbf{z}} P(\mathbf{x}, \mathbf{z}).
+$$
+
+For 2 states and length 3 that is $2^3 = 8$ paths — fine by hand. For a real
+chromosome ($2^{\text{millions}}$ paths) it is hopeless by brute force; the
+**forward algorithm** does it efficiently by reusing partial sums.
+
+::: notes
+Stress the distinction between the joint probability of a specific path, which
+we just computed, and the likelihood of the data, which marginalises over all
+possible paths. The naive sum has a number of terms exponential in the sequence
+length, so you cannot enumerate it for a genome. The forward algorithm is the
+clever bookkeeping that collapses this to a linear-time computation by carrying
+forward partial probabilities — conceptually like reusing work, not unlike the
+matrix iterations from day eight. We will only call it, not implement it.
+:::
+
+## Decoding: the most likely path (Viterbi) {.smaller}
+
+Decoding asks for the **single best** hidden path:
+
+$$
+\mathbf{z}^\* = \arg\max_{\mathbf{z}} \; P(\mathbf{z}\mid \mathbf{x}).
+$$
+
+The **Viterbi algorithm** finds it efficiently (same trick as forward, but
+keeping the best path instead of the total).
+
+For islands: run Viterbi, then **read off the runs of `H`** — those are your
+**predicted CpG islands**. This turns a probabilistic model into a concrete
+genome annotation.
+
+::: notes
+Decoding is the payoff for biology. Viterbi returns one hidden-state label per
+position; wherever it says H you have a predicted GC-rich segment, and the
+maximal runs of H are your predicted islands. Mechanically Viterbi is the same
+dynamic program as forward but takes a max instead of a sum and remembers which
+choice gave it, so it can trace the best path back. Tomorrow the viterbi
+function does this in one line.
+:::
+
+## Learning: where do A, B, π come from? {.smaller}
+
+So far we **assumed** the numbers in $A, B, \boldsymbol{\pi}$. Where do they
+come from?
+
+- **If you have labelled data** (sequences with known island annotations):
+  just **count** transitions and emissions and normalise. Easy.
+- **If you only have raw sequence** (no labels — the usual case):
+  **Baum–Welch** iterates "guess the hidden states, re-estimate the
+  parameters, repeat" until it converges. It is the **EM algorithm** for HMMs.
+
+Caveat: Baum–Welch finds a **local** optimum — the starting guess matters, and
+results need a sanity check.
+
+::: notes
+Address the obvious question: who told us the matrices? With labelled data,
+parameter estimation is just counting and normalising, like estimating any
+conditional probability. The realistic case has no labels, and Baum-Welch — an
+expectation-maximisation method — alternates between softly inferring the hidden
+states and re-fitting the parameters. Flag two practical warnings now so they
+are not surprised tomorrow: it only finds a local optimum, and it is sensitive
+to initialisation.
+:::
+
+## HMM vs visible Markov chain — the contrast {.smaller}
+
+| | Visible Markov chain (Day 7) | Hidden Markov Model (today) |
+|--|--|--|
+| States | **observed** directly | **hidden** — must be inferred |
+| Parameters | transition matrix $A$ | $A$ **and** emission matrix $B$ |
+| You see | the states | only the **emissions** $\mathbf{x}$ |
+| Core question | how does the chain evolve? | what hidden states explain what I see? |
+| Biology | base-to-base model | island vs background **segmentation** |
+
+An HMM = a Day-7 Markov chain on the hidden layer **plus** an emission layer.
+
+::: notes
+This table is the one-slide summary of the whole conceptual jump. The chain
+machinery is identical; the addition is the emission layer and the fact that
+states are no longer observed. If a student leaves understanding only this
+table and the path-probability formula, today succeeded. Re-emphasise that
+everything from days seven and eight still applies to the hidden layer.
+:::
+
+## Summary
+
+- A genome's **island vs background** label is **hidden**; you see only the
+  **bases**. That is exactly an HMM.
+- An HMM = **hidden states** + transition matrix $A$ (the Day-7 chain) +
+  **emission matrix** $B$ + initial distribution $\boldsymbol{\pi}$.
+- **Generative story:** start from $\boldsymbol{\pi}$, then alternate
+  *emit* ($B$) and *move* ($A$). The probability of one path-with-emissions is
+  the **product** of those factors.
+- **Three problems:** likelihood (**forward**), decoding (**Viterbi**),
+  learning (**Baum–Welch**).
+
+**Next:** Day 10 — fit and decode these HMMs in R with the `HMM` package on
+genome-like sequence.
+
+::: notes
+Recap the four beats: the biology motivation, the four ingredients, the
+generative product formula, and the three problems with their algorithms. The
+exercise drills the by-hand path probability and the conceptual contrast; the
+quiz checks the vocabulary, since this is the hardest day. Tomorrow we stop
+assuming the matrices and let R both decode and learn them, then point forward
+to PCA, Bayesian stats, and single-cell in the weeks ahead.
+:::

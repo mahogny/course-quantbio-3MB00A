@@ -1,0 +1,201 @@
+---
+title: "Exercise: matrices as transformations"
+format:
+  html:
+    toc: true
+    code-copy: true
+    code-overflow: wrap
+    highlight-style: github
+---
+
+## Goal
+
+By the end of this exercise you should be able to:
+
+- multiply a matrix by a vector **by hand** (row · vector), and read it as a linear combination of columns,
+- recognise and build **identity**, **scaling**, and **rotation** matrices,
+- read off what a matrix does by looking at where the **unit axes** land,
+- **compose** transformations by multiplying matrices, and explain why order matters,
+- do all of this in R with [`%*%`](https://rdrr.io/r/base/matmult.html), transforming a whole dataset at once.
+
+This is an **R-heavy walkthrough day**. Do the few by-hand problems for exam fluency, but spend most of your time running and modifying the R blocks and *looking at the plots*.
+
+## Background
+
+A matrix $A$ is a function on vectors: $\mathbf{x}\mapsto A\mathbf{x}$.
+
+**Row recipe (for computing by hand):** each output entry is the dot product of a *row* of $A$ with $\mathbf{x}$.
+$$\begin{pmatrix} a & b \\ c & d \end{pmatrix}\begin{pmatrix} x \\ y \end{pmatrix} = \begin{pmatrix} ax + by \\ cx + dy \end{pmatrix}$$
+
+**Column view (for understanding):** $A\mathbf{x}$ is a linear combination of the columns of $A$, weighted by the entries of $\mathbf{x}$.
+
+| Transformation | Matrix |
+|---|---|
+| Identity (do nothing) | $\begin{pmatrix}1&0\\0&1\end{pmatrix}$ |
+| Scaling | $\begin{pmatrix}s_1&0\\0&s_2\end{pmatrix}$ |
+| Rotation by $\theta$ | $\begin{pmatrix}\cos\theta&-\sin\theta\\\sin\theta&\cos\theta\end{pmatrix}$ |
+
+Composition: applying $B$ then $A$ equals the single matrix $AB$ (rightmost acts first). In general $AB \neq BA$.
+
+## By hand
+
+**B1.** Compute $\begin{pmatrix} 2 & 1 \\ 0 & 3 \end{pmatrix}\begin{pmatrix} 4 \\ 1 \end{pmatrix}$ using the row recipe.
+
+**B2.** Redo B1 as a **linear combination of the columns** of the matrix. Confirm you get the same answer.
+
+**B3.** What does $\begin{pmatrix} 3 & 0 \\ 0 & 1 \end{pmatrix}$ do to a point geometrically? Apply it to $(1,1)$, $(2,0)$ and $(0,5)$.
+
+**B4.** Write down the rotation matrix for $\theta = 90^\circ$ (use $\cos 90^\circ = 0$, $\sin 90^\circ = 1$). Apply it to the x-axis unit vector $(1,0)$ and to $(0,1)$. Where do the axes land?
+
+**B5.** Without multiplying anything out, state where the two standard axes $(1,0)$ and $(0,1)$ land under $A = \begin{pmatrix} 2 & -1 \\ 1 & 3 \end{pmatrix}$. (Hint: look at the columns.)
+
+**B6.** Let $A = \begin{pmatrix} 2 & 0 \\ 0 & 1 \end{pmatrix}$ (scale x by 2) and $B = \begin{pmatrix} 0 & -1 \\ 1 & 0 \end{pmatrix}$ (rotate $90^\circ$). Compute both $AB$ and $BA$ by hand and show they differ.
+
+## In R
+
+Work through every block. Change numbers and re-run to build intuition.
+
+### Matrix–vector product
+
+```r
+A <- matrix(c(2, 1,
+              0, 3), nrow = 2, byrow = TRUE)
+x <- c(4, 1)
+A %*% x          # check against B1:  9  3
+
+# elementwise * is NOT matrix multiplication -- see the difference:
+A * x            # wrong tool here; recycles x down the columns
+```
+
+### Identity and scaling, applied to a whole dataset
+
+Store sample points as **columns** so one `%*%` transforms them all.
+
+```r
+I <- diag(2)
+S <- diag(c(3, 1))      # stretch x by 3, leave y
+
+pts <- matrix(c( 1, 1,
+                 2, 0,
+                 0, 5), nrow = 2)   # 3 points as columns
+I %*% pts                # unchanged
+S %*% pts                # x-coordinates tripled
+```
+
+### Rotation, with a plot
+
+```r
+rot <- function(theta) {
+  matrix(c(cos(theta), -sin(theta),
+           sin(theta),  cos(theta)), nrow = 2, byrow = TRUE)
+}
+
+# a little square of points (as columns)
+square <- matrix(c( 1, 1,
+                   -1, 1,
+                   -1,-1,
+                    1,-1), nrow = 2)
+
+R <- rot(pi/4)                       # 45 degrees
+rotated <- R %*% square
+
+plot(t(square),  xlim=c(-2,2), ylim=c(-2,2), pch=19, asp=1,
+     xlab="feature 1", ylab="feature 2")
+points(t(rotated), col="red", pch=19)
+# black = before, red = after (note: t() because plot wants points as ROWS)
+```
+
+### Composition: order matters
+
+```r
+A <- diag(c(2, 1))                   # scale x by 2
+B <- rot(pi/2)                       # rotate 90 deg
+
+scale_then_rotate <- B %*% A         # A acts first
+rotate_then_scale <- A %*% B         # B acts first
+
+round(scale_then_rotate %*% c(1, 0), 3)
+round(rotate_then_scale %*% c(1, 0), 3)
+# different outputs -> AB != BA
+```
+
+### Tasks
+
+**R1.** In the matrix–vector block, explain in one sentence why `A * x` gives a different (wrong) result than `A %*% x`.
+
+**R2.** Modify the rotation block to rotate by $30^\circ$ instead of $45^\circ$ and confirm the square's corners move but its size does not (a rotation preserves length — check with `sqrt(colSums(rotated^2))`).
+
+**R3.** Build a single matrix `T` that **first** rotates by $90^\circ$ and **then** scales x by 2, as one matrix. Apply it to `square` in one `%*%`. (Hint: which of `A %*% B` / `B %*% A` is "rotate first"?)
+
+**R4.** A design-matrix flavour. Let
+```r
+X <- matrix(c(1, 0,
+              1, 0,
+              1, 1,
+              1, 1), nrow = 4, byrow = TRUE)   # 4 samples: 2 control, 2 treated
+beta <- c(5, 3)   # baseline = 5, treatment effect = +3
+X %*% beta
+```
+Read off the predicted expression for each sample and explain, in terms of the columns of `X`, why the treated samples come out higher.
+
+## Hints
+
+::: {.callout-tip collapse="true" title="Hint 1 — multiply, do not use *"}
+Matrix multiplication is [`%*%`](https://rdrr.io/r/base/matmult.html). Plain `*` is elementwise and will silently recycle and give a wrong-shaped or wrong-valued result. Always use `%*%` for $A\mathbf{x}$ and $AB$.
+:::
+
+::: {.callout-tip collapse="true" title="Hint 2 — building matrices the right way up"}
+[`matrix`](https://rdrr.io/r/base/matrix.html) fills **column by column** by default. Pass `byrow = TRUE` to fill row by row so the R matrix matches what you wrote on paper. Always print the matrix to confirm before using it.
+:::
+
+::: {.callout-tip collapse="true" title="Hint 3 — identity and scaling matrices"}
+[`diag(2)`](https://rdrr.io/r/base/diag.html) makes the $2\times2$ identity. `diag(c(s1, s2))` makes a diagonal **scaling** matrix. Diagonal matrices stretch each axis independently.
+:::
+
+::: {.callout-tip collapse="true" title="Hint 4 — samples as columns, transpose for plotting"}
+Store samples as **columns** so a single `A %*% data` transforms all of them. But [`plot`](https://rdrr.io/r/graphics/plot.default.html) expects points as **rows**, so plot `t(data)` (see [`t`](https://rdrr.io/r/base/t.html)). Use `asp = 1` so rotations look like rotations and not ellipses.
+:::
+
+::: {.callout-tip collapse="true" title="Hint 5 — composition order"}
+$AB$ means "apply $B$ first, then $A$" (rightmost first). So "rotate then scale" with rotation `R` and scaling `S` is `S %*% R`. In R, just multiply the matrices with `%*%`, then apply the product to your data.
+:::
+
+## Solutions
+
+::: {.callout-note collapse="true" title="Solution"}
+
+**B1.** Row 1: $2\cdot4 + 1\cdot1 = 9$. Row 2: $0\cdot4 + 3\cdot1 = 3$. Result $(9,\ 3)$.
+
+**B2.** $4\begin{pmatrix}2\\0\end{pmatrix} + 1\begin{pmatrix}1\\3\end{pmatrix} = (8,0) + (1,3) = (9,\ 3)$ — same answer.
+
+**B3.** It triples the x-coordinate and leaves y unchanged (stretch along x by 3). $(1,1)\to(3,1)$, $(2,0)\to(6,0)$, $(0,5)\to(0,5)$.
+
+**B4.** $R = \begin{pmatrix}0&-1\\1&0\end{pmatrix}$. $R(1,0) = (0,1)$ and $R(0,1) = (-1,0)$. The x-axis swings up to the y-axis; the y-axis swings to the negative x-axis (a $90^\circ$ counter-clockwise turn).
+
+**B5.** Columns are the images of the axes: $(1,0)\to(2,1)$ (first column) and $(0,1)\to(-1,3)$ (second column).
+
+**B6.**
+$AB = \begin{pmatrix}2&0\\0&1\end{pmatrix}\begin{pmatrix}0&-1\\1&0\end{pmatrix} = \begin{pmatrix}0&-2\\1&0\end{pmatrix}$.
+$BA = \begin{pmatrix}0&-1\\1&0\end{pmatrix}\begin{pmatrix}2&0\\0&1\end{pmatrix} = \begin{pmatrix}0&-1\\2&0\end{pmatrix}$.
+These differ, so $AB \neq BA$ — order matters.
+
+**R1.** `A %*% x` performs row-dot-vector (true matrix multiplication, giving $(9,3)$); `A * x` multiplies elementwise, recycling `x` down the columns of `A`, which is a different operation entirely and not the linear transformation we want.
+
+**R2.** With `R <- rot(pi/6)`, the corners rotate but `sqrt(colSums(rotated^2))` returns the same lengths as `sqrt(colSums(square^2))` (all $\sqrt2$), confirming a rotation preserves length.
+
+**R3.** "Rotate first, then scale" = `T <- A %*% B` where `B` is the rotation and `A` the scaling (rightmost acts first). Then `T %*% square` applies both in one step.
+
+```r
+A <- diag(c(2, 1)); B <- rot(pi/2)
+T <- A %*% B
+T %*% square
+```
+
+**R4.** `X %*% beta` gives `c(5, 5, 8, 8)`. The first column of `X` is all 1s, so every sample gets the baseline 5; the second column is 1 only for treated samples, so they additionally pick up the treatment effect 3, giving 8. The output is a linear combination of `X`'s columns weighted by `beta` — exactly the matrix-as-transformation idea, here mapping effect sizes to predicted expression.
+:::
+
+## Where this leads
+
+- **Day 5–6 (eigenvalues):** for a given transformation, are there special directions that get *only stretched*, never rotated? Those eigenvectors expose the structure of a matrix and are the mathematical core of **PCA**.
+- **Day 7–8 (Markov chains):** a transition matrix is a transformation applied *repeatedly* — multiply by the matrix again and again to evolve a distribution forward in time.
+- **PCA (Week 2):** rotating the cloud of samples to new, more informative axes is exactly composing rotation matrices with your data, the operation you practised today.

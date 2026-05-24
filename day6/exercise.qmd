@@ -1,0 +1,182 @@
+---
+title: "Exercise: eigenvalues in R with eigen()"
+format:
+  html:
+    toc: true
+    code-copy: true
+    code-overflow: wrap
+    highlight-style: github
+---
+
+## Goal
+
+By the end of this exercise you should be able to:
+
+- call [`eigen`](https://rdrr.io/r/base/eigen.html) and read its `$values` and `$vectors`,
+- pull out the $k$-th eigenvector (a **column**) and pair it with its eigenvalue,
+- **verify** $A\mathbf{v} = \lambda\mathbf{v}$ in R, using [`all.equal`](https://rdrr.io/r/base/all.equal.html) for floating-point safety,
+- **reconstruct** a matrix as $A = V\Lambda V^{-1}$, and as $A = V\Lambda V^\top$ when it is symmetric,
+- compute a **covariance matrix** with [`cov`](https://rdrr.io/r/stats/cor.html) and eigen-decompose it, and show the leading eigenvector points along the **main axis of variation**.
+
+This is an **R-heavy walkthrough day**. Run every block, change numbers, and look at the plots. The by-hand intuition from Day 5 is what makes the output meaningful.
+
+## Background
+
+For a square matrix $A$, `eigen(A)` returns a list:
+
+- `$values` — the eigenvalues. For a **symmetric** matrix they come **largest-first**.
+- `$vectors` — a matrix whose **columns** are the (unit-length) eigenvectors; column $k$ pairs with `$values[k]`.
+
+Eigenvectors are unique only up to **scale and sign**, so R's unit-length vector may be the negative of your hand answer — same direction, still correct.
+
+**Reconstruction.** With $V$ = eigenvectors (columns) and $\Lambda = \text{diag}(\text{eigenvalues})$:
+$$A = V\,\Lambda\,V^{-1}, \qquad\text{and for symmetric } A:\quad A = V\,\Lambda\,V^\top .$$
+
+**Biology.** The covariance matrix `cov(X)` (with samples in **rows**, features in **columns**) is symmetric. Its leading eigenvector is the direction of greatest variation — the engine of PCA.
+
+## By hand
+
+Just a couple, to keep your Day-5 fluency warm and to predict what R will print.
+
+**B1.** For $A = \begin{pmatrix} 2 & 1 \\ 1 & 2 \end{pmatrix}$ you found $\lambda = 3, 1$ with eigenvectors $(1,1)$ and $(1,-1)$. R returns unit-length vectors — what numbers should appear in `eigen(A)$vectors`? (Divide each by its length.)
+
+**B2.** A covariance matrix $C = \begin{pmatrix} 4 & 2 \\ 2 & 4 \end{pmatrix}$. Predict its two eigenvalues by hand, and say which eigenvector is the leading one (the main axis of variation).
+
+## In R
+
+Work through every block in order. Re-run with your own numbers to build intuition.
+
+### 1. Decompose and read the output
+
+```r
+A <- matrix(c(2, 1,
+              1, 2), nrow = 2, byrow = TRUE)
+e <- eigen(A)
+e$values            # 3 1   (largest first)
+e$vectors           # eigenvectors in COLUMNS, each length 1
+
+e$values[1]         # 3
+e$vectors[, 1]      # eigenvector paired with lambda = 3
+e$vectors[, 2]      # eigenvector paired with lambda = 1
+```
+
+### 2. Verify the eigen relation
+
+```r
+lambda <- e$values[1]
+v      <- e$vectors[, 1]
+
+A %*% v             # should equal lambda * v
+lambda * v
+
+# == is unsafe for floats; use all.equal
+all.equal(as.vector(A %*% v), lambda * v)   # TRUE
+```
+
+### 3. Reconstruct the matrix
+
+```r
+V      <- e$vectors
+Lambda <- diag(e$values)
+
+# general formula
+V %*% Lambda %*% solve(V)      # rebuilds A
+
+# symmetric shortcut (A is symmetric here)
+isSymmetric(A)                 # TRUE
+V %*% Lambda %*% t(V)          # also rebuilds A, no inverse needed
+crossprod(V)                   # V^T V = identity -> columns orthonormal
+```
+
+### 4. Biology: covariance and the main axis of variation
+
+```r
+set.seed(1)
+n  <- 200
+g1 <- rnorm(n)
+g2 <- 0.8 * g1 + rnorm(n, sd = 0.4)   # gene 2 tracks gene 1 + noise
+X  <- cbind(g1, g2)                   # rows = cells, cols = genes
+
+C  <- cov(X)                          # symmetric 2x2 covariance
+ec <- eigen(C)
+ec$values                             # variance along each eigen-axis
+pc1 <- ec$vectors[, 1]                # leading eigenvector
+
+plot(X, asp = 1, pch = 19, col = "grey40",
+     xlab = "gene 1", ylab = "gene 2")
+m <- colMeans(X)
+arrows(m[1], m[2], m[1] + 2*pc1[1], m[2] + 2*pc1[2],
+       col = "red", lwd = 3)
+# red arrow lies along the long axis of the cloud
+```
+
+### Tasks
+
+**R1.** Run block 1 and confirm `eigen(A)$vectors[, 1]` matches your **B1** prediction (up to sign).
+
+**R2.** In block 2, replace `e$vectors[, 1]` with `e$vectors[, 2]` and `e$values[1]` with `e$values[2]`, and re-verify $A\mathbf{v}=\lambda\mathbf{v}$ for the **second** eigenpair.
+
+**R3.** Make `A` non-symmetric, e.g. `A <- matrix(c(2, 1, 0, 3), 2, byrow = TRUE)`. Run `eigen(A)`. Do the eigenvectors come out orthogonal? Check with `crossprod(eigen(A)$vectors)` — is it the identity? Why or why not?
+
+**R4.** For block 4, compute the **fraction of total variance** captured by the leading axis: `ec$values[1] / sum(ec$values)`. (This number is what PCA calls "proportion of variance explained by PC1".)
+
+**R5.** Increase the noise: set `sd = 1.5` when making `g2`, rebuild `X`, `C`, and `ec`. How does the leading eigenvalue's *share* of the variance change, and what does the cloud look like? Explain in one sentence.
+
+**R6.** Confirm the symmetric reconstruction numerically: with `C` and its `ec` from block 4, check `all.equal(C, ec$vectors %*% diag(ec$values) %*% t(ec$vectors))` returns `TRUE`.
+
+**R7. (complex eigenvalues)** Run `eigen(matrix(c(0, -1, 1, 0), 2, byrow = TRUE))`. What kind of numbers are the eigenvalues, and how does that match the fact that a $90^\circ$ rotation has no real eigen-direction (Day 5)?
+
+## Hints
+
+::: {.callout-tip collapse="true" title="Hint 1 — eigenvectors are columns"}
+`eigen(A)$vectors[, k]` is the $k$-th eigenvector and pairs with `eigen(A)$values[k]`. Grabbing a *row* by mistake gives the wrong vector. See [`eigen`](https://rdrr.io/r/base/eigen.html).
+:::
+
+::: {.callout-tip collapse="true" title="Hint 2 — compare floats with all.equal, not =="}
+`A %*% v` and `lambda * v` agree only to ~15 digits because of floating point. Use [`all.equal`](https://rdrr.io/r/base/all.equal.html)`(as.vector(A %*% v), lambda * v)`, which returns `TRUE` when they match within tolerance. (`A %*% v` is a column matrix, hence `as.vector`.)
+:::
+
+::: {.callout-tip collapse="true" title="Hint 3 — building V and Lambda"}
+`V <- e$vectors` already has eigenvectors in columns. [`diag`](https://rdrr.io/r/base/diag.html)`(e$values)` turns the eigenvalue vector into the diagonal matrix $\Lambda$. The inverse is [`solve`](https://rdrr.io/r/base/solve.html)`(V)`; the transpose is [`t`](https://rdrr.io/r/base/t.html)`(V)`.
+:::
+
+::: {.callout-tip collapse="true" title="Hint 4 — symmetric vs general"}
+For symmetric $A$, eigenvectors are orthonormal, so $V^{-1} = V^\top$ and `crossprod(V)` (which is $V^\top V$, see [`crossprod`](https://rdrr.io/r/base/crossprod.html)) is the identity. For a non-symmetric $A$ this fails — the eigenvectors are generally **not** orthogonal.
+:::
+
+::: {.callout-tip collapse="true" title="Hint 5 — covariance orientation"}
+[`cov`](https://rdrr.io/r/stats/cor.html)`(X)` expects samples in **rows** and features in **columns**. Build `X <- cbind(g1, g2)`. The result is symmetric: variances on the diagonal, covariance off-diagonal.
+:::
+
+::: {.callout-tip collapse="true" title="Hint 6 — proportion of variance"}
+Total variance = `sum(ec$values)`. The share along the leading axis is `ec$values[1] / sum(ec$values)`. More noise makes the cloud rounder, so this share drops toward 0.5.
+:::
+
+## Solutions
+
+::: {.callout-note collapse="true" title="Solution"}
+
+**B1.** Each hand eigenvector has length $\sqrt{1^2+1^2} = \sqrt2$, so the unit versions are $(1,1)/\sqrt2 \approx (0.707, 0.707)$ and $(1,-1)/\sqrt2 \approx (0.707, -0.707)$. R may flip a sign on either.
+
+**B2.** $(4-\lambda)^2 - 4 = 0 \Rightarrow 4-\lambda = \pm2 \Rightarrow \lambda = 6, 2$. The leading eigenvector (for $\lambda = 6$) is $(1,1)$ — the main axis of variation. (Checks: trace $8 = 6+2$, det $16-4 = 12 = 6\cdot2$.)
+
+**R1.** `eigen(A)$vectors[, 1]` prints `0.7071068 0.7071068` (or its negative), matching B1.
+
+**R2.** With `lambda <- e$values[2]` and `v <- e$vectors[, 2]`, both `A %*% v` and `lambda * v` equal $1\cdot v$, and `all.equal(...)` is `TRUE`.
+
+**R3.** For `A <- matrix(c(2,1,0,3), 2, byrow = TRUE)`, `eigen(A)$vectors` are **not** orthogonal, so `crossprod(eigen(A)$vectors)` is **not** the identity. The orthogonality guarantee only holds for **symmetric** matrices (spectral theorem); this $A$ is not symmetric.
+
+**R4.** `ec$values[1] / sum(ec$values)` is about `0.939` — roughly 94% of the variance lies along the leading axis, because the two genes are strongly correlated (a thin, elongated cloud).
+
+**R5.** With `sd = 1.5`, gene 2 is noisier and less tied to gene 1, so the cloud becomes rounder; the leading eigenvalue's *share* of total variance drops from about 0.94 to about 0.82. The two genes share less common variation, so the single leading axis no longer dominates as strongly. (Push the noise much higher and the noisy gene's own variance eventually dominates instead — try `sd = 4` and watch the leading axis swing toward the gene-2 direction.)
+
+**R6.** `all.equal(C, ec$vectors %*% diag(ec$values) %*% t(ec$vectors))` returns `TRUE` — the symmetric reconstruction $V\Lambda V^\top$ rebuilds the covariance matrix exactly (within floating-point tolerance).
+
+**R7.** `eigen(matrix(c(0,-1,1,0), 2, byrow = TRUE))$values` returns **complex** numbers `0+1i` and `0-1i`. A $90^\circ$ rotation moves every real direction, so it has no real eigenvector; the eigenvalues are imaginary, consistent with the characteristic equation $\lambda^2 + 1 = 0$ from Day 5.
+:::
+
+## Where this leads
+
+- **PCA (Week 2):** today's `eigen(cov(X))` is the heart of PCA. PCA adds mean-centring, projecting samples onto the eigenvectors to get **scores**, and ordering components by **variance explained** (your R4 number). It scales to thousands of genes at once.
+- **Day 7–8 (Markov chains):** you will apply a transition matrix repeatedly; the **stationary distribution** is the eigenvector with eigenvalue $\lambda = 1$, found with the same `eigen()` you used today.
+- **Numerical habit:** comparing floats with `all.equal` and remembering eigenvectors are sign/scale-free will save you throughout the course.

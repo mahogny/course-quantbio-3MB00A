@@ -1,0 +1,201 @@
+---
+title: "Quiz: Hidden Markov Models"
+format:
+  html:
+    toc: true
+    code-copy: true
+    code-overflow: wrap
+    highlight-style: github
+---
+
+Short questions to test your understanding of HMMs: the four ingredients, the
+generative story, the path-probability formula, and the three classic problems.
+This is the hardest day of the block, so make sure the vocabulary is solid. Try
+each question before opening the hint or answer.
+
+Throughout, use the Day-9 model: states $\{H,L\}$ (H = GC-rich, L = normal),
+symbols $\{A,C,G,T\}$,
+$$
+\boldsymbol{\pi}=\begin{bmatrix}0.5\\0.5\end{bmatrix},\quad
+A=\begin{bmatrix}0.8&0.2\\0.3&0.7\end{bmatrix}\ (HL\times HL),\quad
+B=\begin{bmatrix}0.1&0.4&0.4&0.1\\0.3&0.2&0.2&0.3\end{bmatrix}\ (ACGT).
+$$
+
+---
+
+**Q1.** In a CpG-island HMM, which layer do you **observe** and which is
+**hidden**: the DNA bases, or the "GC-rich vs normal" region labels?
+
+::: {.callout-tip collapse="true" title="Hint"}
+You can read the sequence off a sequencer. Nobody hands you the island
+annotation.
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+You **observe** the **DNA bases** (the emissions). The **region labels**
+(GC-rich vs normal) are the **hidden states** you must infer.
+:::
+
+---
+
+**Q2.** Name the four ingredients of an HMM and say which of them are *new*
+compared with a visible Markov chain (Day 7).
+
+::: {.callout-tip collapse="true" title="Hint"}
+The hidden layer is just a Day-7 chain. What extra object connects hidden states
+to observations?
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+(1) hidden **states**, (2) **transition matrix** $A$, (3) **emission matrix**
+$B$, (4) **initial distribution** $\boldsymbol{\pi}$. The transition matrix and
+initial distribution are the same objects as a visible Markov chain; the genuinely
+**new** ingredient is the **emission matrix $B$** (and the fact that the states
+are now hidden).
+:::
+
+---
+
+**Q3.** Both $A$ and $B$ have rows that sum to 1, but they are different shapes.
+What are the dimensions of each, and what does a row of each represent?
+
+::: {.callout-tip collapse="true" title="Hint"}
+$A$ goes state → state; $B$ goes state → symbol.
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+$A$ is **states × states** ($2\times2$ here); a row is the distribution over
+the **next state**. $B$ is **states × symbols** ($2\times4$ here); a row is the
+distribution over the **emitted symbol** for that state.
+:::
+
+---
+
+**Q4.** Write the generative story (the order of steps) for producing a length-2
+sequence from an HMM.
+
+::: {.callout-tip collapse="true" title="Hint"}
+Start, emit, move, emit. You always finish on an emission.
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+(1) Draw $z_1$ from $\boldsymbol{\pi}$. (2) Emit $x_1$ from row $z_1$ of $B$.
+(3) Draw $z_2$ from row $z_1$ of $A$. (4) Emit $x_2$ from row $z_2$ of $B$.
+:::
+
+---
+
+**Q5.** Using the model above, compute $P(\mathbf{x}=(C),\ \mathbf{z}=(H))$ for
+a single position.
+
+::: {.callout-tip collapse="true" title="Hint"}
+Length 1: one start factor, one emission factor, no transitions.
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+$P = \pi_H \cdot B_{H,C} = 0.5 \times 0.4 = 0.20$.
+:::
+
+---
+
+**Q6.** For $\mathbf{x}=(G,G)$ and path $\mathbf{z}=(H,H)$, compute the joint
+probability.
+
+::: {.callout-tip collapse="true" title="Hint"}
+$\pi_H \cdot B_{H,G} \cdot A_{H,H} \cdot B_{H,G}$.
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+$0.5 \times 0.4 \times 0.8 \times 0.4 = 0.064$.
+:::
+
+---
+
+**Q7.** For a sequence of length $T$, how many $\boldsymbol{\pi}$, emission, and
+transition factors appear in a single path probability $P(\mathbf{x},\mathbf{z})$?
+
+::: {.callout-tip collapse="true" title="Hint"}
+One start; one emission per position; one transition per gap between positions.
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+**1** initial factor, **$T$** emission factors, and **$T-1$** transition
+factors.
+:::
+
+---
+
+**Q8.** What is the difference between the **probability of one path**
+$P(\mathbf{x},\mathbf{z})$ and the **likelihood of the data** $P(\mathbf{x})$?
+
+::: {.callout-tip collapse="true" title="Hint"}
+One fixes a path; the other accounts for every path that could have produced
+$\mathbf{x}$.
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+$P(\mathbf{x},\mathbf{z})$ is for **one specific** hidden path. The likelihood
+$P(\mathbf{x})=\sum_{\mathbf{z}}P(\mathbf{x},\mathbf{z})$ **sums over all**
+possible hidden paths.
+:::
+
+---
+
+**Q9.** Match each classic HMM problem to its algorithm: likelihood, decoding,
+learning.
+
+::: {.callout-tip collapse="true" title="Hint"}
+Forward, Viterbi, Baum–Welch — one each.
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+Likelihood → **forward** algorithm; decoding (most likely path) → **Viterbi**;
+learning the parameters from unlabelled data → **Baum–Welch** (EM).
+:::
+
+---
+
+**Q10.** Which of the three problems produces the **predicted CpG-island
+annotation** of a genome, and how do you read the islands off its output?
+
+::: {.callout-tip collapse="true" title="Hint"}
+Which algorithm returns one hidden-state label per position?
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+**Decoding** (Viterbi). It returns the most likely hidden state at each
+position; the **maximal runs of the $H$ (GC-rich) state** are the predicted CpG
+islands.
+:::
+
+---
+
+**Q11.** Why can't you compute the likelihood of a whole chromosome by simply
+listing all hidden paths and summing, the way you did for length 2 by hand?
+
+::: {.callout-tip collapse="true" title="Hint"}
+How does the number of paths grow with sequence length?
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+The number of paths is **exponential** in the sequence length ($S^T$ for $S$
+states, length $T$), so for millions of positions it is astronomically large.
+The **forward algorithm** computes the same sum efficiently by reusing partial
+results instead of enumerating paths.
+:::
+
+---
+
+**Q12.** Baum–Welch is said to find only a **local** optimum. What practical
+consequence does this have when you fit an HMM to real sequence?
+
+::: {.callout-tip collapse="true" title="Hint"}
+Think about how the starting parameter guess affects where it ends up.
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+The fitted parameters depend on the **initial guess**, so different starts can
+give different results. In practice you try several initialisations, sanity-check
+that the learned states are biologically interpretable, and do not blindly trust
+a single run.
+:::

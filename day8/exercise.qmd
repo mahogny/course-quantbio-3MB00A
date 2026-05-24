@@ -1,0 +1,247 @@
+---
+title: "Exercise: stationary distributions in R"
+format:
+  html:
+    toc: true
+    code-copy: true
+    code-overflow: wrap
+    highlight-style: github
+---
+
+## Goal
+
+By the end of this exercise you should be able to, **by hand and in R**:
+
+- build a transition matrix $P$ in R and take its powers correctly (`%*%`, not `^`),
+- step a chain forward and watch $\mathbf{x}_t$ **converge**,
+- write down and solve the stationarity equation $\boldsymbol\pi P = \boldsymbol\pi$ by hand for a small chain,
+- find $\boldsymbol\pi$ in R **two ways** — power iteration and as the eigenvector of $P^\top$ for eigenvalue 1 (`eigen`),
+- normalise an eigenvector into a probability distribution,
+- interpret $\boldsymbol\pi$ as the **equilibrium nucleotide composition** of a DNA Markov model.
+
+The by-hand stationary-distribution problem is the most likely exam question — practise it on paper. The R parts are where you scale up and cross-check.
+
+## Background
+
+Conventions (from Day 7): row vectors, $\mathbf{x}_{t+1} = \mathbf{x}_t P$, rows of $P$ sum to 1, entry $p_{ij}$ = from $i$ to $j$.
+
+The **stationary distribution** $\boldsymbol\pi$ is the distribution that does not change under a step:
+
+$$\boldsymbol\pi P = \boldsymbol\pi, \qquad \sum_k \pi_k = 1, \qquad \pi_k \ge 0.$$
+
+Two ways to find it:
+
+| Method | Idea | Recall |
+|---|---|---|
+| **Power iteration** | start anywhere valid, keep doing $\mathbf{x}\leftarrow\mathbf{x}P$ until it stops changing | the chain "forgets" its start |
+| **Eigenvector** | $\boldsymbol\pi P=\boldsymbol\pi \Leftrightarrow P^\top\boldsymbol\pi^\top=\boldsymbol\pi^\top$, so $\boldsymbol\pi^\top$ is the right eigenvector of $P^\top$ for $\lambda=1$ | Day 6 `eigen` |
+
+To solve $\boldsymbol\pi P = \boldsymbol\pi$ **by hand** for a 2-state chain: write the two scalar equations, notice they are equivalent (give one relation between $\pi_1$ and $\pi_2$), then add the constraint $\pi_1 + \pi_2 = 1$.
+
+## By hand
+
+### Part A — 2-state stationary distribution
+
+Use the cell model from Day 7, states $(R, D)$:
+$$P = \begin{pmatrix} 0.8 & 0.2\\ 0.6 & 0.4 \end{pmatrix}.$$
+
+**B1.** Write the stationarity equation $\boldsymbol\pi P = \boldsymbol\pi$ with $\boldsymbol\pi = (\pi_R, \pi_D)$ as two scalar equations.
+
+**B2.** Show the two equations give the **same** relation between $\pi_R$ and $\pi_D$. State that relation.
+
+**B3.** Use $\pi_R + \pi_D = 1$ to solve for $\boldsymbol\pi$.
+
+**B4.** Verify directly that your $\boldsymbol\pi$ satisfies $\boldsymbol\pi P = \boldsymbol\pi$.
+
+### Part B — convergence by hand
+
+Still with the 2-state $P$ above, start from $\mathbf{x}_0 = (1, 0)$.
+
+**B5.** Compute $\mathbf{x}_1$, $\mathbf{x}_2$, $\mathbf{x}_3$ by hand (you already have $\mathbf{x}_1, \mathbf{x}_2$ from Day 7). How close is $\mathbf{x}_3$ to the $\boldsymbol\pi$ you found in B3?
+
+**B6.** Without computing, predict: if you instead started from $\mathbf{x}_0 = (0, 1)$, would you converge to the **same** $\boldsymbol\pi$? Why?
+
+### Part C — a 3-state DNA chain
+
+The 3-state DNA model over `{A, C, G}` from Day 7:
+$$P = \begin{pmatrix} 0.1 & 0.6 & 0.3\\ 0.4 & 0.4 & 0.2\\ 0.5 & 0.5 & 0.0 \end{pmatrix}.$$
+
+**B7.** Write the three scalar equations of $\boldsymbol\pi P = \boldsymbol\pi$ (you do not need to fully solve them by hand — set them up cleanly). Together with $\sum_k \pi_k = 1$, how many independent equations do you have for the three unknowns?
+
+## In R
+
+### Build $P$, check it, take powers
+
+```r
+bases <- c("A","C","G","T")
+P <- matrix(c(0.30, 0.20, 0.25, 0.25,
+              0.25, 0.35, 0.05, 0.35,   # CpG-like dip: C -> G rare
+              0.25, 0.25, 0.25, 0.25,
+              0.15, 0.30, 0.25, 0.30),
+            nrow = 4, byrow = TRUE,
+            dimnames = list(bases, bases))
+rowSums(P)             # all 1: valid transition matrix
+
+P %*% P                # 2-step matrix  (NOT P^2, which squares entrywise!)
+
+matpow <- function(M, n) {
+  R <- diag(nrow(M))
+  for (i in seq_len(n)) R <- R %*% M
+  R
+}
+matpow(P, 10)          # 10-step transition matrix
+```
+
+**R1.** Confirm `rowSums(P)` are all 1. Then compute `P^2` (elementwise) and `P %*% P` and confirm they differ — this is the classic mistake to avoid.
+
+### Watch it converge
+
+```r
+step_n <- function(x, P, n) { for (i in seq_len(n)) x <- x %*% P; drop(x) }
+
+for (n in c(1, 2, 5, 10, 20, 40)) {
+  cat("n =", n, "from A:", round(step_n(c(1,0,0,0), P, n), 4), "\n")
+}
+# Same long-run answer from a different start:
+step_n(c(0,0,0,1), P, 40)
+```
+
+**R2.** Run the loop. By roughly what `n` have the digits stopped changing? Start instead from `c(0,0,0,1)` and from `c(0.25,0.25,0.25,0.25)` — do you reach the same distribution?
+
+### Method (a): power iteration
+
+```r
+pi_power <- function(P, tol = 1e-12, max_iter = 1000) {
+  x <- rep(1 / nrow(P), nrow(P))     # uniform start
+  for (i in seq_len(max_iter)) {
+    xn <- x %*% P
+    if (max(abs(xn - x)) < tol) break
+    x <- xn
+  }
+  drop(xn)
+}
+
+pi_hat <- pi_power(P)
+round(pi_hat, 4)       # 0.2323 0.2811 0.1938 0.2928
+sum(pi_hat)            # 1
+round(pi_hat %*% P, 4) # equals pi_hat -> stationary
+```
+
+**R3.** Run it. Verify `pi_hat %*% P` equals `pi_hat`. What is the equilibrium frequency of `G`, and why is it the lowest?
+
+### Method (b): eigenvector of $P^\top$ for $\lambda = 1$
+
+```r
+e <- eigen(t(P))       # transpose: pi is a LEFT eigenvector
+e$values               # the dominant eigenvalue is 1
+
+v <- Re(e$vectors[, 1])   # eigenvector for lambda = 1 (drop tiny imaginary part)
+pi_eig <- v / sum(v)      # normalise to sum to 1 (NOT to length!)
+round(pi_eig, 4)          # 0.2323 0.2811 0.1938 0.2928  -- same as (a)
+
+# compare the two methods:
+round(rbind(power = pi_hat, eigen = pi_eig), 6)
+```
+
+**R4.** Confirm method (b) matches method (a) to several decimals. Why do we use `t(P)`? Why divide the eigenvector by its **sum** rather than by its length (norm)?
+
+### Cross-check by simulation
+
+```r
+set.seed(1)
+n <- 50000
+s <- character(n); s[1] <- "A"
+for (t in 2:n) s[t] <- sample(bases, 1, prob = P[s[t-1], ])
+round(prop.table(table(factor(s, levels = bases))), 3)   # ~ pi
+```
+
+**R5.** Generate a long sequence from `P` and compare the observed base frequencies to `pi_hat`. Do they match? What does this confirm about $\boldsymbol\pi$?
+
+### A periodic counterexample
+
+```r
+Q <- matrix(c(0, 1,
+              1, 0), 2, byrow = TRUE)
+# Power iteration from (1,0) oscillates and never settles:
+step_n(c(1,0), Q, 1)    # 0 1
+step_n(c(1,0), Q, 2)    # 1 0
+step_n(c(1,0), Q, 3)    # 0 1
+# ...yet (0.5, 0.5) IS stationary:
+c(0.5, 0.5) %*% Q       # 0.5 0.5
+eigen(t(Q))$values      # eigenvalues 1 and -1  (the -1 causes the oscillation)
+```
+
+**R6.** Explain why power iteration fails to converge for `Q` even though a stationary distribution exists. (Hint: look at the second eigenvalue.)
+
+## Hints
+
+::: {.callout-tip collapse="true" title="Hint 1 — building and checking P"}
+Use [`matrix`](https://rdrr.io/r/base/matrix.html) with `byrow = TRUE`, name with `dimnames`, and validate with [`rowSums`](https://rdrr.io/r/base/colSums.html) (all entries should be 1).
+:::
+
+::: {.callout-tip collapse="true" title="Hint 2 — powers, the right way"}
+`P %*% P` (see [`%*%`](https://rdrr.io/r/base/matmult.html)) is the 2-step matrix. `P^2` squares each entry elementwise — **wrong**. For higher powers use the `matpow` loop, or `expm::%^%` from the [`expm`](https://rdrr.io/cran/expm/) package.
+:::
+
+::: {.callout-tip collapse="true" title="Hint 3 — solving pi P = pi by hand"}
+Write $\boldsymbol\pi P = \boldsymbol\pi$ as scalar equations $\sum_i \pi_i p_{ij} = \pi_j$ (one per column $j$). For 2 states they reduce to a single relation between $\pi_1$ and $\pi_2$; close the system with $\pi_1 + \pi_2 = 1$.
+:::
+
+::: {.callout-tip collapse="true" title="Hint 4 — power iteration in R"}
+Start from any valid distribution (uniform `rep(1/n, n)` is easy). Loop `x <- x %*% P` until `max(abs(x_new - x))` falls below a tolerance. The result already sums to 1.
+:::
+
+::: {.callout-tip collapse="true" title="Hint 5 — the eigenvector route"}
+$\boldsymbol\pi$ multiplies $P$ on the left, but [`eigen`](https://rdrr.io/r/base/eigen.html) returns **right** eigenvectors, so call `eigen(t(P))` (see [`t`](https://rdrr.io/r/base/t.html)). The eigenvalue-1 vector is usually `e$vectors[,1]`. Take `Re()` to drop a numerically-tiny imaginary part, then divide by `sum(v)` (a probability vector must sum to 1; that is **not** the same as the unit-length normalisation from Day 3).
+:::
+
+::: {.callout-tip collapse="true" title="Hint 6 — simulating a sequence"}
+Pick each next base with [`sample`](https://rdrr.io/r/base/sample.html), passing `prob = P[current, ]` (the current base's row). Tally with `table(factor(s, levels = bases))` and convert to fractions with [`prop.table`](https://rdrr.io/r/base/proportions.html).
+:::
+
+## Solutions
+
+::: {.callout-note collapse="true" title="Solution"}
+
+**B1.** $\boldsymbol\pi P = \boldsymbol\pi$ with $\boldsymbol\pi=(\pi_R,\pi_D)$ gives (one equation per output column):
+- column $R$: $0.8\pi_R + 0.6\pi_D = \pi_R$
+- column $D$: $0.2\pi_R + 0.4\pi_D = \pi_D$
+
+**B2.** From column $R$: $0.8\pi_R + 0.6\pi_D = \pi_R \Rightarrow 0.6\pi_D = 0.2\pi_R \Rightarrow \pi_R = 3\pi_D$. From column $D$: $0.2\pi_R = 0.6\pi_D \Rightarrow \pi_R = 3\pi_D$ — the **same** relation. (This always happens: the equations are dependent, which is why we need the sum constraint.)
+
+**B3.** With $\pi_R = 3\pi_D$ and $\pi_R + \pi_D = 1$: $3\pi_D + \pi_D = 1 \Rightarrow \pi_D = 0.25$, $\pi_R = 0.75$. So $\boldsymbol\pi = (0.75,\ 0.25)$.
+
+**B4.** $(0.75, 0.25)P = (0.75\cdot0.8 + 0.25\cdot0.6,\ \ 0.75\cdot0.2 + 0.25\cdot0.4) = (0.6+0.15,\ 0.15+0.1) = (0.75,\ 0.25)$. ✓
+
+**B5.** $\mathbf{x}_1 = (0.8, 0.2)$; $\mathbf{x}_2 = (0.76, 0.24)$ (from Day 7).
+$\mathbf{x}_3 = (0.76, 0.24)P = (0.76\cdot0.8 + 0.24\cdot0.6,\ \ 0.76\cdot0.2 + 0.24\cdot0.4) = (0.608+0.144,\ 0.152+0.096) = (0.752,\ 0.248)$.
+Compared with $\boldsymbol\pi=(0.75,0.25)$, the gap is only $0.002$ — already very close after 3 steps.
+
+**B6.** Yes — the same $\boldsymbol\pi$. This chain is irreducible and aperiodic (you can get between states and there is no fixed cycle), so it converges to the **unique** stationary distribution regardless of the starting vector. The start only affects the transient, not the limit.
+
+**B7.** $\boldsymbol\pi P = \boldsymbol\pi$ for the 3-state matrix, one equation per column:
+- column $A$: $0.1\pi_A + 0.4\pi_C + 0.5\pi_G = \pi_A$
+- column $C$: $0.6\pi_A + 0.4\pi_C + 0.5\pi_G = \pi_C$
+- column $G$: $0.3\pi_A + 0.2\pi_C + 0.0\pi_G = \pi_G$
+
+These three are **dependent** (they always sum to the trivial identity $\pi_A+\pi_C+\pi_G$ on both sides), so only **two** are independent. Add $\pi_A+\pi_C+\pi_G=1$ to get three independent equations for three unknowns. (Solving gives $\boldsymbol\pi \approx (0.3226,\ 0.4839,\ 0.1935)$, which R confirms below.)
+
+**R answers.**
+
+**R1.** `rowSums(P)` are all 1. `P^2` (elementwise) and `P %*% P` clearly differ — e.g. the $(1,1)$ entry of `P^2` is $0.30^2=0.09$, while `(P %*% P)[1,1]` is the dot of row 1 with column 1 $\approx 0.255$.
+
+**R2.** The digits stabilise by about `n = 20`–`30`. Starting from `c(0,0,0,1)` or the uniform vector gives the **same** limit $(0.2323, 0.2811, 0.1938, 0.2928)$ — convergence is start-independent.
+
+**R3.** `pi_hat %*% P` equals `pi_hat`. The equilibrium `G` frequency is $\approx 0.194$, the lowest of the four, because the matrix suppresses transitions **into** `G` (the CpG dip $p_{CG}=0.05$, plus generally modest "to-G" columns), so `G` is reached less often at equilibrium.
+
+**R4.** Methods (a) and (b) agree to ~6 decimals: `(0.232342, 0.281134, 0.193773, 0.292751)`. We use `t(P)` because $\boldsymbol\pi$ is a **left** eigenvector ($\boldsymbol\pi P = \boldsymbol\pi$) while `eigen` returns right eigenvectors; transposing converts one to the other. We divide by the **sum** (not the length) because a probability distribution must satisfy $\sum_k \pi_k = 1$; normalising to unit Euclidean length would not sum to 1.
+
+**R5.** The simulated base frequencies (e.g. `A 0.234, C 0.281, G 0.192, T 0.293`) match `pi_hat` to about two decimals. This confirms $\boldsymbol\pi$ really is the long-run composition of sequences generated by $P$ — a third, independent route (simulation) agreeing with power iteration and the eigenvector.
+
+**R6.** `eigen(t(Q))$values` are $1$ and $-1$. Convergence of power iteration requires every eigenvalue **other than** the dominant $1$ to have magnitude **strictly less than 1**; the eigenvalue $-1$ has magnitude 1 and produces a sign-flipping component that never decays, so $\mathbf{x}_t$ oscillates $(1,0)\to(0,1)\to(1,0)\to\dots$ forever. A stationary distribution $(0.5,0.5)$ still *exists* (it satisfies $\boldsymbol\pi Q = \boldsymbol\pi$), but the chain is **periodic**, so iteration does not reach it from a corner start. The eigenvector method still finds it.
+:::
+
+## Where this leads
+
+- You can now take any transition matrix and compute its equilibrium behaviour two ways, both grounded in the eigenvalue ideas of Day 6.
+- **Days 9–10 (Hidden Markov Models):** the transition matrix $P$ becomes the hidden "engine", but you no longer observe the state directly — only an **emitted symbol** (e.g. a nucleotide emitted by a hidden "CpG island" vs "background" state). The stationary distribution, powers of $P$, and the row-stochastic structure all carry over; HMMs add an emission layer and the problem of **inferring** the hidden path. Everything you built this week is the foundation.

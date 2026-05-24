@@ -1,0 +1,359 @@
+---
+title: "Fitting HMMs in R: finding CpG islands"
+subtitle: "Day 10 — Quantitative biology"
+author: "Quantitative biology and integrative omics"
+format:
+  revealjs:
+    theme: [simple, ../theme.scss]
+    slide-number: c/t
+    width: 1280
+    height: 720
+    transition: slide
+    transition-speed: fast
+    highlight-style: github
+    code-overflow: wrap
+    code-line-numbers: false
+    incremental: false
+    chalkboard: false
+    menu: true
+---
+
+## About this lecture
+
+This is the **final day** of the linear-algebra block. Yesterday you built HMMs
+by hand; today we let R do the heavy lifting on genome-like data. By the end
+you will be able to:
+
+- Build an HMM in R with the CRAN [`HMM`](https://cran.r-project.org/package=HMM)
+  package via `initHMM` (states, symbols, $\boldsymbol{\pi}$, $A$, $B$).
+- **Simulate** sequence with `simHMM` and recover its likelihood with
+  `forward`.
+- **Decode** the most likely hidden-state path with `viterbi` and read it as a
+  predicted **CpG-island map**.
+- **Learn** the parameters $A$, $B$, $\boldsymbol{\pi}$ from *unlabelled*
+  sequence with `baumWelch`.
+- Discuss **how many states** to use and the main **pitfalls**.
+
+Notation as Day 9: transition matrix $A$, emission matrix $B$, initial
+distribution $\boldsymbol{\pi}$, hidden states $\mathbf{z}$, observations
+$\mathbf{x}$.
+
+::: notes
+Welcome to day ten, the last day of the block. Yesterday was all concept and
+pen-and-paper; today is hands-on R. We use the same two-state GC-rich versus
+normal model so nothing about the biology is new — only the tooling. The HMM
+package gives us one function per task: build, simulate, score, decode, and
+learn. Code on these slides is illustrative, not executable; the exercise is
+where you run it.
+:::
+
+## Recap and today's tool {.smaller}
+
+Day 9: an HMM = hidden states + transition matrix $A$ + emission matrix $B$ +
+initial distribution $\boldsymbol{\pi}$, with three problems —
+**likelihood** (forward), **decoding** (Viterbi), **learning** (Baum–Welch).
+
+The CRAN [`HMM`](https://cran.r-project.org/package=HMM) package gives one
+function for each:
+
+| Task (Day 9) | `HMM` function |
+|--|--|
+| build the model | `initHMM` |
+| generate data | `simHMM` |
+| likelihood $P(\mathbf{x})$ | `forward` (and `backward`) |
+| decode best path $\mathbf{z}^\*$ | `viterbi` |
+| learn $A, B, \boldsymbol{\pi}$ | `baumWelch` |
+
+```r
+install.packages("HMM")   # once
+library(HMM)
+```
+
+::: notes
+Map each Day-9 concept onto exactly one function so the package feels like a
+direct translation of yesterday's ideas. initHMM builds the four ingredients,
+simHMM runs the generative story, forward and backward give the likelihood,
+viterbi decodes, and baumWelch learns. Mention depmixS4 as a more flexible
+alternative for richer emission models, but we stick with HMM because it maps
+cleanly onto the concepts.
+:::
+
+## Building the model with `initHMM` {.smaller}
+
+The same 2-state model as Day 9. States $H$ (GC-rich), $L$ (normal); symbols
+the bases.
+
+```r
+library(HMM)
+
+states  <- c("H", "L")
+symbols <- c("A", "C", "G", "T")
+
+startProbs <- c(0.5, 0.5)                    # pi
+
+transProbs <- matrix(c(0.8, 0.2,             # A: rows = from, cols = to
+                       0.3, 0.7),
+                     nrow = 2, byrow = TRUE,
+                     dimnames = list(states, states))
+
+emissionProbs <- matrix(c(0.1, 0.4, 0.4, 0.1,  # B: rows = state, cols = base
+                          0.3, 0.2, 0.2, 0.3),
+                        nrow = 2, byrow = TRUE,
+                        dimnames = list(states, symbols))
+
+hmm <- initHMM(States = states, Symbols = symbols,
+               startProbs = startProbs,
+               transProbs = transProbs,
+               emissionProbs = emissionProbs)
+```
+
+Each matrix row must **sum to 1** — exactly the constraint from Day 9.
+
+::: notes
+Type this slowly. The arguments to initHMM are the four ingredients by name:
+States and Symbols are the labels, startProbs is pi, transProbs is A, and
+emissionProbs is B. Use byrow equals TRUE so the matrices read like the page,
+and dimnames so rows and columns are labelled. Stress the row-sum-to-one
+constraint; a common bug is a typo that makes a row sum to 0.99 or 1.01.
+:::
+
+## Simulating sequence with `simHMM` {.smaller}
+
+`simHMM` runs the generative story for you and, because it is a simulation, also
+hands back the **true** hidden states — a luxury you never get with real data,
+but perfect for testing.
+
+```r
+set.seed(1)
+sim <- simHMM(hmm, length = 30)
+
+sim$observation   # the emitted bases  (this is your "data")
+#  [1] "G" "C" "C" "G" "A" ...
+
+sim$states        # the TRUE hidden path (normally unknown!)
+#  [1] "H" "H" "H" "H" "L" ...
+```
+
+We will pretend we only saw `sim$observation`, then check whether decoding
+recovers `sim$states`.
+
+::: notes
+simHMM is our test harness. It samples a hidden path from the chain and emits a
+base at each step, returning both. The observation vector is what we would get
+from a sequencer; the states vector is the ground truth that real biology hides
+from us. The plan is honest model evaluation: hide the truth, run the
+algorithms on the observations alone, then compare against the truth we
+secretly kept.
+:::
+
+## Likelihood with `forward` {.smaller}
+
+`forward` returns a matrix of **log** forward probabilities, states × position.
+The likelihood $P(\mathbf{x})$ is recovered from the **last column**.
+
+```r
+obs <- sim$observation
+
+f <- forward(hmm, obs)        # log alpha values, rows = states, cols = positions
+
+# total log-likelihood = log-sum-exp of the final column
+logLik <- function(col) {
+  m <- max(col)
+  m + log(sum(exp(col - m)))
+}
+logLik(f[, length(obs)])
+# e.g.  -39.5      (a log-probability: the raw probability is astronomically tiny)
+```
+
+Probabilities of long sequences are vanishingly small, so the package works in
+**logs** — this is why your by-hand products from Day 9 shrank so fast.
+
+::: notes
+forward gives the log alpha matrix. To get the data log-likelihood you combine
+the final column with a numerically safe log-sum-exp — subtract the max before
+exponentiating to avoid underflow. Connect this back to yesterday: when they
+multiplied six probabilities they already saw the number collapse toward zero;
+over thousands of bases it underflows entirely, which is exactly why everything
+is done in log space. They mainly need to know that forward gives likelihood and
+that it lives in logs.
+:::
+
+## Decoding with `viterbi`: the island map {.smaller}
+
+`viterbi` returns the single most likely hidden path — one label per base.
+
+```r
+path <- viterbi(hmm, obs)
+path
+#  [1] "H" "H" "H" "H" "L" "L" "L" "H" "H" ...
+
+# How well did we recover the truth?
+mean(path == sim$states)      # fraction of positions correctly decoded, e.g. 0.87
+
+# Read off predicted CpG islands: maximal runs of "H"
+rle(path)
+# Run Length Encoding
+#   lengths: int [1:5] 4 3 2 ...
+#   values : chr [1:5] "H" "L" "H" ...
+```
+
+The **runs of `H`** are your **predicted CpG islands**.
+[`rle`](https://rdrr.io/r/base/rle.html) turns the path into segments.
+
+::: notes
+This is the biological payoff. viterbi takes only the observations and returns
+the best hidden label per position. Compare to sim states to measure accuracy;
+it will not be perfect because the emissions are genuinely ambiguous, but it
+should be high. Then rle compresses the path into runs, and each run of H is a
+predicted island with a start, end, and length. This is a real genome
+annotation produced from raw sequence.
+:::
+
+## Learning with `baumWelch` {.smaller}
+
+So far we **supplied** $A, B, \boldsymbol{\pi}$. The realistic case: only raw
+sequence, no labels. `baumWelch` learns the parameters by EM.
+
+```r
+# start from a deliberately WRONG guess to show it can learn
+guess <- initHMM(states, symbols,
+                 transProbs    = matrix(c(0.5,0.5, 0.5,0.5), 2, byrow=TRUE,
+                                        dimnames=list(states,states)),
+                 emissionProbs = matrix(rep(0.25, 8), 2, byrow=TRUE,
+                                        dimnames=list(states,symbols)))
+
+bw <- baumWelch(guess, obs, maxIterations = 100)
+
+bw$hmm$transProbs      # learned A  -> should drift toward 0.8/0.2, 0.3/0.7
+bw$hmm$emissionProbs   # learned B  -> H row should become GC-heavy
+```
+
+`baumWelch` returns `$hmm` (the fitted model) and `$difference` (convergence
+trace).
+
+::: notes
+Baum-Welch is the learning step. We hand it a deliberately uninformative
+starting model — uniform transitions and uniform emissions — and let it iterate.
+With enough data it pulls the parameters toward the truth: the H row of the
+emission matrix becomes GC-heavy and the transitions become sticky. Point out
+the return structure: dollar hmm is the fitted model you then feed to viterbi,
+and dollar difference lets you check it converged. Then immediately raise the
+caveats on the next slide.
+:::
+
+## Pitfalls of learning {.smaller}
+
+`baumWelch` is powerful but easy to misuse:
+
+- **Local optima.** EM climbs to the *nearest* peak, not the global one.
+  Different starting guesses → different fits. **Run several inits**, keep the
+  best likelihood.
+- **Label switching.** Which learned state is "H" is arbitrary — the algorithm
+  may swap them. Interpret by the **emission profile** (the GC-heavy one is your
+  island state), not by the name.
+- **Needs enough data.** Short sequences give unstable estimates.
+- **Garbage in, garbage out.** The fitted states are just clusters; they are
+  "CpG islands" only if you **check** their emission profile makes biological
+  sense.
+
+::: notes
+Spend real time here; this is where students get burned. EM only finds a local
+optimum, so multiple restarts and picking the best log-likelihood is standard
+practice. Label switching trips everyone up: the state the package calls H need
+not be the GC-rich one, so always read the learned emission matrix to decide
+which state means island. More data stabilises estimates. And finally, an HMM
+will happily partition any sequence into states whether or not they mean
+anything biological — interpretation is on you.
+:::
+
+## How many hidden states? {.smaller}
+
+We assumed **2** states (island vs not). In general you must choose the number.
+
+- Let **biology** guide you first: island vs background is naturally 2; coding
+  / intron / intergenic might want 3+.
+- More states **always** fit the training data better (higher likelihood) — so
+  raw likelihood **cannot** pick the number. Penalise complexity with
+  **AIC/BIC**, or use **held-out** sequence.
+- More states = more parameters = more data needed and more local optima.
+
+Start simple, add states only if they earn their keep and stay interpretable.
+
+::: notes
+Choosing the number of states is a model-selection problem, the same tension we
+will meet repeatedly later in the course. Biology gives the first guess. Warn
+them that likelihood always rises with more states, so you cannot choose by
+likelihood alone; you need a penalty like AIC or BIC, or validation on held-out
+data. And every extra state costs parameters, data, and stability. The mantra:
+start simple, justify any added complexity.
+:::
+
+## From toy to real genomes {.smaller}
+
+What changes when you move from `simHMM` data to a real chromosome:
+
+- **Symbols.** Use the 4 bases, or richer features (dinucleotides like `CpG`,
+  or k-mers) for sharper islands.
+- **Scale.** Real sequences are megabases long; `forward`/`viterbi` are linear
+  in length, so this is fine — but **work in logs** (the package does).
+- **Validation.** Compare decoded islands against annotated CpG islands
+  (e.g. UCSC tracks) to judge the model.
+- **Beyond 2 states.** Gene-finding HMMs (e.g. GENSCAN-style) use many states
+  for exons, introns, splice sites — same machinery, bigger $A$ and $B$.
+
+::: notes
+Bridge from the toy to practice. The biggest real-world refinement is the
+emission alphabet: modelling dinucleotides captures CpG depletion far better
+than single bases. Reassure them that scale is not a problem because the
+algorithms are linear in sequence length. Stress validation against known
+annotations, and note that serious gene finders are just large HMMs with the
+identical forward, Viterbi, and Baum-Welch underneath.
+:::
+
+## Summary {.smaller}
+
+- The CRAN [`HMM`](https://cran.r-project.org/package=HMM) package = one
+  function per Day-9 concept: `initHMM`, `simHMM`, `forward`, `viterbi`,
+  `baumWelch`.
+- **Decode** with `viterbi`; the **runs of the GC-rich state are your predicted
+  CpG islands**.
+- **Learn** parameters from unlabelled sequence with `baumWelch` — but watch
+  for **local optima**, **label switching**, and **enough data**.
+- Choosing the **number of states** is model selection: let biology lead, use
+  AIC/BIC or held-out data, keep states interpretable.
+
+That closes the linear-algebra block — from solving systems to chains and
+hidden chains.
+
+::: notes
+Recap the function-per-concept mapping and the biological read-out of the
+decoded path. Re-emphasise the three pitfalls of learning and the model-
+selection nature of choosing the number of states. This is the end of the whole
+linear-algebra arc; the next slide points forward to where these ideas resurface
+in the rest of the course.
+:::
+
+## Where this leads
+
+This is the **end of the linear-algebra block**. The thinking carries forward:
+
+- **Week 2 — PCA & applications.** From discrete hidden states to *continuous*
+  latent directions: PCA finds the axes (eigenvectors!) that explain variation
+  in omics data — the eigen-ideas from days 5–6 return.
+- **Bayesian statistics.** HMMs were our first **latent-variable** models with
+  proper inference; the Bayesian block generalises "infer the hidden given the
+  observed" with priors and full posteriors.
+- **Single-cell analysis.** Segmenting and annotating cells echoes today's
+  segmenting and annotating a genome.
+
+You now have the full toolkit — linear systems, vectors, matrices, eigenvalues,
+Markov chains, and HMMs — that the rest of the course builds on.
+
+::: notes
+End by pointing forward, not back. PCA is the natural next step: continuous
+latent structure found via eigenvectors, tying back to days five and six. The
+Bayesian block generalises today's infer-the-hidden idea with priors and
+posteriors. And single-cell annotation rhymes with island annotation. Congratulate
+them — they have crossed the hardest block, and everything after this leans on
+it.
+:::

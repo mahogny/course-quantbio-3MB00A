@@ -1,0 +1,276 @@
+---
+title: "Exercise: formulating Markov chains"
+format:
+  html:
+    toc: true
+    code-copy: true
+    code-overflow: wrap
+    highlight-style: github
+---
+
+## Goal
+
+By the end of this exercise you should be able to, **by hand and in R**:
+
+- read off transition probabilities from a state diagram and write the transition matrix $P$,
+- check that a matrix is a valid (row-stochastic) transition matrix,
+- take one step and several steps of a chain by computing $\mathbf{x}_{t+1} = \mathbf{x}_t P$,
+- relate $t$-step probabilities to powers $P^t$,
+- **estimate** $P$ from an observed DNA sequence by counting transitions.
+
+The by-hand problems matter most for the on-campus written exam (no computer). Do them with pen and paper first, then verify in R.
+
+## Background
+
+**Our conventions** (used everywhere this week):
+
+- States are listed in a fixed order, e.g. `A, C, G, T`.
+- The state distribution at time $t$ is a **row vector** $\mathbf{x}_t$ whose entries are non-negative and sum to 1.
+- $P$ is the **transition matrix**: the entry in **row $i$, column $j$** is $p_{ij}$ = probability of going **from state $i$ to state $j$**.
+- **Rows of $P$ sum to 1** (row-stochastic).
+
+| Quantity | Definition |
+|---|---|
+| Transition probability | $p_{ij} = P(X_{t+1}=j \mid X_t = i)$ |
+| Row-sum rule | $\sum_j p_{ij} = 1$ for every row $i$ |
+| One step | $\mathbf{x}_{t+1} = \mathbf{x}_t P$, i.e. $x_{t+1}^{\,j} = \sum_i x_t^{\,i}\,p_{ij}$ |
+| $t$ steps | $\mathbf{x}_t = \mathbf{x}_0 P^t$; $(P^t)_{ij}$ = prob. $i\to j$ in $t$ steps |
+| Estimate from data | $\hat p_{ij} = N_{ij} / \sum_k N_{ik}$, where $N_{ij}$ counts `i`→`j` pairs |
+
+## By hand
+
+### Part A — a 2-state cell model
+
+A cell is **resting (R)** or **dividing (D)**. From the state diagram you are told:
+
+- from R: stays R with prob $0.8$, moves to D with prob $0.2$;
+- from D: moves to R with prob $0.6$, stays D with prob $0.4$.
+
+Order the states as $(R, D)$.
+
+**B1.** Write the transition matrix $P$. Verify that each row sums to 1.
+
+**B2.** A population starts entirely resting: $\mathbf{x}_0 = (1, 0)$. Compute $\mathbf{x}_1 = \mathbf{x}_0 P$ by hand.
+
+**B3.** Compute $\mathbf{x}_2 = \mathbf{x}_1 P$. (Keep the numbers exact.)
+
+**B4.** Now start from $\mathbf{x}_0 = (0.5, 0.5)$ and compute $\mathbf{x}_1$. Comment: is the result closer to or further from $(0.75, 0.25)$ than the starting point?
+
+### Part B — reading a DNA state diagram
+
+A simplified **3-state** DNA model over `{A, C, G}` (ignore T) has the diagram:
+
+- from `A`: `A` with $0.1$, `C` with $0.6$, `G` with $0.3$;
+- from `C`: `A` with $0.4$, `C` with $0.4$, `G` with $0.2$;
+- from `G`: `A` with $0.5$, `C` with $0.5$, `G` with $0.0$.
+
+Order the states as $(A, C, G)$.
+
+**B5.** Write $P$. Confirm it is row-stochastic.
+
+**B6.** Starting from base `C` for sure, $\mathbf{x}_0 = (0, 1, 0)$, compute $\mathbf{x}_1$ and $\mathbf{x}_2$.
+
+**B7.** What does the entry $(P^2)_{C A}$ represent in words? Without computing the whole matrix, find it by adding up the probabilities of all 2-step paths `C → ? → A`.
+
+### Part C — estimating $P$ from a sequence
+
+Consider the observed sequence over `{A, C, G, T}`:
+
+$$\mathtt{G\ A\ A\ C\ G\ T\ A\ A\ C}$$
+
+**B8.** List all the consecutive (ordered) transitions. How many are there?
+
+**B9.** Build the $4\times4$ count matrix $N$ (rows = from `A,C,G,T`, cols = to `A,C,G,T`).
+
+**B10.** Normalise each row to obtain $\hat P$. Which row is undefined, and why?
+
+## In R
+
+### Building and checking a transition matrix
+
+```r
+# Part A: the 2-state cell model, states (R, D)
+P <- matrix(c(0.8, 0.2,
+              0.6, 0.4), nrow = 2, byrow = TRUE)
+rownames(P) <- colnames(P) <- c("R", "D")
+P
+
+# Check it is row-stochastic: every row should sum to 1
+rowSums(P)        # R 1  D 1
+```
+
+### One step and several steps
+
+```r
+x0 <- c(1, 0)              # start entirely resting; a row vector
+x1 <- x0 %*% P             # one step:  x0 P
+x1                         # 0.8 0.2
+x2 <- x1 %*% P             # another step
+x2                         # 0.76 0.24
+
+# t-step transition probabilities live in powers of P.
+# Base R has no built-in matrix power, so multiply repeatedly:
+P2 <- P %*% P              # = P^2
+P2
+
+# A small helper for P^n by repeated multiplication:
+matpow <- function(M, n) {
+  R <- diag(nrow(M))       # start from the identity
+  for (i in seq_len(n)) R <- R %*% M
+  R
+}
+matpow(P, 2)               # same as P2
+x0 %*% matpow(P, 5)        # distribution after 5 steps
+```
+
+**R1.** Confirm your by-hand `B2`/`B3` answers with `x0 %*% P` and `x1 %*% P`.
+
+**R2.** Build the 3-state DNA matrix from Part B in R, check `rowSums`, and reproduce `x1`, `x2` from `B6`.
+
+### Estimating $P$ from a sequence
+
+```r
+seq <- c("G","A","A","C","G","T","A","A","C")
+bases <- c("A","C","G","T")
+
+# Tally consecutive pairs into a 4x4 count matrix
+from <- factor(seq[-length(seq)], levels = bases)   # all but last
+to   <- factor(seq[-1],           levels = bases)   # all but first
+N <- table(from, to)
+N
+
+# Normalise each row to get the estimated transition matrix
+Phat <- N / rowSums(N)
+round(Phat, 3)
+```
+
+**R3.** Compare `N` and `Phat` to your by-hand `B9`/`B10`. Which row of `Phat` contains `NaN`, and why does that happen?
+
+### Scale up: estimate $P$ from a longer simulated genome
+
+```r
+set.seed(1)
+bases <- c("A","C","G","T")
+# A "true" transition matrix with a CpG-like dip (G rarely follows C)
+Ptrue <- matrix(c(0.30, 0.20, 0.25, 0.25,
+                  0.25, 0.35, 0.05, 0.35,   # C -> G is rare
+                  0.25, 0.25, 0.25, 0.25,
+                  0.15, 0.30, 0.25, 0.30),
+                nrow = 4, byrow = TRUE,
+                dimnames = list(bases, bases))
+
+# Simulate a sequence of length n from Ptrue
+n <- 20000
+s <- character(n)
+s[1] <- "A"
+for (t in 2:n) {
+  cur <- s[t-1]
+  s[t] <- sample(bases, 1, prob = Ptrue[cur, ])
+}
+
+# Re-estimate P from the simulated sequence
+from <- factor(s[-n], levels = bases)
+to   <- factor(s[-1], levels = bases)
+Phat <- table(from, to)
+Phat <- Phat / rowSums(Phat)
+round(Phat, 3)
+round(Ptrue, 3)            # compare: should be close
+```
+
+**R4.** How close is `Phat` to `Ptrue`? Re-run with `n <- 200` and again with `n <- 200000`. What happens to the estimate as the sequence gets longer?
+
+## Hints
+
+::: {.callout-tip collapse="true" title="Hint 1 — building P in R"}
+Use [`matrix`](https://rdrr.io/r/base/matrix.html) with `byrow = TRUE` so the matrix matches how you wrote it on paper (R fills by column by default). Add names with `dimnames` or `rownames`/`colnames`. Check validity with [`rowSums`](https://rdrr.io/r/base/colSums.html) — every entry should be 1.
+:::
+
+::: {.callout-tip collapse="true" title="Hint 2 — one step is a vector–matrix product"}
+With row vectors, one step is `x %*% P` using [`%*%`](https://rdrr.io/r/base/matmult.html) (the vector goes on the **left**). Do **not** use `*` (that is elementwise and wrong here). The result is a $1\times n$ matrix; that is fine for chaining further steps.
+:::
+
+::: {.callout-tip collapse="true" title="Hint 3 — by hand, x P is rows of dot products"}
+$x_{t+1}^{\,j} = \sum_i x_t^{\,i}\,p_{ij}$: the $j$-th new entry is the old vector dotted with **column $j$** of $P$. For $\mathbf{x}_0=(1,0)$ this just reads off the first **row** of $P$.
+:::
+
+::: {.callout-tip collapse="true" title="Hint 4 — powers of P"}
+Base R has no `^` for matrix powers (`P^2` squares each entry elementwise — wrong!). Multiply repeatedly with `%*%`, or use the `matpow` helper above. A package alternative is `expm::%^%` (Day 8 mentions it).
+:::
+
+::: {.callout-tip collapse="true" title="Hint 5 — counting transitions"}
+Pair up `seq[-length(seq)]` (all but last = the "from" base) with `seq[-1]` (all but first = the "to" base). Wrap both in [`factor`](https://rdrr.io/r/base/factor.html) with `levels = bases` so even unseen bases get a row/column, then [`table`](https://rdrr.io/r/base/table.html) tallies the 4×4 counts. Divide by `rowSums(N)` to normalise.
+:::
+
+::: {.callout-tip collapse="true" title="Hint 6 — (P^2)_{ij} by paths"}
+$(P^2)_{ij} = \sum_k p_{ik}\,p_{kj}$: sum over every intermediate state $k$ the probability of the 2-step path $i \to k \to j$. That is exactly the dot of row $i$ of $P$ with column $j$ of $P$.
+:::
+
+## Solutions
+
+::: {.callout-note collapse="true" title="Solution"}
+
+**B1.** $P = \begin{pmatrix} 0.8 & 0.2\\ 0.6 & 0.4 \end{pmatrix}$. Row sums: $0.8+0.2=1$, $0.6+0.4=1$. ✓
+
+**B2.** $\mathbf{x}_1 = (1,0)P = (1\cdot0.8 + 0\cdot0.6,\ \ 1\cdot0.2 + 0\cdot0.4) = (0.8,\ 0.2)$. (Just the R-row of $P$.)
+
+**B3.** $\mathbf{x}_2 = (0.8, 0.2)P = (0.8\cdot0.8 + 0.2\cdot0.6,\ \ 0.8\cdot0.2 + 0.2\cdot0.4) = (0.64+0.12,\ 0.16+0.08) = (0.76,\ 0.24)$.
+
+**B4.** From $\mathbf{x}_0=(0.5,0.5)$: $\mathbf{x}_1 = (0.5\cdot0.8+0.5\cdot0.6,\ 0.5\cdot0.2+0.5\cdot0.4) = (0.7,\ 0.3)$. Compared with $(0.75,0.25)$, the start $(0.5,0.5)$ was off by $0.25$ in each entry, and $\mathbf{x}_1=(0.7,0.3)$ is off by only $0.05$ — **closer**. (The chain is drifting toward a fixed distribution; that limit is $(0.75, 0.25)$, the topic of Day 8.)
+
+**B5.** $P = \begin{pmatrix} 0.1 & 0.6 & 0.3\\ 0.4 & 0.4 & 0.2\\ 0.5 & 0.5 & 0.0 \end{pmatrix}$. Row sums: $1.0,\ 1.0,\ 1.0$. ✓
+
+**B6.** $\mathbf{x}_0=(0,1,0)$ → $\mathbf{x}_1 = $ the `C`-row of $P$ $= (0.4,\ 0.4,\ 0.2)$.
+$\mathbf{x}_2 = (0.4,0.4,0.2)P$:
+- to `A`: $0.4\cdot0.1 + 0.4\cdot0.4 + 0.2\cdot0.5 = 0.04+0.16+0.10 = 0.30$
+- to `C`: $0.4\cdot0.6 + 0.4\cdot0.4 + 0.2\cdot0.5 = 0.24+0.16+0.10 = 0.50$
+- to `G`: $0.4\cdot0.3 + 0.4\cdot0.2 + 0.2\cdot0.0 = 0.12+0.08+0.00 = 0.20$
+
+So $\mathbf{x}_2 = (0.30,\ 0.50,\ 0.20)$ (sums to 1 ✓).
+
+**B7.** $(P^2)_{CA}$ = probability of being at `A` **two steps** after starting at `C`. Sum over the middle base $k$: $p_{CA}p_{AA} + p_{CC}p_{CA} + p_{CG}p_{GA} = 0.4\cdot0.1 + 0.4\cdot0.4 + 0.2\cdot0.5 = 0.04+0.16+0.10 = 0.30$. (Same as the `A`-entry of $\mathbf{x}_2$ in B6, as it must be.)
+
+**B8.** Pairs of `G A A C G T A A C`: `G→A, A→A, A→C, C→G, G→T, T→A, A→A, A→C`. That is **8** transitions (one fewer than the 9 bases).
+
+**B9.** Tally (rows from, cols to, order `A,C,G,T`):
+$$N = \begin{array}{cc}
+& \begin{array}{cccc}\mathtt{A}&\mathtt{C}&\mathtt{G}&\mathtt{T}\end{array}\\
+\begin{array}{c}\mathtt{A}\\\mathtt{C}\\\mathtt{G}\\\mathtt{T}\end{array}
+&\left(\begin{array}{cccc}
+2 & 2 & 0 & 0\\
+0 & 0 & 1 & 0\\
+1 & 0 & 0 & 1\\
+1 & 0 & 0 & 0
+\end{array}\right)
+\end{array}$$
+Check: A→A twice, A→C twice (row A total 4); C→G once; G→A once, G→T once; T→A once. Total $4+1+2+1 = 8$. ✓
+
+**B10.** Normalise each row by its sum:
+- row `A` (total 4): $(0.5,\ 0.5,\ 0,\ 0)$
+- row `C` (total 1): $(0,\ 0,\ 1,\ 0)$
+- row `G` (total 2): $(0.5,\ 0,\ 0,\ 0.5)$
+- row `T` (total 1): $(1,\ 0,\ 0,\ 0)$
+
+No row is undefined here — every base appears as a "from" base at least once. (In **R3** below the short sequence `G A A C G T A A C` does cover all four; but a sequence missing a base entirely would give a row of $0/0 = $ `NaN`. See R3.)
+
+**R answers.**
+
+**R1./R2.** The R outputs `x0 %*% P` etc. reproduce $(0.8,0.2)$, $(0.76,0.24)$ and the Part-B vectors exactly. For Part B:
+```r
+P3 <- matrix(c(0.1,0.6,0.3,
+               0.4,0.4,0.2,
+               0.5,0.5,0.0), 3, byrow = TRUE,
+             dimnames = list(c("A","C","G"), c("A","C","G")))
+rowSums(P3)                 # 1 1 1
+c(0,1,0) %*% P3             # 0.4 0.4 0.2
+(c(0,1,0) %*% P3) %*% P3    # 0.30 0.50 0.20
+```
+
+**R3.** `N`/`Phat` match B9/B10. With the 9-base sequence every base is seen as a "from" base, so no `NaN` appears. A `NaN` row arises **only** when a base never occurs as a "from" base (its row total is 0, so dividing gives $0/0$). Real analyses use long sequences and/or **pseudocounts** (add a small constant to every count) to avoid this.
+
+**R4.** With `n = 20000`, `Phat` matches `Ptrue` to roughly two decimals. With `n = 200` the estimate is noticeably noisy (entries can be off by 0.1 or more); with `n = 200000` it is very tight. This is the law of large numbers: more observed transitions → more accurate maximum-likelihood estimates of each $p_{ij}$.
+:::
+
+## Where this leads
+
+- **Day 8** keeps multiplying by $P$ and watches $\mathbf{x}_t$ settle to a fixed **stationary distribution** $\boldsymbol\pi$ with $\boldsymbol\pi P = \boldsymbol\pi$ — found by power iteration **and** as the eigenvector of $P^\top$ for eigenvalue 1 (Day 6's `eigen`). Biologically, $\boldsymbol\pi$ is the equilibrium nucleotide composition.
+- **Days 9–10 (HMMs):** here the state (e.g. `A,C,G,T`) was directly observed. In a *Hidden* Markov Model the state is unobserved (e.g. "CpG island" vs "background") and only an emitted symbol is seen — but the transition machinery you built today is the backbone.

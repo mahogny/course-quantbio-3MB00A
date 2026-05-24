@@ -1,0 +1,274 @@
+---
+title: "Exercise: Solving linear equation systems by hand"
+format:
+  html:
+    toc: true
+    code-copy: true
+    code-overflow: wrap
+    highlight-style: github
+---
+
+## Goal
+
+After this exercise you will be able to:
+
+- Translate a small biology mixture problem into a system of linear equations
+  and write it as $A\mathbf{x} = \mathbf{b}$.
+- Solve $2\times 2$ and $3\times 3$ systems **by hand** using substitution and
+  Gaussian elimination with an augmented matrix.
+- Check a solution by substituting it back into the original equations.
+- Reproduce your by-hand answers in R with [`solve`](https://rdrr.io/r/base/solve.html).
+
+This is the by-hand fluency you need for the written exam, so do the pen-and-
+paper parts *before* you touch R.
+
+## Background
+
+A **bulk** sample is a mixture of cell types. If we know, for each cell type,
+how much signal it contributes to each measured gene (its *signature*), then
+the total measured signal is a weighted sum of the unknown cell-type amounts.
+With as many genes measured as cell types present, recovering the amounts is
+exactly solving a square linear system.
+
+In standard form,
+$$
+A\mathbf{x} = \mathbf{b},
+$$
+where the column $j$ of $A$ is the signature of cell type $j$, the entry
+$x_j$ is the unknown amount of cell type $j$, and $\mathbf{b}$ holds the bulk
+measurements. Row $i$ of the system reads
+$$
+A_{i1}x_1 + A_{i2}x_2 + \dots + A_{in}x_n = b_i,
+$$
+the total signal for gene $i$.
+
+Two solution methods:
+
+- **Substitution** — solve one equation for one unknown and substitute into
+  the others. Good for $2\times 2$.
+- **Gaussian elimination** — use row operations (multiply a row by a non-zero
+  number; add a multiple of one row to another) to reach **upper-triangular**
+  form, then **back-substitute** from the bottom row up. Scales to any size.
+
+## By hand
+
+Do these on paper. Show the row operations, not just the final numbers.
+
+### Problem 1 — a 2×2 mixture (substitution)
+
+A blood sample is a mix of two cell types. Per unit, their signatures for
+genes G1 and G2 are:
+
+| | Type A | Type B |
+|--|:--:|:--:|
+| G1 | 3 | 1 |
+| G2 | 1 | 2 |
+
+The bulk measurements are G1 $= 11$ and G2 $= 7$.
+
+(a) Write the system as two equations and as $A\mathbf{x} = \mathbf{b}$.
+(b) Solve for the amounts $x_1$ (Type A) and $x_2$ (Type B) by **substitution**.
+(c) **Check** your answer in both original equations.
+
+### Problem 2 — the same 2×2 by Gaussian elimination
+
+Re-solve Problem 1 using **Gaussian elimination on the augmented matrix**
+$[\,A \mid \mathbf{b}\,]$. Reach upper-triangular form, then back-substitute.
+You should of course get the same answer as in Problem 1.
+
+### Problem 3 — a 3×3 mixture (Gaussian elimination)
+
+Three cell types, three marker genes give the system
+$$
+\begin{aligned}
+1x_1 + 2x_2 + 1x_3 &= 8\\
+2x_1 + 1x_2 + 1x_3 &= 7\\
+1x_1 + 1x_2 + 3x_3 &= 10
+\end{aligned}
+$$
+
+(a) Write the augmented matrix $[\,A \mid \mathbf{b}\,]$.
+(b) Eliminate column 1, then column 2, to reach upper-triangular form.
+(c) Back-substitute to find $x_1, x_2, x_3$, and **check** all three equations.
+
+## In R
+
+Use R only to **verify** the answers you already found by hand.
+
+```r
+# Problem 1 / 2 — the 2x2 system
+A <- matrix(c(3, 1,
+              1, 2), nrow = 2, byrow = TRUE)
+b <- c(11, 7)
+
+x <- solve(A, b)   # solve A x = b
+x
+# expected: your Type A and Type B amounts from the by-hand answer
+
+# Check: does A %*% x reproduce b?
+A %*% x
+```
+
+```r
+# Problem 3 — the 3x3 system
+A3 <- matrix(c(1, 2, 1,
+               2, 1, 1,
+               1, 1, 3), nrow = 3, byrow = TRUE)
+b3 <- c(8, 7, 10)
+
+x3 <- solve(A3, b3)
+x3
+
+# Verify the residual is (numerically) zero
+A3 %*% x3 - b3
+```
+
+Note `byrow = TRUE`: it fills the matrix row by row, so the R code reads in the
+same order as the equations on paper. (The default, `byrow = FALSE`, fills
+column by column — a common source of confusion.)
+
+## Hints
+
+::: {.callout-tip collapse="true" title="Hint 1 — setting up A and b"}
+Each **equation** is one **row**. The numbers multiplying $x_1, x_2, \dots$ go
+into $A$ in order; the right-hand number goes into $\mathbf{b}$. For Problem 1,
+the two equations are $3x_1 + 1x_2 = 11$ and $1x_1 + 2x_2 = 7$.
+:::
+
+::: {.callout-tip collapse="true" title="Hint 2 — substitution"}
+From the second equation of Problem 1, $x_1 = 7 - 2x_2$. Substitute that into
+the first equation to get a single equation in $x_2$ alone, solve it, then
+back-substitute to get $x_1$.
+:::
+
+::: {.callout-tip collapse="true" title="Hint 3 — choosing the elimination multiplier"}
+To kill the entry in row $i$, column $j$ using a pivot row $p$ (which has a
+non-zero entry in column $j$), use
+$$
+\text{R}_i \;\leftarrow\; \text{R}_i - \frac{A_{ij}}{A_{pj}}\,\text{R}_p .
+$$
+Apply the operation to the **whole** augmented row, including the $\mathbf{b}$
+entry.
+:::
+
+::: {.callout-tip collapse="true" title="Hint 4 — back-substitution"}
+After reaching upper-triangular form, the **last** row has only one unknown —
+solve it. Carry that value into the row above, which now also has one remaining
+unknown, and continue upward.
+:::
+
+::: {.callout-tip collapse="true" title="Hint 5 — the R functions"}
+[`matrix`](https://rdrr.io/r/base/matrix.html) builds a matrix (use
+`byrow = TRUE`); [`solve`](https://rdrr.io/r/base/solve.html) with two arguments
+solves $A\mathbf{x} = \mathbf{b}$;
+[`%*%`](https://rdrr.io/r/base/matmult.html) is matrix multiplication, used here
+to check the answer.
+:::
+
+## Solutions
+
+::: {.callout-note collapse="true" title="Solution"}
+
+### Problem 1 — substitution
+
+(a) Equations: $3x_1 + x_2 = 11$ and $x_1 + 2x_2 = 7$. In standard form,
+$$
+\begin{bmatrix} 3 & 1 \\ 1 & 2 \end{bmatrix}
+\begin{bmatrix} x_1 \\ x_2 \end{bmatrix}
+=
+\begin{bmatrix} 11 \\ 7 \end{bmatrix}.
+$$
+
+(b) From equation 2, $x_1 = 7 - 2x_2$. Substitute into equation 1:
+$$
+3(7 - 2x_2) + x_2 = 11 \;\Rightarrow\; 21 - 6x_2 + x_2 = 11
+\;\Rightarrow\; -5x_2 = -10 \;\Rightarrow\; x_2 = 2.
+$$
+Then $x_1 = 7 - 2(2) = 3$. So **$x_1 = 3$ (Type A), $x_2 = 2$ (Type B)**.
+
+(c) Check: $3(3) + 1(2) = 11\ \checkmark$ and $1(3) + 2(2) = 7\ \checkmark$.
+
+### Problem 2 — Gaussian elimination
+
+$$
+\left[\begin{array}{cc|c} 3 & 1 & 11 \\ 1 & 2 & 7 \end{array}\right]
+\xrightarrow{\;\text{R2}-\frac13\text{R1}\;}
+\left[\begin{array}{cc|c} 3 & 1 & 11 \\ 0 & \tfrac{5}{3} & \tfrac{10}{3} \end{array}\right]
+$$
+Bottom row: $\tfrac{5}{3}x_2 = \tfrac{10}{3} \Rightarrow x_2 = 2$.
+Back-substitute into R1: $3x_1 + 2 = 11 \Rightarrow x_1 = 3$. Same answer.
+
+### Problem 3 — 3×3 Gaussian elimination
+
+(a) Augmented matrix:
+$$
+\left[\begin{array}{ccc|c}
+1 & 2 & 1 & 8\\
+2 & 1 & 1 & 7\\
+1 & 1 & 3 & 10
+\end{array}\right]
+$$
+
+(b) Clear column 1 with $\text{R2}-2\text{R1}$ and $\text{R3}-\text{R1}$:
+$$
+\left[\begin{array}{ccc|c}
+1 & 2 & 1 & 8\\
+0 & -3 & -1 & -9\\
+0 & -1 & 2 & 2
+\end{array}\right]
+$$
+Clear column 2 with $\text{R3} - \tfrac{1}{3}\text{R2}$
+(since $-1 = \tfrac{1}{3}\cdot(-3)$):
+$$
+\left[\begin{array}{ccc|c}
+1 & 2 & 1 & 8\\
+0 & -3 & -1 & -9\\
+0 & 0 & \tfrac{7}{3} & 5
+\end{array}\right]
+$$
+(Row 3: $2 - \tfrac13(-1) = \tfrac{7}{3}$ and $2 - \tfrac13(-9) = 5$.)
+
+(c) Back-substitute:
+$$
+\begin{aligned}
+\tfrac{7}{3}x_3 &= 5 &&\Rightarrow\; x_3 = \tfrac{15}{7}\approx 2.143\\
+-3x_2 - x_3 &= -9 &&\Rightarrow\; -3x_2 = -9 + \tfrac{15}{7} = -\tfrac{48}{7}
+   \;\Rightarrow\; x_2 = \tfrac{16}{7}\approx 2.286\\
+x_1 + 2x_2 + x_3 &= 8 &&\Rightarrow\; x_1 = 8 - \tfrac{32}{7} - \tfrac{15}{7}
+   = 8 - \tfrac{47}{7} = \tfrac{9}{7}\approx 1.286
+\end{aligned}
+$$
+So $x_1 = \tfrac{9}{7},\ x_2 = \tfrac{16}{7},\ x_3 = \tfrac{15}{7}$.
+
+Check equation 1: $\tfrac{9}{7} + 2\cdot\tfrac{16}{7} + \tfrac{15}{7}
+= \tfrac{9 + 32 + 15}{7} = \tfrac{56}{7} = 8\ \checkmark$.
+(Equations 2 and 3 check out the same way.)
+
+### R verification
+
+```r
+A <- matrix(c(3, 1, 1, 2), nrow = 2, byrow = TRUE)
+b <- c(11, 7)
+solve(A, b)
+# [1] 3 2
+
+A3 <- matrix(c(1, 2, 1,
+               2, 1, 1,
+               1, 1, 3), nrow = 3, byrow = TRUE)
+b3 <- c(8, 7, 10)
+solve(A3, b3)
+# [1] 1.285714 2.285714 2.142857   (= 9/7, 16/7, 15/7)
+
+A3 %*% solve(A3, b3) - b3
+# all entries ~0 (tiny floating-point residual)
+```
+
+:::
+
+## Where this leads
+
+Every system here had **exactly one** solution. That is not guaranteed:
+**Day 2** builds these systems in R, and asks what happens when $A$ is
+*singular* or *non-square* — the cases of **no solution** and **infinitely
+many solutions**, which correspond to a deconvolution problem being
+over- or under-determined.

@@ -1,0 +1,307 @@
+---
+title: "Exercise: Hidden Markov Models by hand"
+format:
+  html:
+    toc: true
+    code-copy: true
+    code-overflow: wrap
+    highlight-style: github
+---
+
+## Goal
+
+After this exercise you will be able to:
+
+- Identify the four ingredients of an HMM (states, transition matrix $A$,
+  emission matrix $B$, initial distribution $\boldsymbol{\pi}$) in a biology
+  problem.
+- Tell the **generative story** of a 2-state HMM and **compute the probability
+  of one specific hidden path together with its observations — by hand**.
+- Compute a small **likelihood** by summing over a few paths.
+- Reason about **decoding** (which of two paths is more likely).
+- Check your by-hand numbers in R.
+
+The by-hand path-probability calculation is the single most exam-relevant skill
+of this block, so do the pen-and-paper parts *before* you touch R.
+
+## Background
+
+A **Hidden Markov Model** has a hidden Markov chain over states (the Day-7
+chain) plus an **emission** at every step. We use:
+
+- hidden states with **transition matrix** $A$, where
+  $A_{ij}=P(z_{t+1}=j\mid z_t=i)$ and each **row sums to 1**;
+- **emission matrix** $B$, where $B_{ik}=P(x_t=k\mid z_t=i)$, one row per
+  state, one column per symbol, each **row sums to 1**;
+- **initial distribution** $\boldsymbol{\pi}$ with $\pi_i=P(z_1=i)$.
+
+The **joint probability** of a hidden path $\mathbf{z}=(z_1,\dots,z_T)$ together
+with the observations $\mathbf{x}=(x_1,\dots,x_T)$ is the product along the
+generative story:
+
+$$
+P(\mathbf{x},\mathbf{z})
+= \pi_{z_1}\, B_{z_1, x_1}
+  \prod_{t=2}^{T} A_{z_{t-1}, z_t}\, B_{z_t, x_t}.
+$$
+
+In words: **start probability**, then alternate **emit** ($B$) and **move**
+($A$), ending on an emission. The **likelihood** of the data alone sums this
+over *every* possible path:
+$P(\mathbf{x})=\sum_{\mathbf{z}}P(\mathbf{x},\mathbf{z})$.
+
+### The model for this exercise
+
+States $\{H, L\}$: **H** = "GC-rich (CpG-island-like)", **L** = "normal
+background". Symbols are the DNA bases $\{A, C, G, T\}$.
+
+$$
+\boldsymbol{\pi}=\begin{bmatrix} 0.5 \\ 0.5 \end{bmatrix}, \qquad
+A=\begin{array}{cc}
+ & \begin{array}{cc} H & L \end{array}\\
+\begin{array}{c} H\\ L \end{array} &
+\left[\begin{array}{cc} 0.8 & 0.2 \\ 0.3 & 0.7 \end{array}\right]
+\end{array},
+\qquad
+B=
+\left[\begin{array}{cccc}
+0.1 & 0.4 & 0.4 & 0.1 \\
+0.3 & 0.2 & 0.2 & 0.3
+\end{array}\right]
+\begin{array}{c} H\\ L \end{array}
+$$
+
+(The columns of $B$ are, in order, $A, C, G, T$.)
+
+## By hand
+
+Do these on paper. Show every factor in your products, not just the final
+number.
+
+### Problem 1 — read the model
+
+(a) What does $B_{H,G}=0.4$ mean in words? What does $A_{L,L}=0.7$ mean?
+(b) Verify that every row of $A$ and every row of $B$ sums to 1, and that
+$\boldsymbol{\pi}$ sums to 1.
+(c) Which state is more likely to emit a `C`? Which state tends to produce long
+runs of the same state? (Look at the diagonal of $A$.)
+
+### Problem 2 — probability of one path with its emissions
+
+Observed sequence $\mathbf{x}=(G, C, A)$. Consider the hidden path
+$\mathbf{z}=(H, H, L)$.
+
+(a) Write out the product $P(\mathbf{x},\mathbf{z})$ factor by factor, labelling
+each factor as a start, an emission, or a transition.
+(b) Evaluate it to a number.
+
+### Problem 3 — compare two paths (decoding intuition)
+
+Same observations $\mathbf{x}=(G, C, A)$. Now consider the all-high path
+$\mathbf{z}'=(H, H, H)$.
+
+(a) Compute $P(\mathbf{x}, \mathbf{z}')$.
+(b) Which of $\mathbf{z}=(H,H,L)$ and $\mathbf{z}'=(H,H,H)$ is the more likely
+explanation of the data? This is the kind of comparison the **Viterbi**
+algorithm makes (over all paths at once).
+
+### Problem 4 — a small likelihood (summing over paths)
+
+Take the **shorter** observation $\mathbf{x}=(G, C)$ (length 2).
+
+(a) List **all** $2^2=4$ hidden paths.
+(b) Compute $P(\mathbf{x}, \mathbf{z})$ for each path.
+(c) Add them up to get the likelihood $P(\mathbf{x}=(G,C))$. (This is what the
+**forward** algorithm computes, but for length 2 we can just enumerate.)
+
+## In R
+
+Use R only to **verify** the by-hand numbers. We are not using the `HMM`
+package yet (that is Day 10) — here we just multiply the probabilities
+ourselves so the arithmetic is transparent.
+
+```r
+# The model
+pi  <- c(H = 0.5, L = 0.5)
+
+A <- matrix(c(0.8, 0.2,
+              0.3, 0.7), nrow = 2, byrow = TRUE,
+            dimnames = list(c("H", "L"), c("H", "L")))
+
+# columns are A, C, G, T
+B <- matrix(c(0.1, 0.4, 0.4, 0.1,
+              0.3, 0.2, 0.2, 0.3), nrow = 2, byrow = TRUE,
+            dimnames = list(c("H", "L"), c("A", "C", "G", "T")))
+
+# Problem 2: path (H, H, L) with observations (G, C, A)
+p_HHL <- pi["H"] * B["H", "G"] * A["H", "H"] * B["H", "C"] *
+         A["H", "L"] * B["L", "A"]
+p_HHL
+# expected: 0.00384
+
+# Problem 3: path (H, H, H) with the same observations
+p_HHH <- pi["H"] * B["H", "G"] * A["H", "H"] * B["H", "C"] *
+         A["H", "H"] * B["H", "A"]
+p_HHH
+# compare p_HHH with p_HHL: which path is more likely?
+```
+
+```r
+# Problem 4: likelihood of x = (G, C) by enumerating all 4 paths
+states <- c("H", "L")
+obs    <- c("G", "C")
+
+joint <- function(z1, z2) {
+  pi[z1] * B[z1, obs[1]] * A[z1, z2] * B[z2, obs[2]]
+}
+
+paths <- expand.grid(z1 = states, z2 = states, stringsAsFactors = FALSE)
+paths$prob <- mapply(joint, paths$z1, paths$z2)
+paths
+sum(paths$prob)   # the likelihood P(x = (G, C))
+```
+
+The functions used: [`matrix`](https://rdrr.io/r/base/matrix.html) (note
+`byrow = TRUE` and `dimnames` so we can index by state/base names),
+[`expand.grid`](https://rdrr.io/r/base/expand.grid.html) to list all paths, and
+[`mapply`](https://rdrr.io/r/base/mapply.html) to apply the joint-probability
+function to each path.
+
+## Hints
+
+::: {.callout-tip collapse="true" title="Hint 1 — counting the factors"}
+For a sequence of length $T$, the product $P(\mathbf{x},\mathbf{z})$ has exactly
+**one** $\boldsymbol{\pi}$ factor, **$T$** emission factors (one per position),
+and **$T-1$** transition factors (one per gap between positions). For $T=3$
+that is $1 + 3 + 2 = 6$ factors.
+:::
+
+::: {.callout-tip collapse="true" title="Hint 2 — the order of factors"}
+Lay it out left to right as the generative story:
+$$
+\pi_{z_1}\;\to\; B_{z_1,x_1}\;\to\; A_{z_1,z_2}\;\to\; B_{z_2,x_2}
+\;\to\; A_{z_2,z_3}\;\to\; B_{z_3,x_3}.
+$$
+Start, emit, move, emit, move, emit. Always finish on an emission.
+:::
+
+::: {.callout-tip collapse="true" title="Hint 3 — reading the matrices"}
+$A_{ij}$ is the entry in **row** $i$ (current state), **column** $j$ (next
+state). $B_{ik}$ is **row** $i$ (state), **column** $k$ (emitted symbol). For
+$B$, the columns are ordered $A, C, G, T$, so e.g. $B_{H,G}$ is row $H$, third
+column $=0.4$.
+:::
+
+::: {.callout-tip collapse="true" title="Hint 4 — comparing two paths"}
+For decoding you do **not** need the likelihood. Just compute the joint
+probability of each candidate path and compare the numbers — the larger one is
+the more likely explanation. (Viterbi does this comparison over *all* paths
+simultaneously and efficiently.)
+:::
+
+::: {.callout-tip collapse="true" title="Hint 5 — likelihood vs path probability"}
+A single path probability is $P(\mathbf{x},\mathbf{z})$. The **likelihood**
+$P(\mathbf{x})$ is the **sum** of those over every possible path. With 2 states
+and length 2 there are $2^2=4$ paths: $(H,H), (H,L), (L,H), (L,L)$.
+:::
+
+## Solutions
+
+::: {.callout-note collapse="true" title="Solution"}
+
+### Problem 1 — read the model
+
+(a) $B_{H,G}=0.4$: *given* the hidden state is $H$ (GC-rich), the probability of
+emitting a `G` is 0.4. $A_{L,L}=0.7$: given the chain is in state $L$, the
+probability the next state is again $L$ is 0.7.
+
+(b) Rows of $A$: $0.8+0.2=1$, $0.3+0.7=1$. Rows of $B$: $0.1+0.4+0.4+0.1=1$,
+$0.3+0.2+0.2+0.3=1$. $\boldsymbol{\pi}$: $0.5+0.5=1$. All valid.
+
+(c) `C` is more likely from $H$ ($B_{H,C}=0.4 > B_{L,C}=0.2$). State $H$ tends
+to produce longer runs, since $A_{H,H}=0.8 > A_{L,L}=0.7$ (the larger diagonal
+entry is "stickier").
+
+### Problem 2 — one path with its emissions
+
+Path $\mathbf{z}=(H,H,L)$, observations $\mathbf{x}=(G,C,A)$:
+
+$$
+P(\mathbf{x},\mathbf{z})
+= \underbrace{\pi_H}_{0.5}\;
+  \underbrace{B_{H,G}}_{0.4}\;
+  \underbrace{A_{H,H}}_{0.8}\;
+  \underbrace{B_{H,C}}_{0.4}\;
+  \underbrace{A_{H,L}}_{0.2}\;
+  \underbrace{B_{L,A}}_{0.3}
+$$
+$$
+= 0.5 \times 0.4 \times 0.8 \times 0.4 \times 0.2 \times 0.3 = \mathbf{0.003840}.
+$$
+
+### Problem 3 — compare two paths
+
+Path $\mathbf{z}'=(H,H,H)$, same observations:
+$$
+P(\mathbf{x},\mathbf{z}')
+= \pi_H\,B_{H,G}\,A_{H,H}\,B_{H,C}\,A_{H,H}\,B_{H,A}
+= 0.5\times0.4\times0.8\times0.4\times0.8\times0.1 = \mathbf{0.005120}.
+$$
+
+Compare: $P(\mathbf{x},\mathbf{z}')=0.00512 > P(\mathbf{x},\mathbf{z})=0.00384$.
+So **the all-high path $(H,H,H)$ is the more likely explanation** of
+$(G,C,A)$. Intuition: staying in $H$ is cheap (transition 0.8 vs 0.2), and even
+though $H$ emits `A` with only 0.1, that loss is outweighed by the much higher
+transition probability of staying put.
+
+### Problem 4 — likelihood of $\mathbf{x}=(G,C)$
+
+The four paths and their joint probabilities
+$P=\pi_{z_1}\,B_{z_1,G}\,A_{z_1,z_2}\,B_{z_2,C}$:
+
+| path | $\pi$ | emit $G$ | move | emit $C$ | product |
+|--|--|--|--|--|--|
+| $(H,H)$ | 0.5 | 0.4 | 0.8 | 0.4 | $0.0640$ |
+| $(H,L)$ | 0.5 | 0.4 | 0.2 | 0.2 | $0.0080$ |
+| $(L,H)$ | 0.5 | 0.2 | 0.3 | 0.4 | $0.0120$ |
+| $(L,L)$ | 0.5 | 0.2 | 0.7 | 0.2 | $0.0140$ |
+
+Likelihood:
+$$
+P(\mathbf{x}=(G,C)) = 0.0640 + 0.0080 + 0.0120 + 0.0140 = \mathbf{0.098}.
+$$
+
+### R verification
+
+```r
+p_HHL
+# H
+# 0.00384
+p_HHH
+# H
+# 0.00512        # the all-H path is more likely, matching Problem 3
+
+paths
+#   z1 z2  prob
+# 1  H  H 0.064
+# 2  L  H 0.012
+# 3  H  L 0.008
+# 4  L  L 0.014
+sum(paths$prob)
+# [1] 0.098       # matches the by-hand likelihood
+```
+
+:::
+
+## Where this leads
+
+You computed path probabilities, a likelihood, and a path comparison **by
+hand** for a tiny model. Real genomes have millions of positions and far too
+many paths to enumerate. **Day 10** introduces the CRAN
+[`HMM`](https://cran.r-project.org/package=HMM) package, which does all of this
+efficiently: `forward` for the likelihood, `viterbi` to decode the most likely
+island map, and `baumWelch` to *learn* $A$, $B$, $\boldsymbol{\pi}$ from
+unlabelled sequence. After the linear-algebra block, these probabilistic-model
+ideas return throughout the course — in the Bayesian-statistics block (latent
+variables and inference), and again when we segment and annotate single-cell
+data.

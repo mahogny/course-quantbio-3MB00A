@@ -1,0 +1,200 @@
+---
+title: "Exercise: vectors, dot product & projection"
+format:
+  html:
+    toc: true
+    code-copy: true
+    code-overflow: wrap
+    highlight-style: github
+---
+
+## Goal
+
+By the end of this exercise you should be able to, **by hand and in R**:
+
+- add and scale vectors,
+- compute a vector's length (norm),
+- compute a dot product and read off its meaning,
+- compute the angle / cosine similarity between two vectors,
+- decide whether two vectors are orthogonal,
+- project one vector onto another and find the orthogonal leftover.
+
+The by-hand problems are the ones that matter most for the written exam — the on-campus exam has **no computer**. Do them with pen and paper first, then check with R.
+
+## Background
+
+A **vector** is an ordered list of numbers $\mathbf{v} = (v_1, \dots, v_n)$. For us, a vector is a **sample**: a gene-expression profile across $n$ genes.
+
+| Operation | Definition |
+|---|---|
+| Addition | $\mathbf{u} + \mathbf{v} = (u_1 + v_1,\ \dots,\ u_n + v_n)$ |
+| Scaling | $c\,\mathbf{v} = (c v_1,\ \dots,\ c v_n)$ |
+| Norm (length) | $\|\mathbf{v}\| = \sqrt{v_1^2 + \dots + v_n^2} = \sqrt{\mathbf{v}\cdot\mathbf{v}}$ |
+| Dot product | $\mathbf{u}\cdot\mathbf{v} = u_1 v_1 + \dots + u_n v_n$ |
+| Angle | $\cos\theta = \dfrac{\mathbf{u}\cdot\mathbf{v}}{\|\mathbf{u}\|\,\|\mathbf{v}\|}$ |
+| Orthogonal | $\mathbf{u}\cdot\mathbf{v} = 0$ |
+| Projection of $\mathbf{u}$ onto $\mathbf{v}$ | $\text{proj}_{\mathbf{v}}\mathbf{u} = \dfrac{\mathbf{u}\cdot\mathbf{v}}{\mathbf{v}\cdot\mathbf{v}}\,\mathbf{v}$ |
+
+The geometric identity that ties dot product to angle:
+$$\mathbf{u}\cdot\mathbf{v} = \|\mathbf{u}\|\,\|\mathbf{v}\|\cos\theta.$$
+
+## By hand
+
+Use these vectors throughout (think of them as 2-gene mini-profiles):
+$$\mathbf{a} = \begin{pmatrix} 3 \\ 4 \end{pmatrix}, \quad \mathbf{b} = \begin{pmatrix} 4 \\ 0 \end{pmatrix}, \quad \mathbf{c} = \begin{pmatrix} -2 \\ 6 \end{pmatrix}, \quad \mathbf{d} = \begin{pmatrix} 6 \\ 8 \end{pmatrix}$$
+
+**B1.** Compute $\mathbf{a} + \mathbf{c}$ and $2\mathbf{b} - \mathbf{a}$.
+
+**B2.** Compute the lengths $\|\mathbf{a}\|$ and $\|\mathbf{b}\|$. (Both are nice round numbers.)
+
+**B3.** Compute the dot products $\mathbf{a}\cdot\mathbf{b}$ and $\mathbf{a}\cdot\mathbf{c}$.
+
+**B4.** Using B2 and B3, compute $\cos\theta$ for the angle between $\mathbf{a}$ and $\mathbf{b}$. What is $\theta$ in degrees?
+
+**B5.** Show that $\mathbf{b}$ and $\begin{pmatrix} 0 \\ 5 \end{pmatrix}$ are orthogonal. Then find a number $k$ so that $\begin{pmatrix} 2 \\ k \end{pmatrix}$ is orthogonal to $\mathbf{a}$.
+
+**B6.** Compare $\mathbf{a}$ and $\mathbf{d}$: compute $\cos\theta$ between them. What do you notice, and what does it say about the two "samples"? (Hint: look at $\mathbf{d}$ versus $\mathbf{a}$ componentwise.)
+
+**B7.** Project $\mathbf{a}$ onto $\mathbf{b}$, i.e. compute $\text{proj}_{\mathbf{b}}\mathbf{a}$. Then compute the leftover $\mathbf{a} - \text{proj}_{\mathbf{b}}\mathbf{a}$ and verify it is orthogonal to $\mathbf{b}$.
+
+## In R
+
+Define the vectors and verify your by-hand answers, then scale up to a realistic-sized profile.
+
+```r
+a <- c(3, 4)
+b <- c(4, 0)
+cc <- c(-2, 6)   # 'c' is a reserved function name in R, so use cc
+d <- c(6, 8)
+
+# B1 — addition and scaling
+a + cc
+2*b - a
+
+# B2 — norms
+sqrt(sum(a^2))   # = 5
+sqrt(sum(b^2))   # = 4
+
+# B3 — dot products
+sum(a * b)
+sum(a * cc)
+
+# B4 — angle between a and b
+cos_ab <- sum(a*b) / (sqrt(sum(a^2)) * sqrt(sum(b^2)))
+cos_ab
+acos(cos_ab) * 180/pi   # angle in degrees
+
+# B5 — orthogonality check
+sum(b * c(0, 5))        # should be 0
+
+# B6 — a vs d
+sum(a*d) / (sqrt(sum(a^2)) * sqrt(sum(d^2)))
+
+# B7 — projection of a onto b, and the leftover
+proj_ab <- (sum(a*b) / sum(b*b)) * b
+proj_ab
+leftover <- a - proj_ab
+leftover
+sum(leftover * b)       # should be 0 (orthogonal)
+```
+
+### Scale up: comparing real-ish profiles
+
+Reusable helper functions, then a small "expression matrix" of samples in columns:
+
+```r
+norm_vec <- function(v) sqrt(sum(v^2))
+cos_sim  <- function(u, v) sum(u*v) / (norm_vec(u) * norm_vec(v))
+
+set.seed(1)
+genes <- 200
+# two samples of the same "cell type": s2 is s1 at double depth plus a little noise
+s1 <- rpois(genes, lambda = 5)
+s2 <- 2 * s1 + rpois(genes, lambda = 1)
+# an unrelated sample
+s3 <- rpois(genes, lambda = 5)
+
+cos_sim(s1, s2)   # close to 1: same direction despite different depth
+cos_sim(s1, s3)   # lower: unrelated profiles
+
+# Compare with Euclidean distance, which IS fooled by depth:
+norm_vec(s1 - s2)   # large, because s2 is ~twice as big
+norm_vec(s1 - s3)   # smaller, even though s3 is unrelated!
+```
+
+**R1.** Run the block above. Explain in one sentence why cosine similarity ranks `s1`–`s2` as most similar but Euclidean distance does not.
+
+**R2.** Build a cosine-similarity matrix for all three samples. (Hint: stack them as columns of a matrix and use [`crossprod`](https://rdrr.io/r/base/crossprod.html), or just call `cos_sim` on each pair.)
+
+## Hints
+
+::: {.callout-tip collapse="true" title="Hint 1 — building and combining vectors"}
+Use [`c`](https://rdrr.io/r/base/c.html) to build a vector. Plain `+`, `-` and `*` between a scalar and a vector, or between two equal-length vectors, work **elementwise** — exactly matching the by-hand definitions of addition and scaling.
+:::
+
+::: {.callout-tip collapse="true" title="Hint 2 — norm and dot product"}
+The norm is `sqrt(sum(v^2))`. The dot product of `u` and `v` is `sum(u*v)`; equivalently `u %*% v` (see [`%*%`](https://rdrr.io/r/base/matmult.html)), which returns a $1\times1$ matrix. Note $\|\mathbf{v}\|^2 = \mathbf{v}\cdot\mathbf{v} =$ `sum(v*v)`.
+:::
+
+::: {.callout-tip collapse="true" title="Hint 3 — angles in R"}
+R's trig functions work in **radians**. Get the angle with [`acos`](https://rdrr.io/r/base/Trig.html) and convert to degrees by multiplying by `180/pi`. Clamp arguments that drift slightly outside $[-1,1]$ from rounding if needed.
+:::
+
+::: {.callout-tip collapse="true" title="Hint 4 — orthogonality"}
+Two vectors are orthogonal iff their dot product is exactly 0. For B5, set $\mathbf{a}\cdot(2, k) = 0$ and solve the resulting linear equation for $k$.
+:::
+
+::: {.callout-tip collapse="true" title="Hint 5 — projection"}
+First compute the scalar coefficient $\dfrac{\mathbf{u}\cdot\mathbf{v}}{\mathbf{v}\cdot\mathbf{v}}$ = `sum(u*v)/sum(v*v)`, then multiply it by the vector `v`. The leftover `u - proj` should dot to 0 with `v`.
+:::
+
+## Solutions
+
+::: {.callout-note collapse="true" title="Solution"}
+
+**B1.** $\mathbf{a}+\mathbf{c} = (3+(-2),\ 4+6) = (1,\ 10)$.  $2\mathbf{b}-\mathbf{a} = (8,0)-(3,4) = (5,\ -4)$.
+
+**B2.** $\|\mathbf{a}\| = \sqrt{3^2+4^2} = \sqrt{25} = 5$.  $\|\mathbf{b}\| = \sqrt{4^2+0^2} = 4$.
+
+**B3.** $\mathbf{a}\cdot\mathbf{b} = 3\cdot4 + 4\cdot0 = 12$.  $\mathbf{a}\cdot\mathbf{c} = 3(-2) + 4\cdot6 = -6 + 24 = 18$.
+
+**B4.** $\cos\theta = \dfrac{12}{5\cdot4} = \dfrac{12}{20} = 0.6$. So $\theta = \arccos(0.6) \approx 53.13^\circ$.
+
+**B5.** $\mathbf{b}\cdot(0,5) = 4\cdot0 + 0\cdot5 = 0$ → orthogonal. For $(2,k)$: $\mathbf{a}\cdot(2,k) = 3\cdot2 + 4k = 6 + 4k = 0 \Rightarrow k = -\tfrac{3}{2}$.
+
+**B6.** Note $\mathbf{d} = (6,8) = 2\mathbf{a}$. So $\cos\theta = \dfrac{\mathbf{a}\cdot 2\mathbf{a}}{\|\mathbf{a}\|\,\|2\mathbf{a}\|} = \dfrac{2\|\mathbf{a}\|^2}{2\|\mathbf{a}\|^2} = 1$, i.e. $\theta = 0^\circ$. $\mathbf{d}$ points in the **same direction** as $\mathbf{a}$ — same "shape" of profile, just twice the magnitude (like the same cell type sequenced at double depth). Cosine similarity is blind to that scaling.
+
+**B7.** Coefficient $= \dfrac{\mathbf{a}\cdot\mathbf{b}}{\mathbf{b}\cdot\mathbf{b}} = \dfrac{12}{16} = \tfrac{3}{4}$. So $\text{proj}_{\mathbf{b}}\mathbf{a} = \tfrac{3}{4}(4,0) = (3,\ 0)$. Leftover $= \mathbf{a} - (3,0) = (0,\ 4)$. Check: $(0,4)\cdot(4,0) = 0$ ✓ (orthogonal, as expected — the projection drops a perpendicular onto the line through $\mathbf{b}$, here the x-axis).
+
+**R answers (selected output):**
+
+```r
+a + cc            # 1 10
+2*b - a           # 5 -4
+sqrt(sum(a^2))    # 5
+sum(a*b)          # 12
+cos_ab            # 0.6
+acos(0.6)*180/pi  # 53.13010
+proj_ab           # 3 0
+leftover          # 0 4
+sum(leftover*b)   # 0
+```
+
+**R1.** `s2` is essentially `2 * s1`, i.e. the *same direction* in gene space; cosine similarity measures direction and so reports ~1, whereas Euclidean distance measures absolute separation and is inflated by the doubled magnitude.
+
+**R2.** One compact way:
+
+```r
+M <- cbind(s1, s2, s3)        # genes in rows, samples in columns
+# normalise each column to unit length, then cross products give cosines
+U <- apply(M, 2, function(v) v / norm_vec(v))
+round(crossprod(U), 3)        # 3x3 cosine-similarity matrix
+```
+The `s1`–`s2` entry is near 1; the entries involving `s3` are lower.
+:::
+
+## Where this leads
+
+- **Day 4** turns the dot product into a building block: every entry of a matrix–vector product is a dot product of a matrix row with the vector. A matrix becomes a *machine that transforms whole vectors*.
+- **Cosine similarity** is the standard way to compare cells/samples in single-cell analysis (Week 5).
+- **Projection** is the engine of **PCA** (Week 2): a PCA score is the coordinate of a sample projected onto a principal axis, and the orthogonal-leftover idea is how successive components are made independent.

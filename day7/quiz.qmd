@@ -1,0 +1,155 @@
+---
+title: "Quiz: Markov chains & transition matrices"
+format:
+  html:
+    toc: true
+    code-copy: true
+    code-overflow: wrap
+    highlight-style: github
+---
+
+Short questions to test your understanding of formulating Markov chains. Try each on paper first, then open the answer. Several are written in the style of the on-campus exam (no computer). Throughout we use **row vectors**, with $\mathbf{x}_{t+1} = \mathbf{x}_t P$ and **rows of $P$ summing to 1** (entry $p_{ij}$ = from state $i$ to state $j$).
+
+---
+
+**Q1.** State the Markov property in one sentence, for a DNA sequence.
+
+::: {.callout-tip collapse="true" title="Hint"}
+Which bases does the next base depend on?
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+The probability of the next base depends only on the **current** base, not on any bases before it (the chain is "memoryless").
+:::
+
+---
+
+**Q2.** In our convention, what does the entry in **row C, column G** of $P$ mean?
+
+::: {.callout-tip collapse="true" title="Hint"}
+Row = from, column = to.
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+$p_{CG}$ = the probability that the next base is `G` **given** the current base is `C`, i.e. $P(X_{t+1}=G \mid X_t=C)$.
+:::
+
+---
+
+**Q3.** Why must every **row** of a transition matrix sum to 1? Do the columns have to sum to 1?
+
+::: {.callout-tip collapse="true" title="Hint"}
+From a given state, the next state must be *some* state.
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+From state $i$ you go *somewhere* with total probability 1, so the outgoing probabilities (row $i$) form a complete distribution and sum to 1. Columns generally do **not** sum to 1.
+:::
+
+---
+
+**Q4.** Is $\begin{pmatrix} 0.5 & 0.6\\ 0.3 & 0.7 \end{pmatrix}$ a valid transition matrix?
+
+::: {.callout-tip collapse="true" title="Hint"}
+Check each row sum (and that entries are non-negative).
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+No. Row 1 sums to $0.5+0.6 = 1.1 \neq 1$. (Row 2 is fine.) It is not row-stochastic.
+:::
+
+---
+
+**Q5.** With $P = \begin{pmatrix} 0.9 & 0.1\\ 0.5 & 0.5 \end{pmatrix}$ and $\mathbf{x}_0 = (1, 0)$, compute $\mathbf{x}_1 = \mathbf{x}_0 P$.
+
+::: {.callout-tip collapse="true" title="Hint"}
+$\mathbf{x}_0 = (1,0)$ just reads off a row of $P$ — which one?
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+$\mathbf{x}_1 = (1\cdot0.9 + 0\cdot0.5,\ \ 1\cdot0.1 + 0\cdot0.5) = (0.9,\ 0.1)$ — the first row of $P$.
+:::
+
+---
+
+**Q6.** Using the same $P$ and $\mathbf{x}_1 = (0.9, 0.1)$, compute $\mathbf{x}_2$.
+
+::: {.callout-tip collapse="true" title="Hint"}
+$\mathbf{x}_2 = \mathbf{x}_1 P$: dot the row vector with each column of $P$.
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+To state 1: $0.9\cdot0.9 + 0.1\cdot0.5 = 0.81+0.05 = 0.86$. To state 2: $0.9\cdot0.1 + 0.1\cdot0.5 = 0.09+0.05 = 0.14$. So $\mathbf{x}_2 = (0.86,\ 0.14)$.
+:::
+
+---
+
+**Q7.** What does the matrix $P^3$ tell you about the chain?
+
+::: {.callout-tip collapse="true" title="Hint"}
+What does raising $P$ to a power correspond to?
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+$(P^3)_{ij}$ is the probability of being in state $j$ exactly **three steps** after starting in state $i$. In general $\mathbf{x}_t = \mathbf{x}_0 P^t$.
+:::
+
+---
+
+**Q8.** In R, why is `P^2` the wrong way to compute the two-step transition matrix? What should you use instead?
+
+::: {.callout-tip collapse="true" title="Hint"}
+What does `^` do to a matrix in base R?
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+`P^2` squares each entry **elementwise**, which is not matrix multiplication. Use `P %*% P` (see [`%*%`](https://rdrr.io/r/base/matmult.html)), a loop of repeated `%*%`, or a package like `expm` (`P %^% 2`).
+:::
+
+---
+
+**Q9.** You observe the sequence `A C C A`. Write the transitions and the count matrix $N$ over `{A, C}`.
+
+::: {.callout-tip collapse="true" title="Hint"}
+Pairs are `A→C`, `C→C`, `C→A`. Rows = from, cols = to.
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+Transitions: `A→C`, `C→C`, `C→A`. So $N = \begin{pmatrix} 0 & 1\\ 1 & 1 \end{pmatrix}$ (row A: A→A 0, A→C 1; row C: C→A 1, C→C 1).
+:::
+
+---
+
+**Q10.** Normalise the count matrix from Q9 to get the estimated $\hat P$.
+
+::: {.callout-tip collapse="true" title="Hint"}
+Divide each row by its own total.
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+Row A total 1 → $(0, 1)$. Row C total 2 → $(0.5, 0.5)$. So $\hat P = \begin{pmatrix} 0 & 1\\ 0.5 & 0.5 \end{pmatrix}$.
+:::
+
+---
+
+**Q11.** A 4-state DNA chain starts at $\mathbf{x}_0 = (1, 0, 0, 0)$. What is $\mathbf{x}_1$, and what does it represent?
+
+::: {.callout-tip collapse="true" title="Hint"}
+Multiplying $(1,0,0,0)$ by $P$ selects a particular row.
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+$\mathbf{x}_1$ is the **first row of $P$** (the `A`-row): the distribution of the base immediately following an `A`.
+:::
+
+---
+
+**Q12.** True or false: in a state diagram, the weights on all arrows **leaving** a node must sum to 1, including any self-loop.
+
+::: {.callout-tip collapse="true" title="Hint"}
+Leaving-arrow weights are one row of $P$.
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+True. The arrows leaving a node are exactly that node's row of $P$ (the self-loop is the diagonal entry), and a row sums to 1.
+:::
