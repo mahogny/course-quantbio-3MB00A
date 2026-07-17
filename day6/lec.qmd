@@ -73,6 +73,8 @@ e$vectors[, 2]     # -0.7071068 0.7071068  <- eigenvector for lambda = 1
 - `e$vectors[, 1]` is the eigenvector paired with `e$values[1]`.
 - This is $(1,1)$ from yesterday, scaled to length 1: $1/\sqrt{2} \approx 0.707$.
 
+![](fig03-columns-not-rows.svg){width="70%" fig-align="center"}
+
 ::: notes
 The most common reading mistake is grabbing a row instead of a column. Drill the indexing: e$vectors[, k] is the k-th eigenvector and pairs with e$values[k]. Then reconcile with yesterday: (0.707, 0.707) is just (1,1) divided by its length sqrt(2). Same direction, unit length. Reassure them both are the "right" eigenvector — direction is what matters.
 :::
@@ -88,6 +90,8 @@ e$vectors[, 2]            # -0.707  0.707
 
 - Both point along the **same line** (the eigen-direction); both satisfy $A\mathbf{v}=\lambda\mathbf{v}$.
 - So if your hand answer is $(1,-1)$ and R prints $(-0.707, 0.707)$, you are **not wrong** — same direction, opposite sign, unit length.
+
+![](fig04-sign-arbitrary.svg){width="50%" fig-align="center"}
 
 ::: notes
 Pre-empt the panic: "R's eigenvector has the opposite sign to mine!" Both are correct because eigenvectors are defined up to a nonzero scalar, including -1. Show v and -v side by side. This matters later in PCA, where the sign of a principal component is arbitrary and software may flip it between runs or versions. Teach them to compare DIRECTIONS, e.g. by ratio of components or by checking A v = lambda v, not raw numbers.
@@ -108,6 +112,8 @@ all.equal(as.vector(A %*% v), lambda * v)   # TRUE
 ```
 
 - Use [`all.equal`](https://rdrr.io/r/base/all.equal.html), **not** `==`: floating-point arithmetic gives tiny rounding differences.
+
+![](fig05-Av-equals-lambda-v.svg){width="52%" fig-align="center"}
 
 ::: notes
 This is the single most important habit of the day. A %*% v should equal lambda * v. Note A %*% v returns a column matrix, so wrap it in as.vector() to compare with the plain vector lambda * v. Crucially, use all.equal() not == : the two sides agree only to ~15 decimal places because of floating point, so == may return FALSE on values that are equal for all practical purposes. This floating-point lesson recurs all course.
@@ -132,6 +138,8 @@ V %*% Lambda %*% solve(V)       # rebuilds A
 - [`solve`](https://rdrr.io/r/base/solve.html)`(V)` is the inverse $V^{-1}$.
 - This **eigendecomposition** says: $A$ = (change to eigen-coords) → (scale each axis by its $\lambda$) → (change back).
 
+![](fig06-eigendecomposition-pipeline.svg){width="80%" fig-align="center"}
+
 ::: notes
 The reconstruction is the "aha" that eigenvectors fully describe the matrix: in the coordinate system of the eigenvectors, A is just a diagonal scaling. V changes into that coordinate system, Lambda scales, V-inverse changes back. Show it literally rebuilds the original A. Mention diag() does double duty (extracts a diagonal from a matrix, or builds a diagonal matrix from a vector). solve(V) is the inverse. Next slide: for symmetric A, the inverse is just the transpose.
 :::
@@ -150,6 +158,8 @@ V %*% Lambda %*% t(V)           # rebuilds A, using transpose instead of inverse
 
 - [`t`](https://rdrr.io/r/base/t.html)`(V)` is the transpose $V^\top$; [`crossprod`](https://rdrr.io/r/base/crossprod.html)`(V)` computes $V^\top V$.
 - `eigen()` automatically uses a faster, more accurate **symmetric** algorithm when it detects symmetry.
+
+![](fig07-orthonormal-eigenvectors.svg){width="52%" fig-align="center"}
 
 ::: notes
 The orthonormal columns of V (for symmetric A) mean V is an orthogonal matrix, so its inverse equals its transpose — cheaper and numerically nicer. Show crossprod(V) is the identity to prove orthonormality, then rebuild A with t(V) instead of solve(V). Mention eigen() checks symmetry and switches to a specialised routine; you can force it with eigen(A, symmetric = TRUE). This symmetric case is exactly what covariance matrices are, leading into the biology demo.
@@ -176,6 +186,8 @@ round(C, 3)
 - [`cov`](https://rdrr.io/r/stats/cor.html) computes the covariance matrix; it is **symmetric** by construction.
 - Diagonal = variance of each gene; off-diagonal = how they co-vary (positive → rise together).
 
+![](fig08-covariance-cloud.svg){width="50%" fig-align="center"}
+
 ::: notes
 Build the dataset live: gene 2 is mostly a scaled copy of gene 1 plus noise, so they are positively correlated — a tilted cloud. cov(X) gives the 2x2 covariance, symmetric, with variances on the diagonal and the (positive) covariance off-diagonal. Emphasise X is rows = cells (samples), columns = genes (features); cov() expects that orientation. This sets up the eigen-decomposition on the next slide.
 :::
@@ -196,6 +208,8 @@ arrows(m[1], m[2], m[1] + 2*pc1[1], m[2] + 2*pc1[2], col = "red", lwd = 3)
 
 - The **largest** eigenvalue's eigenvector (`ec$vectors[, 1]`) points along the **long axis** of the cloud.
 - Its eigenvalue is the **variance** captured along that direction.
+
+![](fig09-leading-eigenvector-axis.svg){width="50%" fig-align="center"}
 
 ::: notes
 This is the payoff slide. Eigen-decompose the covariance matrix; the leading eigenvalue is the variance along the cloud's long axis, and the leading eigenvector is that axis's direction. Plot the cloud with asp=1 (so it isn't distorted) and draw a red arrow from the data centre along pc1 — it should lie right along the sausage. This is literally how PCA finds its first component. Be careful to say "this is the engine of PCA" and stop there.

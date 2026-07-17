@@ -233,7 +233,8 @@ Quantitative biology and integrative omics
 <p>A bulk expression sample is a mixture. Known per-cell-type <strong>signatures</strong> (matrix <span class="math inline">\(A\)</span>, one column per cell type) and the measured <strong>bulk profile</strong> (vector <span class="math inline">\(\mathbf{b}\)</span>) give a system <span class="math display">\[
 A\mathbf{x} = \mathbf{b},
 \]</span> whose solution <span class="math inline">\(\mathbf{x}\)</span> is the <strong>fractions</strong> (or amounts) of each cell type. Today: what if the system cannot be solved exactly?</p>
-<aside class="notes">
+
+<img data-src="fig02-deconvolution-system.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:70.0%"><aside class="notes">
 <p>Recall the running example. The number of measured genes is the number of equations (rows of A); the number of cell types is the number of unknowns (columns of A). The relationship between those two counts is what drives everything today.</p>
 <style type="text/css">
         span.MJX_Assistive_MathML {
@@ -263,7 +264,8 @@ A\mathbf{x} = \mathbf{b},
 <li><code>nrow</code> sets the number of rows; <code>c(...)</code> is just the entries.</li>
 <li>Default <code>byrow = FALSE</code> fills <strong>column by column</strong> — a classic bug.</li>
 </ul>
-<aside class="notes">
+
+<img data-src="fig03-byrow-fill-order.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:60.0%"><aside class="notes">
 <p>Spend a moment on byrow because it bites everyone once. The default fills down the first column, so a matrix typed left-to-right comes out transposed unless you set byrow = TRUE. Always print the matrix and eyeball it against your equations before trusting it.</p>
 <style type="text/css">
         span.MJX_Assistive_MathML {
@@ -338,7 +340,8 @@ A\mathbf{x} = \mathbf{b},
 <li><strong>Infinitely many</strong> solutions — the equations are <em>consistent but leave freedom</em>.</li>
 </ol>
 <p>The next slides take each in turn and pair it with a deconvolution scenario.</p>
-<aside class="notes">
+
+<img data-src="fig06-three-solution-spaces.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:80.0%"><aside class="notes">
 <p>This trichotomy is a theorem: a linear system has zero, one, or infinitely many solutions — never, say, exactly two. Geometrically (day 3) each equation is a line or plane, and we are asking how they intersect. For now, anchor each case to the biology.</p>
 <style type="text/css">
         span.MJX_Assistive_MathML {
@@ -361,7 +364,8 @@ A\mathbf{x} = \mathbf{b},
 <span id="cb4-3"><a aria-hidden="true" tabindex="-1"></a><span class="fu">solve</span>(A, <span class="fu">c</span>(<span class="dv">8</span>, <span class="dv">9</span>))</span>
 <span id="cb4-4"><a aria-hidden="true" tabindex="-1"></a><span class="co"># [1] 3 2          # the unique solution</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>This is the happy case from day 1. <code>solve()</code> just returns the answer.</p>
-<aside class="notes">
+
+<img data-src="fig07-case1-unique-intersection.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:48.0%"><aside class="notes">
 <p>This is the case students already understand from yesterday. Stress the two conditions: square (equations equal unknowns) and non-singular (the equations are genuinely independent, not rephrasings of each other). When both hold, there is one and only one solution and solve returns it.</p>
 <style type="text/css">
         span.MJX_Assistive_MathML {
@@ -386,7 +390,8 @@ A\mathbf{x} = \mathbf{b},
 <span id="cb5-5"><a aria-hidden="true" tabindex="-1"></a><span class="fu">solve</span>(A, b)</span>
 <span id="cb5-6"><a aria-hidden="true" tabindex="-1"></a><span class="co"># Error in solve.default(A, b) : 'a' must be a square matrix</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p><code>solve()</code> refuses: it only handles square systems.</p>
-<aside class="notes">
+
+<img data-src="fig08-case2-no-common-point.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:48.0%"><aside class="notes">
 <p>Over-determined means too many equations. With exact data they might still all agree, but with measurement noise they generally do not — there is no x that satisfies every equation at once. solve flatly errors on a non-square A. The fix, least squares, is two slides away. Note this is actually the realistic omics case: thousands of genes, a handful of cell types.</p>
 <style type="text/css">
         span.MJX_Assistive_MathML {
@@ -410,7 +415,8 @@ A\mathbf{x} = \mathbf{b},
 <span id="cb6-4"><a aria-hidden="true" tabindex="-1"></a><span class="fu">solve</span>(A, b)</span>
 <span id="cb6-5"><a aria-hidden="true" tabindex="-1"></a><span class="co"># Error in solve.default(...) : Lapack routine dgesv: system is exactly singular</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>Both equations say the same thing (<span class="math inline">\(x_1 + x_2 = 3\)</span>), so any <span class="math inline">\(\mathbf{x}\)</span> on that line works. <code>solve()</code> errors on the <strong>singular</strong> matrix.</p>
-<aside class="notes">
+
+<img data-src="fig09-case3-coincident-line.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:48.0%"><aside class="notes">
 <p>Under-determined means too few independent equations. Here row two is just twice row one — no new information — so the matrix is singular and there is a whole line of solutions. solve detects the singularity and stops. The biology: not enough markers to resolve the cell types. Contrast the two error messages on this and the previous slide so they can diagnose which case they hit.</p>
 <style type="text/css">
         span.MJX_Assistive_MathML {
@@ -435,7 +441,8 @@ A\mathbf{x} = \mathbf{b},
 <li><a href="https://rdrr.io/r/base/qr.html"><code>qr</code></a><code>$rank</code> &lt; #unknowns <span class="math inline">\(\Rightarrow\)</span> the equations do not pin down every unknown.</li>
 </ul>
 <p>A square <span class="math inline">\(A\)</span> with <span class="math inline">\(\det A \ne 0\)</span> and full rank is exactly Case 1.</p>
-<aside class="notes">
+
+<img data-src="fig10-diagnosis-flowchart.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:60.0%"><aside class="notes">
 <p>Give them a diagnostic toolkit. dim tells you the shape. det near zero flags a singular square matrix — but careful, floating point means it is rarely exactly zero, so “small relative to the entries” is the real test. Rank is the most robust single number: full rank equal to the number of unknowns is the unique- solution condition.</p>
 <style type="text/css">
         span.MJX_Assistive_MathML {
@@ -462,7 +469,8 @@ A\mathbf{x} = \mathbf{b},
 <span id="cb8-8"><a aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb8-9"><a aria-hidden="true" tabindex="-1"></a><span class="fu">coef</span>(<span class="fu">lm</span>(b <span class="sc">~</span> A <span class="sc">-</span> <span class="dv">1</span>))       <span class="co"># same thing, via linear regression</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p><a href="https://rdrr.io/r/base/qr.html"><code>qr.solve</code></a> and <a href="https://rdrr.io/r/stats/lm.html"><code>lm</code></a> both give the best-fit <span class="math inline">\(\mathbf{x}\)</span>. We treat this properly later in the course.</p>
-<aside class="notes">
+
+<img data-src="fig11-least-squares-compromise.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:45.0%"><aside class="notes">
 <p>This is the bridge to the rest of the course. When you cannot fit everything, fit as well as possible by minimising squared error — that is least squares, and it is what lm does under the hood. Mention it lightly here; the geometry (projection, day 3) and the full regression treatment come later. The takeaway: an over-determined deconvolution is solved by least squares, not solve.</p>
 <style type="text/css">
         span.MJX_Assistive_MathML {
@@ -484,7 +492,8 @@ A\mathbf{x} = \mathbf{b},
 <li>The linear-system core is the same — the constraints are extra structure on top.</li>
 </ul>
 <p>We use the unconstrained version to learn the mechanics; the constrained version is the real tool.</p>
-<aside class="notes">
+
+<img data-src="fig12-fraction-simplex.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:48.0%"><aside class="notes">
 <p>Honesty about what we defer, per the course design principles. The bare linear algebra can hand you a negative fraction, which is biologically nonsense. Real deconvolution adds constraints. We deliberately strip those away to expose the linear-system skeleton students need to learn first. Name-drop the real tools so they know where to look.</p>
 <style type="text/css">
         span.MJX_Assistive_MathML {

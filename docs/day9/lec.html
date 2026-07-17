@@ -181,7 +181,8 @@ A=\begin{array}{c c}
 \end{array}
 \]</span></p>
 <p>Crucially, in this chain <strong>the state IS the letter you read</strong>. You observe the state directly.</p>
-<aside class="notes">
+
+<img data-src="fig02-visible-markov-bases.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:52.0%"><aside class="notes">
 <p>Remind them of the day-seven setup: a transition matrix with rows summing to one, and the one-step update being a matrix-vector product. Here I have made the <em>states</em> be the DNA letters themselves, so there is nothing hidden — you read the sequence, you know the state. Hold onto that, because the whole point of today is to break it: the states will become things we cannot read off directly.</p>
 <style type="text/css">
         span.MJX_Assistive_MathML {
@@ -203,7 +204,8 @@ A=\begin{array}{c c}
         |________ GC-rich? ________|  |__ normal? __|</code></pre>
 <p>You can <strong>see the letters</strong> (A, C, G, T). You <strong>cannot see</strong> the label “GC-rich” vs “normal” — that label is the biology you actually want.</p>
 <p>The letters are <strong>emissions</strong>. The hidden region label is the <strong>hidden state</strong>.</p>
-<aside class="notes">
+
+<img data-src="fig03-cpg-island-track.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:78.0%"><aside class="notes">
 <p>This is the motivating pairing for both days. A CpG island is a genomic region unusually rich in C and G; they often sit at promoters and matter for gene regulation. The key observation: nature does not annotate the sequence for you. You see A, C, G, T; you must <em>infer</em> which segments are islands. So there are two layers — a hidden layer of region labels and a visible layer of bases — and that is precisely a hidden Markov model.</p>
 <style type="text/css">
         span.MJX_Assistive_MathML {
@@ -226,7 +228,8 @@ A=\begin{array}{c c}
 <li>A “normal” region emits a <code>G</code> <em>too</em>, just less often.</li>
 </ul>
 <p>So a single <code>G</code> does not tell you the state. The state is <strong>hidden</strong>; we must <strong>infer</strong> it from the pattern of emissions over a whole stretch.</p>
-<aside class="notes">
+
+<img data-src="fig04-ambiguous-emission.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:60.0%"><aside class="notes">
 <p>Hammer the limitation. A visible chain assumes you see the states. Here you do not, and the emissions are ambiguous: every base can come from either state, only with different probabilities. One letter is nearly useless; it is the <em>run</em> of letters that betrays the hidden state. That inference problem is what the HMM machinery is built to solve.</p>
 <style type="text/css">
         span.MJX_Assistive_MathML {
@@ -252,7 +255,8 @@ visible:  x1      x2      x3      x4      (emitted bases: A C G T)</code></pre>
 <li>At <strong>each</strong> hidden state, you draw one <strong>emission</strong> (a base) from that state’s emission distribution, governed by matrix <span class="math inline">\(B\)</span>.</li>
 </ul>
 <p>You only ever see the bottom row. The top row is hidden.</p>
-<aside class="notes">
+
+<img data-src="fig05-two-layer-generative.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:72.0%"><aside class="notes">
 <p>This diagram is the mental model for the whole topic. Top row: the hidden chain hops between GC-rich and normal according to A, exactly the Markov chain we already know. Bottom row: every time we land in a hidden state, that state “speaks” a letter, drawn from its own emission distribution B. The arrows down are emissions; the arrows across are transitions. We observe only the bottom row and must reason backwards to the top.</p>
 <style type="text/css">
         span.MJX_Assistive_MathML {
@@ -275,7 +279,8 @@ visible:  x1      x2      x3      x4      (emitted bases: A C G T)</code></pre>
 <li><strong>Initial distribution <span class="math inline">\(\boldsymbol{\pi}\)</span></strong> — where the chain starts, <span class="math inline">\(\pi_i=P(z_1=i)\)</span>, entries sum to 1.</li>
 </ol>
 <p>An HMM is the triple <span class="math inline">\((A, B, \boldsymbol{\pi})\)</span> plus the lists of states and symbols.</p>
-<aside class="notes">
+
+<img data-src="fig06-hmm-anatomy.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:60.0%"><aside class="notes">
 <p>List the four ingredients and keep emphasising which is old and which is new. A and pi are pure Markov-chain objects from day seven. The genuinely new piece is B, the emission matrix: for every hidden state, a probability distribution over the symbols you can observe. Note both A and B have rows that sum to one, but they are different shapes — A is states-by-states, B is states-by-symbols.</p>
 <style type="text/css">
         span.MJX_Assistive_MathML {
@@ -312,7 +317,8 @@ B=\begin{array}{c}
 \begin{array}{c} H\\ L \end{array}
 \]</span></p>
 <p>Read <span class="math inline">\(B\)</span>: state <span class="math inline">\(H\)</span> emits C or G with prob 0.4 each (GC-rich!); state <span class="math inline">\(L\)</span> spreads probability more evenly.</p>
-<aside class="notes">
+
+<img data-src="fig07-concrete-2state.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:58.0%"><aside class="notes">
 <p>This is the example we will compute with by hand, and again in R tomorrow, so introduce it carefully. Pi says we start in either state with equal chance. A says both states are sticky — H stays H with probability 0.8, L stays L with 0.7 — which encodes that islands and background come in runs. B is the new object: the high state loves C and G, the low state is roughly uniform. Sanity check every row sums to one.</p>
 <style type="text/css">
         span.MJX_Assistive_MathML {
@@ -338,7 +344,8 @@ B=\begin{array}{c}
 <li>Emit <span class="math inline">\(x_3\)</span> from row <span class="math inline">\(L\)</span> of <span class="math inline">\(B\)</span>. Say <span class="math inline">\(x_3 = A\)</span> (prob 0.3).</li>
 </ol>
 <p>We <strong>observe</strong> only <span class="math inline">\(\mathbf{x} = (G, C, A)\)</span>. The path <span class="math inline">\(\mathbf{z} = (H, H, L)\)</span> is hidden.</p>
-<aside class="notes">
+
+<img data-src="fig08-generation-trace.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:70.0%"><aside class="notes">
 <p>Walk through generation as a recipe, alternating transition and emission. Start state from pi, emit, transition, emit, transition, emit. Each choice has a probability attached. The student sees only the emitted letters G C A; the path H H L is invisible. The next slide multiplies all those probabilities together, which is the single most important by-hand skill for the exam.</p>
 <style type="text/css">
         span.MJX_Assistive_MathML {
@@ -413,7 +420,8 @@ P(\mathbf{x},\mathbf{z})
 P(\mathbf{x}) = \sum_{\text{all paths } \mathbf{z}} P(\mathbf{x}, \mathbf{z}).
 \]</span></p>
 <p>For 2 states and length 3 that is <span class="math inline">\(2^3 = 8\)</span> paths — fine by hand. For a real chromosome (<span class="math inline">\(2^{\text{millions}}\)</span> paths) it is hopeless by brute force; the <strong>forward algorithm</strong> does it efficiently by reusing partial sums.</p>
-<aside class="notes">
+
+<img data-src="fig11-likelihood-trellis-sum.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:66.0%"><aside class="notes">
 <p>Stress the distinction between the joint probability of a specific path, which we just computed, and the likelihood of the data, which marginalises over all possible paths. The naive sum has a number of terms exponential in the sequence length, so you cannot enumerate it for a genome. The forward algorithm is the clever bookkeeping that collapses this to a linear-time computation by carrying forward partial probabilities — conceptually like reusing work, not unlike the matrix iterations from day eight. We will only call it, not implement it.</p>
 <style type="text/css">
         span.MJX_Assistive_MathML {
@@ -435,7 +443,8 @@ P(\mathbf{x}) = \sum_{\text{all paths } \mathbf{z}} P(\mathbf{x}, \mathbf{z}).
 \]</span></p>
 <p>The <strong>Viterbi algorithm</strong> finds it efficiently (same trick as forward, but keeping the best path instead of the total).</p>
 <p>For islands: run Viterbi, then <strong>read off the runs of <code>H</code></strong> — those are your <strong>predicted CpG islands</strong>. This turns a probabilistic model into a concrete genome annotation.</p>
-<aside class="notes">
+
+<img data-src="fig12-viterbi-best-path.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:70.0%"><aside class="notes">
 <p>Decoding is the payoff for biology. Viterbi returns one hidden-state label per position; wherever it says H you have a predicted GC-rich segment, and the maximal runs of H are your predicted islands. Mechanically Viterbi is the same dynamic program as forward but takes a max instead of a sum and remembers which choice gave it, so it can trace the best path back. Tomorrow the viterbi function does this in one line.</p>
 <style type="text/css">
         span.MJX_Assistive_MathML {
@@ -457,7 +466,8 @@ P(\mathbf{x}) = \sum_{\text{all paths } \mathbf{z}} P(\mathbf{x}, \mathbf{z}).
 <li><strong>If you only have raw sequence</strong> (no labels — the usual case): <strong>Baum–Welch</strong> iterates “guess the hidden states, re-estimate the parameters, repeat” until it converges. It is the <strong>EM algorithm</strong> for HMMs.</li>
 </ul>
 <p>Caveat: Baum–Welch finds a <strong>local</strong> optimum — the starting guess matters, and results need a sanity check.</p>
-<aside class="notes">
+
+<img data-src="fig13-baum-welch-em-loop.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:60.0%"><aside class="notes">
 <p>Address the obvious question: who told us the matrices? With labelled data, parameter estimation is just counting and normalising, like estimating any conditional probability. The realistic case has no labels, and Baum-Welch — an expectation-maximisation method — alternates between softly inferring the hidden states and re-fitting the parameters. Flag two practical warnings now so they are not surprised tomorrow: it only finds a local optimum, and it is sensitive to initialisation.</p>
 <style type="text/css">
         span.MJX_Assistive_MathML {

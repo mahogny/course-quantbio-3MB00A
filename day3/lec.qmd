@@ -46,6 +46,8 @@ $$\mathbf{x} = \begin{pmatrix} 12 \\ 0 \\ 7 \end{pmatrix} \quad \begin{array}{l}
   - **as data**: "this sample's measurements"
   - **as an arrow**: from the origin to the point $(12, 0, 7)$.
 
+![](fig02-profile-vector.svg){width="45%" fig-align="center"}
+
 ::: notes
 The single most important idea of the day, stated on slide 2: a sample IS a vector. Stress that nothing about the math cares whether the dimension is 2 or 20000 — we draw pictures in 2-D only because we have two eyes. Tell them that "dimension" just means "number of genes / number of measurements". Keep coming back to this profile vector throughout.
 :::
@@ -57,6 +59,8 @@ In 2-D, the vector $\mathbf{v} = \begin{pmatrix} 3 \\ 2 \end{pmatrix}$ is the ar
 - The numbers are the **components**: move 3 right, 2 up.
 - An arrow has a **direction** and a **length**.
 - We can slide the arrow around, but by convention we draw it starting at the origin.
+
+![](fig03-vector-arrow-2d.svg){width="48%" fig-align="center"}
 
 ```r
 # In R a vector is the most basic object
@@ -78,6 +82,8 @@ $$\begin{pmatrix} 3 \\ 2 \end{pmatrix} + \begin{pmatrix} 1 \\ 4 \end{pmatrix} = 
 - Geometrically: place the tail of the second arrow at the head of the first ("tip-to-tail").
 - Biological reading: if $\mathbf{x}$ is a baseline profile and $\mathbf{d}$ is the change after a drug, then $\mathbf{x} + \mathbf{d}$ is the treated profile.
 
+![](fig04-vector-addition.svg){width="50%" fig-align="center"}
+
 ```r
 c(3, 2) + c(1, 4)
 # [1] 4 6
@@ -97,6 +103,8 @@ $$2 \cdot \begin{pmatrix} 3 \\ 2 \end{pmatrix} = \begin{pmatrix} 6 \\ 4 \end{pma
 - Scaling never changes the *direction* (except the flip) — only the length.
 - Biological reading: doubling a library's sequencing depth scales the whole count vector by ~2; **normalisation** is exactly choosing a scalar to make samples comparable.
 
+![](fig05-vector-scaling.svg){width="50%" fig-align="center"}
+
 ```r
 2 * c(3, 2)
 # [1] 6 4
@@ -113,6 +121,8 @@ The **length** (or **norm**) of $\mathbf{v}$ comes straight from Pythagoras:
 $$\|\mathbf{v}\| = \sqrt{v_1^2 + v_2^2 + \dots + v_n^2}$$
 
 For $\mathbf{v} = \begin{pmatrix} 3 \\ 4 \end{pmatrix}$:  $\|\mathbf{v}\| = \sqrt{9 + 16} = \sqrt{25} = 5$.
+
+![](fig06-norm-pythagoras.svg){width="48%" fig-align="center"}
 
 ```r
 v <- c(3, 4)
@@ -138,6 +148,8 @@ $$\mathbf{u}\cdot\mathbf{v} = 3\cdot1 + 2\cdot4 = 3 + 8 = 11$$
 - The output is a single **number** (a scalar), not a vector.
 - Note: $\mathbf{v}\cdot\mathbf{v} = v_1^2 + \dots + v_n^2 = \|\mathbf{v}\|^2$ — the dot product of a vector with itself is its length squared.
 
+![](fig07-dot-product-mechanics.svg){width="48%" fig-align="center"}
+
 ```r
 u <- c(3, 2); v <- c(1, 4)
 sum(u * v)        # 11
@@ -162,6 +174,8 @@ where $\theta$ is the angle between the two arrows.
 
 So the dot product measures **how much two vectors point the same way**, scaled by their lengths.
 
+![](fig08-dot-product-angle.svg){width="70%" fig-align="center"}
+
 ::: notes
 This boxed identity is the conceptual climax. The two definitions — "multiply-and-add" and "lengths times cosine of angle" — are the same number, and that coincidence is what makes linear algebra powerful. Walk through the three cases (aligned, perpendicular, opposite) slowly. The sign of the dot product alone already tells you whether two profiles broadly agree or disagree.
 :::
@@ -175,6 +189,8 @@ $$\cos\theta = \frac{\mathbf{u}\cdot\mathbf{v}}{\|\mathbf{u}\|\,\|\mathbf{v}\|}$
 This is **cosine similarity** — it ranges from $-1$ to $1$ and ignores overall magnitude (it only cares about direction).
 
 - Why biologists love it: two samples of the same cell type have **similar shapes** of expression even if one was sequenced twice as deep. Cosine similarity sees them as nearly identical (close to 1); Euclidean distance would be fooled by the depth difference.
+
+![](fig09-cosine-similarity.svg){width="50%" fig-align="center"}
 
 ```r
 cos_sim <- function(u, v) sum(u*v) / (sqrt(sum(u^2)) * sqrt(sum(v^2)))
@@ -196,6 +212,8 @@ Example: $\begin{pmatrix} 2 \\ 0 \end{pmatrix} \cdot \begin{pmatrix} 0 \\ 5 \end
 - Orthogonal directions carry **independent information** — no overlap.
 - This idea returns in force when we build PCA: the principal components are orthogonal axes.
 
+![](fig10-orthogonality.svg){width="45%" fig-align="center"}
+
 ```r
 sum(c(2,0) * c(0,5))   # 0  -> perpendicular
 ```
@@ -213,6 +231,8 @@ $$\text{proj}_{\mathbf{v}}\mathbf{u} = \frac{\mathbf{u}\cdot\mathbf{v}}{\mathbf{
 - The fraction $\dfrac{\mathbf{u}\cdot\mathbf{v}}{\mathbf{v}\cdot\mathbf{v}}$ is a **scalar**: "how many copies of $\mathbf{v}$".
 - Multiplying by $\mathbf{v}$ turns that scalar into a vector pointing along $\mathbf{v}$.
 - The leftover, $\mathbf{u} - \text{proj}_{\mathbf{v}}\mathbf{u}$, is **orthogonal** to $\mathbf{v}$.
+
+![](fig11-projection.svg){width="45%" fig-align="center"}
 
 ```r
 proj <- function(u, v) (sum(u*v) / sum(v*v)) * v

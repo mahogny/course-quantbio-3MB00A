@@ -273,7 +273,8 @@ Quantitative biology and integrative omics
 <li><code>e$vectors[, 1]</code> is the eigenvector paired with <code>e$values[1]</code>.</li>
 <li>This is <span class="math inline">\((1,1)\)</span> from yesterday, scaled to length 1: <span class="math inline">\(1/\sqrt{2} \approx 0.707\)</span>.</li>
 </ul>
-<aside class="notes">
+
+<img data-src="fig03-columns-not-rows.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:70.0%"><aside class="notes">
 <p>The most common reading mistake is grabbing a row instead of a column. Drill the indexing: e<span class="math inline">\(vectors[, k] is the k-th eigenvector and pairs with e\)</span>values[k]. Then reconcile with yesterday: (0.707, 0.707) is just (1,1) divided by its length sqrt(2). Same direction, unit length. Reassure them both are the “right” eigenvector — direction is what matters.</p>
 <style type="text/css">
         span.MJX_Assistive_MathML {
@@ -296,7 +297,8 @@ Quantitative biology and integrative omics
 <li>Both point along the <strong>same line</strong> (the eigen-direction); both satisfy <span class="math inline">\(A\mathbf{v}=\lambda\mathbf{v}\)</span>.</li>
 <li>So if your hand answer is <span class="math inline">\((1,-1)\)</span> and R prints <span class="math inline">\((-0.707, 0.707)\)</span>, you are <strong>not wrong</strong> — same direction, opposite sign, unit length.</li>
 </ul>
-<aside class="notes">
+
+<img data-src="fig04-sign-arbitrary.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:50.0%"><aside class="notes">
 <p>Pre-empt the panic: “R’s eigenvector has the opposite sign to mine!” Both are correct because eigenvectors are defined up to a nonzero scalar, including -1. Show v and -v side by side. This matters later in PCA, where the sign of a principal component is arbitrary and software may flip it between runs or versions. Teach them to compare DIRECTIONS, e.g.&nbsp;by ratio of components or by checking A v = lambda v, not raw numbers.</p>
 <style type="text/css">
         span.MJX_Assistive_MathML {
@@ -323,7 +325,8 @@ Quantitative biology and integrative omics
 <ul>
 <li>Use <a href="https://rdrr.io/r/base/all.equal.html"><code>all.equal</code></a>, <strong>not</strong> <code>==</code>: floating-point arithmetic gives tiny rounding differences.</li>
 </ul>
-<aside class="notes">
+
+<img data-src="fig05-Av-equals-lambda-v.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:52.0%"><aside class="notes">
 <p>This is the single most important habit of the day. A %<em>% v should equal lambda </em> v. Note A %<em>% v returns a column matrix, so wrap it in as.vector() to compare with the plain vector lambda </em> v. Crucially, use all.equal() not == : the two sides agree only to ~15 decimal places because of floating point, so == may return FALSE on values that are equal for all practical purposes. This floating-point lesson recurs all course.</p>
 <style type="text/css">
         span.MJX_Assistive_MathML {
@@ -352,7 +355,8 @@ Quantitative biology and integrative omics
 <li><a href="https://rdrr.io/r/base/solve.html"><code>solve</code></a><code>(V)</code> is the inverse <span class="math inline">\(V^{-1}\)</span>.</li>
 <li>This <strong>eigendecomposition</strong> says: <span class="math inline">\(A\)</span> = (change to eigen-coords) → (scale each axis by its <span class="math inline">\(\lambda\)</span>) → (change back).</li>
 </ul>
-<aside class="notes">
+
+<img data-src="fig06-eigendecomposition-pipeline.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:80.0%"><aside class="notes">
 <p>The reconstruction is the “aha” that eigenvectors fully describe the matrix: in the coordinate system of the eigenvectors, A is just a diagonal scaling. V changes into that coordinate system, Lambda scales, V-inverse changes back. Show it literally rebuilds the original A. Mention diag() does double duty (extracts a diagonal from a matrix, or builds a diagonal matrix from a vector). solve(V) is the inverse. Next slide: for symmetric A, the inverse is just the transpose.</p>
 <style type="text/css">
         span.MJX_Assistive_MathML {
@@ -377,7 +381,8 @@ Quantitative biology and integrative omics
 <li><a href="https://rdrr.io/r/base/t.html"><code>t</code></a><code>(V)</code> is the transpose <span class="math inline">\(V^\top\)</span>; <a href="https://rdrr.io/r/base/crossprod.html"><code>crossprod</code></a><code>(V)</code> computes <span class="math inline">\(V^\top V\)</span>.</li>
 <li><code>eigen()</code> automatically uses a faster, more accurate <strong>symmetric</strong> algorithm when it detects symmetry.</li>
 </ul>
-<aside class="notes">
+
+<img data-src="fig07-orthonormal-eigenvectors.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:52.0%"><aside class="notes">
 <p>The orthonormal columns of V (for symmetric A) mean V is an orthogonal matrix, so its inverse equals its transpose — cheaper and numerically nicer. Show crossprod(V) is the identity to prove orthonormality, then rebuild A with t(V) instead of solve(V). Mention eigen() checks symmetry and switches to a specialised routine; you can force it with eigen(A, symmetric = TRUE). This symmetric case is exactly what covariance matrices are, leading into the biology demo.</p>
 <style type="text/css">
         span.MJX_Assistive_MathML {
@@ -409,7 +414,8 @@ Quantitative biology and integrative omics
 <li><a href="https://rdrr.io/r/stats/cor.html"><code>cov</code></a> computes the covariance matrix; it is <strong>symmetric</strong> by construction.</li>
 <li>Diagonal = variance of each gene; off-diagonal = how they co-vary (positive → rise together).</li>
 </ul>
-<aside class="notes">
+
+<img data-src="fig08-covariance-cloud.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:50.0%"><aside class="notes">
 <p>Build the dataset live: gene 2 is mostly a scaled copy of gene 1 plus noise, so they are positively correlated — a tilted cloud. cov(X) gives the 2x2 covariance, symmetric, with variances on the diagonal and the (positive) covariance off-diagonal. Emphasise X is rows = cells (samples), columns = genes (features); cov() expects that orientation. This sets up the eigen-decomposition on the next slide.</p>
 <style type="text/css">
         span.MJX_Assistive_MathML {
@@ -438,7 +444,8 @@ Quantitative biology and integrative omics
 <li>The <strong>largest</strong> eigenvalue’s eigenvector (<code>ec$vectors[, 1]</code>) points along the <strong>long axis</strong> of the cloud.</li>
 <li>Its eigenvalue is the <strong>variance</strong> captured along that direction.</li>
 </ul>
-<aside class="notes">
+
+<img data-src="fig09-leading-eigenvector-axis.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:50.0%"><aside class="notes">
 <p>This is the payoff slide. Eigen-decompose the covariance matrix; the leading eigenvalue is the variance along the cloud’s long axis, and the leading eigenvector is that axis’s direction. Plot the cloud with asp=1 (so it isn’t distorted) and draw a red arrow from the data centre along pc1 — it should lie right along the sausage. This is literally how PCA finds its first component. Be careful to say “this is the engine of PCA” and stop there.</p>
 <style type="text/css">
         span.MJX_Assistive_MathML {

@@ -48,6 +48,8 @@ A **first-order Markov model** of the sequence says:
 
 This "memorylessness" is the **Markov property**. It is an *assumption* (a model) — real genomes have longer-range structure — but a remarkably useful one.
 
+![](fig02-markov-forgets.svg){width="60%" fig-align="center"}
+
 ::: notes
 Define states concretely as the four nucleotides before any abstraction. The Markov property is the one idea to nail today: the future is conditionally independent of the past given the present. Be honest that it is an approximation — codons and motifs create longer dependencies — but it captures a lot (e.g. CpG depletion) and is the foundation for the HMMs in Days 9-10.
 :::
@@ -63,6 +65,8 @@ In words: **only the present state matters.** The number $P(X_{t+1}=j \mid X_t=i
 A second biology example — **cell states**:
 $$\{\,\text{stem},\ \text{progenitor},\ \text{differentiated}\,\}$$
 At each time step a cell may stay or move to another state, depending only on where it is now.
+
+![](fig03-markov-chain-graph.svg){width="65%" fig-align="center"}
 
 ::: notes
 Now formalise. The conditional-probability line is the definition; read it aloud in plain English. Introduce the notation $p_{ij}$ = probability of going FROM i TO j — the from/to direction is a recurring source of confusion, so fix it now. The cell-state example shows the same framework applies to discrete biological state transitions, which is where single-cell trajectory ideas live.
@@ -87,6 +91,8 @@ $$
 
 **Our convention:** entry in **row $i$, column $j$** is $p_{ij}$ = probability of going **from $i$ (row) to $j$ (column)**.
 
+![](fig04-from-row-to-col.svg){width="50%" fig-align="center"}
+
 ::: notes
 This is the central object of the next two days. The labelled matrix makes the from-row / to-column convention visual. State the convention explicitly and commit to it — we use ROW vectors and right-multiplication throughout, so rows are "from" and columns are "to". Warn that some textbooks use the transpose; consistency within our course matters more than matching any one book.
 :::
@@ -108,6 +114,8 @@ P = \begin{pmatrix}
 \end{pmatrix}
 \quad\leftarrow\ \text{each row adds to } 1
 $$
+
+![](fig05-rows-sum-to-one.svg){width="60%" fig-align="center"}
 
 ::: notes
 The row-sum-to-1 rule is both a definition and a sanity check students will use constantly: if a row does not sum to 1, the matrix is wrong. Tie it to total probability: you leave each state with certainty, you just don't know to where. Columns do NOT generally sum to 1 — a frequent confusion under our row convention. The example matrix has a built-in CpG-like dip we can revisit.
@@ -132,6 +140,8 @@ $$P = \begin{pmatrix} 0.9 & 0.1\\ 0.5 & 0.5 \end{pmatrix}$$
 - Arrow R→D has weight $0.1$; the self-loop R→R has weight $0.9$. Row R: $0.9+0.1=1$. ✓
 - The diagram and the matrix carry **exactly the same information**.
 
+![](fig06-two-state-diagram.svg){width="60%" fig-align="center"}
+
 ::: notes
 The diagram is the intuition pump; the matrix is the calculation engine. Show that every arrow leaving a node is one entry of that node's row, and the leaving-arrow weights sum to 1. Self-loops (staying put) are the diagonal entries and are easy to forget. Encourage students to be able to translate freely both ways — diagram to matrix and back — because exam questions go in both directions.
 :::
@@ -146,6 +156,8 @@ $$\mathbf{x}_t = \big(\,x_t^{A},\ x_t^{C},\ x_t^{G},\ x_t^{T}\,\big), \qquad \su
 - $\mathbf{x}_t = (0.25,0.25,0.25,0.25)$ means "equally likely to be any base."
 
 Think of it as the composition of a huge pool of independent walkers: the fraction in each state.
+
+![](fig07-distribution-vector.svg){width="70%" fig-align="center"}
 
 ::: notes
 The shift from a single walker to a distribution over states is what makes the linear algebra work. Emphasise the row-vector choice (it pairs with right-multiplication on the next slide) and that entries are non-negative and sum to 1. The "fraction of a big pool" picture is the bridge to the biology: $\mathbf{x}_t$ is the expected nucleotide composition, or the fraction of cells in each state.
@@ -165,6 +177,8 @@ Worked 2-state step with $P=\begin{pmatrix}0.9&0.1\\0.5&0.5\end{pmatrix}$ and $\
 
 $$\mathbf{x}_1 = (1,0)P = \big(1\cdot0.9 + 0\cdot0.5,\ \ 1\cdot0.1 + 0\cdot0.5\big) = (0.9,\ 0.1).$$
 
+![](fig08-vector-matrix-step.svg){width="70%" fig-align="center"}
+
 ::: notes
 This is THE computation of the whole week and a guaranteed exam skill. Connect to Day 4: $\mathbf{x}_t P$ is a row vector times a matrix, each output entry a dot of the row vector with a COLUMN of P. The summation form makes the "landing in j" interpretation explicit — sum over all origins i weighted by how likely you were there. Make students reproduce the (0.9, 0.1) step by hand. Note that because we use row vectors, the vector goes on the LEFT.
 :::
@@ -180,6 +194,8 @@ So **$t$ steps = the $t$-th power of $P$**. Continuing the example:
 $$\mathbf{x}_2 = (0.9,0.1)P = (0.9\cdot0.9 + 0.1\cdot0.5,\ \ 0.9\cdot0.1 + 0.1\cdot0.5) = (0.86,\ 0.14).$$
 
 The entry $(P^t)_{ij}$ is the probability of going from state $i$ to state $j$ in **exactly $t$ steps**.
+
+![](fig09-powers-chain.svg){width="72%" fig-align="center"}
 
 ::: notes
 Powers of P are just "do one step, then another" — composition of transformations from Day 4. Two readings: multiply the distribution forward step by step, OR raise P to a power and read off multi-step transition probabilities directly. Both give the same answer. Hint at Day 8 without proving it: as t grows, $\mathbf{x}_t$ tends to settle down toward a fixed distribution regardless of where it started — that limit is the stationary distribution.
@@ -197,6 +213,8 @@ Tally each ordered pair into a $4\times4$ **count matrix** $N$, where $N_{ij}$ =
 $$\hat p_{ij} = \frac{N_{ij}}{\sum_k N_{ik}}.$$
 
 This is the **maximum-likelihood estimate**: the observed fraction of `i`-followed-by-`j` among all transitions out of `i`.
+
+![](fig10-count-transitions.svg){width="70%" fig-align="center"}
 
 ::: notes
 Estimation closes the loop from data to model. The recipe is mechanical: slide a window of length 2 along the sequence, tally ordered pairs into N, then divide each row by its own total so it sums to 1. Stress "ordered" pairs (A→C is not C→A) and "consecutive". The row normalisation is exactly what guarantees a valid stochastic matrix. This is the maximum-likelihood estimator, though we just call it "counting".

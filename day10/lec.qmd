@@ -69,6 +69,8 @@ install.packages("HMM")   # once
 library(HMM)
 ```
 
+![](fig02-hmm-pipeline.svg){width="75%" fig-align="center"}
+
 ::: notes
 Map each Day-9 concept onto exactly one function so the package feels like a
 direct translation of yesterday's ideas. initHMM builds the four ingredients,
@@ -109,6 +111,8 @@ hmm <- initHMM(States = states, Symbols = symbols,
 
 Each matrix row must **sum to 1** — exactly the constraint from Day 9.
 
+![](fig03-hmm-state-diagram.svg){width="60%" fig-align="center"}
+
 ::: notes
 Type this slowly. The arguments to initHMM are the four ingredients by name:
 States and Symbols are the labels, startProbs is pi, transProbs is A, and
@@ -136,6 +140,8 @@ sim$states        # the TRUE hidden path (normally unknown!)
 
 We will pretend we only saw `sim$observation`, then check whether decoding
 recovers `sim$states`.
+
+![](fig04-generative-story.svg){width="70%" fig-align="center"}
 
 ::: notes
 simHMM is our test harness. It samples a hidden path from the chain and emits a
@@ -167,6 +173,8 @@ logLik(f[, length(obs)])
 
 Probabilities of long sequences are vanishingly small, so the package works in
 **logs** — this is why your by-hand products from Day 9 shrank so fast.
+
+![](fig05-forward-trellis.svg){width="70%" fig-align="center"}
 
 ::: notes
 forward gives the log alpha matrix. To get the data log-likelihood you combine
@@ -200,6 +208,8 @@ rle(path)
 The **runs of `H`** are your **predicted CpG islands**.
 [`rle`](https://rdrr.io/r/base/rle.html) turns the path into segments.
 
+![](fig06-viterbi-island-map.svg){width="70%" fig-align="center"}
+
 ::: notes
 This is the biological payoff. viterbi takes only the observations and returns
 the best hidden label per position. Compare to sim states to measure accuracy;
@@ -231,6 +241,8 @@ bw$hmm$emissionProbs   # learned B  -> H row should become GC-heavy
 `baumWelch` returns `$hmm` (the fitted model) and `$difference` (convergence
 trace).
 
+![](fig07-baumwelch-em.svg){width="70%" fig-align="center"}
+
 ::: notes
 Baum-Welch is the learning step. We hand it a deliberately uninformative
 starting model — uniform transitions and uniform emissions — and let it iterate.
@@ -245,6 +257,9 @@ caveats on the next slide.
 
 `baumWelch` is powerful but easy to misuse:
 
+::: {.columns}
+::: {.column width="55%"}
+
 - **Local optima.** EM climbs to the *nearest* peak, not the global one.
   Different starting guesses → different fits. **Run several inits**, keep the
   best likelihood.
@@ -255,6 +270,14 @@ caveats on the next slide.
 - **Garbage in, garbage out.** The fitted states are just clusters; they are
   "CpG islands" only if you **check** their emission profile makes biological
   sense.
+
+:::
+::: {.column width="45%"}
+
+![](fig08-local-optima.svg){fig-align="center"}
+
+:::
+:::
 
 ::: notes
 Spend real time here; this is where students get burned. EM only finds a local
@@ -270,6 +293,9 @@ anything biological — interpretation is on you.
 
 We assumed **2** states (island vs not). In general you must choose the number.
 
+::: {.columns}
+::: {.column width="55%"}
+
 - Let **biology** guide you first: island vs background is naturally 2; coding
   / intron / intergenic might want 3+.
 - More states **always** fit the training data better (higher likelihood) — so
@@ -278,6 +304,14 @@ We assumed **2** states (island vs not). In general you must choose the number.
 - More states = more parameters = more data needed and more local optima.
 
 Start simple, add states only if they earn their keep and stay interpretable.
+
+:::
+::: {.column width="45%"}
+
+![](fig09-model-selection.svg){fig-align="center"}
+
+:::
+:::
 
 ::: notes
 Choosing the number of states is a model-selection problem, the same tension we

@@ -266,7 +266,8 @@ Quantitative biology and integrative omics
 </table>
 <div class="sourceCode" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a aria-hidden="true" tabindex="-1"></a><span class="fu">install.packages</span>(<span class="st">"HMM"</span>)   <span class="co"># once</span></span>
 <span id="cb1-2"><a aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(HMM)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<aside class="notes">
+
+<img data-src="fig02-hmm-pipeline.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:75.0%"><aside class="notes">
 <p>Map each Day-9 concept onto exactly one function so the package feels like a direct translation of yesterday’s ideas. initHMM builds the four ingredients, simHMM runs the generative story, forward and backward give the likelihood, viterbi decodes, and baumWelch learns. Mention depmixS4 as a more flexible alternative for richer emission models, but we stick with HMM because it maps cleanly onto the concepts.</p>
 <style type="text/css">
         span.MJX_Assistive_MathML {
@@ -305,7 +306,8 @@ Quantitative biology and integrative omics
 <span id="cb2-20"><a aria-hidden="true" tabindex="-1"></a>               <span class="at">transProbs =</span> transProbs,</span>
 <span id="cb2-21"><a aria-hidden="true" tabindex="-1"></a>               <span class="at">emissionProbs =</span> emissionProbs)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>Each matrix row must <strong>sum to 1</strong> — exactly the constraint from Day 9.</p>
-<aside class="notes">
+
+<img data-src="fig03-hmm-state-diagram.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:60.0%"><aside class="notes">
 <p>Type this slowly. The arguments to initHMM are the four ingredients by name: States and Symbols are the labels, startProbs is pi, transProbs is A, and emissionProbs is B. Use byrow equals TRUE so the matrices read like the page, and dimnames so rows and columns are labelled. Stress the row-sum-to-one constraint; a common bug is a typo that makes a row sum to 0.99 or 1.01.</p>
 <style type="text/css">
         span.MJX_Assistive_MathML {
@@ -331,7 +333,8 @@ Quantitative biology and integrative omics
 <span id="cb3-7"><a aria-hidden="true" tabindex="-1"></a>sim<span class="sc">$</span>states        <span class="co"># the TRUE hidden path (normally unknown!)</span></span>
 <span id="cb3-8"><a aria-hidden="true" tabindex="-1"></a><span class="co">#  [1] "H" "H" "H" "H" "L" ...</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>We will pretend we only saw <code>sim$observation</code>, then check whether decoding recovers <code>sim$states</code>.</p>
-<aside class="notes">
+
+<img data-src="fig04-generative-story.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:70.0%"><aside class="notes">
 <p>simHMM is our test harness. It samples a hidden path from the chain and emits a base at each step, returning both. The observation vector is what we would get from a sequencer; the states vector is the ground truth that real biology hides from us. The plan is honest model evaluation: hide the truth, run the algorithms on the observations alone, then compare against the truth we secretly kept.</p>
 <style type="text/css">
         span.MJX_Assistive_MathML {
@@ -360,7 +363,8 @@ Quantitative biology and integrative omics
 <span id="cb4-10"><a aria-hidden="true" tabindex="-1"></a><span class="fu">logLik</span>(f[, <span class="fu">length</span>(obs)])</span>
 <span id="cb4-11"><a aria-hidden="true" tabindex="-1"></a><span class="co"># e.g.  -39.5      (a log-probability: the raw probability is astronomically tiny)</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>Probabilities of long sequences are vanishingly small, so the package works in <strong>logs</strong> — this is why your by-hand products from Day 9 shrank so fast.</p>
-<aside class="notes">
+
+<img data-src="fig05-forward-trellis.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:70.0%"><aside class="notes">
 <p>forward gives the log alpha matrix. To get the data log-likelihood you combine the final column with a numerically safe log-sum-exp — subtract the max before exponentiating to avoid underflow. Connect this back to yesterday: when they multiplied six probabilities they already saw the number collapse toward zero; over thousands of bases it underflows entirely, which is exactly why everything is done in log space. They mainly need to know that forward gives likelihood and that it lives in logs.</p>
 <style type="text/css">
         span.MJX_Assistive_MathML {
@@ -390,7 +394,8 @@ Quantitative biology and integrative omics
 <span id="cb5-11"><a aria-hidden="true" tabindex="-1"></a><span class="co">#   lengths: int [1:5] 4 3 2 ...</span></span>
 <span id="cb5-12"><a aria-hidden="true" tabindex="-1"></a><span class="co">#   values : chr [1:5] "H" "L" "H" ...</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>The <strong>runs of <code>H</code></strong> are your <strong>predicted CpG islands</strong>. <a href="https://rdrr.io/r/base/rle.html"><code>rle</code></a> turns the path into segments.</p>
-<aside class="notes">
+
+<img data-src="fig06-viterbi-island-map.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:70.0%"><aside class="notes">
 <p>This is the biological payoff. viterbi takes only the observations and returns the best hidden label per position. Compare to sim states to measure accuracy; it will not be perfect because the emissions are genuinely ambiguous, but it should be high. Then rle compresses the path into runs, and each run of H is a predicted island with a start, end, and length. This is a real genome annotation produced from raw sequence.</p>
 <style type="text/css">
         span.MJX_Assistive_MathML {
@@ -419,7 +424,8 @@ Quantitative biology and integrative omics
 <span id="cb6-10"><a aria-hidden="true" tabindex="-1"></a>bw<span class="sc">$</span>hmm<span class="sc">$</span>transProbs      <span class="co"># learned A  -&gt; should drift toward 0.8/0.2, 0.3/0.7</span></span>
 <span id="cb6-11"><a aria-hidden="true" tabindex="-1"></a>bw<span class="sc">$</span>hmm<span class="sc">$</span>emissionProbs   <span class="co"># learned B  -&gt; H row should become GC-heavy</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p><code>baumWelch</code> returns <code>$hmm</code> (the fitted model) and <code>$difference</code> (convergence trace).</p>
-<aside class="notes">
+
+<img data-src="fig07-baumwelch-em.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:70.0%"><aside class="notes">
 <p>Baum-Welch is the learning step. We hand it a deliberately uninformative starting model — uniform transitions and uniform emissions — and let it iterate. With enough data it pulls the parameters toward the truth: the H row of the emission matrix becomes GC-heavy and the transitions become sticky. Point out the return structure: dollar hmm is the fitted model you then feed to viterbi, and dollar difference lets you check it converged. Then immediately raise the caveats on the next slide.</p>
 <style type="text/css">
         span.MJX_Assistive_MathML {
@@ -436,12 +442,21 @@ Quantitative biology and integrative omics
 <section id="pitfalls-of-learning" class="slide level2 smaller">
 <h2>Pitfalls of learning</h2>
 <p><code>baumWelch</code> is powerful but easy to misuse:</p>
+<div class="columns">
+<div class="column" style="width:55%;">
 <ul>
 <li><strong>Local optima.</strong> EM climbs to the <em>nearest</em> peak, not the global one. Different starting guesses → different fits. <strong>Run several inits</strong>, keep the best likelihood.</li>
 <li><strong>Label switching.</strong> Which learned state is “H” is arbitrary — the algorithm may swap them. Interpret by the <strong>emission profile</strong> (the GC-heavy one is your island state), not by the name.</li>
 <li><strong>Needs enough data.</strong> Short sequences give unstable estimates.</li>
 <li><strong>Garbage in, garbage out.</strong> The fitted states are just clusters; they are “CpG islands” only if you <strong>check</strong> their emission profile makes biological sense.</li>
 </ul>
+</div><div class="column" style="width:45%;">
+<div class="quarto-figure quarto-figure-center">
+<figure>
+<p><img data-src="fig08-local-optima.svg" class="quarto-figure quarto-figure-center"></p>
+</figure>
+</div>
+</div></div>
 <aside class="notes">
 <p>Spend real time here; this is where students get burned. EM only finds a local optimum, so multiple restarts and picking the best log-likelihood is standard practice. Label switching trips everyone up: the state the package calls H need not be the GC-rich one, so always read the learned emission matrix to decide which state means island. More data stabilises estimates. And finally, an HMM will happily partition any sequence into states whether or not they mean anything biological — interpretation is on you.</p>
 <style type="text/css">
@@ -459,12 +474,21 @@ Quantitative biology and integrative omics
 <section id="how-many-hidden-states" class="slide level2 smaller">
 <h2>How many hidden states?</h2>
 <p>We assumed <strong>2</strong> states (island vs not). In general you must choose the number.</p>
+<div class="columns">
+<div class="column" style="width:55%;">
 <ul>
 <li>Let <strong>biology</strong> guide you first: island vs background is naturally 2; coding / intron / intergenic might want 3+.</li>
 <li>More states <strong>always</strong> fit the training data better (higher likelihood) — so raw likelihood <strong>cannot</strong> pick the number. Penalise complexity with <strong>AIC/BIC</strong>, or use <strong>held-out</strong> sequence.</li>
 <li>More states = more parameters = more data needed and more local optima.</li>
 </ul>
 <p>Start simple, add states only if they earn their keep and stay interpretable.</p>
+</div><div class="column" style="width:45%;">
+<div class="quarto-figure quarto-figure-center">
+<figure>
+<p><img data-src="fig09-model-selection.svg" class="quarto-figure quarto-figure-center"></p>
+</figure>
+</div>
+</div></div>
 <aside class="notes">
 <p>Choosing the number of states is a model-selection problem, the same tension we will meet repeatedly later in the course. Biology gives the first guess. Warn them that likelihood always rises with more states, so you cannot choose by likelihood alone; you need a penalty like AIC or BIC, or validation on held-out data. And every extra state costs parameters, data, and stability. The mantra: start simple, justify any added complexity.</p>
 <style type="text/css">
