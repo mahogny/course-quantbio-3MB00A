@@ -208,6 +208,17 @@ Gates before a block is "done":
   79 SVGs added & QA'd. See `plan/slides-image-audit.md`.
 - 2026-07-21 — This plan created; decisions locked (flat slugs, topic-based refs,
   all four remaining blocks).
+- 2026-07-22 — **Deep per-figure QA (checklist-driven).** Built
+  `plan/figure-qa-checklist.md` (headline rule: nothing overlaps text when space
+  exists; plus axes, arrows-anchored-to-target, legend alignment, no internal
+  dead-bands, proper tspan super/subscripts not ASCII). Piloted on `opls` (verified
+  by hand), then ran one deep agent per figure across all 335 (240+85 in two waves
+  around a usage-limit reset, +10 opls). Fixes: arrows/boxes/leaders rerouted off
+  text, axis titles centred, captions pulled in / canvases shrunk, ASCII math →
+  real super/subscripts. Gates: all well-formed XML, zero raw Unicode
+  super/subscripts, svg/ref parity. Caveat: audited with cairosvg (≠ browser) since
+  the sandbox browser can't reach these paths — glyph metrics need a final
+  in-browser eyeball.
 - 2026-07-22 — **SVG audit & tightening.** All 335 figures audited browser-accurately
   (cairosvg). Deterministic crop pass tightened 200 oversized canvases to their
   content bounding box (measured from rendered pixels + ~3% padding); backups in
