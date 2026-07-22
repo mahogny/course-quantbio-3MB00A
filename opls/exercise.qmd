@@ -1,0 +1,234 @@
+---
+title: "Exercise: the OPLS model"
+format:
+  html:
+    toc: true
+    code-copy: true
+    code-overflow: wrap
+    highlight-style: github
+---
+
+## Goal
+
+By the end of this exercise you should be able to:
+
+- state the difference between the **PCA** objective (maximise **variance**) and the **PLS** objective (maximise **covariance with $Y$**), and say why it matters,
+- on a tiny dataset, work out **by hand** which feature a supervised method would favour and which an unsupervised one would favour,
+- classify sources of variation as **predictive**, **orthogonal**, or **residual**,
+- read an **OPLS-DA** score plot (predictive vs orthogonal axis),
+- diagnose **overfitting** from $R^2$ vs $Q^2$ and from a **permutation** null,
+- sketch an OPLS analysis in R with `ropls` and know **which numbers to check first**.
+
+This is a **concept day**. There is no by-hand OPLS algorithm to memorise; the exercises build the *judgement* to use it — and to not be fooled by it. Spend most of your time reasoning, not computing.
+
+## Background
+
+**PCA** takes a centred data matrix $X$ and finds directions of **maximum variance**, ignoring any outcome. **PLS** attaches a response $Y$ and finds directions $t = Xw$ of **maximum covariance with $Y$**:
+
+$$\text{PCA:}\ \max_{\|w\|=1}\operatorname{var}(Xw) \qquad\qquad \text{PLS:}\ \max_{\|w\|=1}\operatorname{cov}(Xw,\ Y).$$
+
+**OPLS** re-parameterises PLS so that, for a single response, the $Y$-related signal sits in **one predictive component** (scores $t_p$) and the systematic-but-$Y$-irrelevant structure (batch, physiology) is pushed into separate **orthogonal** components:
+
+$$X = t_p\, p_p^\top \;+\; T_o\, P_o^\top \;+\; E, \qquad \hat Y = t_p\, c + \text{const}.$$
+
+Three kinds of variation:
+
+- **Predictive** — correlated with $Y$ (what you want),
+- **Orthogonal** — structured but **uncorrelated** with $Y$ (nuisance: batch, age, sex, diet),
+- **Residual** ($E$) — unstructured measurement noise.
+
+**The caution.** When features vastly outnumber samples ($p \gg n$), a supervised model can separate the groups **even with no real signal**. Trust the cross-validated **$Q^2$** and a **permutation test**, not a pretty score plot.
+
+**A toy dataset** (used in the by-hand tasks). Four serum samples, two metabolite features $A$ and $B$, two classes:
+
+| sample | $A$ | $B$ | class |
+|---|---|---|---|
+| s1 | 10 | 20 | case |
+| s2 | 12 | 10 | case |
+| s3 | 4  | 20 | control |
+| s4 | 6  | 10 | control |
+
+Code the class as $y = +1$ for case, $y = -1$ for control, so $y = (1, 1, -1, -1)$ (already mean-centred).
+
+## By hand
+
+**B1.** In one sentence each, state what PCA maximises and what PLS maximises. Then say, in one more sentence, *why* a supervised objective can find disease signal that PCA misses.
+
+**B2.** For the toy dataset, centre each feature (subtract its mean) and compute the **variance** of $A$ and of $B$ (use the sample variance, dividing by $n-1 = 3$). Which feature has the larger variance? Which one would **PCA's first component** lean toward?
+
+**B3.** Now compute the **covariance** of each feature with $y = (1,1,-1,-1)$ (again divide by $n-1 = 3$). Which feature covaries with the class label, and which does not? Which one would a **PLS/OPLS predictive component** lean toward?
+
+**B4.** Combine B2 and B3. Feature $B$ is the *larger* source of variation but is *uncorrelated* with the disease. In OPLS language, which feature belongs to the **predictive** part and which to the **orthogonal** part? What would go wrong if you tried to pick disease biomarkers from a **PCA** loading plot here?
+
+**B5. (classify the variation).** A metabolomics case/control study measures serum on an LC–MS platform. Label each source below as **predictive**, **orthogonal**, or **residual**:
+(a) a metabolite genuinely elevated in the disease;
+(b) signal drift because cases were mostly run on day 1 and controls on day 2;
+(c) differences driven by the subjects' ages;
+(d) random electronic noise in a single spectrum.
+
+**B6. (read a score plot).** An OPLS-DA model has one predictive component ($t_p$, horizontal) and one orthogonal component ($t_o$, vertical). In the score plot the cases sit on the **right** and controls on the **left**, but within each group the points are spread widely **up and down**. What does the horizontal separation tell you? What does the vertical spread represent, and does it distinguish the groups?
+
+**B7. (diagnose overfitting).** For three OPLS-DA models you are told:
+
+| model | $R^2Y$ | $Q^2$ |
+|---|---|---|
+| M1 | 0.88 | 0.80 |
+| M2 | 0.97 | $-0.05$ |
+| M3 | 0.70 | 0.55 |
+
+Which model is clearly **overfit**? Which look trustworthy? What single feature of the numbers gives the overfit one away?
+
+**B8. (permutation reasoning).** You run 200 label-permutations of an OPLS-DA model and record $Q^2$ each time; the shuffled $Q^2$ values pile up around $0$ and never exceed $0.25$. Your **real** model has $Q^2 = 0.62$. What do you conclude? Separately: a *different* study's real model has $Q^2 = 0.20$, while its permuted values reach up to $0.30$ — what do you conclude there?
+
+## In R
+
+Nothing here needs to run for the exercise; read the code as a template. In R you would compute the toy quantities and then fit a real model with [`ropls`](https://bioconductor.org/packages/ropls/).
+
+### The toy dataset: variance vs covariance-with-Y
+
+```r
+A <- c(10, 12, 4, 6)
+B <- c(20, 10, 20, 10)
+y <- c(1, 1, -1, -1)      # case = +1, control = -1  (mean 0)
+
+var(A)                    # variance of feature A
+var(B)                    # variance of feature B  -> larger
+cov(A, y)                 # covariance of A with the label
+cov(B, y)                 # covariance of B with the label -> 0
+```
+
+The point: `var(B) > var(A)` (so PCA leans toward `B`), yet `cov(A, y)` is the non-zero one (so a supervised component leans toward `A`).
+
+### Fitting OPLS-DA with ropls (sketch)
+
+```r
+library(ropls)
+
+# X: samples x features matrix;  cls: factor with two levels (case/control)
+model <- opls(X, cls,
+              predI  = 1,     # one predictive component (single response)
+              orthoI = NA,    # cross-validation chooses the orthogonal count
+              permI  = 200)   # 200-permutation validation test
+
+model                        # prints R2X, R2Y, Q2 and permutation p-values
+getScoreMN(model)            # predictive & orthogonal scores (score plot)
+getLoadingMN(model)          # feature loadings (which metabolites)
+```
+
+### Why $p \gg n$ is dangerous (a thought experiment in code)
+
+```r
+set.seed(1)
+n <- 20; p <- 2000                 # 20 samples, 2000 features
+X <- matrix(rnorm(n * p), n, p)    # pure noise, no signal at all
+cls <- factor(rep(c("case","ctrl"), each = 10))  # arbitrary labels
+
+# An OPLS-DA on this CAN still look like it separates the groups on the
+# training data. Only Q2 and the permutation test reveal there is nothing:
+# a high R2Y with Q2 near or below 0 is the fingerprint of fitting noise.
+```
+
+### Tasks
+
+**R1.** Reproduce B2/B3 in R: build `A`, `B`, `y` as above and print `var(A)`, `var(B)`, `cov(A, y)`, `cov(B, y)`. Confirm the feature with the larger variance is **not** the feature that covaries with the label.
+
+**R2.** Explain, in a comment, what each argument of `opls(...)` does: `predI = 1`, `orthoI = NA`, `permI = 200`. Which of the three is your main guard against overfitting?
+
+**R3.** In the $p \gg n$ thought experiment, the data are pure noise. Write one sentence saying what you would expect the **permutation test** to show if the model is honest — i.e. how the real $Q^2$ should compare with the permuted $Q^2$ values when there is genuinely no signal.
+
+## Hints
+
+::: {.callout-tip collapse="true" title="Hint 1 — the two objectives"}
+PCA maximises [`var`](https://rdrr.io/r/stats/cor.html)`(Xw)` — spread in $X$ only. PLS maximises [`cov`](https://rdrr.io/r/stats/cor.html)`(Xw, Y)` — spread that also tracks $Y$. Covariance factors as $\operatorname{sd}(Xw)\cdot\operatorname{cor}(Xw,Y)\cdot\operatorname{sd}(Y)$, so a PLS direction must both *vary* **and** *correlate with $Y$*.
+:::
+
+::: {.callout-tip collapse="true" title="Hint 2 — centring and variance by hand"}
+Centre a feature by subtracting its mean. Sample variance $= \frac{1}{n-1}\sum (x_i - \bar x)^2$. For $A$: mean $= 8$, centred $(2, 4, -4, -2)$. For $B$: mean $= 15$, centred $(5, -5, 5, -5)$. Use [`var`](https://rdrr.io/r/stats/cor.html) to check.
+:::
+
+::: {.callout-tip collapse="true" title="Hint 3 — covariance with the label"}
+$\operatorname{cov}(x, y) = \frac{1}{n-1}\sum (x_i - \bar x)(y_i - \bar y)$. Here $\bar y = 0$, so just multiply each centred feature value by the matching $y$, add up, divide by $3$. A feature that is high for cases and low for controls gives a positive sum; a feature that ignores the class gives $0$.
+:::
+
+::: {.callout-tip collapse="true" title="Hint 4 — predictive vs orthogonal vs residual"}
+**Predictive** = correlated with $Y$. **Orthogonal** = structured (systematic) but *uncorrelated* with $Y$ — batch, age, sex, diet. **Residual** = unstructured random noise. Ask of each source: does it track the disease (predictive), is it systematic but off-topic (orthogonal), or is it just noise (residual)?
+:::
+
+::: {.callout-tip collapse="true" title="Hint 5 — reading the OPLS-DA plot"}
+By construction the **predictive** axis $t_p$ (horizontal) is the one that carries the group difference; the **orthogonal** axis $t_o$ (vertical) holds systematic variation that does *not* separate the classes. So horizontal = disease signal, vertical = quarantined nuisance.
+:::
+
+::: {.callout-tip collapse="true" title="Hint 6 — R2 vs Q2"}
+$R^2Y$ is in-sample fit (optimistic; only ever rises as you add components). $Q^2$ is the **cross-validated** predicted variance — the honest one. A big gap, especially $R^2Y$ high while $Q^2$ is near $0$ or **negative**, means the model fits the training data but does not generalise: overfitting.
+:::
+
+::: {.callout-tip collapse="true" title="Hint 7 — the permutation test"}
+Shuffling $Y$ destroys any real $X$–$Y$ link but keeps the matrix shapes, so the permuted $Q^2$ values show what this method achieves on **chance alone** for data of this size. Your real $Q^2$ must sit clearly in the **tail**, well above the permuted values, to be believable.
+:::
+
+## Solutions
+
+::: {.callout-note collapse="true" title="Solution"}
+
+**B1.** PCA maximises the **variance** captured by each component ($\max \operatorname{var}(Xw)$) — the spread in $X$ alone. PLS maximises the **covariance** of a component with the response ($\max \operatorname{cov}(Xw, Y)$) — spread that also tracks $Y$. A supervised objective can find disease signal PCA misses because it deliberately favours directions that correlate with the outcome, even when they are *not* the directions of largest overall variance (which may be batch or physiology).
+
+**B2.** Centre each feature.
+
+- $A$: mean $= (10+12+4+6)/4 = 8$; centred $(2, 4, -4, -2)$. Variance $= \frac{1}{3}(2^2 + 4^2 + (-4)^2 + (-2)^2) = \frac{1}{3}(4+16+16+4) = \frac{40}{3} \approx 13.3$.
+- $B$: mean $= (20+10+20+10)/4 = 15$; centred $(5, -5, 5, -5)$. Variance $= \frac{1}{3}(25+25+25+25) = \frac{100}{3} \approx 33.3$.
+
+$B$ has the larger variance ($33.3 > 13.3$), so **PCA's first component would lean toward $B$**.
+
+**B3.** Covariance with $y = (1,1,-1,-1)$ (and $\bar y = 0$), dividing by $3$:
+
+- $\operatorname{cov}(A, y) = \frac{1}{3}\big[(2)(1) + (4)(1) + (-4)(-1) + (-2)(-1)\big] = \frac{1}{3}(2+4+4+2) = \frac{12}{3} = 4.$
+- $\operatorname{cov}(B, y) = \frac{1}{3}\big[(5)(1) + (-5)(1) + (5)(-1) + (-5)(-1)\big] = \frac{1}{3}(5-5-5+5) = 0.$
+
+$A$ covaries with the class label; $B$ does not. So a **PLS/OPLS predictive component leans toward $A$** — the opposite of PCA.
+
+**B4.** $A$ is the **predictive** feature (it tracks the disease), $B$ is **orthogonal** (large, structured, but uncorrelated with the class — note both cases and controls take $B \in \{20,10\}$, so it separates nothing). A PCA loading plot, ranking features by variance, would put $B$ first and could lead you to nominate $B$ as a "biomarker" — but $B$ carries **no** disease information. This is exactly the failure OPLS avoids by separating predictive from orthogonal variation.
+
+**B5.**
+(a) **predictive** — genuinely tied to the disease, i.e. correlated with $Y$.
+(b) **orthogonal** — a real, systematic **batch** effect, but it is confounded structure, not the biology of interest (and here it is partly aliased with the label because of poor run design — a reason to randomise run order; still, as a *source*, it is nuisance structure, not the causal disease signal).
+(c) **orthogonal** — age is systematic but not the disease outcome.
+(d) **residual** — unstructured random noise, goes into $E$.
+
+*(Note on (b): if batch is perfectly confounded with class it becomes indistinguishable from signal — which is why run order should be randomised. This is a study-design warning, discussed further in the Chemometrics and Cross-validation units.)*
+
+**B6.** The **horizontal** separation on the predictive axis $t_p$ is the disease signal: cases and controls occupy different positions along the one axis OPLS built to carry $Y$-related variation. The **vertical** spread on the orthogonal axis $t_o$ is systematic variation *within* the data (batch, individual physiology) that OPLS has deliberately set aside; because it is orthogonal to $Y$, it does **not** distinguish the groups — both classes spread up and down similarly.
+
+**B7.** **M2 is clearly overfit**: $R^2Y = 0.97$ (excellent in-sample fit) but $Q^2 = -0.05$ (worse than predicting the mean under cross-validation). The tell-tale is the large gap between a high $R^2Y$ and a near-zero/negative $Q^2$. **M1** ($0.88$ vs $0.80$) and **M3** ($0.70$ vs $0.55$) both have $Q^2$ comfortably positive and reasonably close to $R^2Y$, so they look trustworthy.
+
+**B8.** First study: the real $Q^2 = 0.62$ sits far above the permuted values (which top out at $0.25$), so the model performs much better than chance for data of this size — the separation is likely **real**. Second study: the real $Q^2 = 0.20$ is *within* the range the permuted (label-shuffled) models reach ($\le 0.30$), so it is **not** distinguishable from noise — the apparent separation is not trustworthy, despite $Q^2$ being positive. A positive $Q^2$ alone is not enough; it must beat the permutation null.
+
+**R1.**
+```r
+A <- c(10, 12, 4, 6)
+B <- c(20, 10, 20, 10)
+y <- c(1, 1, -1, -1)
+
+var(A)      # 13.333...
+var(B)      # 33.333...   -> larger variance
+cov(A, y)   # 4           -> covaries with the label
+cov(B, y)   # 0           -> no relation to the label
+```
+The larger-variance feature (`B`) is **not** the one that covaries with `y` (`A`) — PCA and a supervised component point at different features.
+
+**R2.**
+```r
+opls(X, cls,
+     predI  = 1,    # one PREDICTIVE component: a single response has one Y-axis
+     orthoI = NA,   # let cross-validation choose how many ORTHOGONAL comps to keep
+     permI  = 200)  # run a 200-label-permutation validation test
+```
+`permI` (the permutation test) is the main guard against being fooled by a chance separation; `orthoI = NA` also protects you by not letting you bolt on arbitrarily many orthogonal components (which would inflate $R^2$ without helping $Q^2$).
+
+**R3.** If the model is honest and the data are pure noise, the **real** $Q^2$ should be **no better than** the permuted $Q^2$ values — it should sit right in the middle of the permutation null (around $0$), not out in the tail. Seeing that is the correct, reassuring outcome: it tells you there is nothing to find, exactly as designed.
+:::
+
+## Where this leads
+
+- **Chemometrics:** OPLS and its relatives are workhorses for spectral data (NMR, LC–MS, IR); you will apply them to real chemometric datasets and biomarker discovery, including the S-plot for shortlisting features.
+- **Multiome data integration:** the same latent-variable thinking extends to relating **two data blocks** (e.g. RNA-seq vs proteomics), where components summarise shared structure across omics layers.
+- **Cross-validation:** the $Q^2$ and permutation machinery you used here as a black box is built up properly — how to split data, what leakage is, and how to choose the number of components without fooling yourself.

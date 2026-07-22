@@ -1,0 +1,223 @@
+---
+title: "Exercise: cell cycle & connection to PCA"
+format:
+  html:
+    toc: true
+    code-copy: true
+    code-overflow: wrap
+    highlight-style: github
+---
+
+## Goal
+
+By the end of this exercise you should be able to:
+
+- explain **why** the cell cycle is a major axis of variation in single-cell data,
+- compute a **module score** for a gene set by hand (average expression, then a background-corrected version),
+- assign a cell-cycle **phase** (G1 / S / G2M) from two scores using the standard rule,
+- reason about **why a cell-cycle program lands on a top principal component**,
+- **diagnose** what a PC represents using loadings and correlation with a covariate,
+- decide **when to regress the cell cycle out** and when to keep it, and describe the per-gene `lm` that does the regression.
+
+This is an **applied concept** day. The R below is shown for understanding and is **not meant to be run** (no single-cell object is provided); the by-hand parts are the ones to master.
+
+## Background
+
+The cell cycle is a coordinated transcriptional program. As a cell moves toward division it turns on **S-phase** genes (DNA replication: *PCNA*, *MCM* family, *TYMS*) and then **G2/M** genes (mitosis: *TOP2A*, *MKI67*, *CCNB1/2*, *CDK1*). Because hundreds of genes move **together**, the cycle contributes a large amount of **covariance** — and PCA finds directions of large covariance. So a top principal component often **is** the cell cycle, and clustering (built on the PCA embedding) can end up grouping cells by *how much they divide* rather than *what they are*.
+
+**Scoring a phase.** For a gene set $\mathcal{S}$ and cell $c$, the plain module score is the average expression of the set,
+
+$$\text{Score}_{\mathcal{S}}(c) = \frac{1}{|\mathcal{S}|}\sum_{g\in\mathcal{S}} x_{gc},$$
+
+where $x_{gc}$ is log-normalised expression. The **background-corrected** score (the `AddModuleScore` / `CellCycleScoring` idea) subtracts the average of a set of expression-matched **control** genes,
+
+$$\text{Score}_{\mathcal{S}}(c) = \overline{x}_{\mathcal{S}}(c) - \overline{x}_{\text{ctrl}}(c),$$
+
+so a score near 0 means "no more than background" and a clearly positive score means the program is on.
+
+**Assigning the phase.** With $\text{Score}_S$ and $\text{Score}_{G2M}$: if both are low (near/below 0) call it **G1**; otherwise take the phase of the **larger positive** score.
+
+**Removing it.** If the cycle is a nuisance, regress it out **per gene** before PCA:
+$$x_{gc} = \beta_{0g} + \beta_{1g}\,\text{Score}_S(c) + \beta_{2g}\,\text{Score}_{G2M}(c) + \varepsilon_{gc},$$
+and feed the **residuals** $\varepsilon_{gc}$ to PCA. Only do this when proliferation is not part of the answer you want.
+
+## By hand
+
+**B1.** In one sentence, explain why the cell cycle is a much bigger problem in **single-cell** RNA-seq than in **bulk** RNA-seq.
+
+**B2.** A cell has log-normalised expression for four S-phase markers: *PCNA* $=2.0$, *MCM6* $=1.6$, *TYMS* $=2.4$, *MCM2* $=2.0$. Compute the plain (uncorrected) S-phase module score.
+
+**B3.** For the same cell, the matched **control** gene set averages to $\overline{x}_{\text{ctrl}} = 1.4$. Compute the background-corrected S-phase score. Is the S program on or off for this cell?
+
+**B4.** Three cells have the following scores. Assign each a phase (G1 / S / G2M) using the standard rule.
+
+| cell | $\text{Score}_S$ | $\text{Score}_{G2M}$ |
+|---|---|---|
+| A | $0.61$ | $-0.10$ |
+| B | $-0.04$ | $0.55$ |
+| C | $-0.09$ | $-0.11$ |
+
+**B5.** You run PCA and find that the genes with the largest loadings on **PC1** are *MKI67*, *TOP2A*, *CCNB1*, *CDK1*, and *PCNA*. What does PC1 most likely represent? What single number would you compute to confirm it?
+
+**B6.** You cross-tabulate your clusters against the assigned phase and get the table below. Which cluster is a likely **cell-cycle artefact**, and why? What is one reason you should **not** immediately delete it?
+
+|  | G1 | S | G2M |
+|---|---|---|---|
+| cluster 0 | 402 | 9 | 6 |
+| cluster 1 | 15 | 188 | 201 |
+
+**B7.** For each scenario, decide whether you would **regress the cell cycle out** or **keep it**, and say why in one line:
+(a) mapping fine subtypes of resting T cells in a healthy lymph node;
+(b) comparing proliferating vs. quiescent stem cells in a regenerating tissue;
+(c) you care *that* a tumour cell is dividing but not *where* in the cycle it is.
+
+**B8.** After regressing out `S.Score` and `G2M.Score`, you re-run PCA and again correlate PC1 with `S.Score`. You get $0.72$. What went wrong, or what should you check?
+
+## In R
+
+The code below is **illustrative** (static — nothing to run here). It mirrors the standard Seurat workflow so you recognise it later.
+
+### Score the cell cycle
+
+```r
+library(Seurat)
+
+s.genes   <- cc.genes.updated.2019$s.genes     # curated S-phase markers
+g2m.genes <- cc.genes.updated.2019$g2m.genes   # curated G2/M markers
+
+# obj must already be normalised (LogNormalize) before scoring
+obj <- CellCycleScoring(
+  obj,
+  s.features   = s.genes,
+  g2m.features = g2m.genes,
+  set.ident    = FALSE
+)
+
+head(obj[[]][, c("S.Score", "G2M.Score", "Phase")])
+```
+
+### Diagnose whether a PC is the cell cycle
+
+```r
+obj <- RunPCA(obj)
+
+pc1 <- Embeddings(obj, "pca")[, 1]
+cor(pc1, obj$S.Score)      # strong correlation => PC1 tracks the cycle
+cor(pc1, obj$G2M.Score)
+
+# and cross-tabulate clusters against phase
+table(Cluster = Idents(obj), Phase = obj$Phase)
+```
+
+### Regress it out (only if it is a nuisance) and re-check
+
+```r
+obj <- ScaleData(obj, vars.to.regress = c("S.Score", "G2M.Score"),
+                 features = rownames(obj))
+obj <- RunPCA(obj)
+
+pc1 <- Embeddings(obj, "pca")[, 1]
+cor(pc1, obj$S.Score)      # should now be near 0 if the correction worked
+```
+
+### A tiny by-hand version of the module score (base R)
+
+This toy computes the **plain** module score for one gene set, to show there is no magic — it is a mean over chosen rows of the expression matrix.
+
+```r
+# expr: genes (rows) x cells (columns), log-normalised
+s.set <- c("PCNA", "MCM6", "TYMS", "MCM2")
+score_S <- colMeans(expr[s.set, ])     # one number per cell
+head(score_S)
+```
+
+### Tasks
+
+**R1.** In the toy base-R snippet, explain in words what `colMeans(expr[s.set, ])` returns and why its length equals the number of **cells**.
+
+**R2.** Sketch (in words or pseudocode) how you would turn the plain `score_S` into a **background-corrected** score using a control gene set `ctrl.set`, matching the formula in the Background.
+
+**R3.** Given `S.Score` and `G2M.Score` columns, write a one-line rule (in words or R) that reproduces the phase-assignment logic from **B4**.
+
+## Hints
+
+::: {.callout-tip collapse="true" title="Hint 1 — bulk vs single-cell (B1)"}
+In bulk RNA-seq you average over millions of cells, so cells in different phases **cancel out**. In single-cell data each cell is captured at **one** definite phase, so the cell-to-cell differences survive and become a visible axis of variation.
+:::
+
+::: {.callout-tip collapse="true" title="Hint 2 — the plain module score (B2)"}
+The plain score is just the mean of the listed values: add the four numbers and divide by four. This is the same average you would get from [`colMeans`](https://rdrr.io/r/base/colSums.html) applied to those rows of the expression matrix.
+:::
+
+::: {.callout-tip collapse="true" title="Hint 3 — background correction (B3)"}
+Subtract the control average from the marker average: $\overline{x}_{\mathcal{S}} - \overline{x}_{\text{ctrl}}$. A **positive** result means the markers are above the background level the cell would show anyway, so the program is **on**.
+:::
+
+::: {.callout-tip collapse="true" title="Hint 4 — assigning a phase (B4)"}
+Rule: if **both** scores are $\le 0$ (or near 0), call it **G1**. Otherwise pick the phase whose score is the **largest positive** value. Compare the two scores per cell.
+:::
+
+::: {.callout-tip collapse="true" title="Hint 5 — what a PC means (B5)"}
+The **loadings** are the eigenvector entries — how much each gene contributes to the axis (see Principal component analysis). If cell-cycle genes dominate the loadings, the PC is the cell cycle. Confirm by correlating that PC's **scores** with `S.Score` / `G2M.Score` using [`cor`](https://rdrr.io/r/stats/cor.html).
+:::
+
+::: {.callout-tip collapse="true" title="Hint 6 — reading the cross-tab (B6)"}
+A cluster that is almost entirely **one phase** is suspicious: it may be grouping cells by division state rather than identity. But some real cell types (transit-amplifying / progenitor cells) genuinely are highly proliferative — so treat it as a flag to **investigate**, not an automatic delete.
+:::
+
+::: {.callout-tip collapse="true" title="Hint 7 — regress or keep? (B7)"}
+Ask: *is proliferation part of the answer I want?* If yes (development, tumour, activation, stem/progenitor comparisons), **keep** it — regressing it out could erase your result. If it merely hides the identities you are after, **remove** it. When you care *that* a cell cycles but not *where* in the cycle, regress the **difference** `S.Score - G2M.Score`.
+:::
+
+::: {.callout-tip collapse="true" title="Hint 8 — the check failed (B8)"}
+If the correlation is still high after regressing out, the correction did not take. Check that scoring ran **before** `ScaleData`, that the score columns were actually passed to `vars.to.regress`, and that `RunPCA` used the **scaled (residual)** data. Always verify a correction rather than assuming it worked.
+:::
+
+## Solutions
+
+::: {.callout-note collapse="true" title="Solution"}
+
+**B1.** In bulk RNA-seq the signal is averaged over millions of cells so cell-cycle differences cancel; in single-cell data every cell has a definite phase, so cell-cycle variation is preserved and becomes one of the largest axes of variation.
+
+**B2.** Plain S-phase score $= \dfrac{2.0 + 1.6 + 2.4 + 2.0}{4} = \dfrac{8.0}{4} = 2.0$.
+
+**B3.** Background-corrected score $= \overline{x}_{\mathcal{S}} - \overline{x}_{\text{ctrl}} = 2.0 - 1.4 = 0.6$. This is clearly positive, so the **S program is on** in this cell.
+
+**B4.**
+- Cell A: $\text{Score}_S = 0.61$ (positive) beats $\text{Score}_{G2M} = -0.10$ → **S**.
+- Cell B: $\text{Score}_{G2M} = 0.55$ (positive) beats $\text{Score}_S = -0.04$ → **G2M**.
+- Cell C: both scores negative → **G1**.
+
+**B5.** PC1 most likely represents the **cell cycle** (specifically a G2/M-heavy division signature — *MKI67*, *TOP2A*, *CCNB1*, *CDK1* are G2/M markers, *PCNA* is S-phase). To confirm, compute the **correlation** between each cell's PC1 score and its `G2M.Score` (and `S.Score`); a high value confirms PC1 tracks the cycle.
+
+**B6.** **Cluster 1** is the likely artefact: it is almost entirely S + G2M cells (389 of 404), so it appears to be grouping cells by *division state* rather than by identity. You should not immediately delete it because some real cell types are genuinely highly proliferative (e.g. transit-amplifying or progenitor cells) — the one-phase cluster is a flag to investigate (check its marker genes, or re-cluster after regressing out the cycle), not a guaranteed technical artefact.
+
+**B7.**
+(a) **Regress out** — here proliferation is not the question; the cycle just blurs the resting-T-cell subtypes you want to resolve.
+(b) **Keep** — proliferating vs. quiescent *is* the biology; regressing it out would erase the comparison.
+(c) Regress out the **difference** `S.Score - G2M.Score`: this removes the phase gradient among cycling cells but keeps the cycling-vs-non-cycling contrast you care about.
+
+**B8.** A correlation of $0.72$ means the cell cycle is still driving PC1, so the correction did **not** take effect. Check that (i) `CellCycleScoring` ran and produced the score columns **before** `ScaleData`; (ii) `vars.to.regress = c("S.Score","G2M.Score")` was actually passed; and (iii) `RunPCA` was run on the **scaled/residual** data (not a cached earlier PCA). Re-run in the correct order and re-check — the correlation should drop close to 0.
+
+**R1.** `expr[s.set, ]` selects the rows of the expression matrix for the S-phase genes, giving a (genes-in-set × cells) submatrix. [`colMeans`](https://rdrr.io/r/base/colSums.html) averages **down each column**, i.e. over the genes in the set, producing **one score per cell** — hence its length equals the number of cells (columns).
+
+**R2.** Compute the marker average and a control average, then subtract:
+```r
+score_S_raw  <- colMeans(expr[s.set, ])
+score_S_ctrl <- colMeans(expr[ctrl.set, ])
+score_S      <- score_S_raw - score_S_ctrl     # background-corrected
+```
+(The real `AddModuleScore` picks `ctrl.set` to have expression levels matched to the markers; the subtraction logic is identical.)
+
+**R3.** One rule: for each cell, if `S.Score <= 0 & G2M.Score <= 0` assign **G1**, else assign **S** if `S.Score > G2M.Score` and **G2M** otherwise. In R, for example:
+```r
+phase <- ifelse(S.Score <= 0 & G2M.Score <= 0, "G1",
+         ifelse(S.Score >  G2M.Score,          "S", "G2M"))
+```
+:::
+
+## Where this leads
+
+- **Multiome data integration** and clustering workflows: the same "interpret your components" discipline applies to every latent space, not just PCA — always ask whether a shared axis is biology or a technical artefact.
+- **Batch, depth, and stress as confounders:** cell cycle is one example of a covariate that can seize a principal component. Sequencing depth (`nCount_RNA`), mitochondrial fraction (`percent.mt`), and batch/donor are diagnosed and, if needed, regressed out with exactly the same recipe.
+- **Cell-type annotation:** once nuisance axes are handled, the clusters you interpret and label reflect **identity** rather than division state.

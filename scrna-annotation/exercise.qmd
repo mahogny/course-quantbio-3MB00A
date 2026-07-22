@@ -1,0 +1,231 @@
+---
+title: "Exercise: cell-type annotation"
+format:
+  html:
+    toc: true
+    code-copy: true
+    code-overflow: wrap
+    highlight-style: github
+---
+
+## Goal
+
+By the end of this exercise you should be able to:
+
+- explain the difference between a **cluster** (found by the algorithm) and a **cell type** (a biological label),
+- compute a cluster **centroid** (mean expression profile) from a small expression matrix by hand,
+- compute a **log$_2$ fold change** and the **detection fractions** `pct.1` / `pct.2` for a gene, one-vs-rest,
+- read a **FindMarkers-style** table and decide which gene is a marker and which is housekeeping,
+- assign a **cell-type label** to a cluster by matching its markers to a signature table,
+- recognise the classic traps: **doublets** and **continuous states**.
+
+The by-hand parts are the exam-relevant skill: they are just group means and a difference of logs, applied per gene. The R section confirms the same numbers at scale (full workflow fluency continues in Cell-cycle analysis and the single-cell practical).
+
+## Background
+
+Each cell is a **vector** of gene expression. A **cluster** is a set of these vectors; its **centroid** is the mean vector — the typical profile of that group. A **marker gene** for a cluster is a gene whose expression is much higher **inside** the cluster than **outside** it (the "rest").
+
+For a gene, the **one-vs-rest** comparison produces:
+
+- the **log fold change** (effect size),
+$$\log_2\text{FC} = \log_2\frac{\text{mean expression in the cluster}}{\text{mean expression in the rest}},$$
+- the **detection fractions** `pct.1` (fraction of *cluster* cells with the gene detected, i.e. count $>0$) and `pct.2` (fraction of the *rest* with it detected),
+- and a **p-value** from a two-group test (default: the non-parametric **Wilcoxon rank-sum** test), reported **after multiple-testing correction** because thousands of genes are tested.
+
+A good marker has a **large positive** $\log_2$FC, **high `pct.1`**, **low `pct.2`**, and a small adjusted p-value.
+
+We use this toy dataset throughout (rows = genes, columns = cells — the single-cell convention). Values are already-normalised expression.
+
+|  gene   | c1 | c2 | c3 | c4 | c5 | c6 |
+|:-------:|:--:|:--:|:--:|:--:|:--:|:--:|
+| CD3D    |  9 |  7 |  8 |  0 |  0 |  3 |
+| MS4A1   |  0 |  1 |  0 |  7 |  8 |  9 |
+| ACTB    | 10 | 12 | 11 | 11 | 10 | 12 |
+
+Clustering has already assigned **cluster 1 = {c1, c2, c3}** and **cluster 2 = {c4, c5, c6}**.
+
+## By hand
+
+**B1.** Write the **centroid** (mean expression vector) of cluster 1, gene by gene. Do the same for cluster 2.
+
+**B2.** For the one-vs-rest comparison **cluster 1 vs the rest** (here "the rest" = cluster 2), compute $\log_2$FC for each of the three genes. Which gene is **up** in cluster 1, which is **down**, and which is **flat**? (You may leave $\log_2$ of a nice ratio as-is, e.g. $\log_2 8 = 3$.)
+
+**B3.** Still for cluster 1 vs the rest, compute `pct.1` and `pct.2` for **CD3D** (fraction of cells with count $>0$ in the cluster, and in the rest).
+
+**B4.** Using your B2 and B3 numbers, which gene is the **marker** for cluster 1? Justify it against all three criteria (fold change, `pct.1`, `pct.2`). What role does **ACTB** play, and why is it *not* a marker?
+
+**B5.** Here is a signature table. Assign a **cell-type label** to cluster 1 and to cluster 2.
+
+| Cell type | Canonical markers |
+|---|---|
+| T cell | `CD3D`, `CD3E`, `CD2` |
+| B cell | `MS4A1` (CD20), `CD79A` |
+
+**B6. (doublet)** A seventh cell arrives with expression `CD3D = 8`, `MS4A1 = 8`, `ACTB = 11`. It co-expresses the exclusive T-cell **and** B-cell markers at high level. Should you call it a new "T/B hybrid" cell type? What is the more likely explanation, and how would you check?
+
+**B7. (continuous state)** In a bone-marrow dataset the cells form a smooth gradient from stem cells to mature cells, with no gaps. You still run clustering and get 5 clusters. In one sentence, what is the risk of labelling these 5 clusters as 5 discrete "types", and what representation might be truer to the biology?
+
+## In R
+
+Use R to reproduce the by-hand numbers. Nothing here needs a single-cell package — it is `rowMeans` and comparisons. (The production tool, `Seurat::FindAllMarkers`, does exactly this across all genes and adds the statistical test.)
+
+### Build the toy matrix
+
+```r
+expr <- matrix(
+  c( 9,  7,  8,  0,  0,  3,   # CD3D
+     0,  1,  0,  7,  8,  9,   # MS4A1
+    10, 12, 11, 11, 10, 12),  # ACTB
+  nrow = 3, byrow = TRUE,
+  dimnames = list(c("CD3D", "MS4A1", "ACTB"),
+                  c("c1","c2","c3","c4","c5","c6")))
+
+cluster1 <- c("c1","c2","c3")   # T cells (to be confirmed)
+cluster2 <- c("c4","c5","c6")
+```
+
+### Centroids (mean expression per gene)
+
+```r
+m1 <- rowMeans(expr[, cluster1])   # cluster-1 centroid
+m2 <- rowMeans(expr[, cluster2])   # cluster-2 centroid ("the rest")
+m1                                 # CD3D 8.00  MS4A1 0.33  ACTB 11
+m2                                 # CD3D 1.00  MS4A1 8.00  ACTB 11
+```
+
+### Log2 fold change, cluster 1 vs the rest
+
+```r
+log2fc <- log2(m1 / m2)
+log2fc          # CD3D  3.00   MS4A1 -4.58   ACTB 0.00
+# CD3D up 8-fold in cluster 1; MS4A1 down; ACTB flat.
+# NOTE: real tools add a small pseudocount, log2((m1+eps)/(m2+eps)),
+#       so a gene absent in one group does not divide by zero.
+```
+
+### Detection fractions for CD3D
+
+```r
+pct <- function(x) mean(x > 0)         # fraction of cells with count > 0
+pct(expr["CD3D", cluster1])            # pct.1 = 1.00  (3/3)
+pct(expr["CD3D", cluster2])            # pct.2 = 0.33  (1/3)
+```
+
+### What the real call looks like (static — do not run)
+
+```r
+# after clustering, with cluster labels set as identities:
+markers <- FindAllMarkers(seurat_obj, only.pos = TRUE,
+                          min.pct = 0.25, logfc.threshold = 0.25)
+# one row per (gene, cluster) with columns:
+#   p_val  avg_log2FC  pct.1  pct.2  p_val_adj  cluster  gene
+head(markers[markers$cluster == 1, ], 5)
+```
+
+### Tasks
+
+**R1.** Reproduce **B1** and **B2** with the code above. Confirm `log2fc["CD3D"]` is $3$ and `log2fc["MS4A1"]` is negative.
+
+**R2.** Reproduce **B3**: confirm `pct.1 = 1.0` and `pct.2 = 0.33` for CD3D. Then compute `pct.1`/`pct.2` for **MS4A1** with respect to cluster 1 — do the values make sense for a *non*-marker of cluster 1?
+
+**R3.** Add the doublet cell from **B6** as a new column `c7 = c(8, 8, 11)` and confirm it is high in **both** `CD3D` and `MS4A1`. Explain in a comment why a naive marker match would mislabel it.
+
+## Hints
+
+::: {.callout-tip collapse="true" title="Hint 1 — the centroid is just a mean"}
+The centroid of a cluster is the **mean expression of each gene** over the cells in that cluster — one number per gene. For cluster 1, average across columns c1, c2, c3. In R this is [`rowMeans`](https://rdrr.io/r/base/colSums.html)`(expr[, cluster1])`.
+:::
+
+::: {.callout-tip collapse="true" title="Hint 2 — log fold change"}
+$\log_2$FC compares the two centroids you just computed: $\log_2(\text{mean}_{\text{cluster}} / \text{mean}_{\text{rest}})$. Recall $\log_2$ of a ratio is a **difference of logs**, and $\log_2 8 = 3$, $\log_2 1 = 0$, $\log_2(\text{small}) < 0$. A gene with $\log_2$FC $\approx 0$ is expressed equally in both groups — not a marker.
+:::
+
+::: {.callout-tip collapse="true" title="Hint 3 — detection fractions"}
+`pct.1` = fraction of **cluster** cells where the gene is *detected* (count $>0$); `pct.2` = the same for the **rest**. Count the non-zero entries and divide by the group size (3 here). A specific marker has `pct.1` high and `pct.2` low.
+:::
+
+::: {.callout-tip collapse="true" title="Hint 4 — what makes a marker"}
+A marker must satisfy **all** of: large positive $\log_2$FC (higher in the cluster), high `pct.1` (on in most cluster cells), low `pct.2` (off elsewhere). A housekeeping gene like `ACTB` is high **everywhere**, so its $\log_2$FC is $\approx 0$ and both `pct` values are high — high expression is not the same as being a marker.
+:::
+
+::: {.callout-tip collapse="true" title="Hint 5 — assigning the label"}
+Match the cluster's **up** markers to the signature table: whichever cell type's canonical genes appear as the cluster's markers gives the label. `CD3D` up in cluster 1 → look it up in the table.
+:::
+
+::: {.callout-tip collapse="true" title="Hint 6 — the doublet"}
+`CD3D` and `MS4A1` mark **different, exclusive** lineages (T vs B). A single real cell almost never expresses both strongly. When it does, suspect a **doublet** — two cells in one droplet, whose profile is the *sum* of two types. Check with a doublet detector ([`scDblFinder`](https://bioconductor.org/packages/scDblFinder/)) and remove flagged cells before annotating.
+:::
+
+## Solutions
+
+::: {.callout-note collapse="true" title="Solution"}
+
+**B1.** Average each gene over the cluster's cells.
+
+Cluster 1 = {c1, c2, c3}:
+
+- CD3D: $(9+7+8)/3 = 24/3 = 8$
+- MS4A1: $(0+1+0)/3 = 1/3 \approx 0.33$
+- ACTB: $(10+12+11)/3 = 33/3 = 11$
+
+so the **cluster-1 centroid** is $(\text{CD3D}, \text{MS4A1}, \text{ACTB}) = (8,\ 0.33,\ 11)$.
+
+Cluster 2 = {c4, c5, c6}:
+
+- CD3D: $(0+0+3)/3 = 1$
+- MS4A1: $(7+8+9)/3 = 8$
+- ACTB: $(11+10+12)/3 = 11$
+
+so the **cluster-2 centroid** is $(1,\ 8,\ 11)$.
+
+**B2.** $\log_2$FC = $\log_2(\text{cluster-1 mean} / \text{cluster-2 mean})$:
+
+- CD3D: $\log_2(8/1) = \log_2 8 = 3$ → **up** (about $8\times$ higher in cluster 1).
+- MS4A1: $\log_2(0.33/8) = \log_2(0.0417) \approx -4.58$ → **down** (much lower in cluster 1; it is instead a cluster-2 gene).
+- ACTB: $\log_2(11/11) = \log_2 1 = 0$ → **flat** (equal in both groups).
+
+**B3.** Detection = fraction of cells with count $>0$.
+
+- `pct.1` (CD3D in cluster 1): all of 9, 7, 8 are $>0$ → $3/3 = 1.0$.
+- `pct.2` (CD3D in cluster 2): of 0, 0, 3 only one is $>0$ → $1/3 \approx 0.33$.
+
+**B4.** **CD3D** is the marker for cluster 1: it has a large positive $\log_2$FC ($=3$), high `pct.1` ($=1.0$, on in every cluster-1 cell), and low `pct.2` ($=0.33$, mostly off elsewhere) — it satisfies all three criteria. MS4A1 fails (its $\log_2$FC for cluster 1 is negative — it marks cluster 2, not cluster 1). **ACTB** is a **housekeeping** gene: it is highly expressed in *both* clusters, so its $\log_2$FC is $0$ and it carries no information about which type a cell is. High expression alone does not make a marker; **differential** expression does.
+
+**B5.** Cluster 1's up-marker is `CD3D`, which the table lists under **T cell** → **cluster 1 = T cells**. Cluster 2's up-marker is `MS4A1` (high in cluster 2, low in cluster 1), listed under **B cell** → **cluster 2 = B cells**.
+
+**B6.** Do **not** call it a new hybrid type. `CD3D` (T cell) and `MS4A1` (B cell) mark exclusive lineages that a single cell essentially never co-expresses at high level. The profile `(8, 8, 11)` looks like the **sum** of a T-cell profile and a B-cell profile — the signature of a **doublet**: two cells captured in one droplet and sequenced as one. Check by running a doublet detector (e.g. `scDblFinder` or `DoubletFinder`); if flagged, remove the cell before finalising annotation. Co-expression of two lineages' exclusive markers is a doublet until proven otherwise.
+
+**B7.** If identity is really a smooth **continuum** (stem → mature), cutting it into 5 clusters draws boundaries that are partly arbitrary, so the 5 "types" may be artefacts of where the algorithm split a gradient rather than genuine discrete populations. A **trajectory / pseudotime** representation, which orders cells along the continuous axis instead of boxing them, is truer to this biology.
+
+**R1.** Running the centroid and log-fold-change blocks gives `log2fc["CD3D"] = 3` and `log2fc["MS4A1"] ≈ -4.58`, matching B2.
+
+```r
+m1 <- rowMeans(expr[, cluster1])
+m2 <- rowMeans(expr[, cluster2])
+log2(m1 / m2)     # CD3D 3.00  MS4A1 -4.58  ACTB 0.00
+```
+
+**R2.** For CD3D, `pct(expr["CD3D", cluster1]) = 1.0` and `pct(expr["CD3D", cluster2]) = 0.33`, as in B3. For MS4A1 vs cluster 1:
+
+```r
+pct(expr["MS4A1", cluster1])   # 0.33  (only c2 is > 0)  -> pct.1
+pct(expr["MS4A1", cluster2])   # 1.00  (all of c4,c5,c6) -> pct.2
+```
+
+For a cluster-1 marker we want `pct.1` high and `pct.2` low; MS4A1 shows the **opposite** (`pct.1 = 0.33`, `pct.2 = 1.0`), confirming it is not a marker of cluster 1 — it marks cluster 2.
+
+**R3.**
+
+```r
+expr2 <- cbind(expr, c7 = c(8, 8, 11))
+expr2[, "c7"]      # CD3D 8  MS4A1 8  ACTB 11  -> high in BOTH lineage markers
+# A naive match would see CD3D -> T cell AND MS4A1 -> B cell and might invent a
+# "T/B" type. The profile is really the sum of a T cell and a B cell: a doublet.
+```
+:::
+
+## Where this leads
+
+- **Cell-cycle analysis:** a **continuous** state (the cell cycle) that can create spurious clusters and confound annotation — you will *score* it per cell and, if needed, regress it out. The same signature-scoring idea from this unit reappears.
+- **Reference-based annotation at scale:** tools such as `SingleR`, `Azimuth`, and `CellTypist` transfer labels from a curated atlas by **correlation** to reference profiles — the vector-similarity idea from Vectors, dot product & projection, applied per cell.
+- **Differential expression proper:** the one-vs-rest test here is the entry point to comparing conditions (treated vs control) within a cell type — where the count-data distributions (Poisson / negative binomial) matter for choosing the right test.

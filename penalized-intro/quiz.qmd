@@ -1,0 +1,119 @@
+---
+title: "Quiz: why penalize?"
+format:
+  html:
+    toc: true
+    code-copy: true
+    code-overflow: wrap
+    highlight-style: github
+---
+
+Short conceptual questions to test your grasp of *why* penalized regression exists. Try each on paper first, then open the answer. This block is **provisional** and may move to a later statistics / machine-learning course, so treat these as intuition checks rather than exam drills.
+
+---
+
+**Q1.** What does "**p ≫ n**" mean for a gene-expression dataset, and why is that shape a problem for ordinary least squares?
+
+::: {.callout-tip collapse="true" title="Hint"}
+Count the predictors versus the samples. What does the model need in order to have a unique solution?
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+$p$ is the number of predictors (genes) and $n$ is the number of samples (patients/cells); $p \gg n$ means **far more genes than samples**. Ordinary least squares needs $X^\top X$ to be invertible, but with $p > n$ that matrix is **singular**, so there is **no unique** solution — the model is unidentifiable.
+:::
+
+---
+
+**Q2.** In the OLS solution $\hat{\boldsymbol{\beta}} = (X^\top X)^{-1} X^\top \mathbf{y}$, which single matrix must be invertible, and what is its size?
+
+::: {.callout-tip collapse="true" title="Hint"}
+Look for the inverse in the formula. $X$ is $n \times p$.
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+$X^\top X$ must be invertible. It is a **$p \times p$** matrix (one row and column per predictor), even though it is built from only $n$ samples.
+:::
+
+---
+
+**Q3.** Why exactly does $p > n$ make $X^\top X$ non-invertible? Use the word **rank**.
+
+::: {.callout-tip collapse="true" title="Hint"}
+The rank of $X^\top X$ cannot exceed the number of samples. When is a $p\times p$ matrix invertible?
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+$\text{rank}(X^\top X) \le n$. A $p \times p$ matrix is invertible only if its rank equals $p$. When $p > n$, the rank is at most $n < p$, so the matrix is **rank-deficient (singular)** and has no inverse.
+:::
+
+---
+
+**Q4.** Suppose $p < n$, so $X^\top X$ *is* invertible. Name a common biological situation that still makes OLS coefficients huge and unstable, and say what happens to $X^\top X$.
+
+::: {.callout-tip collapse="true" title="Hint"}
+Think about genes in the same pathway. What does that do to the columns of $X$?
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+**Correlated predictors** — co-regulated genes move together, so their columns in $X$ are nearly the same. This makes $X^\top X$ **nearly singular** (an eigenvalue close to 0, tiny determinant). Inverting a near-singular matrix amplifies noise, so the coefficients become **large and unstable** (multicollinearity).
+:::
+
+---
+
+**Q5.** True or false: the model that fits the training data best is the best model. Explain.
+
+::: {.callout-tip collapse="true" title="Hint"}
+What do we actually want the model to do — describe this data, or predict new data?
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+**False.** A model flexible enough to fit the training data perfectly usually has learned the **noise**, not the signal, and predicts **new** data badly — it **overfits**. We care about generalisation to the next patient, not a perfect fit to the samples we already have.
+:::
+
+---
+
+**Q6.** Define **bias** and **variance** in one sentence each, and say which one OLS with many predictors suffers from.
+
+::: {.callout-tip collapse="true" title="Hint"}
+One comes from a model that is too rigid, the other from a model that is too flexible.
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+**Bias** is error from a model too rigid to capture the true pattern (underfitting). **Variance** is error from a model so flexible it chases noise and changes wildly between samples (overfitting). OLS with many predictors is **low bias, high variance** — it overfits.
+:::
+
+---
+
+**Q7.** In words, what does adding a penalty term $\lambda\cdot(\text{coefficient size})$ to the least-squares objective do, and what is the role of $\lambda$?
+
+::: {.callout-tip collapse="true" title="Hint"}
+The objective now has two competing parts. What does the second part discourage, and what does $\lambda$ set?
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+It **charges for large coefficients**, so the fit must justify every unit of coefficient it uses; this shrinks coefficients toward zero and stabilises them. $\lambda \ge 0$ sets **how strong** the penalty is — the **bias–variance dial**: $\lambda = 0$ is OLS (low bias, high variance), large $\lambda$ heavily shrinks (high bias, low variance).
+:::
+
+---
+
+**Q8.** The ridge penalty changes the normal equations to use $X^\top X + \lambda I$ instead of $X^\top X$. Why does this matrix have an inverse even when $p > n$?
+
+::: {.callout-tip collapse="true" title="Hint"}
+What does adding $\lambda I$ do to the eigenvalues? When is a matrix invertible?
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+Adding $\lambda I$ lifts **every eigenvalue** of $X^\top X$ by $\lambda$. A matrix is invertible exactly when none of its eigenvalues is zero, so any zero eigenvalue (which is what made the $p > n$ case singular) becomes $\lambda > 0$. Hence $X^\top X + \lambda I$ is **always invertible** for $\lambda > 0$, and there is again a unique solution.
+:::
+
+---
+
+**Q9.** Name one bonus a biologist gets from penalization beyond "the model is now computable," and one price paid for it.
+
+::: {.callout-tip collapse="true" title="Hint"}
+Think about reproducibility of gene signatures and prediction on new patients — and what shrinkage does to the estimates.
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+**Bonus (any one):** more **stable, reproducible** coefficients that don't flip when you swap a few patients; **better prediction** on held-out patients; and with some penalties (lasso), most coefficients go exactly to zero, giving a short **interpretable gene list**. **Price:** shrinkage introduces **bias** — the estimates are systematically pulled toward zero, so choosing $\lambda$ well (later, by cross-validation) matters.
+:::

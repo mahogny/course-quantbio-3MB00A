@@ -1,0 +1,107 @@
+---
+title: "Quiz: Chemometrics I — spectra as data"
+format:
+  html:
+    toc: true
+    code-copy: true
+    code-overflow: wrap
+    highlight-style: github
+---
+
+Short questions to test your understanding of spectra as data. Try each on paper first, then open the answer. Several are written in the style of the on-campus exam (no computer).
+
+---
+
+**Q1.** In what sense is a single spectrum a **vector**? What do its coordinates and its dimension correspond to?
+
+::: {.callout-tip collapse="true" title="Hint"}
+The instrument records absorbance at a discrete grid of wavelengths.
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+A spectrum is the list of absorbances at each measured wavelength, $\mathbf{x} = (A(\lambda_1),\dots,A(\lambda_p)) \in \mathbb{R}^p$. Each **wavelength is a coordinate**, and the **dimension $p$** is the number of wavelengths measured (often several hundred to a few thousand). It is one point in a high-dimensional space.
+:::
+
+---
+
+**Q2.** State the **Beer–Lambert law** and say, in one sentence, why it makes **linear** models natural for spectroscopy.
+
+::: {.callout-tip collapse="true" title="Hint"}
+Which quantity is proportional to which?
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+$A = \varepsilon\ell c$: absorbance equals molar absorptivity × path length × concentration. Because absorbance is **proportional to concentration** (and absorbances of a mixture add), a spectrum is a linear function of the concentrations — so linear models are the physically correct choice.
+:::
+
+---
+
+**Q3.** A pure compound with $\varepsilon\ell = 1500\ \text{M}^{-1}$ (at $\ell = 1\ \text{cm}$) gives absorbance $A = 0.45$. What is the concentration? If you double the concentration, what is the new absorbance?
+
+::: {.callout-tip collapse="true" title="Hint"}
+Rearrange $A = \varepsilon\ell c$; then use proportionality.
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+$c = A/(\varepsilon\ell) = 0.45/1500 = 3\times10^{-4}\ \text{M}$. Doubling the concentration doubles the absorbance (proportionality): $A = 0.90$.
+:::
+
+---
+
+**Q4.** A measured spectrum contains three absorbing substances with pure-component spectra $\mathbf{s}_1, \mathbf{s}_2, \mathbf{s}_3$. Write the mixture spectrum, and name the linear-algebra operation it represents.
+
+::: {.callout-tip collapse="true" title="Hint"}
+At each wavelength the absorbances add, each weighted by a concentration.
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+$\mathbf{x} = c_1\mathbf{s}_1 + c_2\mathbf{s}_2 + c_3\mathbf{s}_3$. It is a **linear combination** of the pure-component spectra, with the concentrations as coefficients.
+:::
+
+---
+
+**Q5.** Match each preprocessing step to the artefact it primarily removes: (i) baseline correction, (ii) normalization, (iii) smoothing, (iv) first derivative.
+
+::: {.callout-tip collapse="true" title="Hint"}
+Additive vs multiplicative vs random vs constant-offset-and-overlap.
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+(i) baseline correction → **additive** offset/drift; (ii) normalization → **multiplicative** scaling (path length, particle size); (iii) smoothing → **random noise**; (iv) first derivative → **constant baseline offset** (and it sharpens overlapping peaks). A second derivative additionally removes a linear (sloping) baseline.
+:::
+
+---
+
+**Q6.** Why does taking a **derivative** of a spectrum remove a constant baseline, and what is the price you pay for it?
+
+::: {.callout-tip collapse="true" title="Hint"}
+What is the derivative of a constant? What happens to noise when you difference?
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+A constant baseline adds the same value at every wavelength; the derivative of a constant is zero, so it drops out (discretely, $(x_{i+1}+b)-(x_i+b) = x_{i+1}-x_i$). The price is **noise amplification** — differencing makes noise worse — which is why derivatives are computed together with smoothing (e.g. Savitzky–Golay).
+:::
+
+---
+
+**Q7.** You have $n = 10$ calibration spectra measured at $p = 900$ wavelengths. Why can you **not** just fit an ordinary least-squares regression of concentration on all 900 wavelengths?
+
+::: {.callout-tip collapse="true" title="Hint"}
+Compare the number of unknown coefficients to the number of samples; think about inverting $X^\top X$.
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+OLS would estimate 900 coefficients from only 10 samples. It needs to invert $X^\top X$ (a $900\times900$ matrix), which is **singular** when $p \gg n$ — no unique solution, and infinitely many coefficient vectors fit the 10 samples perfectly while predicting garbage on new ones (overfitting). Adjacent wavelengths are also highly **collinear**, which destabilises OLS even further.
+:::
+
+---
+
+**Q8.** In one or two sentences, what does **PLS** do that ordinary regression does not, and how does it differ from doing **PCA** first (PCR)?
+
+::: {.callout-tip collapse="true" title="Hint"}
+PLS builds a few components; what quantity do those components pay attention to?
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+PLS compresses the many correlated wavelengths into a **few latent components** — combinations of wavelengths — and regresses on those, avoiding the singular/ill-conditioned inversion. Unlike PCA (which chooses components to capture variance in $X$ only, as in PCR), PLS chooses components that also **correlate with the response $\mathbf{y}$**, aiming them at the quantity being predicted. The number of components is chosen by **cross-validation**.
+:::

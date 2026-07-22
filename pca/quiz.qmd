@@ -1,0 +1,119 @@
+---
+title: "Quiz: principal component analysis"
+format:
+  html:
+    toc: true
+    code-copy: true
+    code-overflow: wrap
+    highlight-style: github
+---
+
+Short questions to test your understanding of the **concept** of PCA. Try each on paper first, then open the answer. Several are written in the style of the on-campus exam (no computer). Throughout, PCA means the eigen-decomposition of the (centred) data's **covariance matrix**.
+
+---
+
+**Q1.** In one sentence, what is a principal component, in terms of the covariance matrix?
+
+::: {.callout-tip collapse="true" title="Hint"}
+Which matrix do we diagonalise, and what are its eigenvectors?
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+A principal component is an **eigenvector of the covariance matrix** — a direction in variable space. PC1 is the eigenvector with the largest eigenvalue (the direction of greatest variance), and successive PCs are the next eigenvectors, orthogonal to the earlier ones.
+:::
+
+---
+
+**Q2.** Why are the principal components guaranteed to be **orthogonal** (perpendicular) to each other?
+
+::: {.callout-tip collapse="true" title="Hint"}
+What special property does the covariance matrix have, and what did the eigen unit prove about such matrices?
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+The covariance matrix is **symmetric** ($\text{cov}(g_i,g_j)=\text{cov}(g_j,g_i)$). By the spectral theorem (from Eigenvalues & eigenvectors), a symmetric matrix has **real** eigenvalues and **orthogonal** eigenvectors — so the PCs are automatically perpendicular.
+:::
+
+---
+
+**Q3.** What does the **eigenvalue** of a principal component represent, biologically and numerically?
+
+::: {.callout-tip collapse="true" title="Hint"}
+Think about spread along that direction.
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+The eigenvalue is the **variance captured along that PC** — how much the samples spread out in that direction. A large eigenvalue means the samples vary a lot along that axis; a small one means they barely move along it. Eigenvalues are non-negative because variances cannot be negative.
+:::
+
+---
+
+**Q4.** What is the difference between a **score** and a **loading**?
+
+::: {.callout-tip collapse="true" title="Hint"}
+One is per sample, the other is per gene. Both come from the same eigenvector.
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+A **score** is a per-**sample** number: the projection (dot product) of a centred sample onto a PC — where that sample lands along the axis. A **loading** is a per-**gene** number: an entry of the eigenvector — how much that gene contributes to the PC. Scores describe samples; loadings describe genes.
+:::
+
+---
+
+**Q5.** A covariance matrix has eigenvalues $\lambda_1 = 12$, $\lambda_2 = 6$, $\lambda_3 = 2$. What fraction of the total variance does PC1 explain?
+
+::: {.callout-tip collapse="true" title="Hint"}
+Variance explained by PC$_k$ is $\lambda_k$ divided by the sum of all eigenvalues.
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+Total variance $= 12+6+2 = 20$. PC1 explains $12/20 = 0.6 = \mathbf{60\%}$. (PC2: $6/20=30\%$; PC3: $2/20=10\%$; they sum to 100%.)
+:::
+
+---
+
+**Q6.** Why must you **centre** the data before running PCA? What tends to happen to PC1 if you forget?
+
+::: {.callout-tip collapse="true" title="Hint"}
+Variance is spread *about the mean*. What is spread measured about if you don't centre?
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+PCA describes variation **about the mean**, so we subtract each variable's mean first. If you skip centring, spread is measured about the **origin**, and PC1 is pulled toward the direction from the origin to the data's centroid — it encodes where the cloud *sits* rather than how it is *shaped*.
+:::
+
+---
+
+**Q7.** You have two variables: gene expression measured in the thousands, and a pH measured between 6 and 8. If you run PCA on the raw covariance matrix, which variable dominates PC1, and how do you fix an unwanted dominance?
+
+::: {.callout-tip collapse="true" title="Hint"}
+Larger numeric range means larger variance. What does dividing each variable by its standard deviation do?
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+The gene (huge numeric range → huge variance) dominates PC1 purely because of its **units**, not its biology. Fix it by **scaling**: divide each variable by its standard deviation so every variable has variance 1 (equivalently, run PCA on the **correlation** matrix instead of the covariance matrix), giving each variable an equal say.
+:::
+
+---
+
+**Q8.** PCA is **unsupervised**. Give one consequence of that: what is *not* guaranteed about PC1?
+
+::: {.callout-tip collapse="true" title="Hint"}
+PCA optimises variance and never sees the sample labels.
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+Because PCA maximises variance without using labels, PC1 is the direction of **greatest variation**, which is **not guaranteed to be the biologically interesting axis**. The largest source of variance might be a **batch effect** or a technical artefact. Always colour the PCA plot by known covariates (condition, batch) to interpret what each PC actually represents.
+:::
+
+---
+
+**Q9.** True or false: rotating the data onto the principal component axes throws away information. Explain.
+
+::: {.callout-tip collapse="true" title="Hint"}
+Distinguish *rotating* the axes from *keeping only the first few* PCs.
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+**False** — the rotation itself is loss-less: keeping *all* the PCs is just the same points described in a new, rotated coordinate system. Information is only discarded when you **truncate** — keep the first few PCs and drop the rest — which is the (approximate) dimension-reduction step, separate from the (exact) rotation.
+:::

@@ -1,0 +1,232 @@
+---
+title: "Exercise: principal component analysis"
+format:
+  html:
+    toc: true
+    code-copy: true
+    code-overflow: wrap
+    highlight-style: github
+---
+
+## Goal
+
+By the end of this exercise you should be able to:
+
+- explain, in words, what PCA does to a high-dimensional data cloud (**rotate the axes** to line up with the directions of greatest variance),
+- **centre** a small data matrix by hand and say why centring is necessary,
+- build the $2\times2$ **covariance matrix** of a tiny dataset,
+- read its **eigenvectors as principal components** and its **eigenvalues as variances** (reusing the by-hand recipe from Eigenvalues & eigenvectors),
+- compute a **score** as the projection of a sample onto a PC, and read **loadings** off the eigenvector,
+- turn eigenvalues into **variance explained**.
+
+This is a **concept day**. No `prcomp` yet — that arrives in PCA in R. Do the pen-and-paper parts first; the R section only confirms your hand answers.
+
+## Background
+
+PCA takes a data matrix (samples × variables) and finds a **new set of orthogonal axes** — the **principal components (PCs)** — ordered so that the first captures the most variance, the second the most of what remains, and so on.
+
+**The pipeline (memorise this):**
+
+1. **Centre** each column (subtract its mean). Optionally **scale** (divide by its standard deviation) if variables are on different units.
+2. Form the **covariance matrix** $C$ (symmetric, $p\times p$): $C_{ii} = \text{var}(\text{var}_i)$ on the diagonal, $C_{ij} = \text{cov}(\text{var}_i,\text{var}_j)$ off it. For $n$ samples use the sample covariance with divisor $n-1$.
+3. **Eigen-decompose** $C$. The **eigenvectors are the PCs** (orthogonal, because $C$ is symmetric); the **eigenvalues are the variances** captured along each PC.
+4. **Scores** = projections of centred samples onto a PC: $\text{score} = \mathbf{x}\cdot\mathbf{u}$ for centred sample $\mathbf{x}$ and unit PC $\mathbf{u}$. Scores describe **samples**.
+5. **Loadings** = the entries of the eigenvector — the weight of each variable in that PC. Loadings describe **variables (genes)**.
+6. **Variance explained** by PC$_k$ = $\lambda_k / \sum_j \lambda_j$. The denominator equals the total variance (the **trace** of $C$).
+
+Throughout we use a tiny dataset of **2 genes measured in 5 samples**:
+
+| sample | *GENE_A* | *GENE_B* |
+|---|---|---|
+| s1 | 1 | 5 |
+| s2 | 3 | 3 |
+| s3 | 4 | 6 |
+| s4 | 5 | 7 |
+| s5 | 7 | 9 |
+
+## By hand
+
+**B1.** Compute the mean of each gene, then write out the **centred** data matrix (subtract each column's mean). Check that each centred column sums to 0. Why do we centre before PCA — what goes wrong if we skip it?
+
+**B2.** Using the centred data, compute $\text{var}(A)$, $\text{var}(B)$, and $\text{cov}(A,B)$ with divisor $n-1 = 4$. Assemble the covariance matrix $C$. Confirm it is symmetric.
+
+**B3.** Find the eigenvalues of $C$ by solving the characteristic equation $\det(C-\lambda I)=0$ (the recipe from Eigenvalues & eigenvectors). Check them with trace and determinant.
+
+**B4.** Find a **unit** eigenvector for each eigenvalue. These are **PC1** (largest eigenvalue) and **PC2**. Confirm they are orthogonal. Which one points along the long axis of the data cloud?
+
+**B5. (scores)** Project each centred sample onto **PC1** (the unit eigenvector $\mathbf{u}_1$) to get its **PC1 score**, using $\text{score} = \mathbf{x}\cdot\mathbf{u}_1$. Which sample sits at each extreme of PC1?
+
+**B6. (loadings)** Write down the **loadings** of PC1 (the entries of $\mathbf{u}_1$). Do the two genes contribute equally to PC1? What does that say biologically about how genes A and B behave?
+
+**B7. (variance explained)** What fraction of the total variance does PC1 capture? PC2? Confirm the two fractions add to 1 and that the denominator equals the trace of $C$.
+
+**B8. (concept)** Suppose you had *not* centred, and instead ran the whole procedure on the raw numbers. In one or two sentences, explain why the leading direction would then mostly point from the origin toward the data's centre, rather than along the direction of greatest spread.
+
+## In R
+
+Use R only to **confirm** the hand answers. (In PCA in R we use `prcomp`; today we build each piece with base R so the mapping to the maths is explicit — no PCA function is called here.)
+
+### Centre the data and form the covariance matrix
+
+```r
+X <- matrix(c(1, 5,
+              3, 3,
+              4, 6,
+              5, 7,
+              7, 9), ncol = 2, byrow = TRUE)
+colnames(X) <- c("GENE_A", "GENE_B")
+
+colMeans(X)              # 4 6  -> the two gene means
+
+Xc <- scale(X, center = TRUE, scale = FALSE)   # centre only, no scaling
+colMeans(Xc)             # ~0 0 -> columns now centred
+
+C <- cov(Xc)             # 2x2 covariance matrix (divisor n-1 = 4)
+C                        # [[5, 4], [4, 5]]
+```
+
+### Eigen-decompose the covariance matrix (this is PCA, by hand)
+
+```r
+E <- eigen(C)
+E$values                 # 9 1   -> variances along PC1, PC2
+E$vectors                # columns are the unit eigenvectors (PC1, PC2)
+```
+
+### Scores: project centred samples onto the PCs
+
+```r
+scores <- Xc %*% E$vectors   # each row: (PC1 score, PC2 score) for that sample
+scores
+```
+
+### Variance explained
+
+```r
+E$values / sum(E$values)     # 0.9 0.1  -> PC1 90%, PC2 10%
+sum(E$values)                # 10 = trace(C) = total variance
+sum(diag(C))                 # 10  -> same total, from the trace directly
+```
+
+### Tasks
+
+**R1.** Reproduce your **B2** covariance matrix with `cov(Xc)` and confirm it equals your hand answer.
+
+**R2.** Run `eigen(C)` and match `$values` to your **B3** eigenvalues and `$vectors` to your **B4** eigenvectors. (Signs may be flipped — an eigenvector and its negative describe the same axis.)
+
+**R3.** Compute `scores <- Xc %*% E$vectors` and check the first column against the **B5** PC1 scores you found by hand.
+
+**R4.** Confirm `E$values / sum(E$values)` gives the **B7** variance-explained fractions, and that `sum(E$values)` equals `sum(diag(C))`.
+
+## Hints
+
+::: {.callout-tip collapse="true" title="Hint 1 — centring"}
+Subtract each **column's own mean** from every entry in that column. The mean of *GENE_A* is $(1+3+4+5+7)/5$ and of *GENE_B* is $(5+3+6+7+9)/5$. After centring, each column must sum to exactly 0 — a quick self-check. In R, [`scale`](https://rdrr.io/r/base/scale.html)`(X, center = TRUE, scale = FALSE)` centres without scaling.
+:::
+
+::: {.callout-tip collapse="true" title="Hint 2 — sample covariance"}
+With centred values, $\text{cov}(A,B) = \frac{1}{n-1}\sum_i (A_i-\bar A)(B_i-\bar B)$ and $\text{var}(A)=\text{cov}(A,A)$. Here $n=5$ so the divisor is $4$. This matches R's [`cov`](https://rdrr.io/r/stats/cor.html) and [`var`](https://rdrr.io/r/stats/cor.html), so your hand answer should equal `cov(Xc)`.
+:::
+
+::: {.callout-tip collapse="true" title="Hint 3 — eigenvalues of a 2×2"}
+Form $C-\lambda I$ by subtracting $\lambda$ from each diagonal entry, then solve $(a-\lambda)(d-\lambda)-bc=0$. For $C=\begin{pmatrix}5&4\\4&5\end{pmatrix}$ this is $(5-\lambda)^2-16=0$, i.e. $(5-\lambda)=\pm4$. Check: $\lambda_1+\lambda_2$ should equal the trace $5+5$, and $\lambda_1\lambda_2$ the determinant $25-16$.
+:::
+
+::: {.callout-tip collapse="true" title="Hint 4 — eigenvectors and normalising"}
+Plug each $\lambda$ into $(C-\lambda I)\mathbf v=\mathbf 0$ and read $v_2$ in terms of $v_1$ from one row. To make it a **unit** vector, divide by its length $\sqrt{v_1^2+v_2^2}$; e.g. $(1,1)$ has length $\sqrt2$, so the unit version is $\frac{1}{\sqrt2}(1,1)\approx(0.707,0.707)$.
+:::
+
+::: {.callout-tip collapse="true" title="Hint 5 — scores are projections"}
+A score is a **dot product** (the projection you met in vector geometry). For centred sample $\mathbf x=(x_A,x_B)$ and unit PC $\mathbf u=(u_A,u_B)$, the score is $x_A u_A + x_B u_B$. In R, `Xc %*% E$vectors` does all samples and both PCs at once — column 1 is the PC1 scores.
+:::
+
+::: {.callout-tip collapse="true" title="Hint 6 — loadings vs scores"}
+**Loadings** are the eigenvector entries (one weight per gene) — they describe how genes combine to build the PC. **Scores** are per-sample projections — where samples land. Same eigenvector, two readings: down the vector (loadings, genes) vs dotting a sample against it (scores, samples).
+:::
+
+::: {.callout-tip collapse="true" title="Hint 7 — variance explained"}
+Divide each eigenvalue by the **sum of all eigenvalues**: $\lambda_k/\sum_j\lambda_j$. The sum of eigenvalues equals the trace of $C$ (sum of the diagonal, `sum(diag(C))`), which is the total variance — so the fractions are guaranteed to add to 1.
+:::
+
+## Solutions
+
+::: {.callout-note collapse="true" title="Solution"}
+
+**B1.** Means: $\bar A = (1+3+4+5+7)/5 = 20/5 = 4$ and $\bar B = (5+3+6+7+9)/5 = 30/5 = 6$.
+Centred data (subtract the column mean):
+
+| sample | $A-\bar A$ | $B-\bar B$ |
+|---|---|---|
+| s1 | $-3$ | $-1$ |
+| s2 | $-1$ | $-3$ |
+| s3 | $0$ | $0$ |
+| s4 | $1$ | $1$ |
+| s5 | $3$ | $3$ |
+
+Column sums: $-3-1+0+1+3 = 0$ and $-1-3+0+1+3 = 0$ ✓.
+We centre because PCA describes **variation around the mean**. If we skip it, the leading direction is pulled toward the data's centroid (the mean vector) instead of lying along the direction of greatest spread — so PC1 would partly encode where the cloud sits, not how it is shaped (see B8).
+
+**B2.** With divisor $n-1 = 4$:
+$$\text{var}(A) = \tfrac14\big[(-3)^2+(-1)^2+0^2+1^2+3^2\big] = \tfrac14(9+1+0+1+9) = \tfrac{20}{4} = 5.$$
+$$\text{var}(B) = \tfrac14\big[(-1)^2+(-3)^2+0^2+1^2+3^2\big] = \tfrac14(1+9+0+1+9) = \tfrac{20}{4} = 5.$$
+$$\text{cov}(A,B) = \tfrac14\big[(-3)(-1)+(-1)(-3)+0+(1)(1)+(3)(3)\big] = \tfrac14(3+3+0+1+9) = \tfrac{16}{4} = 4.$$
+$$C = \begin{pmatrix} 5 & 4 \\ 4 & 5 \end{pmatrix}.$$
+Symmetric ($C_{12}=C_{21}=4$) ✓.
+
+**B3.** $C-\lambda I = \begin{pmatrix}5-\lambda & 4\\ 4 & 5-\lambda\end{pmatrix}$, so
+$$\det(C-\lambda I) = (5-\lambda)^2 - 16 = 0 \ \Rightarrow\ (5-\lambda)^2 = 16 \ \Rightarrow\ 5-\lambda = \pm 4.$$
+Hence $\lambda_1 = 9$ and $\lambda_2 = 1$.
+Checks: trace $5+5 = 10 = 9+1$ ✓; determinant $5\cdot5 - 4\cdot4 = 25-16 = 9 = 9\cdot1$ ✓.
+
+**B4.** For $\lambda_1 = 9$: $C-9I = \begin{pmatrix}-4 & 4\\ 4 & -4\end{pmatrix}$; row 1 gives $-4v_1+4v_2=0 \Rightarrow v_2=v_1$, so $(1,1)$. Unit version: $\mathbf u_1 = \tfrac{1}{\sqrt2}(1,1) \approx (0.707, 0.707)$.
+For $\lambda_2 = 1$: $C-I = \begin{pmatrix}4 & 4\\ 4 & 4\end{pmatrix}$; row 1 gives $v_1+v_2=0 \Rightarrow v_2=-v_1$, so $(1,-1)$. Unit version: $\mathbf u_2 = \tfrac{1}{\sqrt2}(1,-1) \approx (0.707,-0.707)$.
+Orthogonal: $\mathbf u_1\cdot\mathbf u_2 = \tfrac12[(1)(1)+(1)(-1)] = 0$ ✓.
+$\mathbf u_1$ (largest eigenvalue, $\lambda=9$) is **PC1**; it points along the $45^\circ$ **long axis** of the cloud.
+
+**B5.** PC1 score of a centred sample $\mathbf x$ is $\mathbf x\cdot\mathbf u_1 = \tfrac{1}{\sqrt2}(x_A + x_B)$:
+
+| sample | centred $(x_A,x_B)$ | $x_A+x_B$ | PC1 score $=\frac{x_A+x_B}{\sqrt2}$ |
+|---|---|---|---|
+| s1 | $(-3,-1)$ | $-4$ | $-2.83$ |
+| s2 | $(-1,-3)$ | $-4$ | $-2.83$ |
+| s3 | $(0,0)$ | $0$ | $0$ |
+| s4 | $(1,1)$ | $2$ | $1.41$ |
+| s5 | $(3,3)$ | $6$ | $4.24$ |
+
+Sample **s5** sits at the high end of PC1; **s1 and s2** are tied at the low end. So PC1 orders the samples from low overall A+B expression to high.
+
+**B6.** PC1 loadings are the entries of $\mathbf u_1 = (0.707, 0.707)$ — one weight per gene. Both genes have the **same** loading, so PC1 is (proportional to) $A+B$: the two genes contribute **equally**. Biologically this reflects that A and B **rise and fall together** (strong positive covariance), so the main axis of variation is their shared programme, weighting both genes alike.
+
+**B7.** Total variance $= \lambda_1+\lambda_2 = 9+1 = 10$, which equals the trace $5+5$.
+$$\text{PC1}: \frac{9}{10} = 0.9 = 90\%, \qquad \text{PC2}: \frac{1}{10} = 0.1 = 10\%.$$
+They sum to $1$ ✓, and the denominator $10$ is the trace of $C$ ✓. PC1 alone captures 90% of the variation, so a one-number-per-sample (PC1 score) summary keeps most of the signal.
+
+**B8.** Variance measures spread **about the mean**. If the data are not centred, the sum of squares is taken about the **origin**, not the centroid, so the direction that "explains the most" is dominated by the offset of the whole cloud from the origin — it points roughly from the origin to the mean of the data. Centring removes that offset so the leading direction reflects the **shape** of the cloud (how it is stretched) rather than its **location**.
+
+**R1–R4.** The R blocks reproduce every hand result:
+
+```r
+X <- matrix(c(1,5, 3,3, 4,6, 5,7, 7,9), ncol = 2, byrow = TRUE)
+Xc <- scale(X, center = TRUE, scale = FALSE)
+C  <- cov(Xc)
+C                            # matches B2:  [[5,4],[4,5]]
+
+E <- eigen(C)
+E$values                     # 9 1        -> matches B3
+E$vectors                    # +/-(0.707,0.707), (0.707,-0.707)  -> matches B4 (up to sign)
+
+scores <- Xc %*% E$vectors
+scores[, 1]                  # PC1 scores -> matches B5 (up to overall sign)
+
+E$values / sum(E$values)     # 0.9 0.1    -> matches B7
+sum(E$values); sum(diag(C))  # 10 and 10  -> total variance = trace
+```
+
+If `eigen` reports the PC1 eigenvector as $(-0.707,-0.707)$, that is the same axis as $(0.707,0.707)$ with the sign flipped, and every PC1 score flips sign with it — the geometry (ordering, separation, variance explained) is unchanged.
+:::
+
+## Where this leads
+
+- **PCA in R:** [`prcomp`](https://rdrr.io/r/stats/prcomp.html) does the centring, optional scaling (`scale. = TRUE`), and eigen-decomposition in a single call, returning scores (`$x`), loadings (`$rotation`), and standard deviations (`$sdev`, whose squares are the eigenvalues). Everything you computed by hand here is one function call there.
+- **Scaling and the correlation matrix:** running PCA with scaling is the same as eigen-decomposing the **correlation** matrix instead of the covariance matrix — the right choice when variables are on different units.
+- **Larger data:** for wide $p \gg n$ omics matrices, PCA is computed via the **singular value decomposition (SVD)** of the data matrix rather than by forming a huge $p\times p$ covariance matrix — same principal components, a faster route.

@@ -1,0 +1,231 @@
+---
+title: "Exercise: why penalize?"
+format:
+  html:
+    toc: true
+    code-copy: true
+    code-overflow: wrap
+    highlight-style: github
+---
+
+## Goal
+
+By the end of this exercise you should be able to:
+
+- recognise the **p ≫ n** shape of omics data and say why it breaks ordinary least squares,
+- explain, using **rank**, why $X^\top X$ has **no inverse** when there are more predictors than samples,
+- describe how **correlated predictors** make $X^\top X$ nearly singular and coefficients unstable,
+- explain the **bias–variance tradeoff** in plain words and say which end OLS sits at,
+- do a **one-parameter ridge** calculation by hand and see the coefficient shrink as $\lambda$ grows,
+- explain why adding $\lambda I$ to $X^\top X$ **restores invertibility** (eigenvalue shift).
+
+This is a **concept day**. Most questions are reasoning, not arithmetic; the point is to internalise *why* penalization is needed before we meet the specific penalties (ridge and lasso) in later units.
+
+::: {.callout-warning title="Provisional block"}
+This block is provisional and may move to a later statistics / machine-learning course. Nothing here is guaranteed exam material — do it to build intuition, not to memorise.
+:::
+
+## Background
+
+For a linear model $\mathbf{y} \approx X\boldsymbol{\beta}$ with an $n \times p$ design matrix $X$ ($n$ samples, $p$ predictors), **ordinary least squares (OLS)** minimises the squared error and solves the **normal equations**:
+
+$$X^\top X\,\boldsymbol{\beta} = X^\top \mathbf{y} \qquad\Longrightarrow\qquad \hat{\boldsymbol{\beta}} = (X^\top X)^{-1} X^\top \mathbf{y}.$$
+
+This only works if the $p \times p$ matrix $X^\top X$ is **invertible**. Two things go wrong in biology:
+
+1. **$p > n$ (more genes than samples).** Then $\text{rank}(X^\top X) \le n < p$, so $X^\top X$ is **singular** — no inverse, no unique solution.
+2. **Correlated predictors** (co-regulated genes). Then $X^\top X$ is **nearly singular** — it has an eigenvalue close to 0, the inverse blows up, and coefficients become huge and unstable.
+
+**Penalized regression** adds a price for coefficient size:
+
+$$\hat{\boldsymbol{\beta}} = \arg\min_{\boldsymbol{\beta}} \ \|\mathbf{y} - X\boldsymbol{\beta}\|^2 + \lambda\,(\text{size of }\boldsymbol{\beta}),\qquad \lambda \ge 0.$$
+
+Using the squared size $\|\boldsymbol{\beta}\|^2$ (ridge) changes the normal equations to
+
+$$\hat{\boldsymbol{\beta}} = (X^\top X + \lambda I)^{-1} X^\top \mathbf{y}.$$
+
+Adding $\lambda I$ lifts every eigenvalue of $X^\top X$ by $\lambda$, so $X^\top X + \lambda I$ is **always invertible** for $\lambda > 0$. The price is **bias**: coefficients are shrunk toward zero. $\lambda$ is the **bias–variance dial**.
+
+## By hand
+
+**B1.** For each experiment, write the shape of $X$ as $n \times p$ and state whether $X^\top X$ (which is $p \times p$) can possibly be inverted for an OLS fit. Give the one-line reason.
+
+(a) 200 patients, 5 clinical variables.
+(b) 30 patients, 20,000 genes.
+(c) 50 cells, 50 genes, all measurements distinct and uncorrelated.
+
+**B2.** You have $n = 2$ samples and $p = 3$ predictors, so $\mathbf{y} \approx X\boldsymbol{\beta}$ is 2 equations in 3 unknowns. Without computing anything, explain how many $\boldsymbol{\beta}$ vectors fit the data **exactly**, and connect this to "the model is unidentifiable." (Recall the solution-space language from the Linear systems units.)
+
+**B3.** Two genes are almost perfectly correlated, giving
+
+$$X^\top X = \begin{pmatrix} 1 & 1 \\ 1 & 1.01 \end{pmatrix}.$$
+
+(a) Compute $\det(X^\top X)$. (b) Is the matrix close to singular? (c) Recall that $(X^\top X)^{-1}$ divides by the determinant — what does a tiny determinant do to the size of the inverse, and hence to $\hat{\boldsymbol{\beta}}$?
+
+**B4. (one-parameter ridge — the key calculation).** Take the simplest possible model: one predictor, no intercept, so $y \approx \beta x$ over the samples. The ridge objective is
+
+$$f(\beta) = \sum_i (y_i - \beta x_i)^2 + \lambda \beta^2.$$
+
+(a) Differentiate with respect to $\beta$, set to zero, and show
+$$\hat{\beta} = \frac{\sum_i x_i y_i}{\sum_i x_i^2 + \lambda}.$$
+(b) With $\sum x_i y_i = 10$ and $\sum x_i^2 = 5$, compute $\hat{\beta}$ for $\lambda = 0,\ 5,\ 20$.
+(c) What happens to $\hat{\beta}$ as $\lambda \to \infty$? What is $\hat{\beta}$ at $\lambda = 0$, and what is that estimator called?
+
+**B5. (eigenvalue shift).** Let $X^\top X = \begin{pmatrix} 4 & 0 \\ 0 & 0 \end{pmatrix}$ (a rank-1 matrix — the second direction carries no information, as if $p > n$).
+
+(a) What are its eigenvalues? Is it invertible?
+(b) Form $X^\top X + \lambda I$ with $\lambda = 2$. What are its eigenvalues now?
+(c) Is it invertible? Explain in one sentence why adding $\lambda I$ always fixes the singular case.
+
+**B6. (bias–variance in words).** For each description, say whether it is mainly a **bias** problem or a **variance** problem, and whether the model is under- or over-fitting:
+
+(a) A model fits the 30 training patients perfectly but predicts new patients terribly.
+(b) A model predicts a constant (the overall mean) for everyone, ignoring gene expression.
+(c) Refitting the model after swapping 3 patients flips several coefficients from large positive to large negative.
+
+## In R
+
+Use R to **see** the failures and the fix. These are static illustrations — the point is what the output *would* show, not to run them now.
+
+### OLS breaks when p > n
+
+```r
+set.seed(1)
+n <- 5; p <- 8                       # more predictors than samples
+X <- matrix(rnorm(n * p), n, p)
+XtX <- t(X) %*% X                    # 8 x 8, but built from only 5 samples
+
+qr(XtX)$rank                         # 5, not 8  -> rank-deficient
+solve(XtX)                           # ERROR: system is computationally singular
+```
+
+### A near-singular X^T X blows up the inverse
+
+```r
+XtX <- matrix(c(1, 1,
+                1, 1.01), 2, byrow = TRUE)
+det(XtX)                             # 0.01  -> tiny
+solve(XtX)                           # entries around 100 -> huge, unstable
+```
+
+### The ridge fix: add lambda to the diagonal
+
+```r
+XtX <- matrix(c(4, 0,
+                0, 0), 2, byrow = TRUE)   # singular (rank 1)
+lambda <- 2
+XtX_ridge <- XtX + lambda * diag(2)       # add lambda to the diagonal
+XtX_ridge                                  # 6 0 / 0 2
+solve(XtX_ridge)                           # now invertible: diag(1/6, 1/2)
+```
+
+### One-parameter ridge shrinks the coefficient
+
+```r
+sxy <- 10; sxx <- 5                  # sum(x*y) and sum(x^2)
+for (lambda in c(0, 5, 20)) {
+  beta <- sxy / (sxx + lambda)
+  cat("lambda =", lambda, "  beta =", beta, "\n")
+}
+# lambda = 0  -> 2.0 (this is OLS)
+# lambda = 5  -> 1.0
+# lambda = 20 -> 0.4  (shrinking toward 0)
+```
+
+### Tasks
+
+**R1.** Using the ridge-shift block, change $\lambda$ to $0.001$ and to $100$. Confirm that a tiny $\lambda$ barely changes $X^\top X$ (close to OLS) while a large $\lambda$ dominates the diagonal (heavy shrinkage). Relate this to the bias–variance dial.
+
+**R2.** For the one-parameter ridge loop, add $\lambda = 100$ and $\lambda = 1000$. Describe in one sentence the trajectory of $\hat{\beta}$ as $\lambda$ grows, and name the value it approaches.
+
+**R3.** In the near-singular block, change the `1.01` to `1.0001`. Predict what happens to `det(XtX)` and to the size of `solve(XtX)` before reading it off, then check your prediction.
+
+## Hints
+
+::: {.callout-tip collapse="true" title="Hint 1 — rank and invertibility (B1, B2)"}
+$X^\top X$ is $p \times p$ but its rank cannot exceed the number of samples $n$: $\text{rank}(X^\top X) \le \min(n, p)$. A $p \times p$ matrix is invertible **only** if its rank equals $p$. So if $p > n$, the rank is at most $n < p$ and the matrix is singular. In R the rank is [`qr`](https://rdrr.io/r/base/qr.html)`(XtX)$rank`.
+:::
+
+::: {.callout-tip collapse="true" title="Hint 2 — infinitely many solutions (B2)"}
+Fewer independent equations than unknowns means the solution set is not a single point but a whole space of vectors, all fitting equally well. This is the same "infinitely many solutions" case you met when solving $A\mathbf{x}=\mathbf{b}$ with a rank-deficient $A$ in the Linear systems units. "Unidentifiable" just means the data cannot single out one $\boldsymbol{\beta}$.
+:::
+
+::: {.callout-tip collapse="true" title="Hint 3 — determinant and the inverse (B3)"}
+For a $2\times2$ matrix, $\det\begin{pmatrix}a&b\\c&d\end{pmatrix}=ad-bc$, and the inverse is $\frac{1}{ad-bc}\begin{pmatrix}d&-b\\-c&a\end{pmatrix}$. The determinant sits in the **denominator**, so a determinant near zero makes every entry of the inverse enormous — and those large numbers multiply through to $\hat{\boldsymbol{\beta}}$, giving huge, unstable coefficients. Use [`det`](https://rdrr.io/r/base/det.html) and [`solve`](https://rdrr.io/r/base/solve.html) to check.
+:::
+
+::: {.callout-tip collapse="true" title="Hint 4 — differentiating the ridge objective (B4)"}
+$f(\beta) = \sum_i (y_i - \beta x_i)^2 + \lambda\beta^2$. Use the chain rule term by term: $\frac{d}{d\beta}(y_i-\beta x_i)^2 = 2(y_i-\beta x_i)(-x_i)$, and $\frac{d}{d\beta}(\lambda\beta^2)=2\lambda\beta$. Set the total to zero, divide by 2, and collect the $\beta$ terms: $\beta(\sum x_i^2 + \lambda) = \sum x_i y_i$. Notice that at $\lambda = 0$ this is exactly the OLS slope $\sum x_i y_i / \sum x_i^2$.
+:::
+
+::: {.callout-tip collapse="true" title="Hint 5 — eigenvalue shift (B5)"}
+A diagonal matrix wears its eigenvalues on the diagonal. Adding $\lambda I$ adds $\lambda$ to every diagonal entry, hence lifts **every** eigenvalue by $\lambda$ (this is the fact you proved with the identity shift in the eigenvalue unit). A matrix is invertible exactly when **none** of its eigenvalues is zero, so lifting a zero eigenvalue to $\lambda > 0$ makes an otherwise-singular matrix invertible.
+:::
+
+::: {.callout-tip collapse="true" title="Hint 6 — bias vs variance (B6)"}
+**Bias** = error from a model too rigid to capture the real pattern (predicts the same simple thing regardless of data → underfitting). **Variance** = error from a model so flexible it chases noise and changes wildly between samples (fits training data perfectly but generalises badly, coefficients lurch when data changes → overfitting).
+:::
+
+## Solutions
+
+::: {.callout-note collapse="true" title="Solution"}
+
+**B1.**
+(a) $X$ is $200 \times 5$, so $n = 200 > p = 5$. $X^\top X$ is $5\times5$ and can reach full rank 5 — **invertible** (assuming the variables are not exactly redundant). OLS is fine.
+(b) $X$ is $30 \times 20000$, so $p \gg n$. $\text{rank}(X^\top X) \le 30 \ll 20000$, so the $20000\times20000$ matrix is **singular** — **not invertible**. OLS has no unique solution.
+(c) $X$ is $50\times50$, so $n = p$. If all measurements are genuinely distinct and uncorrelated, $X$ has full rank 50 and $X^\top X$ is **invertible** — but this is the knife-edge case, and any correlation among genes would push it toward singularity.
+
+**B2.** Two equations in three unknowns: there are more free parameters (3) than constraints (2), so the exactly-fitting $\boldsymbol{\beta}$ form a whole **line** (a one-dimensional solution space) — **infinitely many** vectors fit perfectly. The data cannot pick one out, so the model is **unidentifiable**. This is the same rank-deficient "infinitely many solutions" case from the Linear systems units, and it is exactly what $p > n$ produces in general.
+
+**B3.**
+(a) $\det = (1)(1.01) - (1)(1) = 1.01 - 1 = 0.01$.
+(b) Yes — the determinant is tiny (a genuinely singular matrix would have $\det = 0$), so this matrix is **nearly singular**. The two columns are almost identical, mirroring two almost-perfectly-correlated genes.
+(c) The inverse divides by the determinant: $(X^\top X)^{-1} = \frac{1}{0.01}\begin{pmatrix}1.01 & -1\\ -1 & 1\end{pmatrix}$, so its entries are around **100** — huge. Those large numbers multiply $X^\top\mathbf{y}$, so $\hat{\boldsymbol{\beta}}$ becomes **enormous and unstable**: a tiny change in the data (or the `1.01`) swings the coefficients wildly. This is multicollinearity.
+
+**B4.**
+(a) Differentiate:
+$$f'(\beta) = \sum_i 2(y_i - \beta x_i)(-x_i) + 2\lambda\beta = -2\sum_i x_i y_i + 2\beta\sum_i x_i^2 + 2\lambda\beta.$$
+Set $f'(\beta) = 0$ and divide by 2:
+$$-\sum_i x_i y_i + \beta\Big(\sum_i x_i^2 + \lambda\Big) = 0 \quad\Longrightarrow\quad \hat{\beta} = \frac{\sum_i x_i y_i}{\sum_i x_i^2 + \lambda}.$$
+(b) With $\sum x_i y_i = 10$, $\sum x_i^2 = 5$:
+
+| $\lambda$ | $\hat{\beta} = 10/(5+\lambda)$ |
+|---|---|
+| 0  | $10/5 = 2.0$ |
+| 5  | $10/10 = 1.0$ |
+| 20 | $10/25 = 0.4$ |
+
+(c) As $\lambda \to \infty$ the denominator grows without bound, so $\hat{\beta} \to 0$ — heavy penalty shrinks the coefficient to nothing. At $\lambda = 0$, $\hat{\beta} = \sum x_i y_i / \sum x_i^2 = 2.0$, which is the **ordinary least squares** slope. So ridge is a family of estimators indexed by $\lambda$, with OLS at one end and zero at the other.
+
+**B5.**
+(a) $X^\top X = \begin{pmatrix}4&0\\0&0\end{pmatrix}$ is diagonal, so its eigenvalues are the diagonal entries **4 and 0**. Because one eigenvalue is 0, the matrix is **singular — not invertible** (the second direction carries no information, like a $p>n$ dead direction).
+(b) $X^\top X + 2I = \begin{pmatrix}6&0\\0&2\end{pmatrix}$, with eigenvalues **6 and 2** — every eigenvalue lifted by $\lambda = 2$.
+(c) Now **no eigenvalue is zero**, so the matrix is **invertible**. Adding $\lambda I$ raises every eigenvalue by $\lambda$; any zero eigenvalue becomes $\lambda > 0$, so the singular case is always cured. This is exactly why the ridge normal equations $X^\top X + \lambda I$ are solvable even when $p > n$.
+
+**B6.**
+(a) **Variance** problem — the model is flexible enough to fit the training data perfectly but the fit does not generalise. **Overfitting.**
+(b) **Bias** problem — the model is too rigid (predicts a constant) to capture any real signal. **Underfitting.**
+(c) **Variance** problem — coefficients swinging violently when the data changes slightly is the signature of high variance (here driven by multicollinearity). **Overfitting** / instability. Shrinkage would calm this.
+
+**R1.** With $\lambda = 0.001$, $X^\top X + \lambda I \approx \begin{pmatrix}4.001&0\\0&0.001\end{pmatrix}$ — almost unchanged from the singular original, so we are essentially back at OLS (low bias, high variance; the tiny second eigenvalue still makes the inverse large). With $\lambda = 100$, the matrix is $\begin{pmatrix}104&0\\0&100\end{pmatrix}$ — dominated by the penalty, so coefficients are heavily shrunk (high bias, low variance). Sliding $\lambda$ from small to large moves you across the bias–variance dial.
+
+**R2.** Extending the loop:
+
+| $\lambda$ | $\hat{\beta}=10/(5+\lambda)$ |
+|---|---|
+| 0 | 2.0 |
+| 5 | 1.0 |
+| 20 | 0.4 |
+| 100 | ≈ 0.095 |
+| 1000 | ≈ 0.00995 |
+
+$\hat{\beta}$ decreases monotonically toward **0** as $\lambda$ grows — the coefficient is shrunk ever harder and approaches zero in the limit.
+
+**R3.** With `1.0001`, $\det = (1)(1.0001) - 1 = 0.0001$ — ten times smaller than before, so the matrix is even closer to singular. The inverse divides by this, so `solve(XtX)` entries grow by roughly a factor of 10 (around 10,000). Prediction: smaller determinant, larger and more unstable inverse — confirmed by running it. This is why highly correlated genes are so damaging without a penalty.
+:::
+
+## Where this leads
+
+- **Ridge and lasso (this block):** the two standard penalties. Ridge uses $\|\boldsymbol{\beta}\|^2$ (the calculation you did in B4, generalised); lasso uses $\sum|\beta_j|$ and drives coefficients **exactly to zero**, performing gene selection.
+- **Choosing $\lambda$ (this block):** **cross-validation** picks the penalty strength that minimises prediction error on held-out data, rather than guessing.
+- **PCA / dimensional reduction (Applications block):** another route through the $p \gg n$ problem — reduce the number of predictors instead of penalizing them.

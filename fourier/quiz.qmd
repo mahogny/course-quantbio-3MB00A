@@ -1,0 +1,108 @@
+---
+title: "Quiz: Fourier transform & basis functions"
+format:
+  html:
+    toc: true
+    code-copy: true
+    code-overflow: wrap
+    highlight-style: github
+---
+
+Short conceptual questions to test your feel for the Fourier transform and the idea of choosing a basis. This is an Applications-block appreciation topic, so the questions are about *understanding and vocabulary*, not by-hand computation. Try each on paper first, then open the answer.
+
+---
+
+**Q1.** In one sentence: what does the Fourier transform of a signal tell you?
+
+::: {.callout-tip collapse="true" title="Hint"}
+Think of the "recipe of waves" picture.
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+It tells you **how much of each frequency** (and at what phase) is present in the signal — i.e. it writes the signal as a sum of sinusoids and reports each one's amplitude and phase.
+:::
+
+---
+
+**Q2.** The lecture says the Fourier transform is "just a change of basis." What are the coordinates in the two bases, and why does "change of basis" imply the transform loses no information?
+
+::: {.callout-tip collapse="true" title="Hint"}
+Standard basis = one axis per what? Fourier basis = one axis per what? A change of basis is reversible.
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+In the **standard basis** the coordinates are the signal's **values at each time point (or pixel)** — one axis per sample. In the **Fourier basis** the coordinates are the **amount of each frequency** — one axis per frequency. A change of basis is an invertible rotation of the coordinate system, so the **inverse transform** reconstructs the original exactly: no information is lost.
+:::
+
+---
+
+**Q3.** Why is it important that sinusoids of different frequencies are **orthogonal**? Connect this to how a Fourier coefficient is computed.
+
+::: {.callout-tip collapse="true" title="Hint"}
+Orthogonal basis vectors give clean, independent coordinates. Recall the projection idea from PCA.
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+Orthogonality means different-frequency waves do not overlap ($\langle f,g\rangle = \sum_t f(t)g(t) = 0$), so the amount of each frequency can be read off **independently** of the others. Each Fourier coefficient is simply the **projection** of the signal onto one basis wave — the same projection idea as reading a PCA score onto a principal axis.
+:::
+
+---
+
+**Q4.** Both Fourier and PCA express data in an **orthogonal basis**. State the key difference between the two bases, and give one situation where each is the natural choice.
+
+::: {.callout-tip collapse="true" title="Hint"}
+One basis is fixed in advance; the other is learned from the data.
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+The **Fourier** basis is **fixed** — the same sinusoids for every signal, independent of the data. The **PCA** basis is **data-driven** — the axes are learned from the data's covariance (its eigenvectors). Use **Fourier** when you expect structure at particular frequencies (a rhythm, a periodic stripe, a mains hum); use **PCA** when you want the basis to adapt to your dataset's own main axes of variation (e.g. a gene-expression table or a set of spectra).
+:::
+
+---
+
+**Q5.** In a signal, which end of the spectrum — low or high frequency — carries the broad overall shape, and which carries fine detail? Why does this make naive "delete all high frequencies to remove noise" imperfect?
+
+::: {.callout-tip collapse="true" title="Hint"}
+What kind of structure changes slowly, and what changes fast? What *else* besides noise is fast?
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+**Low** frequencies carry the broad, smooth overall shape; **high** frequencies carry fine detail. Deleting all high frequencies removes a lot of noise (noise is high-frequency), but sharp **real** edges and fine true detail are *also* high-frequency, so a blunt cut blurs genuine structure along with the noise. Filtering trades noise reduction against detail loss.
+:::
+
+---
+
+**Q6.** How does frequency-domain **image compression** (as in JPEG) save space, and what is the direct analogy to PCA?
+
+::: {.callout-tip collapse="true" title="Hint"}
+Which coefficients are large in a natural image, and which can you throw away?
+
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+Most of a natural image's energy sits in a few **low-frequency** coefficients; the many high-frequency ones are small. Compression **keeps the large coefficients and discards the rest**, storing far fewer numbers while the image still looks nearly the same. This is exactly like **truncating a PCA** to its top few components — represent the data in a smart basis, then keep only the coordinates that carry the signal. (JPEG uses the DCT, a Fourier relative; pushing it too far gives blocky artefacts.)
+:::
+
+---
+
+**Q7.** You want to remove a single 50 Hz electrical hum from an electrophysiology recording without disturbing the rest of the signal. What kind of filter is this, and why is the frequency domain the natural place to do it?
+
+::: {.callout-tip collapse="true" title="Hint"}
+A single-frequency artefact is localised in the spectrum — you delete one spot.
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+A **notch (band-stop)** filter. The hum is a single frequency, so in the frequency domain it is localised at one spot; you can zero out just that frequency (and its immediate neighbours) and transform back, leaving all other frequencies untouched. In the time domain the same effect would require a carefully designed convolution — the convolution theorem tells us this is just a multiplication (a mask) in the frequency domain.
+:::
+
+---
+
+**Q8.** What limitation of the Fourier transform do **wavelets** address, and what is the one-sentence "big idea" shared by Fourier, PCA, and wavelets?
+
+::: {.callout-tip collapse="true" title="Hint"}
+A global sinusoid tells you *which* frequency but not *where* it happens.
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+Fourier's basis waves span the **whole** signal, so the transform tells you *which* frequencies are present but not **where** they occur — poor for transients and edges. **Wavelets** use basis functions **local** in both position and frequency, describing a signal at multiple scales while keeping track of location. The shared big idea: **analysis is choosing a basis that matches your data's structure** — fixed sinusoids (Fourier), learned axes (PCA), or localised wave-packets (wavelets).
+:::

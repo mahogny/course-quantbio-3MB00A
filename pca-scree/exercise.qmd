@@ -1,0 +1,186 @@
+---
+title: "Exercise: choosing components & pitfalls"
+format:
+  html:
+    toc: true
+    code-copy: true
+    code-overflow: wrap
+    highlight-style: github
+---
+
+## Goal
+
+By the end of this exercise you should be able to:
+
+- turn a set of eigenvalues (or `prcomp$sdev`) into a **proportion of variance explained (PVE)** and a **cumulative PVE**,
+- choose a number of PCs to keep using a **scree/elbow** reading and a **cumulative-variance threshold**, and explain why they can disagree,
+- apply the **Kaiser** ($\lambda>1$) rule and say when it is (and is not) appropriate,
+- recognise, from a description or a plot, the main **pitfalls** — an unsupervised method finding the wrong axis, a **batch effect** on PC1, sensitivity to **scaling** and **outliers**, and the **linearity** limit,
+- state in one sentence what **ICA** and **UMAP** add beyond PCA.
+
+Most of this is **judgement and small arithmetic**, in the spirit of the on-campus exam. The R section only confirms the hand answers; you already met `prcomp` in Computing PCA.
+
+## Background
+
+PCA (from Eigenvalues & eigenvectors and Computing PCA) diagonalises the centred data's covariance matrix. Each principal component is an **eigenvector**, and its **eigenvalue $\lambda_k$ is the variance along that PC**. The eigenvalues are sorted $\lambda_1\ge\lambda_2\ge\dots\ge\lambda_p\ge 0$ and sum to the total variance.
+
+**Proportion of variance explained:**
+$$\text{PVE}_k = \frac{\lambda_k}{\sum_{j=1}^p \lambda_j}, \qquad \text{cumulative PVE}_k = \sum_{j\le k}\text{PVE}_j.$$
+
+In R, `prcomp` reports **standard deviations** in `sdev`, so the eigenvalue is `sdev^2`.
+
+**Choosing how many PCs (all heuristics, none authoritative):**
+
+1. **Scree / elbow** — plot PVE (or $\lambda$) vs PC index; keep the PCs *before* the flat tail begins.
+2. **Cumulative threshold** — keep the smallest $k$ reaching a target cumulative PVE (commonly 80/90/95%).
+3. **Kaiser** — on **standardised** data (correlation matrix, so the eigenvalues average to 1), keep PCs with $\lambda>1$. Tends to **over-retain**.
+4. **Permutation / parallel analysis** — keep PCs whose eigenvalue exceeds what shuffled (noise) data produces.
+
+**Pitfalls.** PCA is **unsupervised** (maximises variance, ignores labels) and **linear** (each PC is a straight axis). So the top PC can be a nuisance gradient, a **batch effect**, or an **outlier**; the components change with **scaling** (`scale. = TRUE/FALSE`); and curved structure is not captured. Supervised separation is the job of **OPLS** (this block) or LDA; curved structure calls for **ICA** (independence, not just decorrelation) or non-linear maps like **UMAP** (single-cell block).
+
+## By hand
+
+For B1–B4 use this set of eigenvalues from a PCA of a small dataset with $p=6$ features:
+
+$$\lambda = (6.0,\; 2.4,\; 0.9,\; 0.4,\; 0.2,\; 0.1).$$
+
+**B1.** Compute the **total variance** $\sum_j\lambda_j$, then the **PVE** of each of the six PCs (as a fraction and roughly as a percentage).
+
+**B2.** Compute the **cumulative PVE** after 1, 2, 3, and 4 PCs. How many PCs do you need to explain at least **90%** of the variance?
+
+**B3.** Sketch the scree plot (PVE vs PC index) by hand. Where is the **elbow**, and how many PCs does the elbow rule suggest keeping? Does this agree with your 90% threshold answer from B2? Comment on any disagreement.
+
+**B4.** These are raw (covariance) eigenvalues. Suppose instead the PCA had been run on **standardised** data with the same 6 features. Explain why the **Kaiser** rule ($\lambda>1$) would be applied to *that* PCA and not directly to the numbers above. (You are not asked to recompute — just explain the condition.)
+
+**B5. (scaling).** A metabolomics dataset has two features: metabolite A with variance $\approx 10{,}000$ (measured in large raw intensities) and metabolite B with variance $\approx 2$ (a ratio). Without any standardisation, which feature will dominate PC1, and why? What does setting `scale. = TRUE` change, and when is that the sensible choice?
+
+**B6. (unsupervised).** You have samples from two tumour subtypes. On the PCA, subtypes are **not** separated on PC1 or PC2, but they *are* cleanly separated on **PC5**, which explains only 3% of the variance. (a) Is anything wrong with the PCA? (b) What does this tell you about the relationship between "variance" and "biological interest"? (c) Name a method designed to find the axis that best separates the two known groups.
+
+**B7. (batch effect).** You colour a PCA score plot by tumour subtype and see no pattern. You then colour the *same* plot by **sequencing run** and the two runs split perfectly along PC1. (a) What is PC1 most likely capturing? (b) Why did PCA place this on PC1 rather than a later component? (c) Give one design step and one analysis step that address this.
+
+**B8. (outlier).** In a score plot, 39 of 40 samples sit in a tight cluster while 1 sample sits far away along PC1, which "explains 55% of the variance." What is the most likely story, and what should you do before interpreting PC1?
+
+**B9. (beyond PCA).** In one sentence each: (a) what does **ICA** look for that PCA does not, and when does that extra condition actually matter; (b) why would you run **PCA before UMAP** rather than UMAP on the raw features, and what must you *not* read off a UMAP plot?
+
+## In R
+
+Use R to **confirm** the hand answers. Nothing here needs a real dataset except the last block.
+
+### PVE and cumulative PVE from eigenvalues (B1–B3)
+
+```r
+lambda <- c(6.0, 2.4, 0.9, 0.4, 0.2, 0.1)
+
+total <- sum(lambda)         # 10
+pve   <- lambda / total      # 0.60 0.24 0.09 0.04 0.02 0.01
+cumsum(pve)                  # 0.60 0.84 0.93 0.97 0.99 1.00
+
+# smallest number of PCs reaching 90% cumulative variance
+which(cumsum(pve) >= 0.90)[1]   # 3
+```
+
+### A scree plot (B3)
+
+```r
+plot(pve, type = "b",
+     xlab = "PC", ylab = "Proportion of variance explained",
+     main = "Scree plot")
+```
+
+### From a real PCA object
+
+```r
+# X: samples x features. scale. = TRUE standardises features first.
+pca <- prcomp(X, center = TRUE, scale. = TRUE)
+
+eig <- pca$sdev^2            # eigenvalues (variance per PC)
+pve <- eig / sum(eig)        # proportion of variance explained
+cumsum(pve)                  # cumulative PVE
+
+summary(pca)                 # prints PVE and cumulative proportion rows
+
+# colour scores by a technical variable to check for a batch effect (B7)
+plot(pca$x[, 1], pca$x[, 2],
+     col = batch,            # a factor: sequencing run / lot / site
+     xlab = "PC1", ylab = "PC2")
+```
+
+### Tasks
+
+**R1.** Reproduce B1–B2: build `lambda`, compute `pve` and `cumsum(pve)`, and confirm the 90% answer with `which(cumsum(pve) >= 0.90)[1]`.
+
+**R2.** Change the threshold to **95%** with `which(cumsum(pve) >= 0.95)[1]`. How many PCs now? Relate the jump to the shape of the scree tail.
+
+**R3.** For any `prcomp` object you have (or make a toy `X <- matrix(rnorm(200), 20, 10)`), compute `pca$sdev^2 / sum(pca$sdev^2)` and check it matches the "Proportion of Variance" row of `summary(pca)`.
+
+## Hints
+
+::: {.callout-tip collapse="true" title="Hint 1 — eigenvalue to PVE"}
+The eigenvalue *is* the variance along a PC. Divide each eigenvalue by the **sum of all eigenvalues** to get the proportion. In R the eigenvalue is `pca$sdev^2` (square it — `sdev` is a standard deviation). See [`prcomp`](https://rdrr.io/r/stats/prcomp.html).
+:::
+
+::: {.callout-tip collapse="true" title="Hint 2 — cumulative and the threshold rule"}
+Cumulative PVE is a running total: [`cumsum`](https://rdrr.io/r/base/cumsum.html)`(pve)`. "Reach 90%" means the **smallest** $k$ with cumulative PVE $\ge 0.90$; `which(cumsum(pve) >= 0.90)[1]` returns that $k$.
+:::
+
+::: {.callout-tip collapse="true" title="Hint 3 — reading the elbow"}
+Plot PVE against PC index. The elbow is where the steep drop turns into the shallow flat tail; keep the PCs *before* it. It is read by eye and is often ambiguous — there may be no single right answer, and it need not match the threshold rule.
+:::
+
+::: {.callout-tip collapse="true" title="Hint 4 — when Kaiser applies"}
+The $\lambda>1$ rule only makes sense on **standardised** data (a correlation-matrix PCA, `scale. = TRUE`), because standardising makes every feature contribute variance 1, so the eigenvalues average to exactly 1. On raw covariance eigenvalues the "1" is not a meaningful cut-off.
+:::
+
+::: {.callout-tip collapse="true" title="Hint 5 — scaling and who dominates PC1"}
+PCA maximises variance, and variance depends on units. A feature with numerically huge variance dominates unless you standardise. `scale. = TRUE` gives every feature variance 1 so all count equally — the right choice when features are on different scales/units.
+:::
+
+::: {.callout-tip collapse="true" title="Hint 6 — unsupervised means label-blind"}
+PCA never sees your group labels; it only ranks directions by variance. So the group-separating direction can be a **small** PC. If separating known groups is the goal, you want a **supervised** method — the OPLS model (this block) or LDA — that does use the labels.
+:::
+
+::: {.callout-tip collapse="true" title="Hint 7 — spotting a batch effect or an outlier"}
+Colour the score plot by every **technical** variable you have (run, lot, date, library size). If a technical variable lines up with a PC, that PC is suspect. An outlier shows up as one lonely point far out with everyone else squashed together — a PC that "explains variance" but really only that one point's.
+:::
+
+## Solutions
+
+::: {.callout-note collapse="true" title="Solution"}
+
+**B1.** Total variance $= 6.0+2.4+0.9+0.4+0.2+0.1 = 10.0$. Dividing each eigenvalue by 10:
+
+| PC | $\lambda$ | PVE | ≈ % |
+|---|---|---|---|
+| 1 | 6.0 | 0.60 | 60% |
+| 2 | 2.4 | 0.24 | 24% |
+| 3 | 0.9 | 0.09 | 9% |
+| 4 | 0.4 | 0.04 | 4% |
+| 5 | 0.2 | 0.02 | 2% |
+| 6 | 0.1 | 0.01 | 1% |
+
+(The PVEs sum to 1.00, a useful check.)
+
+**B2.** Cumulative PVE: after PC1 $=0.60$; after PC2 $=0.60+0.24=0.84$; after PC3 $=0.84+0.09=0.93$; after PC4 $=0.93+0.04=0.97$. The smallest number of PCs reaching $\ge 0.90$ is **3** (0.84 at two PCs is short of 90%, 0.93 at three clears it).
+
+**B3.** The scree plot drops steeply from 0.60 to 0.24 to 0.09, then flattens (0.04, 0.02, 0.01). The **elbow** sits at PC3: the big drops are over PC1→PC2→PC3 and the tail from PC4 on is flat and small. So the elbow rule suggests keeping about **2–3** PCs — one could argue the flat tail starts after PC2 (keep 2) or after PC3 (keep 3). The 90% threshold said **3**. They roughly agree here; any disagreement comes from the elbow being an eyeball judgement while the threshold is a fixed rule. On this dataset the structure is clear (two dominant PCs, small tail), so the rules nearly coincide — which is not always the case.
+
+**B4.** The Kaiser rule keeps PCs with $\lambda>1$, and the "1" cut-off is only meaningful when each *original* feature has variance 1 — i.e. after **standardising** the data (a correlation-matrix PCA). Then the eigenvalues average to exactly 1 (they still sum to $p$, the number of features), so "$\lambda>1$" means "this PC captures more than an average single feature's worth of variance." Applied to the raw covariance eigenvalues above (which sum to 10, not 6), the number 1 has no special status, so Kaiser should not be read off them directly. (Also worth knowing: Kaiser tends to **over-retain** components.)
+
+**B5.** Without standardisation, **metabolite A** dominates PC1: its variance ($\approx 10{,}000$) dwarfs B's ($\approx 2$), and PCA maximises variance, so PC1 will essentially align with A regardless of whether A is biologically more informative. This is an artefact of **units/scale**, not of biology. Setting `scale. = TRUE` standardises each feature to variance 1, so A and B contribute **equally**; the components then reflect *correlation structure* rather than raw magnitude. Standardising is the sensible default when features are on **different scales or units** (as here) — otherwise you are just ranking features by how big their numbers happen to be.
+
+**B6.** (a) **Nothing is wrong with the PCA** — it did exactly its job, ranking directions by variance. (b) It shows that **variance and biological interest are different things**. The subtype contrast is real but small (3% of variance), sitting under larger, biologically uninteresting sources of variation (which occupy PC1–PC4). PCA, being unsupervised, cannot know that the 3% axis is the one you care about. (c) A **supervised** method that uses the labels — **OPLS** (this block) or **LDA** — is designed to find the direction that best separates the two known groups.
+
+**B7.** (a) PC1 is most likely capturing the **batch / technical effect** (the difference between the two sequencing runs), not biology. (b) PCA puts it on PC1 because batch effects are often **large** — larger than the biological signal — and PCA ranks purely by variance, so the biggest source of variation lands first. (c) *Design step:* **randomise** samples across batches (don't confound subtype with run) so the technical and biological variation are not aligned. *Analysis step:* apply a **batch-correction / integration** method (introduced in the single-cell block) and/or always colour the score plot by technical variables before interpreting.
+
+**B8.** The single far-off sample is almost certainly an **outlier** — a technical failure (degraded sample, failed library), a mislabel, or contamination — and it is single-handedly defining PC1 (variance is dominated by large deviations, and this point is the largest deviation by far). Before interpreting PC1 you should **investigate that sample**: check its QC metrics and metadata, decide deliberately whether it is a genuine biological extreme or an artefact, and re-run the PCA with it excluded to see how much PC1 changes. A "PC1 explaining 55%" that is really one point's variance is not describing your population.
+
+**B9.** (a) **ICA** looks for components that are **statistically independent**, a stronger condition than PCA's mere lack of correlation; the extra condition matters for **non-Gaussian** signals (for Gaussian data, uncorrelated already implies independent, so ICA adds nothing). (b) You run **PCA before UMAP** to **denoise and reduce dimensionality** (feed UMAP the top PCs rather than thousands of noisy raw features), which is faster and more stable; and you must **not** read **distances between clusters** (or the axis directions/units) off a UMAP plot — UMAP preserves local neighbourhoods, not global distances, and is stochastic.
+
+**R1–R3.** The code blocks above reproduce these directly: `pve` gives $0.60, 0.24, 0.09, 0.04, 0.02, 0.01$; `cumsum(pve)` gives $0.60, 0.84, 0.93, 0.97, 0.99, 1.00$; `which(cumsum(pve) >= 0.90)[1]` returns **3**. For **R2**, `which(cumsum(pve) >= 0.95)[1]` returns **4** (0.93 at three PCs is short of 95%, 0.97 at four clears it) — one extra PC buys only the small PC4, illustrating how a flat tail makes the last few percent expensive. For **R3**, `pca$sdev^2 / sum(pca$sdev^2)` reproduces the "Proportion of Variance" row of `summary(pca)` exactly.
+:::
+
+## Where this leads
+
+- **The OPLS model (this block):** when you have group labels and want the axis that *separates* them (the B6/B7 situation), a supervised method is the right tool — OPLS is built for exactly that, and contrasts cleanly with today's unsupervised PCA.
+- **Multiome data integration (this block):** choosing components and watching for batch effects recur when combining modalities (e.g. RNA-seq counts vs proteomics).
+- **Single-cell analysis:** the standard pipeline runs **PCA first** (using today's "how many PCs" decision) and then a **non-linear UMAP** on the top PCs, plus explicit **batch correction** — the practical home of several pitfalls above.

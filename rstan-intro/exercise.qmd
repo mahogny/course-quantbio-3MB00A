@@ -1,0 +1,279 @@
+---
+title: "Exercise: introduction to R-STAN"
+format:
+  html:
+    toc: true
+    code-copy: true
+    code-overflow: wrap
+    highlight-style: github
+---
+
+## Goal
+
+By the end of this exercise you should be able to:
+
+- name the three essential Stan blocks (`data`, `parameters`, `model`) and say what each is **for**,
+- read a Stan model and identify the **prior** and the **likelihood**,
+- match an R **data list** to a model's `data` block,
+- write a small complete Stan model for a new biological problem **by hand**,
+- run a model from R with `rstan` (in principle — the code is illustrative), and summarise the **draws**,
+- read a `print(fit)` table: the posterior **mean**, a **credible interval**, and the `Rhat` / `n_eff` diagnostics,
+- recognise when a fit **should not be trusted**.
+
+::: {.callout-warning title="Provisional unit"}
+The **Bayesian statistics** block is provisional and may move to a later statistics / machine-learning course. This exercise is for understanding the mechanics, not for exam drilling. Nothing here requires a working Stan installation — all code is illustrative and you can reason about it on paper.
+:::
+
+## Background
+
+A Bayesian model combines a **prior** with a **likelihood** to give a **posterior**:
+
+$$p(\theta \mid y) \;\propto\; p(y \mid \theta)\,p(\theta).$$
+
+**Stan** describes such models in three blocks and then **samples** the posterior:
+
+- **`data`** — the knowns you pass in from R (counts, sample sizes, predictors), each with a **type** (`int`, `real`) and optional **constraints** (`<lower=0>`).
+- **`parameters`** — the unknowns you want to learn; the posterior is a distribution *over* these.
+- **`model`** — `~` ("distributed as") statements giving the **prior** on each parameter and the **likelihood** of the data.
+
+The running example from the lecture — 13 of 20 cells express a marker — is:
+
+```stan
+// gene_marker.stan
+data {
+  int<lower=0> N;                 // cells assayed
+  int<lower=0> y;                 // cells expressing the marker
+}
+parameters {
+  real<lower=0, upper=1> theta;   // fraction expressing
+}
+model {
+  theta ~ beta(2, 2);             // prior
+  y ~ binomial(N, theta);         // likelihood
+}
+```
+
+You run it from R by passing a **named list whose keys match the `data` block**, then summarise the returned **draws**:
+
+```r
+library(rstan)
+stan_data <- list(N = 20, y = 13)
+fit <- stan(file = "gene_marker.stan", data = stan_data,
+            chains = 4, iter = 2000, seed = 1)
+print(fit, pars = "theta")
+```
+
+The output is thousands of samples of `theta`. The posterior **mean** is `mean(draws)`; a 95% **credible interval** is the 2.5% and 97.5% **quantiles** of the draws. Always check **`Rhat`** ($\approx 1$, want $< 1.01$) and **`n_eff`** (bigger is better) *before* reading the means.
+
+## By hand
+
+**B1.** For each scenario, state what goes in the **`data`** block and what goes in the **`parameters`** block. (Types and names, not full code.)
+
+(a) You count reads mapping to a gene in one RNA-seq sample and want the underlying expression **rate** $\lambda$.
+(b) You measure a continuous phenotype in $n$ mice and want its **mean** $\mu$ and **standard deviation** $\sigma$.
+
+**B2.** In the `gene_marker.stan` model above, point to the exact line that is the **prior** and the exact line that is the **likelihood**. In one sentence each, say what they encode.
+
+**B3.** A colleague passes this data list to the `gene_marker.stan` model:
+
+```r
+stan_data <- list(n = 20, successes = 13)
+```
+
+Stan errors. Why? Give the corrected list.
+
+**B4.** Fill in the three blanks so this becomes a valid model for a **single Poisson count** $y$ with rate $\lambda$ (a gene's read count with an unknown expression rate):
+
+```stan
+data {
+  int<lower=0> y;        // observed read count
+}
+parameters {
+  real<______> lambda;   // (1) constraint: a rate cannot be negative
+}
+model {
+  lambda ~ ______;       // (2) a prior on lambda (name any reasonable one)
+  y ~ ______;            // (3) the likelihood for a Poisson count
+}
+```
+
+**B5.** You fit a model and `print(fit)` shows:
+
+```text
+        mean se_mean   sd  2.5%   50% 97.5% n_eff Rhat
+lambda  8.10    0.02 0.55  7.05  8.08  9.22   980 1.00
+```
+
+(a) What is the posterior mean of $\lambda$?
+(b) Write down a 95% credible interval and state, in words, what it means.
+(c) Is this fit trustworthy? Which two numbers did you check?
+
+**B6.** A different fit reports `Rhat = 1.18` and `n_eff = 32` for its key parameter, even though the posterior mean "looks reasonable". Should you report the posterior mean? What would you do instead?
+
+**B7. (concept)** The lecture said MCMC returns *draws* rather than a formula for the posterior. If you have 4000 draws of $\theta$ stored in a vector `draws`, write (in words or R) how you would obtain: (a) the posterior mean, (b) the 95% credible interval, (c) the posterior probability that $\theta > 0.5$.
+
+## In R
+
+All code below is **illustrative** — treat it as something you reason about, not something that must execute here (no Stan is installed at render time). In a real session you would run it.
+
+### Run the marker model and summarise the draws
+
+```r
+library(rstan)
+
+stan_data <- list(N = 20, y = 13)          # keys match the data block
+fit <- stan(file = "gene_marker.stan", data = stan_data,
+            chains = 4, iter = 2000, seed = 1)
+
+print(fit, pars = "theta")                 # mean, quantiles, n_eff, Rhat
+```
+
+### Pull the draws out and compute summaries yourself
+
+```r
+draws <- as.data.frame(fit)$theta          # a vector of ~4000 posterior draws
+
+mean(draws)                                # posterior mean
+quantile(draws, c(0.025, 0.975))           # 95% credible interval
+mean(draws > 0.5)                          # posterior P(theta > 0.5)
+```
+
+The point: once you hold the draws, **every** posterior summary is ordinary descriptive statistics.
+
+### A Poisson count model (the B4 answer, assembled)
+
+```stan
+// gene_count.stan
+data {
+  int<lower=0> y;                 // observed read count
+}
+parameters {
+  real<lower=0> lambda;           // expression rate (non-negative)
+}
+model {
+  lambda ~ normal(10, 5);         // a weakly-informative prior
+  y ~ poisson(lambda);            // likelihood for a count
+}
+```
+
+```r
+fit2 <- stan(file = "gene_count.stan", data = list(y = 8),
+             chains = 4, iter = 2000, seed = 1)
+print(fit2, pars = "lambda")
+```
+
+### The `brms` shortcut (for a regression)
+
+```r
+library(brms)
+
+# cells: a data frame with a 0/1 column `expressed` and a `treatment` column
+fit3 <- brm(expressed ~ treatment, data = cells,
+            family = bernoulli(),                    # 0/1 -> logistic regression
+            prior  = prior(normal(0, 1), class = "b"),
+            chains = 4, iter = 2000, seed = 1)
+summary(fit3)                                        # same Rhat / credible-interval output
+```
+
+### Tasks
+
+**R1.** Using the "pull the draws out" block, explain what each of the three summary lines returns for the marker model, and why `mean(draws > 0.5)` is a **probability**.
+
+**R2.** Modify the `gene_marker.stan` model to use a **flat** prior `theta ~ beta(1, 1)` instead of `beta(2, 2)`. Would you expect the posterior mean to move **toward** or **away** from the raw ratio $13/20 = 0.65$? Explain in one sentence. (You do not need to run it.)
+
+**R3.** For the Poisson model, write the R call that fits it to an observed count of `y = 15`, then the two lines that extract the draws of `lambda` and report a 95% credible interval.
+
+## Hints
+
+::: {.callout-tip collapse="true" title="Hint 1 — data vs parameters"}
+Ask: *is this number something I measured and will type into R?* If yes it is **data**. *Is it something I do not know and want the posterior over?* If yes it is a **parameter**. Counts and sample sizes are data; rates, means, fractions, and standard deviations are usually parameters.
+:::
+
+::: {.callout-tip collapse="true" title="Hint 2 — spotting prior vs likelihood"}
+The **prior** is the `~` statement whose left side is a **parameter** (it constrains the unknown before seeing data). The **likelihood** is the `~` statement whose left side is the **data** (it says how the observed numbers arise from the parameter).
+:::
+
+::: {.callout-tip collapse="true" title="Hint 3 — matching the data list"}
+The keys of the R list must be **character-for-character** the identifiers in the `data` block. The model declares `N` and `y`; anything else (`n`, `successes`) is a different name and Stan will not find it. See [`stan()`](https://mc-stan.org/rstan/reference/stan.html).
+:::
+
+::: {.callout-tip collapse="true" title="Hint 4 — the Poisson block"}
+A rate is continuous and non-negative, so `real<lower=0>`. Any sensible prior works, e.g. `normal(10, 5)` (weakly informative) — Stan respects the `<lower=0>` constraint. The likelihood for a single count is [`poisson`](https://mc-stan.org/docs/functions-reference/unbounded_discrete_distributions.html)`(lambda)`. The [Poisson](https://en.wikipedia.org/wiki/Poisson_distribution) is the natural first distribution for counts (from the distributions block).
+:::
+
+::: {.callout-tip collapse="true" title="Hint 5 — reading the printout"}
+The `mean` column is the posterior mean. The `2.5%` and `97.5%` columns bracket the central 95% of the draws — that is the credible interval, and it is a **direct probability statement** about the parameter. Judge trust from `Rhat` (want $\approx 1$, definitely $< 1.01$) and `n_eff` (want at least a few hundred).
+:::
+
+::: {.callout-tip collapse="true" title="Hint 6 — summaries are just statistics on the draws"}
+Posterior mean = `mean(draws)`. A 95% credible interval = `quantile(draws, c(0.025, 0.975))`. A posterior probability like $P(\theta>0.5)$ = the **fraction of draws** above 0.5 = `mean(draws > 0.5)` (an average of TRUE/FALSE, which R treats as 1/0).
+:::
+
+## Solutions
+
+::: {.callout-note collapse="true" title="Solution"}
+
+**B1.**
+(a) RNA-seq rate. **Data:** the observed read count, `int<lower=0> y;` (and, if you had several observations, an `int<lower=0> N;` for how many). **Parameters:** the rate, `real<lower=0> lambda;`. The count is measured; the rate is unknown.
+(b) Mouse phenotype. **Data:** the sample size and the measurements, `int<lower=0> n;` and `vector[n] y;`. **Parameters:** the mean and spread, `real mu;` and `real<lower=0> sigma;` (a standard deviation is non-negative). The measurements are known; $\mu$ and $\sigma$ are what we infer.
+
+**B2.**
+- **Prior:** `theta ~ beta(2, 2);` — it encodes the belief, *before* seeing the data, that $\theta$ is probably near 0.5 (a gentle hump on $[0,1]$).
+- **Likelihood:** `y ~ binomial(N, theta);` — it says the observed count $y$ out of $N$ arises as a Binomial draw with success probability $\theta$, linking the data to the unknown.
+
+The tell: the prior's left side (`theta`) is a **parameter**; the likelihood's left side (`y`) is **data**.
+
+**B3.** The `data` block declares the identifiers `N` and `y`, but the list supplies `n` and `successes`. Stan looks for `N` and `y`, cannot find them, and errors (and it also receives two variables it does not recognise). Names must match exactly. Corrected:
+
+```r
+stan_data <- list(N = 20, y = 13)
+```
+
+**B4.** The three blanks:
+
+```stan
+parameters {
+  real<lower=0> lambda;   // (1) a rate is non-negative
+}
+model {
+  lambda ~ normal(10, 5); // (2) any reasonable prior; normal(10,5) is weakly informative
+  y ~ poisson(lambda);    // (3) Poisson likelihood for a count
+}
+```
+
+(1) `<lower=0>`, (2) any sensible prior such as `normal(10, 5)` — Stan keeps `lambda` non-negative because of the constraint, so a normal prior is fine here — and (3) `poisson(lambda)`.
+
+**B5.**
+(a) The posterior mean of $\lambda$ is **8.10**.
+(b) A 95% credible interval is **$[7.05,\ 9.22]$** (the 2.5% and 97.5% columns). In words: given the data and prior, there is a **95% posterior probability** that $\lambda$ lies between 7.05 and 9.22.
+(c) Yes — `Rhat = 1.00` (the chains agree, so the sampler converged) and `n_eff = 980` (comfortably large, so the summaries are not noisy). These are the two numbers to check *before* reading the mean.
+
+**B6.** **No** — do not report the posterior mean. `Rhat = 1.18` is far above 1, meaning the chains did **not** converge to the same distribution, so the draws are not a reliable sample of the posterior; a "reasonable-looking" mean from an unconverged sampler is meaningless. `n_eff = 32` is very low, confirming poor mixing. What to do: run longer (increase `iter`/`warmup`), run more chains, reconsider the priors or the model parameterisation, and only report results once `Rhat < 1.01` and `n_eff` is adequate.
+
+**B7.** With `draws` holding the 4000 posterior samples of $\theta$:
+(a) Posterior mean: `mean(draws)`.
+(b) 95% credible interval: `quantile(draws, c(0.025, 0.975))` — the 2.5% and 97.5% empirical quantiles.
+(c) Posterior probability $\theta > 0.5$: the fraction of draws exceeding 0.5, `mean(draws > 0.5)` (the mean of a TRUE/FALSE vector is the proportion of TRUEs).
+
+**R1.** `mean(draws)` is the posterior mean of $\theta$ (a point summary of the cloud of draws). `quantile(draws, c(0.025, 0.975))` returns the values below which 2.5% and 97.5% of the draws fall — the 95% credible interval. `mean(draws > 0.5)` compares every draw to 0.5, giving a vector of TRUE/FALSE; averaging that vector (TRUE = 1, FALSE = 0) gives the **proportion of draws above 0.5**, which estimates the posterior probability $P(\theta > 0.5)$ — a probability precisely because the draws are distributed as the posterior.
+
+**R2.** With `beta(1, 1)` (the flat/uniform prior) the prior no longer pulls toward 0.5, so the posterior is driven by the data alone and its mean moves **toward** the raw ratio $13/20 = 0.65$. (Under `beta(2, 2)` the mean was pulled slightly below 0.65 toward 0.5; removing that pull lets it sit closer to 0.65.)
+
+**R3.**
+
+```r
+fit_pois <- stan(file = "gene_count.stan", data = list(y = 15),
+                 chains = 4, iter = 2000, seed = 1)
+
+lambda_draws <- as.data.frame(fit_pois)$lambda
+quantile(lambda_draws, c(0.025, 0.975))     # 95% credible interval for lambda
+```
+
+The first call fits the Poisson model to the observed count 15; the next two lines pull the `lambda` draws out and report the 2.5%/97.5% quantiles as a 95% credible interval.
+:::
+
+## Where this leads
+
+- **Bayesian regression:** the `brms` formula interface scales the three-block idea to real models — logistic regression for 0/1 outcomes, Poisson and **negative binomial** regression for (overdispersed) counts, and hierarchical models that share information across genes or samples.
+- **Count models (distributions block):** swapping the likelihood line for `poisson` or `neg_binomial` turns this same skeleton into a model for RNA-seq counts — the honest treatment of overdispersion you met when comparing Poisson and negative binomial.
+- **Posterior predictive checks:** beyond summarising parameters, the draws let you simulate new data from the fitted model and check it against the real data — the standard way to ask "does this model actually fit?" (a later Bayesian topic).

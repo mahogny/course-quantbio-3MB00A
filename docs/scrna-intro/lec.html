@@ -1,0 +1,1060 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<script src="../site_libs/clipboard/clipboard.min.js"></script>
+<script src="../site_libs/quarto-html/tabby.min.js"></script>
+<script src="../site_libs/quarto-html/popper.min.js"></script>
+<script src="../site_libs/quarto-html/tippy.umd.min.js"></script>
+<link href="../site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="../site_libs/quarto-html/light-border.css" rel="stylesheet">
+<link href="../site_libs/quarto-html/quarto-syntax-highlighting-662ae1889177880cb371f83234c0a158.css" rel="stylesheet" id="quarto-text-highlighting-styles"><meta charset="utf-8">
+  <meta name="generator" content="quarto-1.7.30">
+
+  <meta name="author" content="Quantitative biology and integrative omics">
+  <title>Quantitative biology and integrative omics – Single-cell RNA-seq: data &amp; QC</title>
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, minimal-ui">
+  <link rel="stylesheet" href="../site_libs/revealjs/dist/reset.css">
+  <link rel="stylesheet" href="../site_libs/revealjs/dist/reveal.css">
+  <style>
+    code{white-space: pre-wrap;}
+    span.smallcaps{font-variant: small-caps;}
+    div.columns{display: flex; gap: min(4vw, 1.5em);}
+    div.column{flex: auto; overflow-x: auto;}
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+    ul.task-list{list-style: none;}
+    ul.task-list li input[type="checkbox"] {
+      width: 0.8em;
+      margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+      vertical-align: middle;
+    }
+    /* CSS for syntax highlighting */
+    html { -webkit-text-size-adjust: 100%; }
+    pre > code.sourceCode { white-space: pre; position: relative; }
+    pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+    pre > code.sourceCode > span:empty { height: 1.2em; }
+    .sourceCode { overflow: visible; }
+    code.sourceCode > span { color: inherit; text-decoration: inherit; }
+    div.sourceCode { margin: 1em 0; }
+    pre.sourceCode { margin: 0; }
+    @media screen {
+    div.sourceCode { overflow: auto; }
+    }
+    @media print {
+    pre > code.sourceCode { white-space: pre-wrap; }
+    pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+    }
+    pre.numberSource code
+      { counter-reset: source-line 0; }
+    pre.numberSource code > span
+      { position: relative; left: -4em; counter-increment: source-line; }
+    pre.numberSource code > span > a:first-child::before
+      { content: counter(source-line);
+        position: relative; left: -1em; text-align: right; vertical-align: baseline;
+        border: none; display: inline-block;
+        -webkit-touch-callout: none; -webkit-user-select: none;
+        -khtml-user-select: none; -moz-user-select: none;
+        -ms-user-select: none; user-select: none;
+        padding: 0 4px; width: 4em;
+      }
+    pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+    div.sourceCode
+      { color: #24292e;  }
+    @media screen {
+    pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+    }
+    code span { color: #24292e; } /* Normal */
+    code span.al { color: #ff5555; font-weight: bold; } /* Alert */
+    code span.an { color: #6a737d; } /* Annotation */
+    code span.at { color: #d73a49; } /* Attribute */
+    code span.bn { color: #005cc5; } /* BaseN */
+    code span.bu { color: #d73a49; } /* BuiltIn */
+    code span.cf { color: #d73a49; } /* ControlFlow */
+    code span.ch { color: #032f62; } /* Char */
+    code span.cn { color: #005cc5; } /* Constant */
+    code span.co { color: #6a737d; } /* Comment */
+    code span.cv { color: #6a737d; } /* CommentVar */
+    code span.do { color: #6a737d; } /* Documentation */
+    code span.dt { color: #d73a49; } /* DataType */
+    code span.dv { color: #005cc5; } /* DecVal */
+    code span.er { color: #ff5555; text-decoration: underline; } /* Error */
+    code span.ex { color: #d73a49; font-weight: bold; } /* Extension */
+    code span.fl { color: #005cc5; } /* Float */
+    code span.fu { color: #6f42c1; } /* Function */
+    code span.im { color: #032f62; } /* Import */
+    code span.in { color: #6a737d; } /* Information */
+    code span.kw { color: #d73a49; } /* Keyword */
+    code span.op { color: #24292e; } /* Operator */
+    code span.ot { color: #6f42c1; } /* Other */
+    code span.pp { color: #d73a49; } /* Preprocessor */
+    code span.re { color: #6a737d; } /* RegionMarker */
+    code span.sc { color: #005cc5; } /* SpecialChar */
+    code span.ss { color: #032f62; } /* SpecialString */
+    code span.st { color: #032f62; } /* String */
+    code span.va { color: #e36209; } /* Variable */
+    code span.vs { color: #032f62; } /* VerbatimString */
+    code span.wa { color: #ff5555; } /* Warning */
+  </style>
+  <link rel="stylesheet" href="../site_libs/revealjs/dist/theme/quarto-bf56578b9c06c165c166475cd19dbcd1.css">
+  <link href="../site_libs/revealjs/plugin/quarto-line-highlight/line-highlight.css" rel="stylesheet">
+  <link href="../site_libs/revealjs/plugin/reveal-menu/menu.css" rel="stylesheet">
+  <link href="../site_libs/revealjs/plugin/reveal-menu/quarto-menu.css" rel="stylesheet">
+  <link href="../site_libs/revealjs/plugin/quarto-support/footer.css" rel="stylesheet">
+  <style type="text/css">
+    .reveal div.sourceCode {
+      margin: 0;
+      overflow: auto;
+    }
+    .reveal div.hanging-indent {
+      margin-left: 1em;
+      text-indent: -1em;
+    }
+    .reveal .slide:not(.center) {
+      height: 100%;
+    }
+    .reveal .slide.scrollable {
+      overflow-y: auto;
+    }
+    .reveal .footnotes {
+      height: 100%;
+      overflow-y: auto;
+    }
+    .reveal .slide .absolute {
+      position: absolute;
+      display: block;
+    }
+    .reveal .footnotes ol {
+      counter-reset: ol;
+      list-style-type: none; 
+      margin-left: 0;
+    }
+    .reveal .footnotes ol li:before {
+      counter-increment: ol;
+      content: counter(ol) ". "; 
+    }
+    .reveal .footnotes ol li > p:first-child {
+      display: inline-block;
+    }
+    .reveal .slide ul,
+    .reveal .slide ol {
+      margin-bottom: 0.5em;
+    }
+    .reveal .slide ul li,
+    .reveal .slide ol li {
+      margin-top: 0.4em;
+      margin-bottom: 0.2em;
+    }
+    .reveal .slide ul[role="tablist"] li {
+      margin-bottom: 0;
+    }
+    .reveal .slide ul li > *:first-child,
+    .reveal .slide ol li > *:first-child {
+      margin-block-start: 0;
+    }
+    .reveal .slide ul li > *:last-child,
+    .reveal .slide ol li > *:last-child {
+      margin-block-end: 0;
+    }
+    .reveal .slide .columns:nth-child(3) {
+      margin-block-start: 0.8em;
+    }
+    .reveal blockquote {
+      box-shadow: none;
+    }
+    .reveal .tippy-content>* {
+      margin-top: 0.2em;
+      margin-bottom: 0.7em;
+    }
+    .reveal .tippy-content>*:last-child {
+      margin-bottom: 0.2em;
+    }
+    .reveal .slide > img.stretch.quarto-figure-center,
+    .reveal .slide > img.r-stretch.quarto-figure-center {
+      display: block;
+      margin-left: auto;
+      margin-right: auto; 
+    }
+    .reveal .slide > img.stretch.quarto-figure-left,
+    .reveal .slide > img.r-stretch.quarto-figure-left  {
+      display: block;
+      margin-left: 0;
+      margin-right: auto; 
+    }
+    .reveal .slide > img.stretch.quarto-figure-right,
+    .reveal .slide > img.r-stretch.quarto-figure-right  {
+      display: block;
+      margin-left: auto;
+      margin-right: 0; 
+    }
+  </style>
+</head>
+<body class="quarto-light">
+  <div class="reveal">
+    <div class="slides">
+
+<section id="title-slide" class="quarto-title-block center">
+  <h1 class="title">Single-cell RNA-seq: data &amp; QC</h1>
+  <p class="subtitle">Single-cell analysis — Single-cell RNA-seq: data &amp; QC</p>
+
+<div class="quarto-title-authors">
+<div class="quarto-title-author">
+<div class="quarto-title-author-name">
+Quantitative biology and integrative omics 
+</div>
+</div>
+</div>
+
+</section>
+<section id="about-this-lecture" class="slide level2">
+<h2>About this lecture</h2>
+<p>Until now a gene-expression experiment gave you <strong>one number per gene per sample</strong> — a bulk average over millions of cells. Single-cell RNA-seq gives you <strong>one number per gene per cell</strong>, for thousands of cells at once. That changes both the biology we can ask and the data structure we handle.</p>
+<ul>
+<li>The data object: a <strong>sparse cells × genes count matrix</strong>, mostly zeros.</li>
+<li>Where the numbers come from: the <strong>droplet</strong> workflow, at a high level.</li>
+<li>Why the counts are <strong>noisy and sparse</strong>, and what that forces us to do.</li>
+<li><strong>Quality control:</strong> removing low-quality cells, empty droplets, and doublets.</li>
+<li><strong>Preprocessing:</strong> normalization, log transform, and picking <strong>highly variable genes</strong>.</li>
+</ul>
+<p>This is a <strong>concept + data-handling</strong> day. No new by-hand math; the linear algebra payoff (PCA, UMAP) comes in the next unit, Single-cell RNA-seq: dimensionality reduction.</p>
+<aside class="notes">
+<p>Frame the whole unit as a shift in resolution: bulk RNA-seq averages over a tissue, single-cell resolves the individual cells that make it up. Everything today is about (1) understanding the data structure that comes out of the machine and (2) cleaning it so the downstream analysis is trustworthy. Emphasise that we deliberately stop before PCA/clustering — those need the cleaned matrix we build today. Keep it conceptual; the R shown is Seurat-style pseudocode to read, not to run in the lecture.</p>
+<style type="text/css">
+        span.MJX_Assistive_MathML {
+          position:absolute!important;
+          clip: rect(1px, 1px, 1px, 1px);
+          padding: 1px 0 0 0!important;
+          border: 0!important;
+          height: 1px!important;
+          width: 1px!important;
+          overflow: hidden!important;
+          display:block!important;
+      }</style></aside>
+</section>
+<section id="a-biology-picture-first" class="slide level2 smaller">
+<h2>A biology picture first</h2>
+<p>A tumour biopsy is not one thing. It is tumour cells, immune cells (T cells, B cells, macrophages), fibroblasts, and endothelial cells — all mixed together.</p>
+<ul>
+<li><strong>Bulk</strong> RNA-seq measures the <em>average</em> expression across all of them. A gene that is high in a rare T-cell population but absent elsewhere looks like faint background.</li>
+<li><strong>Single-cell</strong> RNA-seq measures each cell separately, so you can ask: <em>which cell types are present, in what proportions, and what is each one doing?</em></li>
+</ul>
+<p>The biological question — <em>what cell types make up this tissue, and how do they differ?</em> — is only answerable if we can read out expression <strong>one cell at a time</strong>.</p>
+
+<img data-src="fig02-bulk-vs-singlecell.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:80.0%"><aside class="notes">
+<p>This is the motivating pairing for the whole unit. The killer application of single-cell is resolving cellular heterogeneity that bulk averages away — rare cell types, mixtures, cell states. Use the tumour microenvironment because students know it and it is a real, high-stakes use case. Plant the idea that “many cells, measured separately” is what makes the new data structure (a big matrix) and the new problems (noise, sparsity, doublets) unavoidable. Do not mention PCA/clustering yet; just motivate why we want per-cell data.</p>
+<style type="text/css">
+        span.MJX_Assistive_MathML {
+          position:absolute!important;
+          clip: rect(1px, 1px, 1px, 1px);
+          padding: 1px 0 0 0!important;
+          border: 0!important;
+          height: 1px!important;
+          width: 1px!important;
+          overflow: hidden!important;
+          display:block!important;
+      }</style></aside>
+</section>
+<section id="the-data-a-cells-genes-count-matrix" class="slide level2 smaller">
+<h2>The data: a cells × genes count matrix</h2>
+<p>The output of a single-cell experiment is a <strong>table of counts</strong>:</p>
+<ul>
+<li><strong>rows = cells</strong> (often 1,000–50,000+),</li>
+<li><strong>columns = genes</strong> (often ~20,000 for human/mouse),</li>
+<li><strong>entry <span class="math inline">\(X_{cg}\)</span></strong> = the number of RNA molecules of gene <span class="math inline">\(g\)</span> detected in cell <span class="math inline">\(c\)</span> (a non-negative <strong>integer count</strong>).</li>
+</ul>
+<p><span class="math display">\[X = \begin{pmatrix} X_{11} &amp; X_{12} &amp; \cdots &amp; X_{1G} \\ X_{21} &amp; X_{22} &amp; \cdots &amp; X_{2G} \\ \vdots &amp; &amp; \ddots &amp; \vdots \\ X_{C1} &amp; X_{C2} &amp; \cdots &amp; X_{CG} \end{pmatrix}\]</span></p>
+<p>Same <strong>sample × feature</strong> shape you met with bulk expression tables — just with <em>cells</em> as the samples, and a lot more rows.</p>
+
+<img data-src="fig03-count-matrix.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:60.0%"><aside class="notes">
+<p>Anchor on the object they will actually manipulate: a count matrix. Stress it is the same conceptual shape as any omics table (samples in rows, features in columns) so it is not alien — but the “samples” are now individual cells and there are thousands to tens of thousands of them. Some toolkits (Bioconductor’s SingleCellExperiment, and Seurat internally) store the transpose with genes in rows and cells in columns; mention this so a transposed matrix later does not confuse them, but keep the mental model as cells = observations. Counts are integers; that matters for the distribution discussion later.</p>
+<style type="text/css">
+        span.MJX_Assistive_MathML {
+          position:absolute!important;
+          clip: rect(1px, 1px, 1px, 1px);
+          padding: 1px 0 0 0!important;
+          border: 0!important;
+          height: 1px!important;
+          width: 1px!important;
+          overflow: hidden!important;
+          display:block!important;
+      }</style></aside>
+</section>
+<section id="it-is-mostly-zeros-sparsity" class="slide level2 smaller">
+<h2>It is mostly zeros: sparsity</h2>
+<p>Most entries in the matrix are <strong>exactly 0</strong>. Typically <strong>90–95%</strong> of the matrix is zero.</p>
+<p>Two reasons a zero appears:</p>
+<ul>
+<li><strong>Biological:</strong> the gene is genuinely not expressed in that cell.</li>
+<li><strong>Technical (“dropout”):</strong> the gene <em>is</em> expressed, but its few molecules were not captured or sequenced — a <strong>false zero</strong> from limited sensitivity.</li>
+</ul>
+<p>We usually cannot tell the two apart from the count alone. Because so few molecules are sampled per cell, single-cell data is <strong>sparse</strong> and <strong>noisy</strong> by nature.</p>
+<p>Practically, we store it as a <strong>sparse matrix</strong> (only the non-zero entries) — a dense <span class="math inline">\(20{,}000 \times 50{,}000\)</span> table of doubles would be tens of gigabytes.</p>
+
+<img data-src="fig04-sparsity-heatmap.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:70.0%"><aside class="notes">
+<p>Two key ideas here. First, sparsity is real and large (order 90%+ zeros), which is why we store the data in a sparse format — record only non-zeros. This is a genuine memory necessity, not an optimisation. Second, a zero is ambiguous: it can be true absence or a technical dropout caused by capturing only a tiny fraction of each cell’s mRNA. Do not overclaim exact percentages of dropout; the honest statement is that low capture efficiency produces many false zeros and we generally cannot distinguish them per-entry. This ambiguity is why downstream methods are built to tolerate noise rather than trust individual counts.</p>
+<style type="text/css">
+        span.MJX_Assistive_MathML {
+          position:absolute!important;
+          clip: rect(1px, 1px, 1px, 1px);
+          padding: 1px 0 0 0!important;
+          border: 0!important;
+          height: 1px!important;
+          width: 1px!important;
+          overflow: hidden!important;
+          display:block!important;
+      }</style></aside>
+</section>
+<section id="where-the-counts-come-from-droplets" class="slide level2 smaller">
+<h2>Where the counts come from: droplets</h2>
+<p>The dominant technology (e.g.&nbsp;10x Genomics) is <strong>droplet-based</strong>. High level:</p>
+<ol type="1">
+<li>A microfluidic chip pairs <strong>single cells</strong> with <strong>barcoded gel beads</strong> inside tiny <strong>oil droplets</strong> — ideally one cell per droplet.</li>
+<li>The cell is lysed; each captured mRNA is tagged with that droplet’s <strong>cell barcode</strong> (which cell) and a <strong>UMI</strong> — unique molecular identifier (which original molecule).</li>
+<li>All droplets are pooled, reverse-transcribed, amplified, and <strong>sequenced together</strong>.</li>
+<li>Computationally, reads are sorted <strong>by cell barcode</strong> back into cells, and <strong>UMIs are counted</strong> to rebuild the count matrix.</li>
+</ol>
+
+<img data-src="fig05-droplet-workflow.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:80.0%"><aside class="notes">
+<p>Keep this high level — students need the concepts, not the wet-lab protocol. The three ideas that matter downstream: (1) the cell barcode is how reads get grouped back into cells; (2) the UMI lets us count original molecules rather than PCR duplicates, which is what makes the entries meaningful integer counts; (3) “ideally one cell per droplet” is an ideal that fails sometimes, which sets up empty droplets and doublets on the next slides. Everything is sequenced in one pool and de-multiplexed computationally by barcode.</p>
+<style type="text/css">
+        span.MJX_Assistive_MathML {
+          position:absolute!important;
+          clip: rect(1px, 1px, 1px, 1px);
+          padding: 1px 0 0 0!important;
+          border: 0!important;
+          height: 1px!important;
+          width: 1px!important;
+          overflow: hidden!important;
+          display:block!important;
+      }</style></aside>
+</section>
+<section id="why-umis-matter" class="slide level2 smaller">
+<h2>Why UMIs matter</h2>
+<p>Sequencing involves a <strong>PCR amplification</strong> step that copies molecules unevenly. Without correction, a gene that happened to amplify well would look highly expressed.</p>
+<ul>
+<li>A <strong>UMI</strong> is a short random barcode attached to each <em>original</em> mRNA molecule <strong>before</strong> amplification.</li>
+<li>After sequencing, all reads sharing the same UMI (and cell barcode and gene) came from <strong>one</strong> original molecule — so we count them <strong>once</strong>.</li>
+</ul>
+<p>Counting <strong>unique UMIs</strong> instead of raw reads removes most amplification bias, giving counts that better reflect the true number of molecules captured.</p>
+
+<img data-src="fig06-umi-dedup.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:65.0%"><aside class="notes">
+<p>This slide justifies why the matrix entries are trustworthy-ish integer counts and not just read pileups. Amplification is exponential and noisy, so raw read counts are badly distorted. The UMI tags each starting molecule, so collapsing duplicate UMIs recovers a molecule count. This is why people say “UMI counts”. Note it removes amplification bias but does not fix capture efficiency — molecules never captured are still missing (the dropout story). Keep it short; the takeaway is UMI = de-duplicated molecule count.</p>
+<style type="text/css">
+        span.MJX_Assistive_MathML {
+          position:absolute!important;
+          clip: rect(1px, 1px, 1px, 1px);
+          padding: 1px 0 0 0!important;
+          border: 0!important;
+          height: 1px!important;
+          width: 1px!important;
+          overflow: hidden!important;
+          display:block!important;
+      }</style></aside>
+</section>
+<section id="the-count-matrix-is-raw-it-needs-cleaning" class="slide level2 smaller">
+<h2>The count matrix is raw — it needs cleaning</h2>
+<p>The matrix that comes off the pipeline is <strong>not</strong> ready for analysis. Two big problems, both from the “one cell per droplet” ideal breaking down, plus general quality issues:</p>
+<ul>
+<li><strong>Empty droplets:</strong> a droplet with no cell still captures stray ambient RNA → a “cell” that is really background.</li>
+<li><strong>Doublets:</strong> two cells share one droplet → one barcode that mixes two cells’ expression.</li>
+<li><strong>Low-quality cells:</strong> dying or damaged cells (leaked cytoplasm, stressed).</li>
+</ul>
+<p>If we skip QC, these masquerade as real cells and create <strong>fake cell types</strong> and <strong>fake intermediate states</strong> downstream. QC is not optional bookkeeping — it protects every conclusion that follows.</p>
+
+<img data-src="fig07-droplet-failure-modes.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:80.0%"><aside class="notes">
+<p>Set up the QC section by naming the three failure modes. The framing to drill: bad cells do not just add noise, they produce <em>artefacts that look like biology</em> — an empty droplet full of ambient RNA can cluster as a “cell type”; a doublet of a T cell and a B cell looks like a novel cell expressing both programs. This is why QC comes before any dimensionality reduction or clustering. The next slides give the concrete signatures we filter on.</p>
+<style type="text/css">
+        span.MJX_Assistive_MathML {
+          position:absolute!important;
+          clip: rect(1px, 1px, 1px, 1px);
+          padding: 1px 0 0 0!important;
+          border: 0!important;
+          height: 1px!important;
+          width: 1px!important;
+          overflow: hidden!important;
+          display:block!important;
+      }</style></aside>
+</section>
+<section id="qc-signature-1-counts-and-genes-per-cell" class="slide level2 smaller">
+<h2>QC signature 1: counts and genes per cell</h2>
+<p>For each cell we compute two simple numbers:</p>
+<ul>
+<li><strong>total counts</strong> (library size): <span class="math inline">\(n_c = \sum_g X_{cg}\)</span> — total UMIs in the cell.</li>
+<li><strong>number of genes detected:</strong> <span class="math inline">\(\#\{g : X_{cg} &gt; 0\}\)</span> — how many distinct genes are non-zero.</li>
+</ul>
+<p>Interpreting the extremes:</p>
+<ul>
+<li><strong>Very low</strong> on both → an <strong>empty droplet</strong> or a broken cell with little RNA. <em>Filter out.</em></li>
+<li><strong>Very high</strong> on both → possibly a <strong>doublet</strong> (two cells’ worth of RNA). <em>Flag / filter.</em></li>
+</ul>
+<p>These are cheap, per-cell summaries — the first thing you look at.</p>
+
+<img data-src="fig08-counts-genes-qc.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:60.0%"><aside class="notes">
+<p>These two per-cell QC metrics are the workhorses. Total counts (library size) and number of detected genes are strongly correlated and both track “how much real cell was in this droplet”. Very low = empty/broken; very high = suspiciously much RNA, a doublet flag. Emphasise that thresholds are dataset-dependent and chosen by looking at the distributions, not universal magic numbers. Mention the “knee plot” idea: ranked barcodes by total counts show a sharp drop separating real cells from empty droplets, which dedicated tools use to call cells.</p>
+<style type="text/css">
+        span.MJX_Assistive_MathML {
+          position:absolute!important;
+          clip: rect(1px, 1px, 1px, 1px);
+          padding: 1px 0 0 0!important;
+          border: 0!important;
+          height: 1px!important;
+          width: 1px!important;
+          overflow: hidden!important;
+          display:block!important;
+      }</style></aside>
+</section>
+<section id="qc-signature-2-mitochondrial-fraction" class="slide level2 smaller">
+<h2>QC signature 2: mitochondrial fraction</h2>
+<p>Compute the fraction of each cell’s counts coming from <strong>mitochondrial genes</strong> (in human, gene symbols starting <code>MT-</code>):</p>
+<p><span class="math display">\[\text{pct.mt}_c = 100 \times \frac{\sum_{g \in \text{MT}} X_{cg}}{\sum_g X_{cg}}\]</span></p>
+<ul>
+<li>When a cell’s membrane is <strong>compromised</strong> (dying/stressed), cytoplasmic mRNA <strong>leaks out</strong>, but mitochondrial mRNA stays trapped in mitochondria.</li>
+<li>So a <strong>high mitochondrial fraction</strong> is a hallmark of a <strong>low-quality / dying cell</strong>. <em>Filter cells above a threshold.</em></li>
+</ul>
+<p>The threshold is dataset-dependent (a common starting point is ~5–20%), and some healthy tissues are genuinely mito-rich — so inspect, don’t blindly apply.</p>
+
+<img data-src="fig09-mito-fraction.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:75.0%"><aside class="notes">
+<p>This is the classic third QC metric. Mechanism: membrane damage lets cytoplasmic RNA escape while mitochondrial RNA is retained inside mitochondria, so the <em>proportion</em> that is mitochondrial rises. High pct.mt therefore flags dying cells. Be honest that the cutoff varies — 5% is common for some cell lines, but cardiomyocytes and other metabolically active tissues legitimately have high mitochondrial content, so a fixed threshold can throw away good cells. The design principle: look at the distribution, pick a threshold for your data. Ribosomal fraction is sometimes used similarly; mention only if asked.</p>
+<style type="text/css">
+        span.MJX_Assistive_MathML {
+          position:absolute!important;
+          clip: rect(1px, 1px, 1px, 1px);
+          padding: 1px 0 0 0!important;
+          border: 0!important;
+          height: 1px!important;
+          width: 1px!important;
+          overflow: hidden!important;
+          display:block!important;
+      }</style></aside>
+</section>
+<section id="empty-droplets-and-the-ambient-rna-problem" class="slide level2 smaller">
+<h2>Empty droplets and the ambient RNA problem</h2>
+<p>When cells are lysed during prep, some mRNA floats freely in the suspension — <strong>ambient RNA</strong>. Every droplet, even an empty one, captures a little.</p>
+<ul>
+<li>A droplet with <strong>no cell</strong> yields a low-count profile that is just <strong>ambient background</strong>.</li>
+<li>Ranking barcodes by total counts shows a sharp <strong>“knee”</strong>: real cells (high counts) drop off steeply to the empty-droplet background (low counts).</li>
+</ul>
+<p>Simple low-count filtering removes the obvious empties; dedicated tools (e.g.&nbsp;<code>EmptyDrops</code>) model the ambient profile statistically to rescue small real cells and remove background.</p>
+
+<img data-src="fig10-barcode-rank-knee.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:60.0%"><aside class="notes">
+<p>Concept only. The ambient RNA pool is created by lysed cells before/during droplet formation and contaminates every droplet. Empty droplets contain only this background, so they sit at low total counts. The barcode-rank (“knee”) plot is the standard diagnostic: sort barcodes by total UMI descending, plot on log-log, and there is a visible knee separating true cells from empties. Name-drop EmptyDrops as the principled tool but do not teach its statistics — the point is that “call which barcodes are real cells” is its own step. Ambient contamination also motivates later correction tools (SoupX/DecontX), which you can mention as deferred.</p>
+<style type="text/css">
+        span.MJX_Assistive_MathML {
+          position:absolute!important;
+          clip: rect(1px, 1px, 1px, 1px);
+          padding: 1px 0 0 0!important;
+          border: 0!important;
+          height: 1px!important;
+          width: 1px!important;
+          overflow: hidden!important;
+          display:block!important;
+      }</style></aside>
+</section>
+<section id="doublets" class="slide level2 smaller">
+<h2>Doublets</h2>
+<p>A <strong>doublet</strong> is one barcode that captured <strong>two cells</strong>. Its expression is a <strong>blend</strong> of two profiles.</p>
+<ul>
+<li>Why it is dangerous: a doublet of a <strong>T cell</strong> and a <strong>B cell</strong> expresses both T-cell and B-cell markers — it can masquerade as a novel “hybrid” cell type or a fake transitional state.</li>
+<li><strong>Signatures:</strong> unusually high total counts / genes; co-expression of markers that should be <strong>mutually exclusive</strong>.</li>
+<li><strong>Detection:</strong> dedicated tools (e.g.&nbsp;<code>DoubletFinder</code>, <code>scDblFinder</code>) <em>simulate</em> artificial doublets by averaging random pairs of cells, then flag real cells that resemble those simulations.</li>
+</ul>
+<p>Doublet rate scales with how many cells you load — more cells per run means more collisions.</p>
+
+<img data-src="fig11-doublet-blend.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:65.0%"><aside class="notes">
+<p>Doublets are the second consequence of the one-cell-per-droplet ideal failing. The conceptual danger is the important bit: a doublet does not look like noise, it looks like a plausible new cell expressing two programs, which can lead to invented cell types. Detection tools work by simulating synthetic doublets (average pairs of real cells) and finding real barcodes that look like those synthetics. Also mention the practical trade-off: loading more cells increases throughput but raises the collision (doublet) rate — roughly linearly with the number of cells loaded for droplet platforms. Keep tool details out; the concept is what matters.</p>
+<style type="text/css">
+        span.MJX_Assistive_MathML {
+          position:absolute!important;
+          clip: rect(1px, 1px, 1px, 1px);
+          padding: 1px 0 0 0!important;
+          border: 0!important;
+          height: 1px!important;
+          width: 1px!important;
+          overflow: hidden!important;
+          display:block!important;
+      }</style></aside>
+</section>
+<section id="after-filtering-normalization" class="slide level2 smaller">
+<h2>After filtering: normalization</h2>
+<p>Cells differ in <strong>total counts</strong> just from technical capture efficiency, not biology — one cell might have 2,000 UMIs and another 20,000. Comparing raw counts across cells is unfair.</p>
+<p><strong>Library-size normalization:</strong> divide each cell’s counts by its total, then rescale to a common size (a “scale factor”, e.g.&nbsp;10,000):</p>
+<p><span class="math display">\[\tilde{X}_{cg} = \frac{X_{cg}}{\sum_{g'} X_{cg'}} \times s\]</span></p>
+<p>This makes cells comparable — it converts counts into <strong>relative expression</strong> per cell. It is the single-cell cousin of CPM/TPM from bulk RNA-seq.</p>
+
+<img data-src="fig12-library-size-norm.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:70.0%"><aside class="notes">
+<p>Motivate normalization by the fact that library size (total UMIs per cell) varies a lot for purely technical reasons — differences in capture and sequencing depth — so raw counts across cells are not comparable. Library-size (a.k.a. total-count) normalization rescales each cell to a common total, turning counts into within-cell relative abundances. Connect to CPM/TPM which they may recall from bulk. Be honest that this simple normalization is a first-pass standard; more sophisticated approaches (scran pooling factors, SCTransform/Pearson residuals) exist and are deferred. Do not overstate that this fully removes technical effects.</p>
+<style type="text/css">
+        span.MJX_Assistive_MathML {
+          position:absolute!important;
+          clip: rect(1px, 1px, 1px, 1px);
+          padding: 1px 0 0 0!important;
+          border: 0!important;
+          height: 1px!important;
+          width: 1px!important;
+          overflow: hidden!important;
+          display:block!important;
+      }</style></aside>
+</section>
+<section id="then-the-log-transform" class="slide level2 smaller">
+<h2>Then the log transform</h2>
+<p>After scaling we apply <span class="math inline">\(\log(1+x)\)</span> (often written <code>log1p</code>):</p>
+<p><span class="math display">\[Y_{cg} = \log\!\big(1 + \tilde{X}_{cg}\big)\]</span></p>
+<p>Why log?</p>
+<ul>
+<li>Expression spans <strong>orders of magnitude</strong>; a few very-high-count genes would otherwise <strong>dominate</strong> every distance and variance calculation.</li>
+<li>Log <strong>compresses</strong> the large values and <strong>stabilizes variance</strong>, so highly and lowly expressed genes contribute more comparably.</li>
+<li>The <span class="math inline">\(+1\)</span> keeps <strong>zeros as zeros</strong> (<span class="math inline">\(\log(1+0)=0\)</span>) and avoids <span class="math inline">\(\log 0 = -\infty\)</span>.</li>
+</ul>
+<p>The pair <strong>(library-size normalize, then log1p)</strong> is the standard baseline single-cell transform.</p>
+
+<img data-src="fig13-log1p-curve.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:60.0%"><aside class="notes">
+<p>The log serves two purposes: it tames the enormous dynamic range (a handful of housekeeping/ribosomal genes can be thousands of counts while most are single digits) so they do not swamp variance-based methods, and it roughly stabilises variance for count-like data. The +1 pseudocount is what lets zeros survive as zeros and avoids log(0). Emphasise this normalize-then-log pipeline is the default baseline that PCA/clustering assume in the next unit. Flag that Poisson/negative-binomial-aware alternatives exist (and that the count nature connects to the overdispersion topic from the distributions block) but are beyond today.</p>
+<style type="text/css">
+        span.MJX_Assistive_MathML {
+          position:absolute!important;
+          clip: rect(1px, 1px, 1px, 1px);
+          padding: 1px 0 0 0!important;
+          border: 0!important;
+          height: 1px!important;
+          width: 1px!important;
+          overflow: hidden!important;
+          display:block!important;
+      }</style></aside>
+</section>
+<section id="feature-selection-highly-variable-genes" class="slide level2 smaller">
+<h2>Feature selection: highly variable genes</h2>
+<p>Of ~20,000 genes, <strong>most are uninformative</strong> for telling cell types apart — housekeeping genes are steadily on everywhere; many genes are just noise.</p>
+<p><strong>Highly variable genes (HVGs):</strong> keep the genes whose variation across cells is <strong>larger than expected</strong> for their mean expression level.</p>
+<ul>
+<li>Genes with real biological signal (cell-type markers) vary <strong>more</strong> than technical noise predicts.</li>
+<li>We rank genes by variability <em>relative to a mean–variance trend</em> and keep the top ~2,000.</li>
+</ul>
+<p>Working with ~2,000 informative genes instead of 20,000 <strong>cuts noise and computation</strong> — and sets up the dimensionality reduction that comes next.</p>
+
+<img data-src="fig14-mean-variance-hvg.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:65.0%"><aside class="notes">
+<p>Feature selection is the last preprocessing step. The key subtlety: you cannot just pick the highest-variance genes, because in count data variance grows with the mean — highly expressed genes are variable simply because they are big. So HVG selection ranks genes by variance <em>relative to what their mean predicts</em> (variance above a fitted mean-variance trend). Keeping ~2,000 top HVGs is the common default. Motivate it as noise reduction and computational tractability, and as the natural hand-off to the next unit where PCA runs on these selected, scaled genes. This is where the eigen/PCA machinery from the linear algebra block finally gets used on real data.</p>
+<style type="text/css">
+        span.MJX_Assistive_MathML {
+          position:absolute!important;
+          clip: rect(1px, 1px, 1px, 1px);
+          padding: 1px 0 0 0!important;
+          border: 0!important;
+          height: 1px!important;
+          width: 1px!important;
+          overflow: hidden!important;
+          display:block!important;
+      }</style></aside>
+</section>
+<section id="the-standard-pipeline-in-code-read-dont-run" class="slide level2 smaller">
+<h2>The standard pipeline in code (read, don’t run)</h2>
+<p>Seurat-style pseudocode for the whole QC + preprocessing pass:</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(Seurat)</span>
+<span id="cb1-2"><a aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a aria-hidden="true" tabindex="-1"></a><span class="co"># 1. Load the raw counts (cells x genes) into an object</span></span>
+<span id="cb1-4"><a aria-hidden="true" tabindex="-1"></a>counts <span class="ot">&lt;-</span> <span class="fu">Read10X</span>(<span class="st">"filtered_feature_bc_matrix/"</span>)</span>
+<span id="cb1-5"><a aria-hidden="true" tabindex="-1"></a>obj    <span class="ot">&lt;-</span> <span class="fu">CreateSeuratObject</span>(counts, <span class="at">min.cells =</span> <span class="dv">3</span>, <span class="at">min.features =</span> <span class="dv">200</span>)</span>
+<span id="cb1-6"><a aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-7"><a aria-hidden="true" tabindex="-1"></a><span class="co"># 2. Per-cell QC metrics</span></span>
+<span id="cb1-8"><a aria-hidden="true" tabindex="-1"></a>obj[[<span class="st">"percent.mt"</span>]] <span class="ot">&lt;-</span> <span class="fu">PercentageFeatureSet</span>(obj, <span class="at">pattern =</span> <span class="st">"^MT-"</span>)</span>
+<span id="cb1-9"><a aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-10"><a aria-hidden="true" tabindex="-1"></a><span class="co"># 3. Filter low-quality cells (thresholds are dataset-dependent!)</span></span>
+<span id="cb1-11"><a aria-hidden="true" tabindex="-1"></a>obj <span class="ot">&lt;-</span> <span class="fu">subset</span>(obj,</span>
+<span id="cb1-12"><a aria-hidden="true" tabindex="-1"></a>              <span class="at">subset =</span> nFeature_RNA <span class="sc">&gt;</span> <span class="dv">200</span> <span class="sc">&amp;</span></span>
+<span id="cb1-13"><a aria-hidden="true" tabindex="-1"></a>                       nFeature_RNA <span class="sc">&lt;</span> <span class="dv">6000</span> <span class="sc">&amp;</span></span>
+<span id="cb1-14"><a aria-hidden="true" tabindex="-1"></a>                       percent.mt   <span class="sc">&lt;</span> <span class="dv">15</span>)</span>
+<span id="cb1-15"><a aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-16"><a aria-hidden="true" tabindex="-1"></a><span class="co"># 4. Normalize + log, then select highly variable genes</span></span>
+<span id="cb1-17"><a aria-hidden="true" tabindex="-1"></a>obj <span class="ot">&lt;-</span> <span class="fu">NormalizeData</span>(obj)                       <span class="co"># library-size + log1p</span></span>
+<span id="cb1-18"><a aria-hidden="true" tabindex="-1"></a>obj <span class="ot">&lt;-</span> <span class="fu">FindVariableFeatures</span>(obj, <span class="at">nfeatures =</span> <span class="dv">2000</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>Doublet detection (e.g.&nbsp;<code>scDblFinder</code>) is a separate step, usually run before or alongside filtering.</p>
+<aside class="notes">
+<p>Walk the pipeline top to bottom so the concepts map to real function names they will meet. Read10X loads the sparse matrix; CreateSeuratObject already does light gene/cell filtering (min.cells, min.features). PercentageFeatureSet computes pct.mt via the MT- pattern. subset() applies the QC thresholds — stress again these numbers are illustrative and must be chosen from the data. NormalizeData is the library-size + log1p we derived; FindVariableFeatures is HVG selection. Emphasise this is STATIC code to read — nothing is executed at render time and no packages are installed. The doublet step is separate. Next unit picks up the obj and runs PCA/UMAP/clustering.</p>
+<style type="text/css">
+        span.MJX_Assistive_MathML {
+          position:absolute!important;
+          clip: rect(1px, 1px, 1px, 1px);
+          padding: 1px 0 0 0!important;
+          border: 0!important;
+          height: 1px!important;
+          width: 1px!important;
+          overflow: hidden!important;
+          display:block!important;
+      }</style></aside>
+</section>
+<section id="what-we-deliberately-deferred" class="slide level2 smaller">
+<h2>What we deliberately deferred</h2>
+<p>Today stopped at a <strong>clean, normalized, HVG-selected matrix</strong>. Not covered yet:</p>
+<ul>
+<li><strong>PCA / UMAP</strong> — reducing the ~2,000-gene matrix to a few dimensions you can plot and cluster. <em>(Single-cell RNA-seq: dimensionality reduction.)</em></li>
+<li><strong>Clustering &amp; cell-type annotation</strong> — grouping cells and naming the types.</li>
+<li><strong>Count-aware models</strong> — Poisson / negative-binomial treatments of the counts, connecting to the <strong>overdispersion</strong> ideas from the distributions block.</li>
+<li><strong>Ambient-RNA correction</strong> and advanced normalization (Pearson residuals / SCTransform).</li>
+</ul>
+<p>The eigenvalue/eigenvector and PCA machinery you built earlier is exactly what the <strong>next</strong> unit applies to this cleaned matrix.</p>
+<aside class="notes">
+<p>Be explicit about the stepping stones, per the course’s “honest about what we defer” principle. The cleaned matrix is the deliverable; everything glamorous (dimensionality reduction, clustering, annotation) comes next and reuses the eigen/PCA foundation from the linear algebra block. Flag that the simple normalize+log baseline will be contrasted with count-aware models, tying back to Poisson/negative-binomial and overdispersion from the probability block. This slide is the map: students should see today as the data-cleaning foundation the rest of single-cell analysis stands on.</p>
+<style type="text/css">
+        span.MJX_Assistive_MathML {
+          position:absolute!important;
+          clip: rect(1px, 1px, 1px, 1px);
+          padding: 1px 0 0 0!important;
+          border: 0!important;
+          height: 1px!important;
+          width: 1px!important;
+          overflow: hidden!important;
+          display:block!important;
+      }</style></aside>
+</section>
+<section id="summary" class="slide level2 smaller">
+<h2>Summary</h2>
+<table class="caption-top">
+<colgroup>
+<col style="width: 50%">
+<col style="width: 50%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Concept</th>
+<th>Key fact</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Data object</td>
+<td>sparse <strong>cells × genes</strong> integer <strong>count</strong> matrix</td>
+</tr>
+<tr class="even">
+<td>Sparsity</td>
+<td>~90%+ zeros; zeros can be real <strong>or</strong> technical dropout</td>
+</tr>
+<tr class="odd">
+<td>Droplet workflow</td>
+<td>cell + barcoded bead in oil; <strong>barcode</strong> = which cell, <strong>UMI</strong> = which molecule</td>
+</tr>
+<tr class="even">
+<td>Empty droplets</td>
+<td>low counts = ambient background; seen as a <strong>knee</strong> in the barcode-rank plot</td>
+</tr>
+<tr class="odd">
+<td>Doublets</td>
+<td>two cells, one barcode → blended profile; fake “hybrid” cell types</td>
+</tr>
+<tr class="even">
+<td>QC metrics</td>
+<td>total counts, genes detected, <strong>% mitochondrial</strong></td>
+</tr>
+<tr class="odd">
+<td>Normalization</td>
+<td>library-size scale, then <span class="math inline">\(\log(1+x)\)</span></td>
+</tr>
+<tr class="even">
+<td>Feature selection</td>
+<td>keep ~2,000 <strong>highly variable genes</strong> (variance above the mean trend)</td>
+</tr>
+<tr class="odd">
+<td>Biology payoff</td>
+<td>resolve <strong>cell-type heterogeneity</strong> a bulk average hides</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Next (Single-cell RNA-seq: dimensionality reduction):</strong> run PCA and UMAP on this cleaned matrix.</p>
+<aside class="notes">
+<p>The summary is the revision sheet. Drill the pipeline as a story: counts come off the machine sparse and noisy → filter empties, doublets, and dying (high-mito) cells → normalize by library size and log → keep the highly variable genes → hand the clean matrix to PCA. Reconnect each technical step to its biological motivation (heterogeneity is the reason we do any of this). Preview the next unit: the eigen/PCA tools from the linear algebra block get applied to exactly this matrix to make the cell-type structure visible.</p>
+<style type="text/css">
+        span.MJX_Assistive_MathML {
+          position:absolute!important;
+          clip: rect(1px, 1px, 1px, 1px);
+          padding: 1px 0 0 0!important;
+          border: 0!important;
+          height: 1px!important;
+          width: 1px!important;
+          overflow: hidden!important;
+          display:block!important;
+      }</style></aside>
+
+
+</section>
+    </div>
+  <div class="quarto-auto-generated-content" style="display: none;">
+<div class="footer footer-default">
+
+</div>
+</div></div>
+
+  <script>window.backupDefine = window.define; window.define = undefined;</script>
+  <script src="../site_libs/revealjs/dist/reveal.js"></script>
+  <!-- reveal.js plugins -->
+  <script src="../site_libs/revealjs/plugin/quarto-line-highlight/line-highlight.js"></script>
+  <script src="../site_libs/revealjs/plugin/pdf-export/pdfexport.js"></script>
+  <script src="../site_libs/revealjs/plugin/reveal-menu/menu.js"></script>
+  <script src="../site_libs/revealjs/plugin/reveal-menu/quarto-menu.js"></script>
+  <script src="../site_libs/revealjs/plugin/quarto-support/support.js"></script>
+  
+
+  <script src="../site_libs/revealjs/plugin/notes/notes.js"></script>
+  <script src="../site_libs/revealjs/plugin/search/search.js"></script>
+  <script src="../site_libs/revealjs/plugin/zoom/zoom.js"></script>
+  <script src="../site_libs/revealjs/plugin/math/math.js"></script>
+  <script>window.define = window.backupDefine; window.backupDefine = undefined;</script>
+
+  <script>
+
+      // Full list of configuration options available at:
+      // https://revealjs.com/config/
+      Reveal.initialize({
+'controlsAuto': true,
+'previewLinksAuto': false,
+'pdfSeparateFragments': false,
+'autoAnimateEasing': "ease",
+'autoAnimateDuration': 1,
+'autoAnimateUnmatched': true,
+'jumpToSlide': true,
+'menu': {"side":"left","useTextContentForMissingTitles":true,"markers":false,"loadIcons":false,"custom":[{"title":"Tools","icon":"<i class=\"fas fa-gear\"></i>","content":"<ul class=\"slide-menu-items\">\n<li class=\"slide-tool-item active\" data-item=\"0\"><a href=\"#\" onclick=\"RevealMenuToolHandlers.fullscreen(event)\"><kbd>f</kbd> Fullscreen</a></li>\n<li class=\"slide-tool-item\" data-item=\"1\"><a href=\"#\" onclick=\"RevealMenuToolHandlers.speakerMode(event)\"><kbd>s</kbd> Speaker View</a></li>\n<li class=\"slide-tool-item\" data-item=\"2\"><a href=\"#\" onclick=\"RevealMenuToolHandlers.overview(event)\"><kbd>o</kbd> Slide Overview</a></li>\n<li class=\"slide-tool-item\" data-item=\"3\"><a href=\"#\" onclick=\"RevealMenuToolHandlers.togglePdfExport(event)\"><kbd>e</kbd> PDF Export Mode</a></li>\n<li class=\"slide-tool-item\" data-item=\"4\"><a href=\"#\" onclick=\"RevealMenuToolHandlers.toggleScrollView(event)\"><kbd>r</kbd> Scroll View Mode</a></li>\n<li class=\"slide-tool-item\" data-item=\"5\"><a href=\"#\" onclick=\"RevealMenuToolHandlers.keyboardHelp(event)\"><kbd>?</kbd> Keyboard Help</a></li>\n</ul>"}],"openButton":true},
+'smaller': false,
+ 
+        // Display controls in the bottom right corner
+        controls: false,
+
+        // Help the user learn the controls by providing hints, for example by
+        // bouncing the down arrow when they first encounter a vertical slide
+        controlsTutorial: false,
+
+        // Determines where controls appear, "edges" or "bottom-right"
+        controlsLayout: 'edges',
+
+        // Visibility rule for backwards navigation arrows; "faded", "hidden"
+        // or "visible"
+        controlsBackArrows: 'faded',
+
+        // Display a presentation progress bar
+        progress: true,
+
+        // Display the page number of the current slide
+        slideNumber: 'c/t',
+
+        // 'all', 'print', or 'speaker'
+        showSlideNumber: 'all',
+
+        // Add the current slide number to the URL hash so that reloading the
+        // page/copying the URL will return you to the same slide
+        hash: true,
+
+        // Start with 1 for the hash rather than 0
+        hashOneBasedIndex: false,
+
+        // Flags if we should monitor the hash and change slides accordingly
+        respondToHashChanges: true,
+
+        // Push each slide change to the browser history
+        history: true,
+
+        // Enable keyboard shortcuts for navigation
+        keyboard: true,
+
+        // Enable the slide overview mode
+        overview: true,
+
+        // Disables the default reveal.js slide layout (scaling and centering)
+        // so that you can use custom CSS layout
+        disableLayout: false,
+
+        // Vertical centering of slides
+        center: false,
+
+        // Enables touch navigation on devices with touch input
+        touch: true,
+
+        // Loop the presentation
+        loop: false,
+
+        // Change the presentation direction to be RTL
+        rtl: false,
+
+        // see https://revealjs.com/vertical-slides/#navigation-mode
+        navigationMode: 'linear',
+
+        // Randomizes the order of slides each time the presentation loads
+        shuffle: false,
+
+        // Turns fragments on and off globally
+        fragments: true,
+
+        // Flags whether to include the current fragment in the URL,
+        // so that reloading brings you to the same fragment position
+        fragmentInURL: false,
+
+        // Flags if the presentation is running in an embedded mode,
+        // i.e. contained within a limited portion of the screen
+        embedded: false,
+
+        // Flags if we should show a help overlay when the questionmark
+        // key is pressed
+        help: true,
+
+        // Flags if it should be possible to pause the presentation (blackout)
+        pause: true,
+
+        // Flags if speaker notes should be visible to all viewers
+        showNotes: false,
+
+        // Global override for autoplaying embedded media (null/true/false)
+        autoPlayMedia: null,
+
+        // Global override for preloading lazy-loaded iframes (null/true/false)
+        preloadIframes: null,
+
+        // Number of milliseconds between automatically proceeding to the
+        // next slide, disabled when set to 0, this value can be overwritten
+        // by using a data-autoslide attribute on your slides
+        autoSlide: 0,
+
+        // Stop auto-sliding after user input
+        autoSlideStoppable: true,
+
+        // Use this method for navigation when auto-sliding
+        autoSlideMethod: null,
+
+        // Specify the average time in seconds that you think you will spend
+        // presenting each slide. This is used to show a pacing timer in the
+        // speaker view
+        defaultTiming: null,
+
+        // Enable slide navigation via mouse wheel
+        mouseWheel: false,
+
+        // The display mode that will be used to show slides
+        display: 'block',
+
+        // Hide cursor if inactive
+        hideInactiveCursor: true,
+
+        // Time before the cursor is hidden (in ms)
+        hideCursorTime: 5000,
+
+        // Opens links in an iframe preview overlay
+        previewLinks: false,
+
+        // Transition style (none/fade/slide/convex/concave/zoom)
+        transition: 'slide',
+
+        // Transition speed (default/fast/slow)
+        transitionSpeed: 'fast',
+
+        // Transition style for full page slide backgrounds
+        // (none/fade/slide/convex/concave/zoom)
+        backgroundTransition: 'none',
+
+        // Number of slides away from the current that are visible
+        viewDistance: 3,
+
+        // Number of slides away from the current that are visible on mobile
+        // devices. It is advisable to set this to a lower number than
+        // viewDistance in order to save resources.
+        mobileViewDistance: 2,
+
+        // The "normal" size of the presentation, aspect ratio will be preserved
+        // when the presentation is scaled to fit different resolutions. Can be
+        // specified using percentage units.
+        width: 1280,
+
+        height: 720,
+
+        // Factor of the display size that should remain empty around the content
+        margin: 0.1,
+
+        math: {
+          mathjax: 'https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.9/MathJax.js',
+          config: 'TeX-AMS_HTML-full',
+          tex2jax: {
+            inlineMath: [['\\(','\\)']],
+            displayMath: [['\\[','\\]']],
+            balanceBraces: true,
+            processEscapes: false,
+            processRefs: true,
+            processEnvironments: true,
+            preview: 'TeX',
+            skipTags: ['script','noscript','style','textarea','pre','code'],
+            ignoreClass: 'tex2jax_ignore',
+            processClass: 'tex2jax_process'
+          },
+        },
+
+        // reveal.js plugins
+        plugins: [QuartoLineHighlight, PdfExport, RevealMenu, QuartoSupport,
+
+          RevealMath,
+          RevealNotes,
+          RevealSearch,
+          RevealZoom
+        ]
+      });
+    </script>
+    <script id="quarto-html-after-body" type="application/javascript">
+      window.document.addEventListener("DOMContentLoaded", function (event) {
+        const tabsets =  window.document.querySelectorAll(".panel-tabset-tabby")
+        tabsets.forEach(function(tabset) {
+          const tabby = new Tabby('#' + tabset.id);
+        });
+        const isCodeAnnotation = (el) => {
+          for (const clz of el.classList) {
+            if (clz.startsWith('code-annotation-')) {                     
+              return true;
+            }
+          }
+          return false;
+        }
+        const onCopySuccess = function(e) {
+          // button target
+          const button = e.trigger;
+          // don't keep focus
+          button.blur();
+          // flash "checked"
+          button.classList.add('code-copy-button-checked');
+          var currentTitle = button.getAttribute("title");
+          button.setAttribute("title", "Copied!");
+          let tooltip;
+          if (window.bootstrap) {
+            button.setAttribute("data-bs-toggle", "tooltip");
+            button.setAttribute("data-bs-placement", "left");
+            button.setAttribute("data-bs-title", "Copied!");
+            tooltip = new bootstrap.Tooltip(button, 
+              { trigger: "manual", 
+                customClass: "code-copy-button-tooltip",
+                offset: [0, -8]});
+            tooltip.show();    
+          }
+          setTimeout(function() {
+            if (tooltip) {
+              tooltip.hide();
+              button.removeAttribute("data-bs-title");
+              button.removeAttribute("data-bs-toggle");
+              button.removeAttribute("data-bs-placement");
+            }
+            button.setAttribute("title", currentTitle);
+            button.classList.remove('code-copy-button-checked');
+          }, 1000);
+          // clear code selection
+          e.clearSelection();
+        }
+        const getTextToCopy = function(trigger) {
+            const codeEl = trigger.previousElementSibling.cloneNode(true);
+            for (const childEl of codeEl.children) {
+              if (isCodeAnnotation(childEl)) {
+                childEl.remove();
+              }
+            }
+            return codeEl.innerText;
+        }
+        const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+          text: getTextToCopy
+        });
+        clipboard.on('success', onCopySuccess);
+        if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+          const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+            text: getTextToCopy,
+            container: window.document.getElementById('quarto-embedded-source-code-modal')
+          });
+          clipboardModal.on('success', onCopySuccess);
+        }
+          var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+          var mailtoRegex = new RegExp(/^mailto:/);
+            var filterRegex = new RegExp('/' + window.location.host + '/');
+          var isInternal = (href) => {
+              return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+          }
+          // Inspect non-navigation links and adorn them if external
+         var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+          for (var i=0; i<links.length; i++) {
+            const link = links[i];
+            if (!isInternal(link.href)) {
+              // undo the damage that might have been done by quarto-nav.js in the case of
+              // links that we want to consider external
+              if (link.dataset.originalHref !== undefined) {
+                link.href = link.dataset.originalHref;
+              }
+            }
+          }
+        function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+          const config = {
+            allowHTML: true,
+            maxWidth: 500,
+            delay: 100,
+            arrow: false,
+            appendTo: function(el) {
+                return el.closest('section.slide') || el.parentElement;
+            },
+            interactive: true,
+            interactiveBorder: 10,
+            theme: 'light-border',
+            placement: 'bottom-start',
+          };
+          if (contentFn) {
+            config.content = contentFn;
+          }
+          if (onTriggerFn) {
+            config.onTrigger = onTriggerFn;
+          }
+          if (onUntriggerFn) {
+            config.onUntrigger = onUntriggerFn;
+          }
+            config['offset'] = [0,0];
+            config['maxWidth'] = 700;
+          window.tippy(el, config); 
+        }
+        const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+        for (var i=0; i<noterefs.length; i++) {
+          const ref = noterefs[i];
+          tippyHover(ref, function() {
+            // use id or data attribute instead here
+            let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+            try { href = new URL(href).hash; } catch {}
+            const id = href.replace(/^#\/?/, "");
+            const note = window.document.getElementById(id);
+            if (note) {
+              return note.innerHTML;
+            } else {
+              return "";
+            }
+          });
+        }
+        const findCites = (el) => {
+          const parentEl = el.parentElement;
+          if (parentEl) {
+            const cites = parentEl.dataset.cites;
+            if (cites) {
+              return {
+                el,
+                cites: cites.split(' ')
+              };
+            } else {
+              return findCites(el.parentElement)
+            }
+          } else {
+            return undefined;
+          }
+        };
+        var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+        for (var i=0; i<bibliorefs.length; i++) {
+          const ref = bibliorefs[i];
+          const citeInfo = findCites(ref);
+          if (citeInfo) {
+            tippyHover(citeInfo.el, function() {
+              var popup = window.document.createElement('div');
+              citeInfo.cites.forEach(function(cite) {
+                var citeDiv = window.document.createElement('div');
+                citeDiv.classList.add('hanging-indent');
+                citeDiv.classList.add('csl-entry');
+                var biblioDiv = window.document.getElementById('ref-' + cite);
+                if (biblioDiv) {
+                  citeDiv.innerHTML = biblioDiv.innerHTML;
+                }
+                popup.appendChild(citeDiv);
+              });
+              return popup.innerHTML;
+            });
+          }
+        }
+      });
+      </script>
+    
+
+</body></html>

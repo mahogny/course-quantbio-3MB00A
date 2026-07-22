@@ -1,0 +1,262 @@
+---
+title: "Exercise: fitting equations the Bayesian way (regression)"
+format:
+  html:
+    toc: true
+    code-copy: true
+    code-overflow: wrap
+    highlight-style: github
+---
+
+## Goal
+
+By the end of this exercise you should be able to:
+
+- write the regression model $y = a + b\,x + \varepsilon$ and name what the intercept, slope, and noise scale mean **biologically**,
+- get the **least-squares** line for a tiny dataset by hand, and recognise it as the same fit `lm()` produces (linear algebra block),
+- compute a **toy posterior** over a slope by hand: prior $\times$ likelihood on a small grid, then normalise,
+- read a coefficient as a **distribution** — a credible interval and a probability such as $P(b>0)$ — by summarising posterior draws,
+- distinguish the **credible interval for the mean line** from the wider **prediction interval** for a new individual,
+- fit the same model in R with `brms` and check that the sampling converged.
+
+This block is **provisional** (it may move to a later statistics / ML course). The examinable core remains the by-hand least-squares fit; the Bayesian layer here is enrichment. Do the **by-hand** parts first — the R section only confirms them.
+
+## Background
+
+The model is the ordinary regression line with Gaussian scatter:
+
+$$y_i = a + b\,x_i + \varepsilon_i, \qquad \varepsilon_i \sim \mathcal{N}(0, \sigma^2).$$
+
+**Least squares** (from the linear algebra block) picks the single $a,b$ minimising the sum of squared residuals $\sum_i (y_i - a - b x_i)^2$; via the normal equations $\hat{\boldsymbol\beta} = (X^\top X)^{-1}X^\top\mathbf y$.
+
+**Bayesian** regression instead reports a **distribution** for each parameter. By Bayes' theorem (prior / likelihood / posterior unit),
+
+$$\underbrace{p(a,b,\sigma \mid \text{data})}_{\text{posterior}} \ \propto\ \underbrace{p(\text{data}\mid a,b,\sigma)}_{\text{likelihood}}\ \times\ \underbrace{p(a)\,p(b)\,p(\sigma)}_{\text{prior}}.$$
+
+Two facts we use repeatedly:
+
+- The **Gaussian likelihood** of one point is $p(y_i\mid a,b,\sigma) = \frac{1}{\sqrt{2\pi}\,\sigma}\exp\!\big(-\tfrac{(y_i - a - b x_i)^2}{2\sigma^2}\big)$. For a fixed $\sigma$, the likelihood is largest when the **squared residual is smallest** — so maximising the likelihood *is* least squares.
+- To turn unnormalised numbers (prior $\times$ likelihood) into a **posterior**, divide each by their total so they sum to 1. Any constant common to all candidates (like $\tfrac{1}{\sqrt{2\pi}\sigma}$) cancels in this division.
+
+Everything Bayesian below is computed by **summarising draws**: a probability is a fraction of draws, a credible interval is a pair of quantiles of the draws.
+
+## By hand
+
+**B1. Least squares on three points.** A tiny experiment measures a response $y$ at three doses $x$:
+
+| $x$ | 0 | 1 | 2 |
+|---|---|---|---|
+| $y$ | 1 | 2 | 2 |
+
+Fit $y = a + b x$ by least squares. (Hint: with $\bar x, \bar y$ the means, $\hat b = \dfrac{\sum (x_i-\bar x)(y_i-\bar y)}{\sum(x_i-\bar x)^2}$ and $\hat a = \bar y - \hat b\,\bar x$.) Report $\hat a$ and $\hat b$.
+
+**B2. Residuals and which line the data prefer.** For the same data, compare two candidate lines: line P is $y = 1 + 0.5x$; line Q is $y = 1 + x$. For each, write the three residuals $y_i - a - b x_i$ and compute the sum of squared residuals (SSR). Which line has the **higher likelihood**, and why does "smaller SSR" mean "more likely"?
+
+**B3. A toy posterior over the slope (uniform prior).** Simplify to a **through-the-origin** model $y_i = b\,x_i + \varepsilon_i$ with known $\sigma = 1$, and only two data points $(x_1,y_1) = (1,1)$ and $(x_2,y_2) = (2,2)$. Consider just three candidate slopes $b \in \{0, 1, 2\}$, each with **prior probability** $\tfrac13$.
+
+(a) For each candidate $b$, compute the SSR $= \sum_i (y_i - b x_i)^2$.
+(b) The (unnormalised) likelihood is $\propto \exp(-\tfrac12\,\text{SSR})$ since $\sigma=1$. Compute it for each $b$ (use $\exp(-2.5)\approx 0.082$).
+(c) Multiply by the prior $\tfrac13$, then **normalise** so the three posterior probabilities sum to 1.
+(d) What is the posterior probability that the slope is **positive**, $P(b>0)$?
+
+**B4. The prior matters (but the data speak).** Repeat B3 with a **sceptical** prior that favours a flat line: $P(b{=}0)=0.5$, $P(b{=}1)=0.3$, $P(b{=}2)=0.2$. Recompute the normalised posterior. Did the sceptical prior change the *conclusion* (which slope is most probable)? By how much did $P(b{=}1)$ move?
+
+**B5. Reading a coefficient from draws.** An MCMC fit returns these 10 posterior draws of a slope $b$ (already sorted, units = change per year):
+
+$$-0.002,\ 0.004,\ 0.006,\ 0.009,\ 0.011,\ 0.014,\ 0.016,\ 0.019,\ 0.023,\ 0.028$$
+
+(a) Estimate $P(b > 0)$ from the draws.
+(b) Give an approximate **80% credible interval** by trimming the lowest and highest 10% (i.e. drop one draw at each end).
+(c) In one sentence, state what the interval means, and contrast it with how a frequentist confidence interval is interpreted.
+
+**B6. Two kinds of prediction band.** For a new donor at a given age, you can report (i) a credible interval for the **mean** expression at that age, or (ii) a prediction interval for **one new donor's** expression. Which is wider, and which extra source of uncertainty does it include? Which would you quote when asked "what expression should I expect if I measure one new 70-year-old?"
+
+## In R
+
+Use R to **confirm** the by-hand answers, then fit the full model.
+
+### Least squares (B1), the familiar way
+
+```r
+dat <- data.frame(x = c(0, 1, 2),
+                  y = c(1, 2, 2))
+fit_ls <- lm(y ~ x, data = dat)
+coef(fit_ls)        # (Intercept) and slope -> compare with your B1
+```
+
+### The toy posterior (B3/B4) as a grid
+
+```r
+x <- c(1, 2); y <- c(1, 2)          # through-origin data
+b_grid <- c(0, 1, 2)                # candidate slopes
+
+ssr  <- sapply(b_grid, function(b) sum((y - b * x)^2))
+lik  <- exp(-0.5 * ssr)             # sigma = 1, constants cancel
+
+prior_flat <- c(1, 1, 1) / 3
+post_flat  <- prior_flat * lik
+post_flat  <- post_flat / sum(post_flat)   # normalise
+round(post_flat, 3)                 # posterior for b = 0, 1, 2
+
+prior_skept <- c(0.5, 0.3, 0.2)     # B4: sceptical prior
+post_skept  <- prior_skept * lik
+post_skept  <- post_skept / sum(post_skept)
+round(post_skept, 3)
+
+sum(post_flat[b_grid > 0])          # P(b > 0) under the flat prior
+```
+
+### Summarising draws (B5)
+
+```r
+b_draws <- c(-0.002, 0.004, 0.006, 0.009, 0.011,
+              0.014, 0.016, 0.019, 0.023, 0.028)
+
+mean(b_draws > 0)                          # P(b > 0)
+quantile(b_draws, c(0.10, 0.90))           # ~80% credible interval
+```
+
+### The full Bayesian fit with brms
+
+```r
+library(brms)
+
+fit <- brm(
+  expr ~ age,                       # same formula as lm()
+  data   = donors,
+  family = gaussian(),
+  prior  = c(
+    prior(normal(0, 5),   class = "Intercept"),
+    prior(normal(0, 0.1), class = "b"),         # slope
+    prior(exponential(1), class = "sigma")      # noise scale
+  ),
+  chains = 4, iter = 2000, seed = 1
+)
+
+summary(fit)                        # check Rhat ~ 1 and ESS before reading estimates
+plot(fit)                           # trace plots: overlapping "fuzzy caterpillars"
+```
+
+### Reading coefficients and predicting
+
+```r
+posterior_summary(fit)              # mean + 95% credible interval per parameter
+
+draws <- as_draws_df(fit)
+mean(draws$b_age > 0)               # P(slope > 0 | data)
+
+newdata <- data.frame(age = 70)
+fitted (fit, newdata = newdata)     # credible interval for the MEAN line
+predict(fit, newdata = newdata)     # wider PREDICTION interval for one new donor
+
+conditional_effects(fit)            # fitted line + uncertainty band across ages
+```
+
+### Tasks
+
+**R1.** Run the least-squares block and confirm `coef(fit_ls)` matches your **B1** $\hat a, \hat b$.
+
+**R2.** Run the grid block and check `post_flat` against your **B3** posterior and `post_skept` against your **B4** posterior. Confirm `sum(post_flat[b_grid > 0])` equals your hand value of $P(b>0)$.
+
+**R3.** Run the draws block and confirm `mean(b_draws > 0)` and the `quantile(...)` interval match your **B5** answers (the quantile interval will be close to, but not exactly, your trim-by-hand interval — `quantile` interpolates).
+
+**R4.** In the `brms` block, identify *where* each of the three priors from the lecture appears, and state which line you would check **first** to decide whether the estimates are trustworthy.
+
+## Hints
+
+::: {.callout-tip collapse="true" title="Hint 1 — least-squares formulas (B1)"}
+Compute the means first: $\bar x = (0+1+2)/3 = 1$, $\bar y = (1+2+2)/3 = 5/3$. Then $\hat b = \dfrac{\sum (x_i-\bar x)(y_i-\bar y)}{\sum(x_i-\bar x)^2}$ and $\hat a = \bar y - \hat b\bar x$. In R this is [`lm`](https://rdrr.io/r/stats/lm.html)`(y ~ x)`.
+:::
+
+::: {.callout-tip collapse="true" title="Hint 2 — residuals and likelihood (B2)"}
+A residual is (observed $-$ predicted): $r_i = y_i - (a + b x_i)$. The SSR is $\sum_i r_i^2$. Under Gaussian noise the likelihood is $\propto \exp(-\text{SSR}/2\sigma^2)$, which is a **decreasing** function of SSR — so the smaller the SSR, the larger the likelihood. Least squares and maximum likelihood pick the same line.
+:::
+
+::: {.callout-tip collapse="true" title="Hint 3 — the grid posterior recipe (B3)"}
+For each candidate $b$: (1) SSR $=\sum_i (y_i - b x_i)^2$; (2) likelihood $\propto \exp(-\tfrac12\text{SSR})$ because $\sigma=1$; (3) multiply by the prior; (4) divide every number by the total of the three so they sum to 1. The $\tfrac{1}{\sqrt{2\pi}\sigma}$ constant is the same for all three candidates and cancels at step 4.
+:::
+
+::: {.callout-tip collapse="true" title="Hint 4 — arithmetic for B3"}
+$b=0$: predictions $0,0$, residuals $1,2$, SSR $=1+4=5$. $b=1$: predictions $1,2$, residuals $0,0$, SSR $=0$. $b=2$: predictions $2,4$, residuals $-1,-2$, SSR $=1+4=5$. So the likelihoods are $\exp(-2.5),\ \exp(0)=1,\ \exp(-2.5)$ with $\exp(-2.5)\approx0.082$.
+:::
+
+::: {.callout-tip collapse="true" title="Hint 5 — did the prior flip the answer? (B4)"}
+Re-use the same three likelihoods $0.082,\ 1,\ 0.082$; only the prior weights change. Multiply, sum, divide. Compare which $b$ has the largest posterior before and after. A weakly-informative prior nudges the numbers but rarely overturns a clear likelihood.
+:::
+
+::: {.callout-tip collapse="true" title="Hint 6 — probabilities and intervals from draws (B5)"}
+$P(b>0)$ is just (count of positive draws) / (total draws) — see [`mean`](https://rdrr.io/r/base/mean.html) applied to a logical. For an 80% interval from 10 sorted draws, trimming 10% at each end drops the 1st and 10th values, leaving the 2nd and 9th as the interval endpoints. In R, [`quantile`](https://rdrr.io/r/stats/quantile.html)`(b_draws, c(0.1, 0.9))` does the interpolated version.
+:::
+
+::: {.callout-tip collapse="true" title="Hint 7 — which band is wider? (B6)"}
+The mean-line band uses only uncertainty in $a$ and $b$. A single new donor also scatters around the line by $\sigma$, so its prediction band adds that noise on top and is **always wider**. For "one new 70-year-old" you want the wider band ([`predict`](https://rdrr.io/r/stats/predict.html)-style / posterior-predictive), not the mean band.
+:::
+
+## Solutions
+
+::: {.callout-note collapse="true" title="Solution"}
+
+**B1.** Means: $\bar x = 1$, $\bar y = 5/3 \approx 1.667$.
+Deviations $x_i-\bar x$: $-1, 0, 1$. Deviations $y_i-\bar y$: $-2/3, 1/3, 1/3$.
+Numerator $\sum(x_i-\bar x)(y_i-\bar y) = (-1)(-2/3) + 0(1/3) + (1)(1/3) = 2/3 + 1/3 = 1$.
+Denominator $\sum(x_i-\bar x)^2 = 1 + 0 + 1 = 2$.
+So $\hat b = 1/2 = 0.5$, and $\hat a = \bar y - \hat b \bar x = 5/3 - 0.5\cdot1 = 5/3 - 1/2 = 7/6 \approx 1.167$.
+The least-squares line is $\hat y = 1.167 + 0.5\,x$. `lm(y ~ x)` returns the same.
+
+**B2.** Predictions and residuals (data $y = 1,2,2$ at $x=0,1,2$):
+
+- Line P, $y = 1 + 0.5x$: predictions $1, 1.5, 2$; residuals $0, 0.5, 0$; SSR $= 0 + 0.25 + 0 = 0.25$.
+- Line Q, $y = 1 + x$: predictions $1, 2, 3$; residuals $0, 0, -1$; SSR $= 0 + 0 + 1 = 1$.
+
+Line P has the smaller SSR (0.25 vs 1), so line P has the **higher likelihood**. Because the Gaussian likelihood is $\propto \exp(-\text{SSR}/2\sigma^2)$, a smaller SSR gives a larger exponent (closer to 0, less negative) and hence a larger likelihood — maximising likelihood is minimising SSR. (Note line P here is close to, but not exactly, the B1 least-squares line $1.167 + 0.5x$, which is the true SSR minimiser.)
+
+**B3.** Through-origin model, $\sigma=1$, data $(1,1),(2,2)$.
+(a) SSR: $b=0 \to (1-0)^2+(2-0)^2 = 1+4 = 5$; $b=1 \to (1-1)^2+(2-2)^2 = 0$; $b=2 \to (1-2)^2+(2-4)^2 = 1+4 = 5$.
+(b) Likelihoods $\propto \exp(-\tfrac12\text{SSR})$: $b=0 \to \exp(-2.5)\approx 0.082$; $b=1 \to \exp(0)=1$; $b=2 \to \exp(-2.5)\approx 0.082$.
+(c) Times prior $\tfrac13$: $0.0274,\ 0.333,\ 0.0274$. Total $= 0.388$. Normalise:
+$$P(b{=}0) = 0.0274/0.388 \approx 0.070,\quad P(b{=}1) \approx 0.859,\quad P(b{=}2) \approx 0.070.$$
+(d) $P(b>0) = P(b{=}1) + P(b{=}2) \approx 0.859 + 0.070 = 0.930$.
+
+**B4.** Same likelihoods $0.082,\ 1,\ 0.082$, sceptical prior $0.5, 0.3, 0.2$.
+Prior $\times$ likelihood: $0.5(0.082)=0.041$, $0.3(1)=0.300$, $0.2(0.082)=0.0164$. Total $=0.3574$.
+Normalise: $P(b{=}0)\approx 0.115$, $P(b{=}1)\approx 0.839$, $P(b{=}2)\approx 0.046$.
+The **conclusion is unchanged**: $b=1$ is still by far the most probable slope. The sceptical prior only moved $P(b{=}1)$ from $\approx0.859$ down to $\approx0.839$ (about two percentage points) — the data (a perfect fit at $b=1$) dominate the weak prior.
+
+**B5.**
+(a) Nine of the ten draws are positive (only $-0.002$ is negative), so $P(b>0) \approx 9/10 = 0.90$.
+(b) Trimming 10% at each end drops the 1st ($-0.002$) and 10th ($0.028$) draws; the interval runs from the 2nd to the 9th draw: $[0.004,\ 0.023]$ per year. (R's interpolating `quantile(b_draws, c(0.1,0.9))` gives a very close $[0.0044,\ 0.0235]$.)
+(c) The 80% **credible** interval means: given the data and priors, there is an 80% probability the true per-year slope lies in $[0.004, 0.023]$ — a direct probability statement about the parameter. A frequentist **confidence** interval cannot be read that way: its 95% (or 80%) refers to the long-run coverage of the *procedure* across hypothetical repeated experiments, not the probability for this particular interval.
+
+**B6.** The **prediction interval for one new donor** is wider. The mean-line (credible) band reflects only uncertainty in the regression line itself ($a$ and $b$). A single new donor additionally scatters around that line by the noise $\sigma$, so its prediction band adds $\sigma$ on top of the line uncertainty and is always wider. For "what expression should I expect from one new 70-year-old?" you quote the **wider prediction interval** (posterior-predictive / `predict`-style), because it includes donor-to-donor variability, not just uncertainty about the average trend.
+
+**R1–R4.**
+
+```r
+# R1
+dat <- data.frame(x = c(0,1,2), y = c(1,2,2))
+coef(lm(y ~ x, data = dat))     # (Intercept) 1.1667  x 0.5  -> matches B1
+
+# R2
+x <- c(1,2); y <- c(1,2); b_grid <- c(0,1,2)
+lik <- exp(-0.5 * sapply(b_grid, function(b) sum((y - b*x)^2)))
+post_flat  <- (c(1,1,1)/3 * lik);      post_flat  <- post_flat / sum(post_flat)
+post_skept <- (c(0.5,0.3,0.2) * lik);  post_skept <- post_skept / sum(post_skept)
+round(post_flat,  3)            # 0.070 0.859 0.070  -> matches B3
+round(post_skept, 3)            # 0.115 0.839 0.046  -> matches B4
+sum(post_flat[b_grid > 0])      # 0.930                -> matches B3(d)
+
+# R3
+b_draws <- c(-0.002,0.004,0.006,0.009,0.011,0.014,0.016,0.019,0.023,0.028)
+mean(b_draws > 0)               # 0.9
+quantile(b_draws, c(0.1, 0.9))  # ~0.0044 .. 0.0235   -> close to B5(b) [0.004, 0.023]
+```
+
+**R4.** In the `brm()` call, `prior(normal(0,5), class="Intercept")` is the prior on $a$, `prior(normal(0,0.1), class="b")` is the prior on the slope $b$, and `prior(exponential(1), class="sigma")` is the prior on the noise scale $\sigma$. Before reading any estimate, check the `summary(fit)` output **first** — specifically that every `Rhat` is $\approx 1.00$ (and `ESS` is large); if the chains have not converged, the coefficient numbers are not trustworthy no matter how reasonable they look.
+:::
+
+## Where this leads
+
+- **Count models (distributions block):** swapping `family = gaussian()` for `family = poisson()` or `negbinomial()` turns this same `brms` workflow into a regression for sequencing **count** data — the honest model for overdispersed omics counts, instead of forcing a Gaussian.
+- **Prior / likelihood / posterior:** the grid computation in B3–B4 is Bayes' theorem in miniature; MCMC (used by `brms`) does the same prior $\times$ likelihood combination when the parameter space is too large to grid.
+- **Markov chains:** the "MC" in MCMC is a Markov chain whose stationary distribution is the posterior — the sampler walks parameter space and its long-run visiting frequencies *are* the posterior draws you summarise here.
+- **Least squares (linear algebra block):** with flat priors, the peak of the posterior coincides exactly with the least-squares line — the Bayesian fit is a strict generalisation of the fit you already know.

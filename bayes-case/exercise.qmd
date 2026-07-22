@@ -1,0 +1,184 @@
+---
+title: "Exercise: a worked Bayesian case"
+format:
+  html:
+    toc: true
+    code-copy: true
+    code-overflow: wrap
+    highlight-style: github
+---
+
+## Goal
+
+By the end of this exercise you should be able to:
+
+- read a **generative model** for biological count data and name each piece (error model, covariates, hierarchy, priors),
+- update a **prior into a posterior** by hand on a toy conjugate case (Poisson likelihood, Gamma prior),
+- convert a log-scale coefficient into a biologically meaningful **rate ratio** ($e^{\beta}$) and interpret a **credible interval**,
+- decide from a mean and variance whether a **Poisson** or a **negative binomial** error model is appropriate (overdispersion),
+- express the same model as a `brms` formula and know what a **posterior predictive check** would tell you.
+
+This unit **consolidates** the Bayesian block; it is provisional and not examined by hand in its current form. Still, the small conjugate calculation in **By hand** is exactly the kind of toy-posterior fluency the block is built on, so do it with pen and paper first.
+
+## Background
+
+We reuse the case from the lecture: for sample $i$ we count **activated T cells**, with a per-patient random intercept and an exposure offset.
+
+$$
+\begin{aligned}
+y_i &\sim \text{NegBinomial}(\mu_i,\ \phi), \qquad \operatorname{Var}(y_i)=\mu_i+\tfrac{\mu_i^2}{\phi}\\
+\log \mu_i &= \log(\text{n\_cells}_i) + \alpha + \beta_{\text{drug}}\,x_i + \beta_{\text{age}}\,\widetilde{\text{age}}_i + u_{\text{patient}[i]}\\
+u_p &\sim \text{Normal}(0,\ \sigma_{\text{patient}})
+\end{aligned}
+$$
+
+Two facts you will use repeatedly:
+
+- **Log link ⇒ multiplicative effects.** A coefficient $\beta$ on the log scale means the mean is multiplied by $e^{\beta}$ (a **rate ratio**) when that predictor increases by one unit.
+- **Conjugacy gives a posterior by hand.** For a Poisson likelihood with a **Gamma$(a,b)$** prior on the rate $\lambda$ (shape $a$, rate $b$, so prior mean $a/b$), observing counts $y_1,\dots,y_n$ with total $S=\sum y_i$ gives a **Gamma posterior**:
+$$\lambda \mid \text{data} \sim \text{Gamma}\big(a + S,\ \ b + n\big), \qquad \text{posterior mean } = \frac{a+S}{b+n}.$$
+This is Bayes' theorem (posterior $\propto$ likelihood $\times$ prior) in a case where the algebra closes in one line — the same logic the sampler does numerically for the full model.
+
+## By hand
+
+**B1.** In the model above, match each symbol to its role: $\phi$, the $\log(\text{n\_cells}_i)$ term, $\beta_{\text{drug}}$, $\sigma_{\text{patient}}$. Which one measures **between-patient** (biological replicate) variation, and which absorbs leftover **within-patient** noise?
+
+**B2.** The fitted drug coefficient is $\beta_{\text{drug}} = 0.47$ on the log scale. Convert it to a **rate ratio** and state, in one biological sentence, what the drug does to the activated-T-cell count. (Use $e^{0.47}\approx 1.60$.)
+
+**B3.** The 95% credible interval for $\beta_{\text{drug}}$ is $[0.29,\ 0.65]$. Convert both ends to the rate-ratio scale, and write the correct one-sentence interpretation of the resulting interval. How does that interpretation differ from a frequentist confidence interval?
+
+**B4. (overdispersion).** Across placebo samples the activated-T-cell count has sample mean $\approx 24$ and sample variance $\approx 210$. Would a **Poisson** error model be adequate? Justify using the Poisson mean–variance relationship, and say what the negative-binomial dispersion $\phi$ is there to fix.
+
+**B5. (conjugate posterior — the core by-hand skill).** Forget covariates for a moment: model the placebo counts of a **single** patient as Poisson with rate $\lambda$. You place a **Gamma$(a=2,\ b=0.1)$** prior on $\lambda$ (prior mean $a/b = 20$ cells). You then observe $n=3$ samples from this patient with counts $18,\ 26,\ 22$.
+(a) Write the **posterior** distribution of $\lambda$.
+(b) Compute the **posterior mean**.
+(c) The prior mean was 20 and the data mean is 22. Explain, in one sentence, why the posterior mean lands where it does relative to those two numbers.
+
+**B6. (log-link prediction).** Using $\alpha = -7.31$, $\beta_{\text{drug}} = 0.47$, $\beta_{\text{age}} = -0.012$, ignore the patient term ($u_p = 0$), and take a **drug** sample from a patient of **average age** ($\widetilde{\text{age}} = 0$) assayed over $\text{n\_cells} = 50000$ cells. Compute the expected count $\mu$. (Recall $\log \mu = \log(\text{n\_cells}) + \alpha + \beta_{\text{drug}}\cdot 1 + \beta_{\text{age}}\cdot 0$.)
+
+**B7. (posterior predictive reasoning).** You run a posterior predictive check and find the **observed proportion of zero counts** sits far in the **upper tail** of the simulated datasets (the model predicts fewer zeros than you see). What does this tell you about the model, and what is a reasonable next modelling step? Why is deleting the zero-count samples the *wrong* response?
+
+## In R
+
+The code below is **static** — read it and predict each result; you will run analogous code in a live session. It confirms the by-hand answers.
+
+### Confirm the conjugate update (B5)
+
+```r
+a <- 2; b <- 0.1                 # Gamma(shape, rate) prior, mean a/b = 20
+y <- c(18, 26, 22)               # this patient's placebo counts
+n <- length(y); S <- sum(y)      # n = 3, S = 66
+
+a_post <- a + S                  # 68
+b_post <- b + n                  # 3.1
+a_post / b_post                  # posterior mean = 68 / 3.1 = 21.94...
+
+# a Gamma prior with Poisson data stays Gamma: draw from the posterior to see it
+lambda_draws <- rgamma(1e5, shape = a_post, rate = b_post)
+mean(lambda_draws)               # ~ 21.9, matches a_post / b_post
+quantile(lambda_draws, c(0.025, 0.975))   # a 95% credible interval for lambda
+```
+
+### Rate ratio and credible interval (B2, B3)
+
+```r
+beta_drug <- 0.47
+exp(beta_drug)                   # 1.60  -> drug multiplies the count by ~1.6
+
+ci_log <- c(0.29, 0.65)          # 95% credible interval on the log scale
+exp(ci_log)                      # 1.34  1.92  -> rate-ratio scale
+```
+
+### The full model as a brms formula (do not run at render time)
+
+```r
+library(brms)
+
+fit <- brm(
+  count ~ treatment + age_c + offset(log_exp) + (1 | patient),
+  data   = dat,
+  family = negbinomial(),
+  prior  = c(prior(normal(0, 2),    class = "Intercept"),
+             prior(normal(0, 1),    class = "b"),
+             prior(exponential(1),  class = "sd"),
+             prior(gamma(0.01,0.01),class = "shape")),
+  chains = 4, iter = 2000, cores = 4, seed = 1
+)
+
+summary(fit)                     # check Rhat ~ 1.00 and ESS before reading estimates
+pp_check(fit, ndraws = 100)      # density overlay: observed among simulated
+pp_check(fit, type = "stat",
+         stat = function(y) mean(y == 0))   # the zero-count check from B7
+```
+
+### Tasks
+
+**R1.** Reproduce **B5** in R using the conjugate block above: confirm `a_post`, `b_post`, and the posterior mean, then report a 95% credible interval for $\lambda$ from `quantile(lambda_draws, ...)`.
+
+**R2.** Change the prior in **R1** to `Gamma(a = 20, b = 1)` (same prior mean 20, but far more concentrated). Recompute the posterior mean. Does the posterior move **closer to the prior mean** or **closer to the data mean** than before, and why?
+
+**R3.** Using the rate-ratio block, confirm the drug rate ratio and its 95% interval. Then compute `mean(post$b_treatmentdrug > 0)` conceptually: what quantity is this, and why can a frequentist analysis not report exactly this number?
+
+## Hints
+
+::: {.callout-tip collapse="true" title="Hint 1 — which term is which (B1)"}
+Map each symbol to a lecture building block. The offset $\log(\text{n\_cells}_i)$ turns a count into a rate; $\beta_{\text{drug}}$ is a fixed effect (a fold change on the log scale); $\sigma_{\text{patient}}$ is the standard deviation of the per-patient intercepts $u_p$ — variation **between patients**; $\phi$ (the [negative-binomial](https://mc-stan.org/docs/functions-reference/unbounded_discrete_distributions.html) dispersion) soaks up the extra scatter **within** a patient beyond Poisson counting noise.
+:::
+
+::: {.callout-tip collapse="true" title="Hint 2 — rate ratios from log coefficients (B2, B3)"}
+A log link means effects are multiplicative: increasing a predictor by one unit multiplies the mean by $e^{\beta}$. So exponentiate. For an interval, exponentiate **both endpoints** — the transform is monotonic, so the order is preserved. In R this is [`exp`](https://rdrr.io/r/base/Log.html)`(beta)`.
+:::
+
+::: {.callout-tip collapse="true" title="Hint 3 — credible vs confidence interval (B3)"}
+A **credible** interval is a direct probability statement about the parameter: given the data and model, there is 95% posterior probability that $\beta_{\text{drug}}$ lies in the interval. A **confidence** interval instead describes the long-run coverage of the *procedure* across hypothetical repeated experiments, not the probability that this particular interval contains the value. Say the credible-interval version in plain words.
+:::
+
+::: {.callout-tip collapse="true" title="Hint 4 — is it overdispersed? (B4)"}
+For a [Poisson](https://rdrr.io/r/stats/Poisson.html), the variance **equals** the mean. Compare the sample variance (210) to the sample mean (24): if variance $\gg$ mean, the data are **overdispersed** and Poisson will understate the noise. The negative-binomial variance is $\mu + \mu^2/\phi$; the extra $\mu^2/\phi$ term is exactly what accommodates the excess.
+:::
+
+::: {.callout-tip collapse="true" title="Hint 5 — the conjugate posterior (B5)"}
+With a [Gamma](https://rdrr.io/r/stats/GammaDist.html)$(a,b)$ prior (shape $a$, rate $b$) and Poisson data, the posterior is Gamma$(a + S,\ b + n)$ where $S = \sum y_i$ and $n$ is the number of observations. Here $S = 18+26+22 = 66$ and $n = 3$, so the posterior is Gamma$(2+66,\ 0.1+3)=$ Gamma$(68,\ 3.1)$ with mean $68/3.1$. The posterior mean is a **data-weighted blend** of the prior mean and the sample mean.
+:::
+
+::: {.callout-tip collapse="true" title="Hint 6 — log-link prediction (B6)"}
+Add the terms on the **log** scale, then exponentiate once at the end. $\log \mu = \log(50000) + (-7.31) + 0.47 = 10.820 - 7.31 + 0.47$. Compute that sum, then $\mu = e^{\text{sum}}$ with [`exp`](https://rdrr.io/r/base/Log.html). Sanity check: the answer should be a plausible small count (tens of cells), not thousands.
+:::
+
+::: {.callout-tip collapse="true" title="Hint 7 — reading a failed posterior predictive check (B7)"}
+A posterior predictive check compares a statistic of the real data (here the proportion of zeros) to the same statistic computed on many datasets simulated from the fitted model. If the observed value sits in the extreme tail of the simulated distribution, the model **cannot generate data like yours** in that respect. Too many observed zeros points to **zero-inflation**; a zero-inflated negative binomial (or a missing covariate) is the fix. See [`pp_check`](https://mc-stan.org/bayesplot/reference/pp_check.html).
+:::
+
+## Solutions
+
+::: {.callout-note collapse="true" title="Solution"}
+
+**B1.** $\log(\text{n\_cells}_i)$ is the **offset / exposure** (fixed coefficient 1), converting counts to a per-cell rate. $\beta_{\text{drug}}$ is a **fixed effect**, the log-scale drug effect. $\sigma_{\text{patient}}$ is the **between-patient** standard deviation — the biological-replicate variation among the $u_p$. $\phi$ is the negative-binomial **dispersion**, absorbing leftover **within-patient** (nearer technical) scatter beyond Poisson noise. So: $\sigma_{\text{patient}}$ = between-patient; $\phi$ = within-patient.
+
+**B2.** Rate ratio $= e^{0.47} \approx 1.60$. Biological reading: *on the drug, the expected number of activated T cells is about 1.6 times that on placebo* (a 60% increase), holding age, exposure and patient fixed.
+
+**B3.** Exponentiate the endpoints: $e^{0.29} \approx 1.34$ and $e^{0.65} \approx 1.92$, giving a rate-ratio interval $[1.34,\ 1.92]$. Interpretation: *given the data and model, there is 95% posterior probability that the drug's rate ratio lies between 1.34 and 1.92.* A frequentist **confidence** interval cannot be read this way — it describes the long-run coverage of the interval-making procedure over hypothetical repeated experiments, not the probability that this particular interval holds the true value. The credible interval is a statement about the **parameter**; the confidence interval is a statement about the **procedure**.
+
+**B4.** For a Poisson the variance equals the mean, so we would expect variance $\approx 24$. The observed variance is $\approx 210$, roughly **9×** the mean — strong **overdispersion**. A Poisson model would badly understate the noise, producing over-confident intervals and inflated significance. The negative binomial adds a $\mu^2/\phi$ term to the variance ($\operatorname{Var}=\mu+\mu^2/\phi$); a moderate, estimated $\phi$ lets the model match the excess spread. (Here $210 \approx 24 + 24^2/\phi \Rightarrow \phi \approx 24^2/186 \approx 3.1$ — a small $\phi$, i.e. clearly non-Poisson.)
+
+**B5.**
+(a) $S = 18+26+22 = 66$, $n = 3$. Posterior $\lambda \mid \text{data} \sim \text{Gamma}(a+S,\ b+n) = \text{Gamma}(2+66,\ 0.1+3) = \text{Gamma}(68,\ 3.1)$.
+(b) Posterior mean $= \dfrac{a+S}{b+n} = \dfrac{68}{3.1} \approx 21.9$ cells.
+(c) The posterior mean (21.9) sits between the prior mean (20) and the data mean (22), but very close to the data: with three observations the likelihood already carries far more weight than the weak prior (prior "rate" $b=0.1$ acts like a tenth of one prior observation), so the data dominate and pull the estimate almost all the way to 22.
+
+**B6.** $\log \mu = \log(50000) + \alpha + \beta_{\text{drug}}\cdot 1 + \beta_{\text{age}}\cdot 0 = 10.8198 - 7.31 + 0.47 + 0 = 3.9798$. Then $\mu = e^{3.9798} \approx 53.5$ activated T cells. A plausible small count, as expected.
+
+**B7.** The check says the model, as written, **generates too few zeros** — its error model cannot reproduce a feature of the real data (excess zeros). This is a signal that the model is misspecified, most likely **zero-inflation** (a separate process producing structural zeros, common in single-cell counts) or a missing covariate that explains the zero samples. A reasonable next step is a **zero-inflated negative binomial**, or adding the relevant covariate, then re-running the same posterior predictive check. Deleting the zero-count samples is wrong because it discards **real data** to make a flawed model look adequate — it hides the misspecification rather than fixing it, and biases every downstream estimate. Posterior predictive failures are feedback about the *model*, not about the data.
+
+**R1.** The static block gives `a_post = 68`, `b_post = 3.1`, posterior mean `68/3.1 ≈ 21.94`. A 95% credible interval from `quantile(lambda_draws, c(0.025, 0.975))` will be roughly $[17,\ 27]$ (Monte-Carlo estimate; exact via `qgamma(c(0.025, 0.975), 68, 3.1)`). It matches the analytic Gamma$(68, 3.1)$.
+
+**R2.** With `Gamma(a = 20, b = 1)` the posterior is Gamma$(20+66,\ 1+3) = \text{Gamma}(86,\ 4)$, mean $86/4 = 21.5$. This prior is **much more concentrated** (it acts like one prior observation's worth of rate, $b=1$, with a large shape), so it pulls the posterior mean **closer to the prior mean (20)** than the weak prior did — 21.5 versus 21.9. A stronger prior resists the data more; the posterior is always a precision-weighted blend of prior and likelihood.
+
+**R3.** `exp(0.47) ≈ 1.60` with interval `exp(c(0.29, 0.65)) = c(1.34, 1.92)`, matching B2–B3. `mean(post$b_treatmentdrug > 0)` is the **posterior probability that the drug effect is positive** — the fraction of posterior draws above zero (the probability of direction). A frequentist analysis cannot report this because, in that framework, the parameter is a fixed unknown constant, not a random quantity — there is no probability distribution over $\beta_{\text{drug}}$ to integrate, only statements about data given a hypothesis (p-values). Assigning a probability to the parameter itself requires the Bayesian posterior.
+:::
+
+## Where this leads
+
+- **Penalized linear models (next block):** the weakly informative priors you placed on the coefficients are exactly **regularisation** — an L2 (ridge) penalty is a Gaussian prior, an L1 (lasso) penalty a Laplace prior. The same model, read through a different lens.
+- **Single-cell analysis:** the negative-binomial count model with an exposure offset scales up to thousands of genes; the zero-inflation you reasoned about in B7 is a central issue there.
+- **Model comparison:** posterior predictive checking is qualitative; formal Bayesian model comparison (information criteria, cross-validation such as `loo`) puts a number on which of two competing generative models predicts held-out data better.

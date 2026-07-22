@@ -1,0 +1,252 @@
+---
+title: "Exercise: handling covariates"
+format:
+  html:
+    toc: true
+    code-copy: true
+    code-overflow: wrap
+    highlight-style: github
+---
+
+## Goal
+
+By the end of this exercise you should be able to:
+
+- write a **model formula** for a research question and say what each term does,
+- turn a formula into a **design matrix** $X$ by hand, for both **continuous** and **categorical** predictors,
+- read off what each **coefficient** means, including the crucial **"holding the other predictors constant,"**
+- explain **confounding** and why **adjusting** for a covariate can change — even reverse — an apparent effect,
+- interpret an **interaction** term ($a * b$) and compute a subgroup-specific effect,
+- recognise the common **pitfalls** (wrong reference level, collinearity, over-adjustment).
+
+By-hand design-matrix and coefficient interpretation are the examined skills; the R section only confirms your answers.
+
+## Background
+
+A model formula is a **recipe for a design matrix**. The model is
+
+$$
+\mathbf{y} = X\boldsymbol{\beta} + \boldsymbol{\varepsilon}, \qquad
+\hat y_i = \beta_0 + \beta_1 x_{i1} + \beta_2 x_{i2} + \dots
+$$
+
+**Building the columns of $X$:**
+
+1. **Intercept** — a column of all 1's (present by default). Its coefficient $\beta_0$ is the predicted outcome when every other predictor is 0 (for factors: at the reference level).
+2. **Continuous predictor** (age, BMI) — the raw numbers, one column. Coefficient = change in $\hat y$ **per unit**.
+3. **Categorical predictor** (a factor with $k$ levels) — $k-1$ **dummy (0/1) columns** under the default *treatment* contrasts. The omitted level is the **reference**, folded into the intercept; each dummy's coefficient = **that level minus the reference**.
+
+**Adjustment.** Adding `+ z` gives $z$ its own column, so the other coefficients are now interpreted **holding $z$ constant**. A **confounder** (a common cause of the predictor of interest and the outcome) must be adjusted for, or the effect you report is biased.
+
+**Interaction.** `a * b` expands to `a + b + a:b`. The product term `a:b` lets the effect of `a` **depend on** the level of `b`. Under treatment contrasts, the main effect of `a` is the effect of `a` **at the reference level of `b`**, and the interaction is the **extra** effect at the other level.
+
+**Reference levels.** R orders factor levels **alphabetically** by default, so the alphabetically-first level is the reference. Change it with [`relevel`](https://rdrr.io/r/stats/relevel.html) or `factor(x, levels = ...)`.
+
+## By hand
+
+**B1.** Write model formulas (in `y ~ ...` form) for each question:
+(a) does expression depend on treatment alone?
+(b) does expression depend on treatment, adjusting for age?
+(c) does expression depend on treatment and sex, allowing the treatment effect to differ between the sexes?
+
+**B2.** You have 4 samples:
+
+| sample | treatment | age |
+|---|---|---|
+| 1 | ctrl  | 10 |
+| 2 | treat | 40 |
+| 3 | ctrl  | 22 |
+| 4 | treat | 35 |
+
+Write out the design matrix $X$ for the formula `expr ~ treatment + age` by hand (treatment coding, `ctrl` as reference). Label the columns.
+
+**B3.** For the fitted model `expr ~ treatment + age` you obtain $\beta_0 = 5$, $\beta_1 = 3$ (`treatmenttreat`), $\beta_2 = 0.1$ (`age`). In words:
+(a) what is the predicted expression for a **treated** animal aged **30**?
+(b) what is the treatment effect, and what does "holding age constant" add to that statement?
+(c) what does $\beta_0 = 5$ correspond to, and why is it not very meaningful here?
+
+**B4. (categorical with three levels)** A factor `tissue` has levels `brain`, `gut`, `liver`. For `expr ~ tissue`:
+(a) how many dummy columns does $X$ have (besides the intercept)?
+(b) which level is the reference under the default coding?
+(c) if the intercept is 2 and the coefficient `tissuegut` is 4, what is the predicted mean expression in **gut**? In **brain**?
+
+**B5. (confounding)** In a study, treated animals were mostly old and controls mostly young, and expression rises with age. The **unadjusted** model `expr ~ treatment` gives a large positive `treatmenttreat`. After fitting `expr ~ treatment + age`, the `treatmenttreat` coefficient **shrinks toward 0**.
+(a) explain, in terms of confounding, why it shrank;
+(b) which of the two estimates is the honest treatment effect, and why?
+
+**B6. (interaction)** For `expr ~ treatment * sex` with references `ctrl` and `F`, you fit:
+$$\beta_0 = 5,\quad \beta_1\,(\text{treat}) = 2,\quad \beta_2\,(\text{M}) = 1,\quad \beta_3\,(\text{treat:M}) = 3.$$
+(a) what is the treatment effect in **females**?
+(b) what is the treatment effect in **males**?
+(c) what does $\beta_3 = 3$ mean in words? What would $\beta_3 = 0$ imply?
+
+**B7. (reference level)** Your treatment factor has levels `drug` and `placebo`. You fit `expr ~ treatment` and get a coefficient named `treatmentplacebo`.
+(a) which level did R choose as the reference, and why?
+(b) the coefficient `treatmentplacebo` is $-4$. Interpret it. Is the drug raising or lowering expression relative to placebo?
+(c) how would you make `placebo` the reference so the coefficient reads as the drug effect?
+
+## In R
+
+Use R to **confirm** the by-hand answers. The models below are illustrative; the same formulas work in a Bayesian fit (`rstanarm::stan_glm`, `brms::brm`) with priors added.
+
+### See the design matrix a formula builds
+
+```r
+treatment <- factor(c("ctrl","treat","ctrl","treat"))
+age       <- c(10, 40, 22, 35)
+
+model.matrix(~ treatment + age)
+#   (Intercept) treatmenttreat age
+# 1           1              0  10
+# 2           1              1  40
+# 3           1              0  22
+# 4           1              1  35
+```
+
+### Check the reference level of a factor
+
+```r
+levels(treatment)                 # "ctrl" "treat"  -> ctrl is the reference
+contrasts(treatment)              # shows the 0/1 coding
+
+# force a different reference:
+treatment2 <- relevel(treatment, ref = "treat")
+levels(treatment2)                # "treat" "ctrl"
+```
+
+### A factor with three levels
+
+```r
+tissue <- factor(c("brain","gut","liver","gut"))
+model.matrix(~ tissue)
+#   (Intercept) tissuegut tissueliver
+# 1           1         0           0     # brain = reference (all dummies 0)
+# 2           1         1           0
+# 3           1         0           1
+# 4           1         1           0
+```
+
+### An interaction expands into three terms
+
+```r
+sex <- factor(c("F","M","F","M"))
+colnames(model.matrix(~ treatment * sex))
+# "(Intercept)" "treatmenttreat" "sexM" "treatmenttreat:sexM"
+```
+
+### Tasks
+
+**R1.** Reproduce the design matrix from **B2** with `model.matrix(~ treatment + age)` and confirm it matches your hand answer column-for-column.
+
+**R2.** For **B4**, build `tissue <- factor(c("brain","gut","liver"))` and run `model.matrix(~ tissue)`. Confirm the number of dummy columns and which level is the reference.
+
+**R3.** For **B7**, build `treatment <- factor(c("drug","placebo","drug","placebo"))`, check `levels()`, then `relevel()` to make `placebo` the reference and re-check `levels()`.
+
+**R4.** Confirm the interaction expansion from **B6**: `colnames(model.matrix(~ treatment * sex))` should list `treatmenttreat`, `sexM`, and the product `treatmenttreat:sexM`.
+
+## Hints
+
+::: {.callout-tip collapse="true" title="Hint 1 — reading a formula"}
+`+` means "also include this term as a predictor" (not arithmetic). `y ~ a + b` fits an **additive** model; `y ~ a * b` adds the **interaction** `a:b` on top of the two main effects. There is always an intercept unless you write `y ~ 0 + ...` or `y ~ ... - 1`.
+:::
+
+::: {.callout-tip collapse="true" title="Hint 2 — building the design matrix"}
+Start with a column of 1's (the intercept). Continuous predictors go in as their raw numbers. For a factor under the default [treatment contrasts](https://rdrr.io/r/stats/contrast.html), add one 0/1 column per **non-reference** level: 1 when the sample is that level, 0 otherwise. Use [`model.matrix`](https://rdrr.io/r/stats/model.matrix.html) to check.
+:::
+
+::: {.callout-tip collapse="true" title="Hint 3 — what a coefficient means"}
+Every coefficient is read **"holding the other predictors constant."** For a continuous predictor it is the change in $\hat y$ per unit. For a factor dummy it is the difference **between that level and the reference**. The intercept is $\hat y$ when all predictors are 0 / at their reference levels.
+:::
+
+::: {.callout-tip collapse="true" title="Hint 4 — predicting from coefficients (B3)"}
+Plug the sample's values into $\hat y = \beta_0 + \beta_1\cdot\text{treat} + \beta_2\cdot\text{age}$. A treated animal has `treat = 1`; a control has `treat = 0`. So a treated animal aged 30 gives $\hat y = 5 + 3(1) + 0.1(30)$.
+:::
+
+::: {.callout-tip collapse="true" title="Hint 5 — confounding (B5)"}
+A confounder is associated with **both** the group and the outcome. The unadjusted treatment coefficient captures the real treatment effect **plus** the age difference between groups. Adding age to the model lets the age effect be estimated separately, so the treatment coefficient keeps only what is left over — the effect "at the same age."
+:::
+
+::: {.callout-tip collapse="true" title="Hint 6 — interaction coefficients (B6)"}
+Under treatment coding the main effect $\beta_1$ is the treatment effect **in the reference sex (F)**. The interaction $\beta_3$ is the **extra** treatment effect in males, so the male treatment effect is $\beta_1 + \beta_3$. If $\beta_3 = 0$ the effect is identical in both sexes (no interaction).
+:::
+
+::: {.callout-tip collapse="true" title="Hint 7 — reference levels (B7)"}
+R orders factor levels alphabetically, so `drug` (before `placebo`) becomes the reference and the reported coefficient is `treatmentplacebo` = placebo − drug. To read it as the drug effect instead, make placebo the reference with [`relevel`](https://rdrr.io/r/stats/relevel.html)`(treatment, ref = "placebo")`.
+:::
+
+## Solutions
+
+::: {.callout-note collapse="true" title="Solution"}
+
+**B1.**
+(a) `expr ~ treatment`
+(b) `expr ~ treatment + age`
+(c) `expr ~ treatment * sex` (equivalently `expr ~ treatment + sex + treatment:sex`). The `*` allows the treatment effect to differ between sexes via the interaction term.
+
+**B2.** Intercept column of 1's; a single treatment dummy (`treatmenttreat` = 1 for treated, 0 for control, since `ctrl` is the reference); and the raw age column.
+
+$$
+X = \begin{pmatrix}
+1 & 0 & 10 \\
+1 & 1 & 40 \\
+1 & 0 & 22 \\
+1 & 1 & 35
+\end{pmatrix}
+\quad
+\begin{array}{l}
+\text{col 1: (Intercept)} \\
+\text{col 2: treatmenttreat} \\
+\text{col 3: age}
+\end{array}
+$$
+
+**B3.**
+(a) $\hat y = \beta_0 + \beta_1\cdot 1 + \beta_2\cdot 30 = 5 + 3 + 0.1\times30 = 5 + 3 + 3 = 11$.
+(b) The treatment effect is $\beta_1 = 3$: treated animals have expression 3 units higher than controls **of the same age**. "Holding age constant" makes clear this is not contaminated by any age imbalance between the groups — it is the treatment effect after age has been accounted for.
+(c) $\beta_0 = 5$ is the predicted expression for a **control** animal of **age 0**. Age 0 is outside any real data (and biologically a newborn / extrapolation), so the raw intercept is not scientifically meaningful. Centring age (`I(age - mean(age))`) would move the intercept to the mean age and make it interpretable.
+
+**B4.**
+(a) Three levels → $3 - 1 = 2$ dummy columns (`tissuegut`, `tissueliver`), plus the intercept.
+(b) `brain` — it is alphabetically first, so it is the reference (all its dummies are 0).
+(c) Gut mean $=$ intercept $+$ `tissuegut` $= 2 + 4 = 6$. Brain mean $=$ intercept $= 2$ (brain is the reference, so both dummies are 0).
+
+**B5.**
+(a) Age is a **confounder**: it differs between the groups (treated older, controls younger) **and** affects the outcome (expression rises with age). In `expr ~ treatment` the treatment coefficient absorbs the treatment effect **plus** the age-driven difference between the groups, inflating it. Adding `+ age` gives age its own coefficient, so the age contribution is removed from the treatment coefficient, and it shrinks toward the true value.
+(b) The **adjusted** estimate (`expr ~ treatment + age`) is the honest one: it estimates the treatment effect **among animals of the same age**, disentangling it from the age imbalance. The unadjusted estimate conflates the two.
+
+**B6.**
+(a) Treatment effect in females (the reference sex): $\beta_1 = 2$.
+(b) Treatment effect in males: $\beta_1 + \beta_3 = 2 + 3 = 5$.
+(c) $\beta_3 = 3$ is the **extra** treatment effect in males compared with females — the treatment raises expression 3 units *more* in males than in females (a difference of treatment effects). $\beta_3 = 0$ would mean the treatment acts **equally** in both sexes, i.e. no interaction, and the additive model `expr ~ treatment + sex` would suffice.
+
+**B7.**
+(a) `drug` — factor levels are ordered alphabetically, and `drug` comes before `placebo`, so `drug` is the reference; the non-reference dummy is `treatmentplacebo`.
+(b) `treatmentplacebo` $= -4$ means placebo expression is 4 units **lower** than drug. Equivalently, the **drug raises** expression by 4 units relative to placebo. (The sign is about placebo-minus-drug because drug is the reference.)
+(c) `treatment <- relevel(treatment, ref = "placebo")` (or `factor(treatment, levels = c("placebo","drug"))`). Then the coefficient becomes `treatmentdrug` $= +4$, directly the drug effect.
+
+**R1–R4.** These confirm the hand answers.
+
+```r
+treatment <- factor(c("ctrl","treat","ctrl","treat"))
+age       <- c(10, 40, 22, 35)
+model.matrix(~ treatment + age)     # R1: matches the X in B2
+
+tissue <- factor(c("brain","gut","liver"))
+model.matrix(~ tissue)              # R2: 2 dummies; brain is reference
+
+treatment <- factor(c("drug","placebo","drug","placebo"))
+levels(treatment)                   # R3: "drug" "placebo" -> drug is reference
+treatment <- relevel(treatment, ref = "placebo")
+levels(treatment)                   # "placebo" "drug"  -> placebo now reference
+
+sex <- factor(c("F","M","F","M"))
+colnames(model.matrix(~ treatment * sex))   # R4: main effects + product term
+```
+:::
+
+## Where this leads
+
+- **Error models (Poisson / negative binomial):** for **count** outcomes (RNA-seq), the covariates still enter through the design matrix $X\boldsymbol\beta$, but inside a **log link** ($\log \mu = X\boldsymbol\beta$) with a count likelihood instead of a Gaussian one.
+- **Hierarchical models:** when samples share structure (several technical replicates per animal, several animals per group), covariate effects can be allowed to **vary across replicates** — the distinction between biological and technical replicates becomes a modelling choice.
+- **Penalized linear models:** when you have **many** covariates or **collinear** ones, plain fitting becomes unstable (an identifiability problem); L1/L2 penalties shrink the coefficients to tame it.
+- **Design and contrast matrices** recur in every differential-expression tool (limma, DESeq2, edgeR): the `model.matrix()` you built here is exactly the `design =` argument those tools expect.

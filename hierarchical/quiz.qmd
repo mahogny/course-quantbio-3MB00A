@@ -1,0 +1,123 @@
+---
+title: "Quiz: hierarchical models"
+format:
+  html:
+    toc: true
+    code-copy: true
+    code-overflow: wrap
+    highlight-style: github
+---
+
+Short questions to test your understanding of hierarchical (multilevel) models: replicates, pooling, shrinkage, and the random-effects formulation. Try each on paper first, then open the answer. Several are in the style of the on-campus exam (no computer).
+
+::: {.callout-warning}
+This **Bayesian statistics** block is provisional and may move to a later statistics / ML course.
+:::
+
+---
+
+**Q1.** In one sentence, what is the difference between a **biological** replicate and a **technical** replicate?
+
+::: {.callout-tip collapse="true" title="Hint"}
+One gives you a new independent unit; the other remeasures a unit you already had.
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+A **biological** replicate is an independent biological unit (a different patient, animal, or independently grown culture) and captures between-unit variation; a **technical** replicate is the same unit measured again (a split sample, a re-sequenced library) and captures only measurement noise.
+:::
+
+---
+
+**Q2.** A paper reports "n = 300 cells from 3 mice, p < 0.001" for a difference between two mouse strains. What is the relevant sample size for the between-strain claim, and what is this error called?
+
+::: {.callout-tip collapse="true" title="Hint"}
+Which number limits your ability to generalise to new mice?
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+The relevant sample size is **3** (the mice), not 300. Treating the 300 cells as independent units is **pseudoreplication**; it overstates the effective sample size, so standard errors are too small and the p-value is too optimistic.
+:::
+
+---
+
+**Q3.** Name the three ways to handle grouped data and say, in a few words, what each assumes.
+
+::: {.callout-tip collapse="true" title="Hint"}
+Two are extremes (between-group variance of 0 or infinity); one is the middle.
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+**Complete pooling** — one mean for everyone (assumes groups are identical, $\tau^2 = 0$). **No pooling** — a separate independent mean per group (assumes groups tell you nothing about each other, $\tau^2 = \infty$). **Partial pooling** — each group estimate is a compromise between its own mean and the grand mean ($\tau^2$ estimated from the data); this is the hierarchical model.
+:::
+
+---
+
+**Q4.** In partial pooling, which groups shrink **most** toward the grand mean, and why?
+
+::: {.callout-tip collapse="true" title="Hint"}
+Look at how the weight $w_i = \dfrac{n_i/\sigma^2}{n_i/\sigma^2 + 1/\tau^2}$ depends on $n_i$.
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+Groups with **few** (or noisy) measurements shrink most. A small $n_i$ makes the group's own precision $n_i/\sigma^2$ small, so the weight $w_i$ on its own mean is small and it leans on the grand mean. Data-rich groups have $w_i$ near 1 and barely move.
+:::
+
+---
+
+**Q5.** A group has $n_i = 3$ measurements with mean $\bar y_i = 12$. The grand mean is $\hat\mu = 6$, $\sigma^2 = 6$, $\tau^2 = 1$. Compute the partial-pooling estimate $\hat\mu_i$.
+
+::: {.callout-tip collapse="true" title="Hint"}
+Compute $n_i/\sigma^2$ and $1/\tau^2$, form $w_i$, then $\hat\mu_i = w_i\bar y_i + (1-w_i)\hat\mu$.
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+$n_i/\sigma^2 = 3/6 = 0.5$; $1/\tau^2 = 1$. So $w_i = \dfrac{0.5}{0.5 + 1} = \dfrac{0.5}{1.5} = \tfrac13$. Then $\hat\mu_i = \tfrac13\cdot 12 + \tfrac23\cdot 6 = 4 + 4 = 8$. The estimate (8) sits between the group mean (12) and the grand mean (6), closer to 6 because the group carries relatively little information.
+:::
+
+---
+
+**Q6.** Write the random-effects model $y_{ij} = \mu + b_i + \varepsilon_{ij}$ and say which term is the **fixed** effect, which is the **random** effect, and what the two variances mean.
+
+::: {.callout-tip collapse="true" title="Hint"}
+One term is a single number for the whole dataset; one is a draw per group.
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+$\mu$ is the **fixed** effect (overall mean, one number). $b_i \sim \mathcal N(0,\tau^2)$ is the **random** effect (group $i$'s deviation, a draw from a shared distribution), with **between**-group variance $\tau^2$. $\varepsilon_{ij} \sim \mathcal N(0,\sigma^2)$ is the residual with **within**-group (measurement) variance $\sigma^2$.
+:::
+
+---
+
+**Q7.** The intraclass correlation is $\text{ICC} = \tau^2/(\tau^2+\sigma^2)$. If $\tau^2 = 9$ and $\sigma^2 = 1$, compute it and say what it means for your effective sample size.
+
+::: {.callout-tip collapse="true" title="Hint"}
+ICC near 1 means measurements within a group are almost redundant.
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+$\text{ICC} = 9/(9+1) = 0.9$. Most variance is between groups and within-group measurements are highly correlated (redundant), so your effective sample size is close to the **number of groups**, not the total number of measurements. To gain power you need more groups, not more measurements per group.
+:::
+
+---
+
+**Q8.** What does the R formula `y ~ treatment + (1 | patient)` specify, and is it different in `lme4` versus `brms`?
+
+::: {.callout-tip collapse="true" title="Hint"}
+Left of the bar = what varies by group; right of the bar = the grouping factor.
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+It specifies a **fixed** effect of `treatment` (the population-level question) plus a **random intercept** `(1 | patient)` — one deviation $b_i$ per patient drawn from a shared $\mathcal N(0,\tau^2)$. The formula is **identical** in `lme4::lmer` (frequentist) and `brms::brm` (Bayesian, via Stan); brms additionally places priors on all parameters and returns a full posterior.
+:::
+
+---
+
+**Q9.** From the Bayesian viewpoint, what *is* a random effect?
+
+::: {.callout-tip collapse="true" title="Hint"}
+Look at the line $b_i \sim \mathcal N(0,\tau^2)$ — what role does it play?
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+A random effect is a **prior** on the group-level parameters: $b_i \sim \mathcal N(0,\tau^2)$ is a prior on the group deviations, and because its width $\tau$ is estimated from the data it is an **adaptive** (hierarchical) prior. Partial pooling is exactly the posterior compromise between each group's data and this learned prior.
+:::

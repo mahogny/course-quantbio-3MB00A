@@ -1,0 +1,246 @@
+---
+title: "Exercise: chemometrics II — applications & validation"
+format:
+  html:
+    toc: true
+    code-copy: true
+    code-overflow: wrap
+    highlight-style: github
+---
+
+::: {.callout-warning title="Draft skeleton — pending expert review"}
+This exercise is a **provisional draft** written to accompany the *Chemometrics II* skeleton lecture while a subject-matter contributor is recruited. The concepts drilled here (task framing, validation, RMSEP) are standard and safe, but the exercise has **not** yet been reviewed by a chemometrics expert and contains **no real dataset**. Numbers in the worked problems are small illustrative toys, not measured data.
+:::
+
+## Goal
+
+By the end of this exercise you should be able to:
+
+- decide whether a spectroscopy problem is a **classification** or a **regression / calibration** task,
+- explain why ordinary least squares (`lm`) is the wrong tool for wide, collinear spectral data,
+- distinguish **RMSEC** (training), **RMSECV** (cross-validated), and **RMSEP** (independent test), and say which one to trust,
+- **compute RMSEP by hand** from a small table of predictions,
+- read a *components-vs-error* curve and choose the number of latent components,
+- spot **data leakage** — the ways a reported error is made falsely optimistic.
+
+This is a **concepts and judgement** day. The by-hand skill examined is the error calculation and the reasoning about validation, not any spectral algorithm.
+
+## Background
+
+A **spectrum** is a vector of many correlated measurements (absorbance at many wavelengths). Stack $n$ samples into a wide matrix $X$ ($n \times p$, often $p \gg n$) and let $\mathbf{y}$ be the property or class we want to predict.
+
+**Two tasks.** *Regression / calibration* predicts a continuous $y$ (a concentration); *classification* predicts a category (a group label).
+
+**Why not `lm`.** With $p \gg n$ and highly collinear columns, $X^\top X$ is not invertible and an OLS fit is unstable. Chemometrics instead **projects $X$ onto a few latent components** first (PCR, PLS) and models in that low-dimensional space — the machinery from *PCA* and *The OPLS model*.
+
+**Validation vocabulary.** The root-mean-square error of prediction is
+
+$$\mathrm{RMSEP} = \sqrt{\frac{1}{n}\sum_{i=1}^{n}\left(\hat{y}_i - y_i\right)^2},$$
+
+in the **same units as $y$**. The *same formula* gives different names depending on which samples it is computed on:
+
+- **RMSEC** — on the **training** samples (used to fit). Optimistic.
+- **RMSECV** — on **cross-validated** held-out predictions (used to tune, e.g. choose the number of components).
+- **RMSEP** — on an **independent test set**, touched once. The number you report.
+
+**Bias** is the mean signed error $\frac{1}{n}\sum(\hat{y}_i - y_i)$: a systematic offset, ideally near zero.
+
+**The cardinal rule.** Anything fit on the data — preprocessing, scaling, component count, variable selection — must be decided **without** the test set, or the reported error is too rosy.
+
+## By hand
+
+**B1.** For each scenario, say whether it is **regression (calibration)** or **classification**, and name the target $y$:
+(a) predict the protein percentage of a grain sample from its NIR spectrum;
+(b) decide whether a Raman spectrum comes from a tumour or from healthy tissue;
+(c) estimate the glucose concentration of a fermentation broth from IR;
+(d) identify which of four bacterial species an isolate is, from its spectrum.
+
+**B2.** Explain in one or two sentences why you cannot simply fit `lm(y ~ .)` on a matrix of 200 wavelengths measured on 30 samples. What quantity fails to exist, and what do PCR / PLS do instead?
+
+**B3.** A calibration model predicts analyte concentration (units: mg/mL) on a **held-out test set** of five samples:
+
+| sample | measured $y_i$ | predicted $\hat{y}_i$ |
+|---|---|---|
+| 1 | 10.0 | 10.5 |
+| 2 | 12.0 | 11.0 |
+| 3 |  8.0 |  8.0 |
+| 4 | 14.0 | 15.0 |
+| 5 | 11.0 | 10.5 |
+
+(a) Compute the residuals $\hat{y}_i - y_i$.
+(b) Compute the **RMSEP** by hand (use the formula above).
+(c) Compute the **bias**. Is the model systematically high or low?
+(d) Since this is the independent test set, which of RMSEC / RMSECV / RMSEP does your number deserve to be called?
+
+**B4.** The same model was also evaluated on the **training** samples and gave an error of $0.2$ mg/mL, whereas your test-set error in B3 is larger. Which number should be reported to a collaborator, and why is the training number smaller?
+
+**B5.** A PLS calibration is fit with increasing numbers of latent components. The cross-validated error (RMSECV) is:
+
+| components | 1 | 2 | 3 | 4 | 5 | 6 | 7 |
+|---|---|---|---|---|---|---|---|
+| RMSECV | 3.1 | 1.8 | 1.0 | 0.9 | 0.92 | 1.4 | 2.6 |
+
+(a) How many components would you choose, and why?
+(b) What is happening to the model at 6–7 components?
+(c) The **training** error (RMSEC) at 7 components is $0.1$ — lower than at 4. Does that mean 7 components is better? Explain.
+
+**B6. (leakage hunt).** For each workflow, say whether the reported test error is **trustworthy** or **optimistically biased**, and why:
+(a) mean-centre and scale using the mean/SD of the **whole** dataset, then split into train/test;
+(b) choose the number of components by picking whichever gives the lowest error **on the test set**;
+(c) select the 20 "best" wavelengths using all samples, then run cross-validation on just those 20;
+(d) fit preprocessing and model on the training set, then apply them unchanged to a test set held out from the start.
+
+**B7. (classification metric).** A spectral classifier is tested on 100 samples: 90 controls and 10 cases. It labels *everything* "control". What is its overall accuracy, and why is that number misleading here? What would you report instead?
+
+## In R
+
+Static illustrations only. **No packages are installed at render time**, so nothing below is executed — read it as a template.
+
+### RMSEP from a vector of predictions
+
+```r
+y_meas <- c(10.0, 12.0,  8.0, 14.0, 11.0)   # measured
+y_pred <- c(10.5, 11.0,  8.0, 15.0, 10.5)   # model predictions
+
+resid <- y_pred - y_meas
+rmsep <- sqrt(mean(resid^2))                # same units as y
+bias  <- mean(resid)
+
+rmsep   # root-mean-square error of prediction
+bias    # systematic offset
+```
+
+### Choosing components from a cross-validation curve
+
+```r
+ncomp  <- 1:7
+rmsecv <- c(3.1, 1.8, 1.0, 0.9, 0.92, 1.4, 2.6)
+
+best <- which.min(rmsecv)   # index of the minimum
+best                        # -> 4  (fewest error)
+plot(ncomp, rmsecv, type = "b",
+     xlab = "number of components", ylab = "RMSECV")
+```
+
+### A PLS calibration with built-in cross-validation (sketch)
+
+```r
+# Illustrative only: the `pls` package provides plsr().
+library(pls)
+
+fit <- plsr(y ~ ., data = train, ncomp = 10, validation = "CV")
+validationplot(fit, val.type = "RMSEP")   # inspect the curve
+summary(fit)
+
+# predict the untouched test set with the chosen number of components
+yhat  <- predict(fit, newdata = test, ncomp = 4)
+rmsep <- sqrt(mean((yhat - test$y)^2))
+rmsep
+```
+
+### Tasks
+
+**R1.** Reproduce **B3** with the RMSEP block above. Confirm your hand-computed RMSEP and bias match the R output.
+
+**R2.** Enter the **B5** table into the components block. Confirm `which.min(rmsecv)` gives the component count you chose by hand, and describe the shape of the plotted curve in one sentence.
+
+**R3.** Write two lines of R that compute RMSEP for a *second* candidate model whose predictions are `y_pred2 <- c(9.5, 12.5, 8.5, 13.5, 11.5)` against the same `y_meas`. Which of the two models has the lower RMSEP?
+
+## Hints
+
+::: {.callout-tip collapse="true" title="Hint 1 — regression vs classification"}
+Ask: is the answer a **number on a continuous scale** (a concentration, a percentage) or a **label from a fixed set of groups** (tumour/healthy, one of four species)? A number → regression/calibration; a label → classification.
+:::
+
+::: {.callout-tip collapse="true" title="Hint 2 — why lm fails on wide data"}
+OLS needs to invert $X^\top X$. With more predictors than samples ($p > n$) and collinear columns, that matrix is **singular** — no unique inverse, so no stable coefficient vector (recall the "no unique solution" case from the *Linear systems* unit). PCR/PLS sidestep it by regressing on a few **latent components** instead of the raw wavelengths.
+:::
+
+::: {.callout-tip collapse="true" title="Hint 3 — computing RMSEP by hand"}
+Work column by column: (1) residual $\hat y_i - y_i$ for each sample; (2) square each residual; (3) average the squares (divide by $n$, here 5); (4) take the square root. Keep units of $y$ throughout. See [`sqrt`](https://rdrr.io/r/base/MathFun.html) and [`mean`](https://rdrr.io/r/base/mean.html) for the R version: `sqrt(mean((y_pred - y_meas)^2))`.
+:::
+
+::: {.callout-tip collapse="true" title="Hint 4 — bias vs RMSEP"}
+Bias is the **signed** average error `mean(y_pred - y_meas)` — positive means predictions run high. RMSEP squares first, so it measures **magnitude** regardless of sign. A model can have near-zero bias but a large RMSEP (errors cancel in the mean but not in the squares).
+:::
+
+::: {.callout-tip collapse="true" title="Hint 5 — reading the components curve"}
+Training error falls forever as you add components; **cross-validated** error falls, bottoms out, then **rises** as the model starts fitting noise. Choose the component count **at (or just before) the minimum** of the cross-validated curve — not the training curve. When two nearby counts are within noise of each other, prefer the **simpler** (fewer-component) model. [`which.min`](https://rdrr.io/r/base/which.min.html) finds the minimum's index.
+:::
+
+::: {.callout-tip collapse="true" title="Hint 6 — spotting leakage"}
+Ask of every step: *did this use any information from the test set?* Preprocessing statistics, component count, and variable selection are all **fitted quantities**. If any of them saw the test samples (or the whole dataset before splitting), the test error is optimistic. Only a set held out **before** any fitting, and touched **once**, gives an honest number.
+:::
+
+::: {.callout-tip collapse="true" title="Hint 7 — accuracy with imbalanced classes"}
+If 90 of 100 samples are controls, always guessing "control" scores 90% accuracy while catching **zero** cases. With imbalanced groups, report **sensitivity** and **specificity** (or a confusion matrix) rather than overall accuracy.
+:::
+
+## Solutions
+
+::: {.callout-note collapse="true" title="Solution"}
+
+**B1.**
+(a) **Regression / calibration** — $y$ = protein percentage (continuous).
+(b) **Classification** — $y$ = tumour vs healthy (two groups).
+(c) **Regression / calibration** — $y$ = glucose concentration (continuous).
+(d) **Classification** — $y$ = species identity (one of four groups).
+
+**B2.** OLS requires inverting $X^\top X$. With 200 wavelengths and only 30 samples ($p \gg n$) and strongly correlated columns, that matrix is **singular / non-invertible**, so there is no unique, stable coefficient vector — the fit is undetermined and wildly sensitive to noise. PCR and PLS instead compress $X$ into a **few latent components** (linear combinations of wavelengths) and regress $y$ on those, which is well-posed. PLS chooses components that are relevant to $y$; PCR uses the largest-variance components of $X$ regardless of $y$.
+
+**B3.**
+(a) Residuals $\hat y_i - y_i$: $10.5-10.0 = +0.5$; $11.0-12.0 = -1.0$; $8.0-8.0 = 0.0$; $15.0-14.0 = +1.0$; $10.5-11.0 = -0.5$.
+(b) Square them: $0.25,\ 1.00,\ 0.00,\ 1.00,\ 0.25$. Sum $= 2.50$. Mean $= 2.50/5 = 0.50$. RMSEP $= \sqrt{0.50} \approx \mathbf{0.71}$ mg/mL.
+(c) Bias $= \frac{1}{5}(0.5 - 1.0 + 0.0 + 1.0 - 0.5) = \frac{0}{5} = \mathbf{0}$ mg/mL — no systematic offset (the errors happen to cancel; note RMSEP is still $0.71$).
+(d) It is computed on the **independent test set**, so it is honestly called **RMSEP**.
+
+**B4.** Report the **test-set** number ($\approx 0.71$ mg/mL, the **RMSEP**). The training error ($0.2$) is smaller because the model was **fit to** those very samples — it has partly memorised them, so its error on them is **optimistic** and does not reflect performance on new samples. Only the independent test set estimates future performance.
+
+**B5.**
+(a) Choose **4 components** (or arguably 3): RMSECV is minimised at 4 ($0.9$), and 3 ($1.0$) is nearly as good — if you favour simplicity, 3 is defensible, but 4 is the strict minimum.
+(b) At 6–7 components the cross-validated error **rises sharply** ($1.4$, then $2.6$): the model is **overfitting**, fitting noise in the training spectra that does not generalise.
+(c) **No.** A lower **training** error (RMSEC) at 7 components just confirms the model is fitting the training data more closely, including its noise. The **cross-validated** error, which reflects new samples, is *worse* at 7 than at 4. Trust the cross-validated curve, not the training curve.
+
+**B6.**
+(a) **Optimistically biased.** The centering/scaling statistics were computed using the test samples, leaking information from test into the fitted preprocessing.
+(b) **Optimistically biased.** Tuning the component count *on the test set* makes the test set part of model selection — it is no longer independent. Choose components by cross-validation within the training data.
+(c) **Optimistically biased.** Selecting wavelengths using all samples (including those later used to estimate error) lets the selection peek at the validation data; selection must happen **inside** the cross-validation loop.
+(d) **Trustworthy.** Preprocessing and model were fit on the training set only and applied unchanged to a test set held out from the start — no leakage.
+
+**B7.** Accuracy $= 90/100 = \mathbf{90\%}$, but it is misleading because the classifier catches **none** of the 10 cases (sensitivity $= 0$) — the high number comes entirely from the majority class. Report **sensitivity** and **specificity** (or the full confusion matrix); with imbalanced groups, overall accuracy hides total failure on the minority class.
+
+**R1.**
+```r
+y_meas <- c(10.0, 12.0,  8.0, 14.0, 11.0)
+y_pred <- c(10.5, 11.0,  8.0, 15.0, 10.5)
+sqrt(mean((y_pred - y_meas)^2))   # 0.7071068  -> matches ~0.71
+mean(y_pred - y_meas)             # 0          -> bias is zero
+```
+Matches the hand answers: RMSEP $\approx 0.71$, bias $= 0$.
+
+**R2.**
+```r
+ncomp  <- 1:7
+rmsecv <- c(3.1, 1.8, 1.0, 0.9, 0.92, 1.4, 2.6)
+which.min(rmsecv)    # 4  -> minimum at 4 components
+```
+`which.min` returns 4, matching the by-hand choice. The curve **falls steeply from 1 to 3–4, flattens at its minimum, then rises** from 5 onward — the classic underfit-then-overfit U-shape.
+
+**R3.**
+```r
+y_meas  <- c(10.0, 12.0,  8.0, 14.0, 11.0)
+y_pred2 <- c( 9.5, 12.5,  8.5, 13.5, 11.5)
+sqrt(mean((y_pred2 - y_meas)^2))   # 0.5  -> lower than 0.71
+```
+The residuals are all $\pm 0.5$, so RMSEP $= \sqrt{\text{mean}(0.25)} = 0.5$ mg/mL — **lower** than the first model's $0.71$, so the second model predicts this test set more accurately.
+:::
+
+## Where this leads
+
+- **PCA** and **The OPLS model** supply the latent-variable machinery (scores, components) that every method here builds on; this unit is about **applying and validating** them.
+- **Chemometrics I** covers the spectra themselves and preprocessing in more detail; revisit it for the signal-processing steps named only briefly here.
+- The **validation discipline** — hold out an independent test set, tune by cross-validation, report error in interpretable units — is not specific to spectra. It carries into every later data-analysis unit, including the single-cell applications.
+
+::: {.callout-warning}
+Reminder: this is a **draft skeleton**. A chemometrics expert should replace the toy tables with a real spectral dataset and add a hands-on PLS calibration once the unit is staffed.
+:::

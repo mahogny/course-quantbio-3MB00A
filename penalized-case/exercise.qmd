@@ -1,0 +1,246 @@
+---
+title: "Exercise: penalized models — case analysis & pitfalls"
+format:
+  html:
+    toc: true
+    code-copy: true
+    code-overflow: wrap
+    highlight-style: github
+---
+
+## Goal
+
+By the end of this exercise you should be able to:
+
+- explain **why correlated predictors make lasso selection unstable** (identifiability), and show the mechanism on a tiny by-hand example,
+- contrast how **lasso, ridge, and elastic net** treat a correlated group,
+- carry out **stability selection** — resample, refit, and turn the results into a **selection frequency** — both by hand and in R,
+- read a selection-frequency result and decide what is a defensible signature,
+- interpret a penalized fit **honestly**: distinguish *predictive* from *causal*, and know why naive post-selection p-values are invalid,
+- write a **reproducible methods paragraph** for a penalized analysis.
+
+This is a **judgement** unit. The by-hand parts build the intuition the exam can probe; the R parts are the workflow you would actually run. Full R fluency with `glmnet` came in Ridge, lasso & elastic net and Cross-validation & model selection — here we reuse it and focus on the pitfalls.
+
+::: {.callout-note}
+**Provisional block.** Penalized linear models may move to a later statistics / machine-learning course; treat this unit as a first pass.
+:::
+
+## Background
+
+We fit a penalized linear model to a **samples × features** matrix $X$ and a response $y$. For the **lasso**,
+
+$$\hat{\boldsymbol\beta} = \arg\min_{\boldsymbol\beta}\ \tfrac{1}{2n}\sum_{i=1}^n \big(y_i - \beta_0 - \mathbf{x}_i^\top\boldsymbol\beta\big)^2 \;+\; \lambda \sum_{j=1}^p |\beta_j|,$$
+
+with $\lambda$ chosen by cross-validation. The penalty is **scale-dependent**, so predictors are standardized first (`glmnet` does this internally).
+
+**The recurring problem.** Biological features are **correlated** — genes in a pathway or co-expression module rise and fall together, so $X$ has blocks of near-duplicate columns. When two columns are near-identical:
+
+- the **lasso** puts essentially all the weight on **one** of them and zeros the rest; which one it picks is decided by a sliver of sample-specific noise, so it **flips** under tiny data changes,
+- the **ridge** penalty ($\sum \beta_j^2$) instead **spreads** the weight across the group, and
+- the **elastic net** ($0<\alpha<1$) keeps correlated members **together** (the grouping effect).
+
+**Stability selection** tames the instability: subsample the data many times, refit the lasso each time, and record each feature's **selection frequency** $\pi_j$ = fraction of subsamples in which it was chosen. Keep features above a stated threshold.
+
+Two interpretation rules to carry throughout:
+
+- **Selected ≠ causal.** A chosen feature may be a proxy, a downstream consequence, or a confounder marker. A penalized fit yields **hypotheses**, not mechanisms.
+- **Coefficients are shrunk** (biased toward zero) and you may **not** compute naive p-values for selected features on the same data (post-selection inference).
+
+## By hand
+
+**B1. (identifiability — the core mechanism).** Two features are **identical** across three samples: column $x_1 = x_2 = (1, 2, 3)^\top$. Suppose the fit wants the combined contribution $\beta_1 x_1 + \beta_2 x_2$ to equal $2\,x_1$ — i.e. any split with $\beta_1 + \beta_2 = 2$ (and both $\ge 0$) fits the data **equally well**. Consider three splits: $(\beta_1,\beta_2) = (2,0)$, $(1,1)$, $(0,2)$.
+(a) Compute the **lasso** penalty $|\beta_1| + |\beta_2|$ for each split. Which split does the lasso prefer?
+(b) Compute the **ridge** penalty $\beta_1^2 + \beta_2^2$ for each split. Which split does the ridge prefer?
+(c) Explain, from (a), why the lasso's choice among these features is **unstable**, and from (b), why the ridge **spreads** weight across the group.
+
+**B2. (which one does the lasso pick).** Now make the two features *nearly* identical: $x_2$ is $x_1$ with a tiny perturbation, and $x_1$ happens to correlate very slightly more strongly with $y$ than $x_2$ does. Argue in one or two sentences which feature the lasso keeps, and what would happen to that choice if you dropped one sample and $x_2$ became the marginally stronger one.
+
+**B3. (stability selection by hand).** You run the lasso on **5** random subsamples of your data. The table marks (×) which of five genes was selected in each subsample:
+
+| subsample | GENE_A | GENE_B | GENE_C | GENE_D | GENE_E |
+|---|---|---|---|---|---|
+| 1 | × | × |   | × |   |
+| 2 | × |   | × | × |   |
+| 3 | × | × |   |   | × |
+| 4 | × |   | × | × |   |
+| 5 | × | × |   | × |   |
+
+(a) Compute each gene's **selection frequency** $\pi_j$ (out of 5).
+(b) With a threshold of $\pi \ge 0.6$, which genes make the shortlist?
+(c) GENE_C and GENE_D are known to be co-expressed. Their frequencies are moderate. What is the biologically honest way to report them?
+
+**B4. (selected ≠ causal).** For each finding, name the most likely reason a *predictive* gene need not be *causal* — **proxy** (correlated non-functional), **reverse causation** (consequence of the phenotype), or **confounder marker** (tracks batch/purity):
+(a) The gene is a well-known marker of tumour **purity**, and drug response also depends on purity.
+(b) The gene is strongly co-expressed with the pathway's true driver but has no known function of its own.
+(c) The phenotype (rapid proliferation) is what *drives up* this gene's expression, not the other way round.
+
+**B5. (reporting).** A methods paragraph reads: *"We fit a lasso with glmnet and report the selected genes as the drug-response signature."* List **three** pieces of information a reader needs before they can reproduce or trust this, and name **one** claim the sentence risks over-stating.
+
+## In R
+
+Use these as static references — read them, predict the output, then run them in your own session. Assume `x` is a standardized **samples × genes** matrix and `y` a numeric response.
+
+### Fit the lasso and read the sparse signature
+
+```r
+library(glmnet)
+
+fit <- cv.glmnet(x, y, alpha = 1, standardize = TRUE, nfolds = 10)
+sel <- function(cvfit) which(as.vector(coef(cvfit, s = "lambda.1se"))[-1] != 0)
+colnames(x)[sel(fit)]      # the (unstable) one-shot shortlist
+```
+
+### See the instability: refit after a tiny change
+
+```r
+set.seed(1)
+fit_all  <- cv.glmnet(x,       y,      alpha = 1)
+fit_drop <- cv.glmnet(x[-1, ], y[-1],  alpha = 1)   # drop one sample
+
+setdiff(colnames(x)[sel(fit_all)],  colnames(x)[sel(fit_drop)])  # genes lost
+setdiff(colnames(x)[sel(fit_drop)], colnames(x)[sel(fit_all)])   # genes gained
+```
+
+### Lasso vs ridge on a correlated pair
+
+```r
+# a and b are near-duplicate columns; compare how each penalty splits the weight
+las   <- glmnet(x, y, alpha = 1, lambda = 0.05)
+rdg   <- glmnet(x, y, alpha = 0, lambda = 0.05)
+coef(las)[c("GENE_a", "GENE_b"), ]   # lasso: weight piles on one, other ~ 0
+coef(rdg)[c("GENE_a", "GENE_b"), ]   # ridge: weight split across both
+```
+
+### Stability selection
+
+```r
+set.seed(1)
+B <- 100
+n <- nrow(x); p <- ncol(x)
+counts <- integer(p)
+
+for (b in seq_len(B)) {
+  idx    <- sample(n, floor(n / 2))            # a random half of the samples
+  fb     <- cv.glmnet(x[idx, ], y[idx], alpha = 1)
+  beta   <- as.vector(coef(fb, s = "lambda.1se"))[-1]   # drop intercept
+  counts <- counts + as.integer(beta != 0)
+}
+
+freq        <- counts / B
+names(freq) <- colnames(x)
+stable      <- sort(freq[freq >= 0.6], decreasing = TRUE)
+stable
+```
+
+### Read the frequency profile
+
+```r
+barplot(sort(freq, decreasing = TRUE)[1:30],
+        las = 2, ylab = "selection frequency")
+abline(h = 0.6, col = "red", lty = 2)         # your reporting threshold
+```
+
+### Tasks
+
+**R1.** Run the **instability** block with three different seeds (`set.seed(1)`, `set.seed(2)`, `set.seed(3)`), each time comparing the one-shot lasso shortlist across the full data vs one dropped sample. Do the gained/lost genes tend to be **co-expressed** with the ones they replace? (Inspect a small gene–gene correlation on the affected genes.)
+
+**R2.** Compare the **lasso** and **ridge** coefficients for a known correlated gene pair (the "lasso vs ridge" block). Confirm that the lasso concentrates the weight on one member while the ridge spreads it. Then fit an **elastic net** (`alpha = 0.5`) and describe where it sits between the two.
+
+**R3.** Run **stability selection** with `B = 100`. Produce the sorted selection-frequency bar plot with the threshold line. Is there a clear **gap** between a stable head and a noisy tail, or is the distribution smeared? State, in one sentence, what your plot licenses you to report.
+
+**R4.** Take your stable shortlist from R3 and, for the top gene, write **one sentence** that reports it correctly — i.e. as a *stably selected predictor and a hypothesis*, not as a causal effect with a p-value.
+
+## Hints
+
+::: {.callout-tip collapse="true" title="Hint 1 — B1, comparing the two penalties"}
+For identical columns, every split with $\beta_1 + \beta_2 = 2$ (both $\ge 0$) gives the **same fitted values**, so only the *penalty* decides. The lasso penalty is $|\beta_1| + |\beta_2|$; the ridge penalty is $\beta_1^2 + \beta_2^2$. Plug in $(2,0)$, $(1,1)$, $(0,2)$ and compare. One penalty gives a **tie**; the other has a **unique minimum**.
+:::
+
+::: {.callout-tip collapse="true" title="Hint 2 — B1(c), why a tie means instability"}
+If several solutions are tied, the choice among them is decided by whatever breaks the tie — here, tiny sample-specific noise. A method with a **unique** minimum (ridge) is stable; a method with a **tie** (lasso on identical columns) is not. See Ridge, lasso & elastic net for the diamond-vs-circle geometry behind this.
+:::
+
+::: {.callout-tip collapse="true" title="Hint 3 — B3, selection frequency"}
+Selection frequency for a gene is simply (number of subsamples in which it was selected) / (total subsamples). Count the × marks down each column and divide by 5. A threshold of $\pi \ge 0.6$ means "selected in at least 3 of the 5 subsamples".
+:::
+
+::: {.callout-tip collapse="true" title="Hint 4 — B3(c), reporting a split module"}
+When two co-expressed genes each sit at a *moderate* frequency, the resamples are splitting their votes between interchangeable members. The stable finding is not "gene C" or "gene D" but the **module** they belong to.
+:::
+
+::: {.callout-tip collapse="true" title="Hint 5 — B4, three ways to be non-causal"}
+**Proxy:** rides on a correlated true driver, no function of its own. **Reverse causation:** the phenotype changes the gene, not vice versa. **Confounder marker:** tracks a third variable (batch, tumour purity) that independently drives the response. Match each scenario to the phrase that fits.
+:::
+
+::: {.callout-tip collapse="true" title="Hint 6 — B5, what a methods paragraph must state"}
+Think reproducibility: standardization, how $\lambda$ (and $\alpha$) were chosen and by what CV, whether stability selection was used and with what $B$ and threshold, and the random **seed**. The over-statement to watch for is treating a *selected* gene as a *causal* one. See the reporting slide in the lecture.
+:::
+
+::: {.callout-tip collapse="true" title="Hint 7 — the R workflow"}
+Build the matrix with [`as.matrix`](https://rdrr.io/r/base/matrix.html); fit with [`cv.glmnet`](https://glmnet.stanford.edu/reference/cv.glmnet.html) (`alpha = 1` lasso, `0` ridge, between = elastic net); pull coefficients at [`s = "lambda.1se"`](https://glmnet.stanford.edu/articles/glmnet.html) with `coef`. Resample rows with [`sample`](https://rdrr.io/r/base/sample.html) and always [`set.seed`](https://rdrr.io/r/base/Random.html) so results are reproducible. `colMeans` of a 0/1 selection matrix (or `counts / B`) gives the selection frequency.
+:::
+
+## Solutions
+
+::: {.callout-note collapse="true" title="Solution"}
+
+**B1.**
+(a) Lasso penalty $|\beta_1| + |\beta_2|$:
+$(2,0) \to 2+0 = 2$; $(1,1) \to 1+1 = 2$; $(0,2) \to 0+2 = 2$. **All equal 2** — the lasso is **indifferent** among these splits (a tie). It does not prefer any one; the solution is **non-unique**.
+(b) Ridge penalty $\beta_1^2 + \beta_2^2$:
+$(2,0) \to 4+0 = 4$; $(1,1) \to 1+1 = 2$; $(0,2) \to 0+4 = 4$. The **even split $(1,1)$ is the unique minimum** (2 < 4) — the ridge **spreads** the weight across the group.
+(c) Because the lasso penalty is tied across all same-sign splits summing to 2, the choice among the interchangeable features is decided by whatever tiny difference breaks the tie — i.e. **sample-specific noise**. Perturb the data slightly and the "winning" feature flips: the selection is **unstable**. The ridge, having a strict unique minimum at the even split, is stable and keeps both features (but never gives you an exact zero, so it is not sparse).
+
+**B2.** The lasso keeps the feature with the marginally **stronger correlation with $y$** — here $x_1$ — and drives $x_2$ to zero, because concentrating the weight on the slightly-better predictor gives a marginally lower loss for the same penalty. This margin is tiny and noise-driven: if dropping one sample makes $x_2$ the marginally stronger predictor, the lasso will switch to keeping $x_2$ and zero $x_1$. The two are near-interchangeable, so the *predictions* barely change while the *selected gene* flips — the identifiability problem in action.
+
+**B3.**
+(a) Count × down each column, divide by 5:
+GENE_A: 5/5 = **1.0**; GENE_B: 3/5 = **0.6**; GENE_C: 2/5 = **0.4**; GENE_D: 3/5 = **0.6**; GENE_E: 1/5 = **0.2**.
+(b) Threshold $\pi \ge 0.6$: **GENE_A (1.0), GENE_B (0.6), GENE_D (0.6)** make the shortlist. GENE_C (0.4) and GENE_E (0.2) do not.
+(c) GENE_C and GENE_D are co-expressed and each has only moderate frequency (0.4 and 0.6) — the resamples are **splitting their votes** between two interchangeable members. The honest report is that the **co-expression module** (containing C and D) is associated with the response, rather than singling out D and discarding C as if they were independent findings. (Note GENE_D clears the threshold and C does not, but their difference of one subsample is within resampling noise.)
+
+**B4.**
+(a) **Confounder marker** — the gene tracks tumour purity, and purity independently drives drug response, so the gene predicts $y$ without acting on it.
+(b) **Proxy** — it is correlated with the true driver but has no function of its own; it predicts by association.
+(c) **Reverse causation** — the phenotype (proliferation) drives the gene up, so the causal arrow points from response to gene, not gene to response.
+
+**B5.** Three things a reader needs (any three): (i) that predictors were **standardized** (and any supervised preprocessing was inside the CV, not before it); (ii) how $\lambda$ — and $\alpha$ if elastic net — was chosen and by what **cross-validation scheme** (e.g. 10-fold, `lambda.1se`); (iii) whether **stability selection** was used, with what number of resamples $B$ and what **threshold**, and the random **seed** for reproducibility. Also acceptable: held-out performance on data untouched by tuning. The over-statement: calling the selected genes "the signature" implies they are *the important / causal* genes, when a lasso selection is an **unstable, predictive** list — a set of **hypotheses**, not established drivers.
+
+**R1.** Across seeds you should see the one-shot shortlist wobble: genes drop out and near-duplicates take their place. Inspecting the correlation of a lost gene against its replacement typically shows a **high** correlation — they are members of the same co-expression module, so the lasso is swapping interchangeable columns. Example skeleton:
+
+```r
+sel <- function(cvfit) which(as.vector(coef(cvfit, s = "lambda.1se"))[-1] != 0)
+
+for (s in 1:3) {
+  set.seed(s)
+  fa <- cv.glmnet(x,       y,     alpha = 1)
+  fd <- cv.glmnet(x[-1, ], y[-1], alpha = 1)
+  cat("seed", s,
+      "| lost:",   setdiff(colnames(x)[sel(fa)], colnames(x)[sel(fd)]),
+      "| gained:", setdiff(colnames(x)[sel(fd)], colnames(x)[sel(fa)]), "\n")
+}
+# then, for a lost/gained pair g1, g2:
+cor(x[, "g1"], x[, "g2"])     # typically high -> same module
+```
+
+**R2.** The lasso puts (almost) all the weight on **one** member of the correlated pair and leaves the other near zero; the ridge gives **both** a similar, smaller coefficient (weight spread). The elastic net (`alpha = 0.5`) sits **between**: it keeps both members (like ridge's grouping) but shrinks small ones toward zero (like the lasso), so a correlated pair tends to enter or leave **together** with modest coefficients.
+
+```r
+las  <- glmnet(x, y, alpha = 1,   lambda = 0.05)
+rdg  <- glmnet(x, y, alpha = 0,   lambda = 0.05)
+enet <- glmnet(x, y, alpha = 0.5, lambda = 0.05)
+coef(las )[c("GENE_a", "GENE_b"), ]   # one big, one ~0
+coef(rdg )[c("GENE_a", "GENE_b"), ]   # two similar, smaller
+coef(enet)[c("GENE_a", "GENE_b"), ]   # both kept, shrunk
+```
+
+**R3.** Running the stability-selection loop and plotting the sorted frequencies, a **clear gap** between a handful of high-frequency genes and a long low tail means the data support a defensible signature (report the genes above the threshold). A **smeared** distribution with everything around 0.3–0.5 means no gene is reliably selected — the honest conclusion is that the data cannot support a stable signature at this sample size, and you should say so rather than lower the threshold until a story appears. What the plot licenses you to report is exactly the set of genes clearing the stated threshold, plus any module whose members split moderate votes.
+
+**R4.** A correct one-sentence report, e.g.: *"TYMS was selected in 94% of subsampled lasso fits, marking it as a stable transcriptomic predictor of drug response and a candidate for functional validation"* — note it reports a **selection frequency** and frames the gene as a **predictive hypothesis to be tested**, with **no** effect-size p-value and **no** causal claim.
+:::
+
+## Where this leads
+
+- **Cross-validation & model selection:** the $\lambda$ (and $\alpha$) tuning used here relies on the CV machinery from that unit; remember that the CV used to *tune* cannot also *certify* performance — that needs a held-out set or nested CV.
+- **Penalties as Bayesian priors:** the lasso penalty is a Laplace prior and the ridge penalty a Gaussian prior (the MAP view). Shrinkage bias is the prior pulling estimates toward zero — which is why coefficients are not unbiased effect sizes.
+- **Beyond this course:** valid inference *after* selection (selective / post-selection inference) and formal stability-selection error control are topics for a later statistics / machine-learning course, in line with this block's provisional status.

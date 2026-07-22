@@ -1,0 +1,108 @@
+---
+title: "Quiz: the OPLS model"
+format:
+  html:
+    toc: true
+    code-copy: true
+    code-overflow: wrap
+    highlight-style: github
+---
+
+Short questions to test your understanding of supervised latent-variable modelling with PLS and OPLS. Try each on paper first, then open the answer. These are conceptual — the exam will ask you to reason about *when* and *why*, not to run the algorithm by hand.
+
+---
+
+**Q1.** In one sentence each, what does **PCA** maximise and what does **PLS** maximise?
+
+::: {.callout-tip collapse="true" title="Hint"}
+One objective looks only at $X$; the other brings in the response $Y$.
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+PCA maximises the **variance** captured in $X$ ($\max \operatorname{var}(Xw)$), ignoring any outcome. PLS maximises the **covariance** of a component with the response ($\max \operatorname{cov}(Xw, Y)$) — variation in $X$ that also tracks $Y$.
+:::
+
+---
+
+**Q2.** Your top principal component of a serum metabolomics dataset separates samples by **run day**, not by disease. Is your data useless? What kind of method should you reach for instead?
+
+::: {.callout-tip collapse="true" title="Hint"}
+PCA ranks directions by size of variance, not by relevance to your question.
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+No — it just means the **loudest** variation is a batch effect, not the biology. PCA optimises for variance, not relevance, so a real but smaller disease signal can hide in later components. Reach for a **supervised** latent-variable method (**PLS / OPLS**) that uses the case/control label $Y$ to find the disease-related direction. (Better run-order randomisation would also help.)
+:::
+
+---
+
+**Q3.** What are the three kinds of variation OPLS distinguishes, and which one is used to predict $Y$?
+
+::: {.callout-tip collapse="true" title="Hint"}
+Correlated with $Y$; structured but uncorrelated with $Y$; unstructured noise.
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+**Predictive** (correlated with $Y$), **orthogonal** (structured but uncorrelated with $Y$ — batch, age, physiology), and **residual** (unstructured noise). Only the **predictive** component — its scores $t_p$ — is used to predict $Y$; the orthogonal part is set aside.
+:::
+
+---
+
+**Q4.** For a single response, how many **predictive** components does OPLS have? Why is that convenient for interpretation?
+
+::: {.callout-tip collapse="true" title="Hint"}
+Think about how many axes you need to read off "how case-like is this sample."
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+Exactly **one** predictive component. That means the whole $Y$-related signal is summarised by a **single score per sample** ($t_p$), so the group difference lives on one interpretable axis of the score plot; any remaining systematic spread is quarantined in orthogonal components.
+:::
+
+---
+
+**Q5.** True or false: OPLS predicts the outcome **more accurately** than PLS. Explain.
+
+::: {.callout-tip collapse="true" title="Hint"}
+OPLS is a re-parameterisation (a rotation) of the same information.
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+**False.** OPLS has essentially the **same** predictive performance as PLS — it is a rotation of the same solution. Its advantage is purely **interpretational**: it concentrates the $Y$-related variation into one predictive component and pushes nuisance structure into separate orthogonal components. Same prediction, cleaner picture.
+:::
+
+---
+
+**Q6.** You have 30 samples and 5000 metabolite features, and your OPLS-DA score plot cleanly separates cases from controls. Why is that plot, on its own, **not** evidence of a real effect?
+
+::: {.callout-tip collapse="true" title="Hint"}
+What can a supervised method do when there are far more features than samples?
+
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+Because $p \gg n$ (5000 features, 30 samples): with far more features than samples, some linear combination will separate **any** labelling — even a random one — by chance. Supervised fitting can therefore produce a beautiful separation from **noise alone**. The training-data score plot proves nothing until it is validated.
+:::
+
+---
+
+**Q7.** Which two numbers/checks tell you whether an OPLS-DA model actually generalises, and what does each add?
+
+::: {.callout-tip collapse="true" title="Hint"}
+One is cross-validated; the other shuffles the labels.
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+**$Q^2$** — the **cross-validated** predicted variance (honest fit; $R^2Y$ alone is optimistic and always rises with more components). And the **permutation test** — shuffle the labels many times to build a null distribution of $Q^2$; the real model must sit clearly in its tail. Together: $Q^2$ says how well it predicts held-out samples, permutation says whether that beats chance for data of this size.
+:::
+
+---
+
+**Q8.** A model reports $R^2Y = 0.95$ but $Q^2 = -0.08$. What is going on, and what is the general fingerprint of this problem?
+
+::: {.callout-tip collapse="true" title="Hint"}
+Compare in-sample fit against cross-validated prediction.
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+The model fits the **training** data almost perfectly ($R^2Y = 0.95$) but predicts held-out samples **worse than the mean** ($Q^2 < 0$) — classic **overfitting**. The general fingerprint is a large gap between a high $R^2Y$ and a near-zero or **negative** $Q^2$.
+:::

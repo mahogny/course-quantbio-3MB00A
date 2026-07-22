@@ -1,0 +1,255 @@
+---
+title: "Exercise: PCA in R"
+format:
+  html:
+    toc: true
+    code-copy: true
+    code-overflow: wrap
+    highlight-style: github
+---
+
+## Goal
+
+By the end of this exercise you should be able to:
+
+- run a PCA in R with [`prcomp`](https://rdrr.io/r/stats/prcomp.html) and know what `center` and `scale.` do,
+- read the three outputs — `$sdev` (spread per PC), `$rotation` (loadings), `$x` (scores) — and say what each means,
+- compute a small PCA **by hand**: center the data, form the covariance matrix, eigen-decompose it, and read off variance explained,
+- show that `prcomp` is the **eigen-decomposition of the covariance matrix** (the engine from Eigenvalues & eigenvectors),
+- plot **PC1 vs PC2** to see sample structure, and read **loadings** to find the genes that drive an axis,
+- explain **why scaling matters** when features are on different scales.
+
+The by-hand steps reuse the eigenvalue recipe you already drilled; the R steps are the tool you will use on real omics data. Spend real time on both.
+
+## Background
+
+**PCA** re-expresses a samples × features table in a new coordinate system whose axes (**principal components**) are ordered by how much variation they capture. PC1 is the direction of greatest variance, PC2 the next-greatest and perpendicular to PC1, and so on.
+
+The principal components are the **eigenvectors of the covariance matrix**, and the variance along each PC is its **eigenvalue**. So a full PCA by hand is:
+
+1. **Center** the data: subtract each feature's (column) mean. (Optionally **scale**: divide each column by its standard deviation.)
+2. Form the **covariance matrix** $C$ of the (centered) features.
+3. **Eigen-decompose** $C$: eigenvalues $\lambda_k$ = variance along PC$k$; eigenvectors = **loadings** (the PC directions).
+4. **Variance explained** by PC$k$ is $\lambda_k / \sum_j \lambda_j$.
+5. **Scores** = project each centered sample onto each PC (a dot product with the unit eigenvector).
+
+In R, `prcomp(X, center = TRUE, scale. = TRUE)` does all of this and returns `$sdev` (where $\text{sdev}_k^2 = \lambda_k$), `$rotation` (loadings), and `$x` (scores).
+
+**Convention:** samples are **rows**, features are **columns**. If your omics table is genes × samples, transpose it with [`t`](https://rdrr.io/r/base/t.html) first.
+
+For the by-hand part, recall that for a $2\times2$ symmetric $C$, the eigenvalues solve $\det(C - \lambda I) = 0$ (a quadratic), and $\sum\lambda = \text{trace}$, $\prod\lambda = \det C$ are handy checks.
+
+## By hand
+
+Use this tiny dataset throughout the by-hand section — **3 samples, 2 genes**:
+
+$$X = \begin{pmatrix} 2 & 2 \\ 4 & 6 \\ 6 & 4 \end{pmatrix}\quad\text{(rows: s1, s2, s3; columns: gene1, gene2)}$$
+
+**B1.** Compute each gene's mean and **center** the data (subtract the column mean from every entry). Write out the centered matrix.
+
+**B2.** Using the centered data, compute the $2\times2$ **covariance matrix** $C = \begin{pmatrix} \text{var}(g_1) & \text{cov}(g_1,g_2) \\ \text{cov}(g_1,g_2) & \text{var}(g_2) \end{pmatrix}$. Use the $n-1$ denominator (here $n-1 = 2$).
+
+**B3.** Find the **eigenvalues** of $C$ from the characteristic equation $\det(C-\lambda I)=0$. Confirm with the trace and determinant checks.
+
+**B4.** Find a **unit-length eigenvector** for each eigenvalue. These are the **loadings** — the directions of PC1 and PC2. Verify the two are orthogonal.
+
+**B5.** Compute the **proportion of variance explained** by PC1 and by PC2.
+
+**B6.** Compute the **PC1 score** of each sample: project each centered sample onto the PC1 unit eigenvector (a dot product). Which two samples end up closest together on PC1?
+
+**B7. (interpretation)** Look at your PC1 loading. Do gene1 and gene2 contribute equally, or does one dominate? What would that tell a biologist about how these two genes vary across the samples?
+
+## In R
+
+The same PCA, run with `prcomp`. (Here we center but do **not** scale, so the result matches the covariance eigen-decomposition you did by hand; the scaling task comes at the end.)
+
+### Run it and read the three outputs
+
+```r
+X <- matrix(c(2, 2,
+              4, 6,
+              6, 4), nrow = 3, byrow = TRUE)
+rownames(X) <- c("s1", "s2", "s3")
+colnames(X) <- c("gene1", "gene2")
+
+pca <- prcomp(X, center = TRUE, scale. = FALSE)
+
+pca$sdev            # [1] 2.449 1.414   -> sd along each PC
+pca$sdev^2          # [1] 6 2           -> variance along each PC = eigenvalues
+
+pca$rotation        # loadings (columns are PCs, rows are genes)
+#          PC1     PC2
+# gene1  0.707   0.707
+# gene2  0.707  -0.707
+
+pca$x               # scores (one row per sample)
+#          PC1     PC2
+# s1  -2.828   0.000
+# s2   1.414  -1.414
+# s3   1.414   1.414
+```
+
+### Variance explained
+
+```r
+prop <- pca$sdev^2 / sum(pca$sdev^2)
+round(prop, 3)      # [1] 0.75 0.25   -> PC1 explains 75%, PC2 explains 25%
+cumsum(prop)        # [1] 0.75 1.00
+```
+
+### Show prcomp == eigen of the covariance matrix
+
+```r
+C <- cov(X)         # covariance matrix (center is built into cov)
+C
+#        gene1 gene2
+# gene1     4     2
+# gene2     2     4
+
+e <- eigen(C)
+e$values            # [1] 6 2          -> same as pca$sdev^2
+e$vectors           # same as pca$rotation (columns), up to sign
+```
+
+### Plot PC1 vs PC2
+
+```r
+plot(pca$x[, 1], pca$x[, 2],
+     xlab = "PC1 (75%)", ylab = "PC2 (25%)", pch = 19)
+text(pca$x[, 1], pca$x[, 2], labels = rownames(X), pos = 3)
+```
+
+### Tasks
+
+**R1.** Reproduce the by-hand result in R: build `X`, run `prcomp(X, scale. = FALSE)`, and confirm `pca$sdev^2` matches your **B3** eigenvalues and `pca$rotation` matches your **B4** eigenvectors (allowing for a possible sign flip).
+
+**R2.** Confirm the equivalence directly: compute `eigen(cov(X))` and check that `$values` equals `pca$sdev^2` and `$vectors` equals `pca$rotation` (up to sign).
+
+**R3.** Confirm your **B6** scores: check that `pca$x[, 1]` equals the PC1 scores you computed by hand.
+
+**R4. (why scaling matters)** Two genes on very different scales:
+
+```r
+Y <- matrix(c(100, 1,
+              110, 5,
+              120, 2,
+              130, 6,
+              140, 3,
+              150, 7), nrow = 6, byrow = TRUE)
+colnames(Y) <- c("geneHi", "geneLo")
+
+pca_noscale <- prcomp(Y, scale. = FALSE)
+pca_scale   <- prcomp(Y, scale. = TRUE)
+
+round(pca_noscale$rotation[, 1], 3)   # PC1 loadings, unscaled
+round(pca_scale$rotation[, 1],   3)   # PC1 loadings, scaled
+```
+
+Compare the two PC1 loadings. Without scaling, which gene dominates PC1, and **why**? What changes when you set `scale. = TRUE`? Which analysis would you trust if the two genes are measured in different units?
+
+## Hints
+
+::: {.callout-tip collapse="true" title="Hint 1 — centering (B1)"}
+The mean of a column is the sum of its entries divided by the number of samples. Subtract that mean from **every** entry in the column. gene1 is $2,4,6$ and gene2 is $2,6,4$ — both have mean $4$, so centering just subtracts $4$ everywhere.
+:::
+
+::: {.callout-tip collapse="true" title="Hint 2 — covariance by hand (B2)"}
+With centered columns $u$ and $v$ and $n$ samples, $\text{var}(u) = \frac{1}{n-1}\sum u_i^2$ and $\text{cov}(u,v) = \frac{1}{n-1}\sum u_i v_i$. Here $n-1 = 2$. The matrix is symmetric, so $\text{cov}(g_1,g_2) = \text{cov}(g_2,g_1)$. In R this is [`cov`](https://rdrr.io/r/stats/cor.html)`(X)`.
+:::
+
+::: {.callout-tip collapse="true" title="Hint 3 — eigenvalues (B3)"}
+This is exactly the recipe from Eigenvalues & eigenvectors: form $C - \lambda I$ (subtract $\lambda$ from each diagonal entry) and solve $\det(C-\lambda I) = (a-\lambda)(d-\lambda) - bc = 0$. Check with $\lambda_1 + \lambda_2 = $ trace and $\lambda_1\lambda_2 = \det C$. In R: [`eigen`](https://rdrr.io/r/base/eigen.html)`(C)$values`.
+:::
+
+::: {.callout-tip collapse="true" title="Hint 4 — unit eigenvectors (B4)"}
+Solve $(C-\lambda I)\mathbf v = \mathbf 0$ for each $\lambda$ to get a direction (e.g. $(1,1)$), then make it length 1 by dividing by its norm $\sqrt{v_1^2 + v_2^2}$. For $(1,1)$ the norm is $\sqrt 2$, so the unit vector is $(1/\sqrt2,\ 1/\sqrt2) \approx (0.707, 0.707)$. Orthogonal means the dot product is 0.
+:::
+
+::: {.callout-tip collapse="true" title="Hint 5 — variance explained (B5)"}
+Proportion for PC$k$ is $\lambda_k / (\lambda_1 + \lambda_2)$. The denominator is the total variance, which also equals the trace of $C$. In R: `pca$sdev^2 / sum(pca$sdev^2)`.
+:::
+
+::: {.callout-tip collapse="true" title="Hint 6 — scores as projections (B6)"}
+A score is a dot product: PC1 score of a sample $=$ (centered sample) $\cdot$ (PC1 unit eigenvector). For centered sample $(u_1, u_2)$ and unit vector $(0.707, 0.707)$ the score is $0.707\,u_1 + 0.707\,u_2$. In R the whole score matrix is `pca$x`, or equivalently `scale(X, scale = FALSE) %*% pca$rotation` (see [`%*%`](https://rdrr.io/r/base/matmult.html)).
+:::
+
+::: {.callout-tip collapse="true" title="Hint 7 — reading loadings (B7)"}
+A **loading** is the weight of a gene in a PC. Equal loadings mean the two genes contribute equally to that axis — i.e. they **vary together**. A loading near zero means the gene is irrelevant to that PC. Compare the magnitudes within the PC1 column of `pca$rotation`.
+:::
+
+::: {.callout-tip collapse="true" title="Hint 8 — scaling (R4)"}
+Variance has units. A gene measured in the hundreds has a large variance for trivial reasons and will dominate PC1 unless you scale. `scale. = TRUE` divides each gene by its standard deviation first, putting them on equal footing. See the `scale.` argument in [`prcomp`](https://rdrr.io/r/stats/prcomp.html) (note the dot in the name) and the standalone [`scale`](https://rdrr.io/r/base/scale.html).
+:::
+
+## Solutions
+
+::: {.callout-note collapse="true" title="Solution"}
+
+**B1 — centering.** Column means: gene1 $=(2+4+6)/3 = 4$; gene2 $=(2+6+4)/3 = 4$. Subtract 4 from each column:
+
+$$X_c = \begin{pmatrix} 2-4 & 2-4 \\ 4-4 & 6-4 \\ 6-4 & 4-4 \end{pmatrix} = \begin{pmatrix} -2 & -2 \\ 0 & 2 \\ 2 & 0 \end{pmatrix}.$$
+
+**B2 — covariance matrix.** With $n-1 = 2$ and the centered columns $u = (-2, 0, 2)$, $v = (-2, 2, 0)$:
+
+- $\text{var}(g_1) = \frac{(-2)^2 + 0^2 + 2^2}{2} = \frac{8}{2} = 4$,
+- $\text{var}(g_2) = \frac{(-2)^2 + 2^2 + 0^2}{2} = \frac{8}{2} = 4$,
+- $\text{cov}(g_1,g_2) = \frac{(-2)(-2) + (0)(2) + (2)(0)}{2} = \frac{4}{2} = 2$.
+
+$$C = \begin{pmatrix} 4 & 2 \\ 2 & 4 \end{pmatrix}.$$
+
+**B3 — eigenvalues.** $\det(C-\lambda I) = (4-\lambda)^2 - (2)(2) = (4-\lambda)^2 - 4$. Expand: $\lambda^2 - 8\lambda + 16 - 4 = \lambda^2 - 8\lambda + 12 = 0$. Factor: $(\lambda - 6)(\lambda - 2) = 0$, so $\lambda_1 = 6$, $\lambda_2 = 2$.
+Checks: trace $= 4 + 4 = 8 = 6 + 2$ ✓; $\det C = 16 - 4 = 12 = 6\cdot 2$ ✓.
+
+**B4 — unit eigenvectors (loadings).**
+For $\lambda = 6$: $C - 6I = \begin{pmatrix} -2 & 2 \\ 2 & -2 \end{pmatrix}$; row 1 gives $-2v_1 + 2v_2 = 0 \Rightarrow v_2 = v_1$, so the direction is $(1,1)$. Normalise: $(1,1)/\sqrt2 = (0.707, 0.707)$ — this is **PC1**.
+For $\lambda = 2$: $C - 2I = \begin{pmatrix} 2 & 2 \\ 2 & 2 \end{pmatrix}$; row 1 gives $v_1 + v_2 = 0 \Rightarrow v_2 = -v_1$, so the direction is $(1,-1)$. Normalise: $(0.707, -0.707)$ — this is **PC2**.
+Orthogonal: $(1)(1) + (1)(-1) = 0$ ✓ (guaranteed, since $C$ is symmetric).
+
+**B5 — variance explained.** Total variance $= 6 + 2 = 8$. PC1: $6/8 = 0.75$ (**75%**); PC2: $2/8 = 0.25$ (**25%**).
+
+**B6 — PC1 scores.** Project each centered sample onto the PC1 unit vector $(0.707, 0.707)$, i.e. score $= 0.707\,(u_1 + u_2)$:
+
+- s1: centered $(-2,-2)$ → $0.707(-2-2) = 0.707(-4) = -2.83$,
+- s2: centered $(0,2)$ → $0.707(0+2) = 0.707(2) = 1.41$,
+- s3: centered $(2,0)$ → $0.707(2+0) = 1.41$.
+
+So PC1 scores are $(-2.83,\ 1.41,\ 1.41)$. **s2 and s3 land at the same PC1 score** — they are the closest pair along PC1 (they differ only along PC2). These match `pca$x[, 1]` exactly.
+
+**B7 — interpretation.** The PC1 loading is $(0.707, 0.707)$: gene1 and gene2 contribute **equally**. Biologically, the dominant source of variation across these samples is the two genes moving **together** — they are co-varying (here, perfectly correlated). PC1 is essentially "overall level of the gene1–gene2 program", and a sample's PC1 score says how high that joint program is.
+
+**R1.** `prcomp(X, scale. = FALSE)` returns `sdev^2 = c(6, 2)` (matching the eigenvalues) and `rotation` with columns $(0.707, 0.707)$ and $(0.707, -0.707)$ (matching the eigenvectors; R may report either sign). The scores in `pca$x[, 1]` are $(-2.83, 1.41, 1.41)$, matching B6.
+
+**R2.**
+
+```r
+C <- cov(X)
+e <- eigen(C)
+e$values          # 6 2
+pca$sdev^2        # 6 2   -> identical
+e$vectors         # columns equal pca$rotation up to sign
+```
+
+The eigenvalues of the covariance matrix are exactly `pca$sdev^2`, and the eigenvectors are the columns of `pca$rotation` (possibly sign-flipped). This is the point of the lecture: **PCA is the eigen-decomposition of the covariance matrix.**
+
+**R3.** `pca$x[, 1]` is `c(-2.828, 1.414, 1.414)`, identical to the hand-computed PC1 scores in B6 (up to the same overall sign as the PC1 eigenvector).
+
+**R4 — why scaling matters.**
+
+```r
+round(pca_noscale$rotation[, 1], 3)
+# geneHi geneLo
+#  0.997  0.081     -> PC1 is almost entirely geneHi
+
+round(pca_scale$rotation[, 1], 3)
+# geneHi geneLo
+#  0.707  0.707     -> both genes contribute equally
+```
+
+Without scaling, `geneHi` (values in the hundreds) has a far larger variance than `geneLo` purely because of its magnitude, so PC1 loads almost entirely on `geneHi` (loading 0.997) and captures ~99% of the "variance" — a result driven by units, not biology. With `scale. = TRUE`, each gene is divided by its standard deviation first, so PC1 responds to the **correlation pattern** and both genes contribute equally (0.707 each). If the two genes are measured in different units, trust the **scaled** analysis; otherwise the PCA just reports which gene has the bigger numbers.
+:::
+
+## Where this leads
+
+- **Real omics data:** the same `prcomp` call scales to thousands of genes. You will transpose genes × samples tables to samples × genes, plot PC1 vs PC2 coloured by a metadata label, and pull the top-loading genes with `sort(abs(pca$rotation[, 1]), decreasing = TRUE)`.
+- **Production tools:** Bioconductor workflows and `DESeq2::plotPCA` wrap exactly these steps with sensible defaults — the base-R `prcomp` you learned here is the transparent engine inside them.
+- **Latent-variable methods (Applications block):** PCA is the first and simplest dimension-reduction method; PC scores feed naturally into clustering, and the same "find low-dimensional structure" idea recurs in later methods.

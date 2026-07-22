@@ -1,0 +1,240 @@
+---
+title: "Exercise: spectra as data"
+format:
+  html:
+    toc: true
+    code-copy: true
+    code-overflow: wrap
+    highlight-style: github
+---
+
+## Goal
+
+By the end of this exercise you should be able to:
+
+- explain why a **spectrum is a vector** and a spectral dataset is a **samples × wavelengths** matrix,
+- use the **Beer–Lambert law** $A = \varepsilon\ell c$ to convert between absorbance and concentration by hand,
+- add **pure-component spectra** as a linear combination to build a mixture spectrum, and reason about recovering concentrations,
+- apply the four preprocessing ideas by hand on tiny examples — **baseline correction**, **normalization**, **smoothing**, **first derivative** — and say which artefact each removes,
+- explain why **ordinary regression** fails on spectra ($p \gg n$, collinearity) and what **PLS** does instead.
+
+This is an **Applications** unit: it reuses **vectors and dot products**, **linear models**, and **principal component analysis**. The by-hand parts are small on purpose; the R parts are illustrative (no spectroscopy packages are assumed installed).
+
+## Background
+
+**A spectrum is a vector.** The instrument records absorbance $A$ on a discrete grid of wavelengths $\lambda_1,\dots,\lambda_p$, so one spectrum is
+
+$$\mathbf{x} = (A(\lambda_1),\ \dots,\ A(\lambda_p)) \in \mathbb{R}^p,$$
+
+and $n$ samples stack as rows of an $n\times p$ matrix $X$ (samples × wavelengths).
+
+**Beer–Lambert law.** For a single absorbing substance,
+$$A = \varepsilon\,\ell\,c,$$
+with $c$ concentration, $\ell$ path length, and $\varepsilon$ the molar absorptivity at that wavelength. Absorbance is *proportional* to concentration.
+
+**Mixtures add.** With $k$ substances, the absorbances add at every wavelength, so the whole spectrum is a **linear combination of pure-component spectra** $\mathbf{s}_i$ weighted by concentrations:
+$$\mathbf{x} = c_1\mathbf{s}_1 + \dots + c_k\mathbf{s}_k.$$
+
+**Preprocessing** removes chemistry-free artefacts before modelling:
+
+| Step | Removes | One-line idea |
+|---|---|---|
+| Baseline correction | additive offset/drift | subtract a baseline |
+| Normalization | multiplicative scaling | divide by length or SD |
+| Smoothing | random noise | average neighbours (Savitzky–Golay) |
+| Derivative | baseline + peak overlap | differentiate along $\lambda$ |
+
+**Calibration** predicts concentration from a spectrum with a linear model $\hat y = b_0 + \mathbf{b}\cdot\mathbf{x}$. Ordinary least squares fails because $p \gg n$ and adjacent wavelengths are collinear; **PLS** compresses wavelengths into a few response-aware components instead.
+
+## By hand
+
+**B1. (Beer–Lambert, one substance).** A purified compound has molar absorptivity $\varepsilon = 2000\ \text{M}^{-1}\text{cm}^{-1}$ at its peak wavelength, measured in a cuvette of path length $\ell = 1\ \text{cm}$.
+(a) A solution of concentration $c = 3\times10^{-4}\ \text{M}$ is measured. What absorbance do you expect?
+(b) A different solution reads $A = 0.9$. What is its concentration?
+(c) You halve the path length to $0.5\ \text{cm}$ and re-measure the solution from (b). What absorbance now?
+
+**B2. (a calibration line).** You measure absorbance at one wavelength for standards of known concentration:
+
+| $c$ (mM) | 0 | 1 | 2 | 4 |
+|---|---|---|---|---|
+| $A$ | 0.00 | 0.20 | 0.40 | 0.80 |
+
+(a) Do these obey Beer–Lambert? What is the slope $\varepsilon\ell$ (in absorbance per mM)?
+(b) An unknown reads $A = 0.50$. Estimate its concentration.
+
+**B3. (a spectrum is a vector).** Two samples are measured at $p = 4$ wavelengths:
+$$\mathbf{x}_A = (0.1,\ 0.4,\ 0.2,\ 0.1), \qquad \mathbf{x}_B = (0.2,\ 0.8,\ 0.4,\ 0.2).$$
+(a) Compute the Euclidean distance $\lVert \mathbf{x}_A - \mathbf{x}_B\rVert$.
+(b) Show that $\mathbf{x}_B = 2\,\mathbf{x}_A$. What physical effect (from the lecture) could make one sample's spectrum an exact multiple of another's?
+(c) After **vector normalization** (divide each by its own length), would $\mathbf{x}_A$ and $\mathbf{x}_B$ be equal, or different? Explain without full computation.
+
+**B4. (mixtures add).** Two pure components have spectra over $p = 3$ wavelengths:
+$$\mathbf{s}_1 = (1,\ 0,\ 2), \qquad \mathbf{s}_2 = (0,\ 3,\ 1).$$
+(a) Write the mixture spectrum for concentrations $c_1 = 2$, $c_2 = 1$.
+(b) You observe a mixture spectrum $\mathbf{x} = (3,\ 3,\ 7)$. Assuming it is $c_1\mathbf{s}_1 + c_2\mathbf{s}_2$, find $c_1$ and $c_2$. (Hint: each wavelength gives one equation.)
+(c) In one sentence, why is knowing the pure-component spectra enough to turn spectroscopy into solving a linear system?
+
+**B5. (baseline correction).** A spectrum over 5 wavelengths reads
+$$\mathbf{x} = (0.3,\ 0.7,\ 0.5,\ 0.9,\ 0.4).$$
+A second measurement of the *same sample* is shifted up by a constant baseline of $0.2$:
+$$\mathbf{x}' = (0.5,\ 0.9,\ 0.7,\ 1.1,\ 0.6).$$
+(a) Apply constant-offset baseline correction by subtracting each spectrum's own **minimum**. Write both corrected spectra.
+(b) Are the corrected spectra identical? Why is that the point of baseline correction?
+
+**B6. (a first derivative removes an offset).** Take $\mathbf{x} = (0.3,\ 0.7,\ 0.5,\ 0.9,\ 0.4)$ from B5.
+(a) Compute the first differences $\Delta_i = x_{i+1} - x_i$ (four numbers).
+(b) Now do the same for the baseline-shifted $\mathbf{x}' = \mathbf{x} + 0.2$. What do you notice, and why does this show a first derivative is blind to a constant baseline?
+
+**B7. (smoothing).** Apply a **moving average of window 3** to $\mathbf{x} = (0.2,\ 0.8,\ 0.2,\ 0.8,\ 0.2)$, i.e. replace each interior point by the mean of itself and its two neighbours (leave the two ends out).
+(a) Write the three smoothed interior values.
+(b) The original alternates sharply; describe what smoothing did to that oscillation, and name the risk if the oscillation had been a real narrow peak.
+
+**B8. (why not ordinary regression).** You have $n = 8$ calibration samples, each a spectrum at $p = 700$ wavelengths, and you want a linear model for concentration.
+(a) Why can ordinary least squares not give a unique coefficient vector here? (Think about $p$ vs $n$.)
+(b) Even if you had $n = 1000$ samples, adjacent wavelengths are nearly identical columns of $X$. What word describes this, and why does it still destabilise the coefficients?
+(c) In one sentence, what does PLS do differently that sidesteps both problems?
+
+## In R
+
+The R below is **illustrative** — run it if you like, but the point is to connect the maths to code you can read. No spectroscopy packages are assumed.
+
+### A spectrum as a vector, a dataset as a matrix
+
+```r
+# a tiny "dataset": 3 samples, 4 wavelengths
+X <- matrix(c(0.1, 0.4, 0.2, 0.1,
+              0.2, 0.8, 0.4, 0.2,
+              0.15, 0.5, 0.25, 0.12),
+            nrow = 3, byrow = TRUE)
+dim(X)            # 3 4  -> 3 samples (rows), 4 wavelengths (cols)
+X[1, ]            # the first spectrum, as a length-4 vector
+
+# distance between two spectra (B3a)
+sqrt(sum((X[1, ] - X[2, ])^2))
+```
+
+### Beer–Lambert both ways (B1)
+
+```r
+eps <- 2000; l <- 1
+A_from_c <- function(c) eps * l * c
+c_from_A <- function(A) A / (eps * l)
+
+A_from_c(3e-4)    # expected absorbance
+c_from_A(0.9)     # concentration from a reading
+```
+
+### Build and unmix a mixture (B4)
+
+```r
+s1 <- c(1, 0, 2)
+s2 <- c(0, 3, 1)
+mix <- 2 * s1 + 1 * s2      # c1 = 2, c2 = 1
+mix                          # the mixture spectrum
+
+# recover concentrations by solving the linear system S %*% c = x
+S <- cbind(s1, s2)           # 3x2 pure-component matrix
+x <- c(3, 3, 7)
+# more equations (3) than unknowns (2): least-squares solve
+solve(t(S) %*% S, t(S) %*% x)
+```
+
+### Preprocessing on a toy spectrum
+
+```r
+x  <- c(0.3, 0.7, 0.5, 0.9, 0.4)
+xs <- x + 0.2                        # same sample, +0.2 baseline
+
+# baseline correction: subtract each spectrum's own minimum (B5)
+x  - min(x)
+xs - min(xs)                          # identical to the line above
+
+# first difference ~ first derivative (B6)
+diff(x)
+diff(xs)                              # identical: derivative kills the offset
+
+# vector (L2) normalization (B3c)
+x / sqrt(sum(x^2))
+```
+
+## Hints
+
+::: {.callout-tip collapse="true" title="Hint 1 — Beer–Lambert both directions"}
+$A = \varepsilon\ell c$ rearranges to $c = A/(\varepsilon\ell)$. Keep units consistent. Halving $\ell$ halves $A$ for the *same* $c$, because $A$ is proportional to $\ell$ as well as $c$.
+:::
+
+::: {.callout-tip collapse="true" title="Hint 2 — a calibration line"}
+"Obeys Beer–Lambert" means $A$ is a straight line through the origin in $c$: $A = (\varepsilon\ell)\,c$. Read the slope off any point, e.g. $0.20/1 = 0.20$ absorbance per mM, and invert to get concentration from a new reading.
+:::
+
+::: {.callout-tip collapse="true" title="Hint 3 — spectra as vectors"}
+Euclidean distance is $\lVert\mathbf a-\mathbf b\rVert = \sqrt{\sum_i (a_i-b_i)^2}$ (the norm from **Vectors and dot products**). If $\mathbf{x}_B = 2\mathbf{x}_A$ they point the same way but differ in length — think which *multiplicative* effect scales an entire spectrum. Vector normalization sets every spectrum's length to 1, so two spectra on the same line become the same point.
+:::
+
+::: {.callout-tip collapse="true" title="Hint 4 — unmixing"}
+A mixture spectrum is $c_1\mathbf s_1 + c_2\mathbf s_2$. Writing it out wavelength by wavelength gives one linear equation per wavelength — a linear system in the unknowns $c_1, c_2$. With more wavelengths than components the system is overdetermined; solve it in the least-squares sense (this is exactly what a linear model does). See [`solve`](https://rdrr.io/r/base/solve.html).
+:::
+
+::: {.callout-tip collapse="true" title="Hint 5 — baseline correction"}
+A constant baseline adds the same number to every entry. Subtracting the spectrum's **minimum** cancels a constant offset, so two measurements that differ only by a constant collapse onto each other. This is the whole idea: same chemistry → same corrected spectrum.
+:::
+
+::: {.callout-tip collapse="true" title="Hint 6 — first derivative vs a constant baseline"}
+The first difference $x_{i+1}-x_i$ of a shifted spectrum $(x+b)$ is $(x_{i+1}+b)-(x_i+b) = x_{i+1}-x_i$ — the constant $b$ cancels. That is the discrete version of "the derivative of a constant is zero." See [`diff`](https://rdrr.io/r/base/diff.html).
+:::
+
+::: {.callout-tip collapse="true" title="Hint 7 — moving average"}
+Each interior smoothed value is the mean of three numbers: the point and its two neighbours, e.g. the second point becomes $(x_1+x_2+x_3)/3$. Averaging cancels an up-down-up oscillation. The risk: if that oscillation were a real narrow peak, smoothing would flatten it too — the smoothing/noise trade-off.
+:::
+
+::: {.callout-tip collapse="true" title="Hint 8 — why OLS fails"}
+Ordinary least squares must invert $X^\top X$, a $p\times p$ matrix. With $p > n$ it is **singular** (no unique solution — recall singular matrices from the linear-systems unit). With correlated columns (adjacent wavelengths) it is near-singular even when $n>p$: this is **collinearity**, and it makes the coefficients huge and unstable. PLS avoids both by regressing on a few combinations of wavelengths chosen to correlate with the response.
+:::
+
+## Solutions
+
+::: {.callout-note collapse="true" title="Solution"}
+
+**B1.**
+(a) $A = \varepsilon\ell c = 2000 \times 1 \times 3\times10^{-4} = 0.6$.
+(b) $c = A/(\varepsilon\ell) = 0.9 / (2000\times1) = 4.5\times10^{-4}\ \text{M}$.
+(c) Absorbance is proportional to path length, so halving $\ell$ halves $A$: $A = 0.9 \times 0.5 = 0.45$. (Concentration is unchanged; only the path shortened.)
+
+**B2.**
+(a) Yes: $A$ is exactly proportional to $c$ (0, 0.20, 0.40, 0.80 for 0, 1, 2, 4 mM), a straight line through the origin. Slope $\varepsilon\ell = 0.20/1 = 0.20$ absorbance per mM (every point gives the same ratio).
+(b) $c = A/\text{slope} = 0.50 / 0.20 = 2.5\ \text{mM}$.
+
+**B3.**
+(a) $\mathbf{x}_A - \mathbf{x}_B = (0.1-0.2,\ 0.4-0.8,\ 0.2-0.4,\ 0.1-0.2) = (-0.1,-0.4,-0.2,-0.1)$. Distance $=\sqrt{0.01+0.16+0.04+0.01} = \sqrt{0.22} \approx 0.469$.
+(b) Each entry of $\mathbf{x}_B$ is twice the corresponding entry of $\mathbf{x}_A$, so $\mathbf{x}_B = 2\mathbf{x}_A$. A **multiplicative** effect — a longer path length (Beer–Lambert: $A \propto \ell$) or denser/thicker sample — scales the entire spectrum by a common factor.
+(c) They would be **equal**. Both lie on the same line through the origin (one is a scalar multiple of the other), so dividing each by its own length lands them on the same unit vector. Normalization removes exactly the multiplicative difference between them.
+
+**B4.**
+(a) $2\mathbf{s}_1 + 1\mathbf{s}_2 = 2(1,0,2) + (0,3,1) = (2,0,4) + (0,3,1) = (2,3,5)$.
+(b) Wavelength by wavelength, $c_1\mathbf s_1 + c_2\mathbf s_2 = (c_1,\ 3c_2,\ 2c_1 + c_2)$. Matching to $(3,3,7)$:
+wavelength 1: $c_1 = 3$; wavelength 2: $3c_2 = 3 \Rightarrow c_2 = 1$; wavelength 3 checks: $2(3)+1 = 7$ ✓. So $c_1 = 3$, $c_2 = 1$.
+(c) Because a mixture spectrum is a linear combination of the pure spectra, each wavelength contributes one linear equation in the unknown concentrations — so recovering concentrations is just solving a linear system.
+
+**B5.**
+(a) $\min(\mathbf{x}) = 0.3$, so $\mathbf{x} - 0.3 = (0.0,\ 0.4,\ 0.2,\ 0.6,\ 0.1)$. For $\mathbf{x}'$, $\min = 0.5$, so $\mathbf{x}' - 0.5 = (0.0,\ 0.4,\ 0.2,\ 0.6,\ 0.1)$.
+(b) They are **identical**. The two measurements differed only by a constant baseline, and subtracting each spectrum's own minimum removes that constant — so the same chemistry yields the same corrected spectrum, which is exactly the goal of baseline correction.
+
+**B6.**
+(a) $\Delta = (0.7-0.3,\ 0.5-0.7,\ 0.9-0.5,\ 0.4-0.9) = (0.4,\ -0.2,\ 0.4,\ -0.5)$.
+(b) For $\mathbf{x}' = \mathbf{x} + 0.2$, every difference is $(x_{i+1}+0.2)-(x_i+0.2) = x_{i+1}-x_i$ — the **same** four numbers $(0.4,-0.2,0.4,-0.5)$. The constant baseline cancels in the differencing, so a first derivative is blind to a constant offset (the discrete "derivative of a constant is zero").
+
+**B7.**
+(a) Interior means of window 3: point 2 $\to (0.2+0.8+0.2)/3 = 0.4$; point 3 $\to (0.8+0.2+0.8)/3 = 0.6$; point 4 $\to (0.2+0.8+0.2)/3 = 0.4$. Smoothed interior $= (0.4,\ 0.6,\ 0.4)$.
+(b) The sharp up-down-up oscillation was flattened toward its average — noise-like wiggles are suppressed. The risk: had that oscillation been a genuine narrow peak, the same averaging would have blunted or erased it. This is the smoothing/noise trade-off (a wider window smooths more but loses more real detail).
+
+**B8.**
+(a) OLS requires inverting $X^\top X$, a $700\times700$ matrix, but with only $n = 8$ samples $X^\top X$ has rank at most 8 and is **singular** — there is no unique solution, and infinitely many coefficient vectors fit the 8 samples perfectly while predicting nonsense on new ones (overfitting).
+(b) **Collinearity** (multicollinearity): adjacent wavelengths are almost identical columns, so $X^\top X$ is near-singular even when $n > p$. Its near-zero eigenvalues blow up the inverse, making the coefficients enormous and wildly unstable to tiny changes in the data.
+(c) PLS builds a few **latent components** — combinations of wavelengths chosen to correlate with the response — and regresses on those, so it never inverts the ill-conditioned $X^\top X$ and is untroubled by having many correlated wavelengths.
+:::
+
+## Where this leads
+
+- **Chemometrics II:** using spectra for **classification** (which class/species/grade is this sample?), honest **model validation**, and interpreting **which wavelengths** drive a prediction back to chemistry.
+- **Principal component analysis:** PLS is PCA's response-aware cousin; the PCA unit builds the compression idea that both Principal Component Regression and PLS rely on.
+- **Linear models:** calibration $\hat y = b_0 + \mathbf{b}\cdot\mathbf{x}$ is a linear model on a wide, collinear design — the reason regularised and latent-variable regressions exist.

@@ -1,0 +1,176 @@
+---
+title: "Exercise: Fourier transform & basis functions"
+format:
+  html:
+    toc: true
+    code-copy: true
+    code-overflow: wrap
+    highlight-style: github
+---
+
+## Goal
+
+By the end of this exercise you should be able to:
+
+- describe a sinusoid by its **frequency**, **amplitude**, and **phase**, and read those off a picture,
+- explain in your own words why the Fourier transform is a **change of basis**, and why it is **reversible**,
+- explain why sinusoids of different frequencies form an **orthogonal** basis, and how that lets each amplitude be read off as a **projection**,
+- contrast the **fixed** Fourier basis with the **data-driven** PCA basis, and say when each is appropriate,
+- reason about what a **spectrum** shows, and how **low-pass / high-pass / notch** filtering and **compression** act on it,
+- read a small `fft()` output in R and interpret the magnitude spectrum.
+
+This is an **Applications-block appreciation** exercise. It builds *conceptual* fluency and light intuition — there is no by-hand transform to grind through. Do the reasoning parts on paper first, then use the short R section to confirm the picture.
+
+## Background
+
+A **sinusoid** is one pure wave, $A\cos(2\pi f\,t + \varphi)$, set by three numbers: **frequency** $f$ (cycles per unit), **amplitude** $A$ (height), **phase** $\varphi$ (starting point in the cycle).
+
+The **Fourier transform** writes any signal as a **sum of sinusoids** and returns the amplitude and phase of every frequency — the *recipe* of waves. Equivalently, it re-expresses the signal from the **standard basis** (one coordinate per time point or pixel) into the **Fourier basis** (one coordinate per frequency). It is a **change of basis**: the same object in new coordinates, fully **reversible** via the inverse transform.
+
+The Fourier basis works because sinusoids of different frequencies are **orthogonal** — treating whole signals as vectors, $\langle f,g\rangle = \sum_t f(t)g(t) = 0$ for two different-frequency waves. So each frequency's amplitude is a **projection** of the signal onto that wave, computed independently of the others — the same projection idea as reading off PCA scores.
+
+Two families of use:
+
+- **Compression** keeps the few large (usually low-frequency) coefficients and discards the rest — like truncating a PCA to its top components (JPEG uses the DCT, a Fourier relative).
+- **Filtering** multiplies the spectrum by a mask and transforms back: **low-pass** smooths/denoises, **high-pass** sharpens, a **notch** removes one artefact frequency. This is fast because of the **convolution theorem** (convolution in space = multiplication in frequency).
+
+**Fixed vs learned basis:** Fourier commits to sinusoids for every signal; **PCA** learns axes from the data's covariance. **Wavelets** offer a basis that is **local** in both position and frequency — good where the content changes across the signal.
+
+## By hand (reasoning)
+
+**B1.** Sketch (roughly) three sinusoids over one unit of time: (a) $\cos(2\pi\cdot 1\cdot t)$, (b) $\cos(2\pi\cdot 4\cdot t)$, (c) $2\cos(2\pi\cdot 1\cdot t)$. How many cycles does each complete? Which pair differs only in **amplitude**, and which only in **frequency**?
+
+**B2.** A signal is described as "mostly a slow smooth trend with a little fine texture on top." Where does its energy sit in the spectrum — low frequencies, high frequencies, or both? Which part would a **low-pass** filter keep?
+
+**B3.** Explain, in one or two sentences each, why the Fourier transform is (a) a **change of basis** and (b) **reversible** (no information lost).
+
+**B4.** Two people record the *same* biological signal but one starts the recording a fraction of a second later. Which of the three sinusoid parameters — frequency, amplitude, phase — is most affected, and which are essentially unchanged? What does this tell you about why the **magnitude** spectrum (amplitudes only) is often more useful than the phase?
+
+**B5.** For each task, say whether a **fixed Fourier basis** or a **data-driven PCA basis** is the more natural first choice, and why:
+(a) detecting a regular striation pattern in a muscle micrograph;
+(b) finding the main axes of variation in a gene-expression table (cells × genes);
+(c) removing a 50 Hz electrical hum from an electrophysiology trace;
+(d) summarising a large set of noisy spectra into a few components that capture most of the variance.
+
+**B6.** A microscopy image has a faint, perfectly regular diagonal **stripe artefact** from the detector. In the 2D spectrum this appears as an isolated pair of bright dots. Describe how you would remove the artefact using the frequency domain, and name the filter type. What real structure might you accidentally damage, and how does that connect to the honesty caveat from the lecture?
+
+**B7.** "Noise is high-frequency, so I'll just delete all high frequencies and my image will be clean." Give one reason this works reasonably well and one reason it can go wrong. Which alternative basis mentioned in the lecture is designed to handle this better?
+
+**B8. (compression)** An image's Fourier coefficients are dominated by a handful of large low-frequency values; the rest are tiny. Explain the compression recipe in three steps, and state the analogy to truncating a PCA. Why is this **lossy**, and what artefact appears if you keep too few coefficients?
+
+## In R
+
+Use R only to **confirm** the intuition above. This is illustrative static code — read it and predict the output before you would run it.
+
+### Build a signal and look at its spectrum
+
+```r
+# a signal: a slow 3-cycle wave + a smaller fast 20-cycle wave + noise
+set.seed(1)
+n <- 256
+t <- seq(0, 1, length.out = n)
+x <- sin(2*pi*3*t) + 0.5*sin(2*pi*20*t) + rnorm(n, sd = 0.2)
+
+X   <- fft(x)          # discrete Fourier transform -> complex numbers
+mag <- Mod(X)          # magnitude = amount of each frequency
+mag <- mag[1:(n/2)]    # keep the lower half; the upper half mirrors it
+
+plot(mag, type = "h", xlab = "frequency index", ylab = "amplitude")
+# expect two clear spikes: a tall one near index 3, a shorter one near index 20
+```
+
+### The transform is reversible
+
+```r
+x_back <- Re(fft(X, inverse = TRUE) / length(X))   # inverse transform
+max(abs(x - x_back))    # ~0 (tiny numerical error): the signal is recovered
+```
+
+### A crude low-pass filter (denoising in the frequency domain)
+
+```r
+X_lp <- X
+keep <- 6                       # keep only the lowest few frequencies
+X_lp[(keep+1):(n-keep+1)] <- 0  # zero out the high-frequency middle band
+x_lp <- Re(fft(X_lp, inverse = TRUE) / n)
+# x_lp is a smoothed version of x: the fast 20-cycle wave and the noise are gone
+```
+
+### Tasks
+
+**R1.** In the first block, before looking: at which two frequency indices do you expect spikes, and which should be **taller**? (Match the amplitudes in the formula for `x`.)
+
+**R2.** Why do we take `Mod(X)` rather than plotting `X` directly, and why do we keep only the first half `mag[1:(n/2)]`? (Two short reasons — one about complex numbers, one about symmetry.)
+
+**R3.** In the low-pass block, predict what happens to `x_lp` if you **increase** `keep` from 6 to 30. Will it look more like the smooth trend or more like the original noisy signal? Explain in terms of which frequencies you are now keeping.
+
+**R4.** Explain why the reconstruction block divides by `length(X)`. (Base R's `fft()` is *unnormalised*, so the round-trip picks up a factor of $n$.)
+
+## Hints
+
+::: {.callout-tip collapse="true" title="Hint 1 — reading a sinusoid (B1)"}
+The number in front of $t$ inside $\cos(2\pi f\,t)$ is the frequency $f$ = cycles per unit time, so over $t\in[0,1]$ it completes exactly $f$ cycles. The number *multiplying* the whole cosine is the amplitude (height). See the wave picture in the lecture, and R's [`cos`](https://rdrr.io/r/base/Trig.html).
+:::
+
+::: {.callout-tip collapse="true" title="Hint 2 — low vs high frequency (B2, B7)"}
+Low frequencies = slow, broad, smooth structure. High frequencies = fast, fine detail — sharp real edges *and* random noise both live here. That overlap is exactly why blunt high-frequency removal is imperfect.
+:::
+
+::: {.callout-tip collapse="true" title="Hint 3 — change of basis (B3)"}
+A basis is a set of coordinate directions; changing basis re-expresses the same object in new coordinates. Standard basis: one coordinate per time point. Fourier basis: one coordinate per frequency. Reversible because the inverse transform exists — see [`fft`](https://rdrr.io/r/stats/fft.html) with `inverse = TRUE`. Compare with the change-of-basis idea from Matrices as transformations and PCA.
+:::
+
+::: {.callout-tip collapse="true" title="Hint 4 — phase vs magnitude (B4)"}
+Shifting *when* you start recording slides every wave along in its cycle — it changes the **phase** but leaves each wave's **frequency** and **amplitude** intact. So the magnitude spectrum is invariant to a time shift, which is why amplitude-only summaries are often the robust choice.
+:::
+
+::: {.callout-tip collapse="true" title="Hint 5 — fixed vs data-driven basis (B5)"}
+Ask: do I expect structure at particular **frequencies** (rhythms, stripes, hums) → Fourier, a fixed basis. Or do I want axes that **adapt to my dataset's variation** (expression tables, sets of spectra) → PCA, a learned basis. Both are orthogonal bases read off by projection.
+:::
+
+::: {.callout-tip collapse="true" title="Hint 6 — removing an artefact (B6)"}
+A perfectly periodic artefact is localised in frequency (a few bright dots), so you can zero out just those frequencies — a **notch** (band-stop) filter — and transform back. The risk: any *real* structure at that same frequency is deleted too.
+:::
+
+::: {.callout-tip collapse="true" title="Hint 7 — reading fft() output (R1–R4)"}
+[`fft`](https://rdrr.io/r/stats/fft.html) returns **complex** numbers; use [`Mod`](https://rdrr.io/r/base/Mod.html) for amplitude and [`Arg`](https://rdrr.io/r/base/Mod.html) for phase. For a real input the spectrum is mirror-symmetric, so only the first half is informative. The transform is unnormalised, so the inverse must be divided by the length. The spike *height* tracks the amplitude in the formula for `x`.
+:::
+
+## Solutions
+
+::: {.callout-note collapse="true" title="Solution"}
+
+**B1.** Over $t\in[0,1]$: (a) $\cos(2\pi\cdot1\cdot t)$ completes **1** cycle; (b) $\cos(2\pi\cdot4\cdot t)$ completes **4** cycles; (c) $2\cos(2\pi\cdot1\cdot t)$ completes **1** cycle but is **twice as tall**. So (a) and (c) differ only in **amplitude** (same frequency, different height); (a) and (b) differ only in **frequency** (same height, different number of cycles).
+
+**B2.** A slow smooth trend is **low-frequency**; the fine texture on top is **high-frequency**. So the energy sits mostly at low frequencies with a small high-frequency contribution — *both*, but dominated by the low end. A **low-pass** filter keeps the low frequencies, i.e. it keeps the smooth trend and removes the fine texture.
+
+**B3.** (a) *Change of basis:* the signal is one object; in the standard basis its coordinates are its values at each time point (one axis per time point), and the Fourier transform re-expresses the same object in the Fourier basis, where the coordinates are the amounts of each frequency (one axis per frequency). Nothing but the coordinate system changed. (b) *Reversible:* the Fourier basis is a complete orthogonal basis, so the transform is an invertible rotation of coordinates — the inverse Fourier transform reconstructs the original signal exactly, so no information is lost.
+
+**B4.** Starting the recording later slides every constituent wave along in its cycle, which changes the **phase** of every frequency. The **frequencies** present and their **amplitudes** are unchanged (the same waves are there, equally strong). Therefore the **magnitude** spectrum (amplitudes only) is unaffected by *when* you started recording, while the phase spectrum is. That shift-invariance is a big reason amplitude-only summaries are often preferred for comparing signals.
+
+**B5.**
+(a) **Fourier** — a regular striation is periodic, so it appears at a specific spatial frequency; a fixed sinusoid basis is the natural detector.
+(b) **PCA** — you want axes that adapt to the data's own directions of variation; there is no reason expression variation should align with fixed sinusoids.
+(c) **Fourier** — a 50 Hz hum is a single frequency; a notch filter in the frequency domain removes it cleanly.
+(d) **PCA** — "capture most of the variance in a few components" is exactly what a learned, data-driven basis does.
+
+**B6.** Transform the image to the 2D frequency domain, locate the isolated bright dots produced by the periodic stripe, set those coefficients (a small band around them) to zero — a **notch / band-stop** filter — then apply the inverse transform to get the cleaned image. Risk: if any genuine image structure happens to sit at that same spatial frequency, it is removed along with the artefact. This is the lecture's honesty caveat — filtering in frequency space cannot distinguish "artefact at frequency $f$" from "real signal at frequency $f$", so it is always a trade-off.
+
+**B7.** *Works reasonably well because* random noise really is spread across high frequencies, so cutting them removes a lot of noise. *Can go wrong because* sharp **real** edges and fine true detail are also high-frequency, so a blunt cut blurs genuine structure along with the noise. The alternative designed to handle this is **wavelets**, whose basis functions are local in both position and frequency, so they can suppress noise while preserving the *location* of real edges.
+
+**B8.** Three-step compression recipe: (1) transform the image to the frequency domain; (2) keep only the largest / lowest-frequency coefficients and discard the many small ones; (3) transform back (or store the kept coefficients and reconstruct on demand). This is the same idea as **truncating a PCA** to its top components — represent the data in a smart basis, then keep only the coordinates that carry most of the signal. It is **lossy** because the discarded coefficients held some (small) real information; keep too few and you lose real high-frequency content, producing visible **blocky / blurred artefacts** (in JPEG, block boundaries become visible because the DCT is applied on small blocks).
+
+**R1.** Spikes at frequency indices **3** and **20** (the two sinusoids in `x`). The index-3 spike is **taller**, because that component has amplitude 1 versus 0.5 for the index-20 component. The noise contributes a low, roughly flat floor across all frequencies.
+
+**R2.** We take `Mod(X)` because `fft()` returns **complex** numbers (real + imaginary parts encoding amplitude *and* phase); `Mod()` extracts the amplitude, which is what we want to see. We keep only `mag[1:(n/2)]` because for a **real** input signal the spectrum is **mirror-symmetric** (the upper half is a redundant reflection of the lower half), so the first half contains all the information.
+
+**R3.** Raising `keep` from 6 to 30 keeps more of the higher frequencies. At `keep = 6` you keep only the slowest components, so `x_lp` is a very smooth curve close to the 3-cycle trend. At `keep = 30` you now also retain the 20-cycle component (and more of the noise band), so `x_lp` looks **more like the original noisy signal** — less smoothing. More kept frequencies = less aggressive low-pass = closer to the original.
+
+**R4.** Base R's `fft()` is **unnormalised**: `fft()` followed by `fft(..., inverse = TRUE)` returns the original signal multiplied by `n = length(X)`. Dividing by `length(X)` cancels that factor so the reconstruction matches the original signal, up to tiny floating-point error.
+:::
+
+## Where this leads
+
+- **PCA (this Applications block):** the data-driven counterpart to Fourier — instead of fixing the basis to sinusoids, it learns the orthogonal axes from the data's covariance. Both are "represent in an orthogonal basis, then keep the coordinates that matter."
+- **Chemometrics:** spectra (mass, IR, Raman) are signals in frequency/wavelength; Fourier methods, filtering, and PCA of spectra are everyday tools there.
+- **Wavelets (pointer only):** a basis local in both position and frequency, for signals whose content changes across time or space — used in edge-preserving denoising and JPEG 2000. Not examined here; noted so you know it exists.

@@ -1,0 +1,225 @@
+---
+title: "Exercise: cross-validation & model selection"
+format:
+  html:
+    toc: true
+    code-copy: true
+    code-overflow: wrap
+    highlight-style: github
+---
+
+## Goal
+
+By the end of this exercise you should be able to:
+
+- explain **why training error is optimistic** and what overfitting looks like,
+- lay out the **folds** of a k-fold cross-validation and say what each is for,
+- compute a **held-out MSE** by hand from a few predictions,
+- read a **CV error curve** and pick both `lambda.min` and `lambda.1se`,
+- **spot information leakage** in a described workflow and fix it,
+- run `cv.glmnet` and read `lambda.min`, `lambda.1se`, and the selected coefficients.
+
+Most of the marks in this block are for **reasoning about the workflow** — the folds, the leakage rule, reading the CV curve — so spend your time there. The R section confirms the by-hand answers (full modelling comes together in the elastic-net and chemometrics units).
+
+## Background
+
+**Why hold data out.** Error measured on the data you fitted is an *optimistic* estimate: a flexible model can memorise noise. To estimate performance on *future* samples, score the model on samples it never saw during fitting.
+
+**k-fold cross-validation.** Split the $n$ samples into $k$ equal folds. For each fold $f = 1,\dots,k$: hold out fold $f$, fit on the other $k-1$ folds, and record the error on fold $f$. Average the $k$ errors:
+$$\text{CV error} = \frac{1}{k}\sum_{f=1}^{k}\text{error on fold } f.$$
+Every sample is held out **exactly once**. Special case $k=n$: **leave-one-out** CV (LOOCV).
+
+**Held-out MSE.** For held-out points with true values $y_i$ and predictions $\hat y_i$,
+$$\text{MSE} = \frac{1}{n}\sum_{i}(y_i - \hat y_i)^2, \qquad \text{RMSE} = \sqrt{\text{MSE}}.$$
+
+**Choosing $\lambda$.** Run CV at each candidate $\lambda$ and plot CV error vs $\lambda$.
+
+- `lambda.min` — the $\lambda$ with the lowest CV error.
+- `lambda.1se` — the **largest** $\lambda$ (simplest model) whose CV error is within **one standard error** of the minimum. Rule: let $m$ be the smallest mean CV error and $s$ its standard error; `lambda.1se` is the largest $\lambda$ with mean CV error $\le m + s$.
+
+**The leakage rule.** Any step that uses the outcome $y$ — supervised gene filtering, choosing a threshold, scaling using $y$ — is part of *fitting* and must happen **inside** each CV fold, on the training portion only. Otherwise the held-out data has already influenced the model and can no longer test it.
+
+## By hand
+
+**B1.** You have $n = 20$ samples and run **5-fold** CV. (a) How many samples are in each fold? (b) How many samples is each model trained on? (c) How many times is a given sample used for *validation*, and how many times for *training*? (d) How many models are fitted in total?
+
+**B2.** Same 20 samples, but **leave-one-out** CV. (a) What is $k$? (b) Fold size? (c) How many models are fitted? (d) One drawback of LOOCV compared with 5- or 10-fold.
+
+**B3.** A held-out fold has true values $y = (3,\ 5,\ 2,\ 6)$ and the model predicts $\hat y = (2,\ 5,\ 4,\ 5)$. Compute the **MSE** and the **RMSE** on this fold by hand.
+
+**B4.** Ten-fold CV of a lasso gives the following table (each row is one candidate $\lambda$, decreasing $\lambda$ down the table):
+
+| $\lambda$ | mean CV MSE | std. error |
+|---:|---:|---:|
+| 0.50 | 0.40 | 0.05 |
+| 0.20 | 0.27 | 0.04 |
+| 0.10 | 0.24 | 0.03 |
+| 0.05 | 0.25 | 0.03 |
+| 0.02 | 0.29 | 0.03 |
+
+(a) Which $\lambda$ is `lambda.min`? (b) Apply the one-standard-error rule to find `lambda.1se`. (c) Which of the two gives the simpler (more shrunk) model, and why might you prefer it for a biomarker paper?
+
+**B5.** A colleague describes their analysis of 20,000 genes in 100 patients:
+
+> "First I kept the 100 genes most correlated with disease status across all patients. Then I split those 100 genes into 10 folds and cross-validated a lasso, getting 94% accuracy."
+
+(a) Identify the information leakage. (b) Explain *why* it makes 94% optimistic. (c) Rewrite the workflow so the estimate is honest.
+
+**B6.** Two lasso fits on the same data:
+
+| model | training error | 10-fold CV error |
+|---|---:|---:|
+| A ($\lambda$ small) | 0.02 | 0.31 |
+| B ($\lambda$ large) | 0.19 | 0.22 |
+
+(a) Which model is overfitting, and how can you tell? (b) Which would you deploy on new patients? (c) In which direction should you move $\lambda$ to reduce overfitting?
+
+**B7.** For each outcome, name a sensible CV metric and justify it in one line: (a) predicting a patient's age from DNA methylation; (b) predicting RNA-seq read counts of a gene; (c) classifying tumour vs normal when only 8% of samples are tumours.
+
+## In R
+
+Use R to **confirm** the reasoning above. Nothing here needs a large dataset; the point is to read the outputs, not to build a real classifier (that comes in the elastic-net and chemometrics units).
+
+### Fit a cross-validated lasso
+
+```r
+library(glmnet)
+
+# x: samples x genes matrix ; y: 0/1 disease label
+x <- as.matrix(expr)
+y <- pheno$disease
+
+set.seed(1)                      # folds are random -> seed for reproducibility
+cvfit <- cv.glmnet(x, y,
+                   family       = "binomial",
+                   alpha        = 1,          # lasso
+                   nfolds       = 10,
+                   type.measure = "auc")
+
+cvfit$lambda.min                 # best-CV lambda
+cvfit$lambda.1se                 # simplest within 1 SE of the best
+plot(cvfit)                      # CV curve with error bars + two dashed lines
+```
+
+### Read the chosen model
+
+```r
+coef(cvfit, s = "lambda.1se")    # sparse coefficients; non-zeros are the signature
+sum(coef(cvfit, s = "lambda.1se") != 0) - 1   # number of selected genes (minus intercept)
+```
+
+### MSE by hand, then check it
+
+```r
+y_true <- c(3, 5, 2, 6)
+y_hat  <- c(2, 5, 4, 5)
+mse  <- mean((y_true - y_hat)^2)
+rmse <- sqrt(mse)
+mse; rmse
+```
+
+### Tasks
+
+**R1.** Reproduce **B3** with the `mse`/`rmse` block above and confirm your hand answer.
+
+**R2.** Explain in one sentence why running the `cv.glmnet` block a second time **without** `set.seed(1)` can give a slightly different `lambda.min`.
+
+**R3.** Given the honest fold loop below, state exactly which line makes it leakage-free (contrast with a version that filters before the loop):
+
+```r
+folds <- sample(rep(1:10, length.out = nrow(x)))
+for (f in 1:10) {
+  tr <- folds != f; te <- folds == f
+  gc   <- abs(cor(x[tr, ], y[tr]))            # <-- filter on TRAIN rows only
+  keep <- order(gc, decreasing = TRUE)[1:50]
+  fit  <- glmnet(x[tr, keep], y[tr], family = "binomial")
+  # predict x[te, keep], score against y[te]
+}
+```
+
+## Hints
+
+::: {.callout-tip collapse="true" title="Hint 1 — counting folds (B1, B2)"}
+In $k$-fold CV each of the $n$ samples sits in exactly **one** fold. Fold size is $n/k$. A model trains on the other $k-1$ folds, so on $n - n/k$ samples. Each sample is validated once (its own fold) and trained on in the other $k-1$ folds. You fit **one model per fold**. LOOCV is just $k = n$; see [`cv.glmnet`](https://glmnet.stanford.edu/reference/cv.glmnet.html)'s `nfolds`.
+:::
+
+::: {.callout-tip collapse="true" title="Hint 2 — MSE by hand (B3)"}
+Subtract each prediction from its truth, **square** each residual, add them up, divide by the number of points. RMSE is the square root of that. In R: `mean((y_true - y_hat)^2)` and [`sqrt`](https://rdrr.io/r/base/MathFun.html)`()`.
+:::
+
+::: {.callout-tip collapse="true" title="Hint 3 — the one-standard-error rule (B4)"}
+Find the row with the smallest mean CV error; call it $m$ and read its standard error $s$. Compute the threshold $m + s$. Now scan from the **largest** $\lambda$ downward and take the first (largest) $\lambda$ whose mean CV error is $\le m + s$. That is `lambda.1se`. Larger $\lambda$ = more shrinkage = fewer non-zero genes.
+:::
+
+::: {.callout-tip collapse="true" title="Hint 4 — spotting leakage (B5)"}
+Ask: did any step look at the outcome $y$ *before* the data was split into folds? Correlating genes with disease status **uses $y$**. If that happened on all patients, the "held-out" fold already helped choose the genes. The fix is to move the gene filter **inside** the fold loop and compute it on the training rows only. See the wrong-vs-right slide.
+:::
+
+::: {.callout-tip collapse="true" title="Hint 5 — overfitting signature (B6)"}
+Overfitting = tiny training error but much larger CV error (a big gap). The model to trust on new data is the one with the **best CV error**, not the best training error. To shrink the gap, increase $\lambda$ (regularise harder).
+:::
+
+::: {.callout-tip collapse="true" title="Hint 6 — matching a metric (B7)"}
+Continuous outcome → squared-error metrics (MSE/RMSE, $R^2$). Count outcome → deviance under a Poisson/negative-binomial model. Binary with rare positives → prefer [AUC](https://glmnet.stanford.edu/reference/cv.glmnet.html) (ranking, threshold-free, robust to imbalance) over plain accuracy, which a "predict the majority" model can game.
+:::
+
+## Solutions
+
+::: {.callout-note collapse="true" title="Solution"}
+
+**B1.** $n = 20$, $k = 5$.
+(a) Fold size $= n/k = 20/5 = \mathbf{4}$ samples per fold.
+(b) Each model trains on the other $k-1 = 4$ folds $= 20 - 4 = \mathbf{16}$ samples.
+(c) Each sample is in its own fold once, so it is used for **validation once** and for **training in the other 4 folds** ($k-1 = 4$ times).
+(d) One model per fold $\Rightarrow \mathbf{5}$ models.
+
+**B2.** LOOCV on $n = 20$.
+(a) $k = n = \mathbf{20}$.
+(b) Fold size $= 1$ sample.
+(c) $\mathbf{20}$ models (one per left-out sample).
+(d) Drawbacks: it is **expensive** (20 fits vs 5), and the LOOCV estimate has **high variance** because the 20 training sets are nearly identical (they overlap in 19 of 20 samples), so the fold errors are highly correlated. 5- or 10-fold is the usual compromise.
+
+**B3.** Residuals $y - \hat y = (3-2,\ 5-5,\ 2-4,\ 6-5) = (1,\ 0,\ -2,\ 1)$.
+Squares: $(1,\ 0,\ 4,\ 1)$; sum $= 6$; there are $4$ points.
+$$\text{MSE} = 6/4 = \mathbf{1.5}, \qquad \text{RMSE} = \sqrt{1.5} \approx \mathbf{1.22}.$$
+
+**B4.**
+(a) The smallest mean CV MSE is $0.24$ at $\lambda = 0.10$, so `lambda.min` $= \mathbf{0.10}$.
+(b) Standard error at the minimum is $s = 0.03$, so the threshold is $m + s = 0.24 + 0.03 = 0.27$. Scanning from the largest $\lambda$ down: $\lambda = 0.50$ has $0.40 > 0.27$ (no); $\lambda = 0.20$ has $0.27 \le 0.27$ (**yes**). So `lambda.1se` $= \mathbf{0.20}$.
+(c) `lambda.1se` $= 0.20 > 0.10$, so it shrinks harder and yields a **simpler model with fewer genes**. For a biomarker paper this is often preferable: it is within statistical noise of the best CV error yet gives a **shorter, more reproducible** gene list.
+
+**B5.**
+(a) **Leakage:** the genes were selected by correlating with disease status **across all 100 patients** *before* forming the folds. The filter used the outcome of the very patients later "held out."
+(b) Because the held-out fold already helped choose the 100 genes, it is no longer naive test data — the model has indirectly seen it. So the 94% measures how well the genes fit *these* patients, not how well the model predicts *new* ones. The estimate is optimistically biased (can be dramatically so when $p \gg n$).
+(c) **Honest workflow:** split into folds *first*, then inside each fold recompute the gene filter on the **training rows only**, fit the lasso on those genes, and score the held-out fold. Average the fold scores. Concretely, wrap filter + fit in the fold loop (see R3), or hold out a final test set that no filtering step ever touched.
+
+**B6.**
+(a) **Model A** is overfitting: near-zero training error ($0.02$) but much worse CV error ($0.31$) — a large train–CV gap. Model B's errors are close ($0.19$ vs $0.22$).
+(b) Deploy **Model B**: it has the better **CV** error ($0.22 < 0.31$), which is the honest estimate of performance on new patients.
+(c) **Increase $\lambda$** (more shrinkage) to reduce overfitting — exactly the move from A to B.
+
+**B7.**
+(a) Age is continuous → **MSE / RMSE** (or $R^2$); squared error is the natural loss and RMSE is in years.
+(b) Read counts are counts → **Poisson (or negative-binomial) deviance**; it is the loss the count error model actually optimises, and squared error would mis-weight the mean–variance relationship.
+(c) 8% tumours is imbalanced → **AUC**; it scores the ranking and is threshold-free, so a lazy "always predict normal" model (92% accurate!) does not look good. Plain accuracy would be misleading.
+
+**R1.**
+```r
+y_true <- c(3, 5, 2, 6)
+y_hat  <- c(2, 5, 4, 5)
+mse  <- mean((y_true - y_hat)^2)   # 1.5
+rmse <- sqrt(mse)                  # 1.2247...
+mse; rmse
+```
+Matches the hand answer: MSE $= 1.5$, RMSE $\approx 1.22$.
+
+**R2.** `cv.glmnet` assigns samples to folds **at random**; without `set.seed` the fold assignment differs between runs, so the CV error curve (and thus `lambda.min`/`lambda.1se`) can shift slightly. Setting the seed fixes the fold assignment and makes the result reproducible.
+
+**R3.** The line `gc <- abs(cor(x[tr, ], y[tr]))` computes the gene filter on the **training rows `tr` only** — the held-out rows `te` never enter the correlation, so they stay naive test data. (A leaking version would compute `cor(x, y)` on all rows once, *before* the loop, letting each held-out fold influence which genes are kept.)
+:::
+
+## Where this leads
+
+- **L1, L2 and elastic-net penalties:** the same CV folds let you compare lasso vs ridge vs elastic net and tune both $\lambda$ and the mixing $\alpha$ on one honest scale.
+- **Chemometrics (PLS / OPLS):** latent-variable models are validated by cross-validation too — the number of components is chosen exactly the way we chose $\lambda$ here.
+- **Single-cell analysis:** grouped/stratified folds matter when many cells come from one patient — splitting them across folds leaks and inflates performance.

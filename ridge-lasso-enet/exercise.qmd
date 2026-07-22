@@ -1,0 +1,260 @@
+---
+title: "Exercise: ridge, lasso & elastic net"
+format:
+  html:
+    toc: true
+    code-copy: true
+    code-overflow: wrap
+    highlight-style: github
+---
+
+## Goal
+
+By the end of this exercise you should be able to:
+
+- explain **why** ordinary least squares fails when predictors outnumber samples ($p \gg n$) or are collinear,
+- write the penalized objective $\lVert\mathbf{y}-X\boldsymbol\beta\rVert^2 + \lambda\cdot\text{penalty}(\boldsymbol\beta)$ for ridge, lasso, and elastic net,
+- compute a **ridge** estimate **by hand** on a tiny problem from $(X^\top X + \lambda I)^{-1}X^\top\mathbf{y}$, and see how $\lambda$ shrinks it,
+- explain, from the **geometry** (circle vs diamond), why lasso zeros coefficients and ridge does not,
+- fit all three with `glmnet` in R, choose $\lambda$ by **cross-validation**, and read off the **selected genes**.
+
+::: {.callout-note}
+This **Penalized linear models** block is **provisional** and may move to a later statistics / machine-learning course. Treat the cross-validation parts as a first look. Everything by hand here uses only tools from Linear models and Linear systems by hand.
+:::
+
+## Background
+
+Ordinary least squares minimizes the residual sum of squares and has the closed form
+$$\hat{\boldsymbol\beta}_{\text{OLS}} = (X^\top X)^{-1}X^\top\mathbf{y},$$
+which needs $X^\top X$ to be **invertible**. When $p > n$ or predictors are collinear, $X^\top X$ is singular (or nearly so) and OLS is unstable or undefined.
+
+**Penalized regression** adds a competing goal — *keep the coefficients small*:
+$$\hat{\boldsymbol\beta} = \arg\min_{\boldsymbol\beta}\ \lVert\mathbf{y}-X\boldsymbol\beta\rVert^2 + \lambda\cdot\text{penalty}(\boldsymbol\beta), \qquad \lambda \ge 0.$$
+
+| Method | penalty | effect | closed form? |
+|---|---|---|---|
+| **Ridge** (L2) | $\sum_j\beta_j^2$ | shrinks all; keeps all | yes: $(X^\top X+\lambda I)^{-1}X^\top\mathbf{y}$ |
+| **Lasso** (L1) | $\sum_j\lvert\beta_j\rvert$ | shrinks; sets some to **0** | no (kink at 0) |
+| **Elastic net** | $\alpha\sum\lvert\beta_j\rvert+(1-\alpha)\sum\beta_j^2$ | grouped selection | no |
+
+Key facts to keep in hand:
+
+- Standardize predictors before penalizing (glmnet does this); never penalize the intercept.
+- $\lambda=0$ → OLS; $\lambda\to\infty$ → all coefficients $\to 0$.
+- Choose $\lambda$ by **cross-validation** — never by training error, which just falls as $\lambda\to0$.
+
+## By hand
+
+**B1.** Explain in one or two sentences why OLS has **no unique** solution when you have $p = 3$ predictors but only $n = 2$ samples. (Think about the number of unknowns versus equations, and about whether $X^\top X$ can be inverted.)
+
+**B2. (ridge on a 1-D toy).** Suppose after centring there is a single predictor and $X^\top X = 4$, $X^\top\mathbf{y} = 8$ (so the OLS slope is $8/4 = 2$). The 1-D ridge estimate is
+$$\hat\beta_{\text{ridge}}(\lambda) = \frac{X^\top\mathbf{y}}{X^\top X + \lambda} = \frac{8}{4+\lambda}.$$
+Compute $\hat\beta_{\text{ridge}}$ for $\lambda = 0,\ 4,\ 12,\ \text{and as }\lambda\to\infty$. What happens to the coefficient as $\lambda$ grows?
+
+**B3. (ridge on a 2×2, by hand).** Take the standardized design
+$$X^\top X = \begin{pmatrix} 1 & 0 \\ 0 & 1 \end{pmatrix}, \qquad X^\top\mathbf{y} = \begin{pmatrix} 3 \\ 1 \end{pmatrix}.$$
+(a) Find the OLS estimate $\hat{\boldsymbol\beta}_{\text{OLS}} = (X^\top X)^{-1}X^\top\mathbf{y}$.
+(b) Find the ridge estimate at $\lambda = 1$ using $(X^\top X + \lambda I)^{-1}X^\top\mathbf{y}$. (Note $X^\top X + I = 2I$, easy to invert.)
+(c) By what factor was each coefficient shrunk? Did either become exactly zero?
+
+**B4. (collinearity and the diagonal).** For a collinear design suppose $X^\top X = \begin{pmatrix} 1 & 1 \\ 1 & 1 \end{pmatrix}$.
+(a) Show it is **singular** (compute the determinant) — so OLS cannot invert it.
+(b) Form $X^\top X + \lambda I$ with $\lambda = 1$ and compute its determinant. Is it now invertible?
+(c) In one sentence, connect this to the eigenvalue fact that adding $\lambda I$ shifts every eigenvalue up by $\lambda$ (recall Eigenvalues & eigenvectors).
+
+**B5. (the geometry).** Sketch, in the $(\beta_1,\beta_2)$ plane:
+(a) the ridge budget region $\beta_1^2+\beta_2^2\le t$ and the lasso budget region $\lvert\beta_1\rvert+\lvert\beta_2\rvert\le t$;
+(b) a set of elliptical RSS contours centred at an OLS solution like $(2, 0.3)$.
+Argue from the picture which method is likely to return a solution with $\beta_2 = 0$ **exactly**, and why the shape of the region is responsible.
+
+**B6. (reading a path plot).** A lasso `plot(fit, xvar="lambda")` shows coefficient paths against $\log\lambda$. As $\lambda$ **increases** (moving right), do the coefficients get larger or smaller? What does it mean when a path hits the horizontal axis and stays there? At the far right, how many predictors does the model use?
+
+**B7. (choosing among the three).** For each scenario, say whether you would start with **ridge**, **lasso**, or **elastic net**, and why:
+(a) 15 000 genes, 30 samples, you want a short panel to validate in the lab;
+(b) a handful of highly co-regulated genes that you believe are all biologically relevant and want to keep;
+(c) 15 000 genes, 30 samples, many correlated pathway modules, you want selection but stable to resampling.
+
+## In R
+
+We use `glmnet`. If needed, install it once with `install.packages("glmnet")`. The code below is illustrative — read it, then adapt it in the tasks.
+
+### Simulate a wide problem ($p > n$)
+
+```r
+library(glmnet)
+set.seed(1)
+
+n <- 40      # samples (patients)
+p <- 200     # predictors (genes)  -> p > n
+x <- matrix(rnorm(n * p), nrow = n, ncol = p)
+colnames(x) <- paste0("gene", seq_len(p))
+
+# only 5 genes truly drive the phenotype; the rest are noise
+beta_true      <- rep(0, p)
+beta_true[1:5] <- c(3, -2, 2, -1.5, 1)
+y <- as.numeric(x %*% beta_true + rnorm(n))   # continuous phenotype
+```
+
+### Fit ridge, lasso, elastic net
+
+```r
+fit_ridge <- glmnet(x, y, alpha = 0)      # ridge:   keeps all genes
+fit_lasso <- glmnet(x, y, alpha = 1)      # lasso:   sparse
+fit_enet  <- glmnet(x, y, alpha = 0.5)    # elastic net
+
+plot(fit_lasso, xvar = "lambda")           # watch coefficients enter/leave
+print(fit_lasso)                           # Df = number of nonzero coefficients
+```
+
+### Choose lambda by cross-validation, then read off the genes
+
+```r
+set.seed(1)
+cv_lasso <- cv.glmnet(x, y, alpha = 1, nfolds = 10)
+
+plot(cv_lasso)                             # CV error vs log(lambda)
+cv_lasso$lambda.min                        # minimum CV error
+cv_lasso$lambda.1se                        # sparser model within 1 SE
+
+beta <- coef(cv_lasso, s = "lambda.1se")   # sparse coefficient vector
+selected <- rownames(beta)[which(beta != 0)]
+selected                                   # includes "(Intercept)" + kept genes
+```
+
+### Tasks
+
+**R1.** Run the simulation block. Confirm the shape of `x` with `dim(x)` and check `p > n`.
+
+**R2.** Fit `fit_ridge` and `fit_lasso`. Using `predict(fit, type = "nonzero", s = 0.5)` **or** the `Df` column of `print(fit)`, compare how many genes each model keeps at a moderate $\lambda$. Which one is sparse?
+
+**R3.** Run `cv.glmnet` for lasso. Report `lambda.min` and `lambda.1se`, and extract the selected genes at **`lambda.1se`**. Did the model recover any of the 5 true genes (`gene1`…`gene5`)?
+
+**R4.** Refit with `alpha = 0` (ridge) via `cv.glmnet`, and `coef(...)` at `lambda.1se`. Confirm that essentially **no** coefficient is exactly zero (ridge keeps all predictors).
+
+**R5.** Change the outcome to **binary** — `y_bin <- as.integer(y > median(y))` — and fit `cv.glmnet(x, y_bin, family = "binomial", alpha = 1)`. This is penalized logistic regression. Extract the selected genes the same way.
+
+## Hints
+
+::: {.callout-tip collapse="true" title="Hint 1 — why OLS fails when p > n (B1)"}
+OLS solves a system with one unknown per predictor. With more unknowns ($p$) than equations ($n$), the system is **underdetermined** — infinitely many $\boldsymbol\beta$ fit perfectly. Equivalently, $X^\top X$ is a $p\times p$ matrix of rank at most $n < p$, so it is **singular** and $(X^\top X)^{-1}$ does not exist. See the solution-space discussion in Linear systems by hand.
+:::
+
+::: {.callout-tip collapse="true" title="Hint 2 — the 1-D ridge formula (B2)"}
+Just plug into $\hat\beta(\lambda) = \dfrac{8}{4+\lambda}$. The denominator grows with $\lambda$, so the estimate shrinks monotonically toward $0$ but never quite reaches it for finite $\lambda$. That "shrinks but does not zero" behaviour is the signature of the L2 penalty.
+:::
+
+::: {.callout-tip collapse="true" title="Hint 3 — inverting 2I (B3)"}
+When $X^\top X$ is the identity, $X^\top X + \lambda I = (1+\lambda)I$, whose inverse is $\frac{1}{1+\lambda}I$. So the ridge estimate is simply $\hat{\boldsymbol\beta}_{\text{ridge}} = \frac{1}{1+\lambda}\,X^\top\mathbf{y}$ — every OLS coefficient scaled by $\frac{1}{1+\lambda}$. At $\lambda=1$ that factor is $\tfrac12$.
+:::
+
+::: {.callout-tip collapse="true" title="Hint 4 — determinant and adding lambda*I (B4)"}
+For a $2\times2$, $\det\begin{pmatrix}a&b\\c&d\end{pmatrix} = ad-bc$. A determinant of $0$ means singular (non-invertible). Adding $\lambda I$ adds $\lambda$ to each diagonal entry. Because adding $\lambda I$ raises every eigenvalue by $\lambda$, a zero eigenvalue (which makes the determinant zero) becomes $\lambda > 0$, so the matrix becomes invertible.
+:::
+
+::: {.callout-tip collapse="true" title="Hint 5 — the geometry (B5)"}
+The ridge region is a **circle** (round, no corners); the lasso region is a **diamond** with corners **on the axes**. The penalized estimate is where the smallest RSS ellipse first **touches** the region. A corner sticks out furthest, so the ellipse tends to hit it first — and a corner on an axis has one coordinate exactly $0$.
+:::
+
+::: {.callout-tip collapse="true" title="Hint 6 — reading the glmnet path (B6)"}
+On `plot(fit, xvar="lambda")` the x-axis is $\log\lambda$ increasing to the right. More penalty (right) means **smaller** coefficients. A path that reaches $0$ and stays there means that gene has been **dropped**. At the far right (very large $\lambda$) all coefficients are $\approx 0$ and the model uses essentially no genes. See [`glmnet`](https://glmnet.stanford.edu/articles/glmnet.html).
+:::
+
+::: {.callout-tip collapse="true" title="Hint 7 — running glmnet and cv.glmnet"}
+[`glmnet`](https://glmnet.stanford.edu/reference/glmnet.html)`(x, y, alpha = a)` needs `x` as a **matrix** (use [`as.matrix`](https://rdrr.io/r/base/matrix.html)); `alpha` is `1` lasso, `0` ridge, in between elastic net. [`cv.glmnet`](https://glmnet.stanford.edu/reference/cv.glmnet.html) adds cross-validation and stores `$lambda.min` and `$lambda.1se`. Get coefficients with [`coef`](https://glmnet.stanford.edu/reference/predict.glmnet.html)`(cvfit, s = "lambda.1se")`. Set a seed — the folds are random.
+:::
+
+## Solutions
+
+::: {.callout-note collapse="true" title="Solution"}
+
+**B1.** With $p=3$ unknown coefficients but only $n=2$ data points (equations), the linear system is **underdetermined**: there are infinitely many $\boldsymbol\beta$ that fit the two points exactly. Concretely $X^\top X$ is a $3\times3$ matrix but has rank at most $2$, so it is singular and $(X^\top X)^{-1}$ does not exist — OLS has no unique solution.
+
+**B2.** $\hat\beta(\lambda) = \dfrac{8}{4+\lambda}$:
+
+- $\lambda=0$: $8/4 = 2$ (the OLS value).
+- $\lambda=4$: $8/8 = 1$.
+- $\lambda=12$: $8/16 = 0.5$.
+- $\lambda\to\infty$: $\to 0$.
+
+The coefficient **shrinks monotonically toward $0$** as $\lambda$ grows, but stays strictly positive for any finite $\lambda$ — ridge never sets it exactly to zero.
+
+**B3.**
+(a) OLS: $(X^\top X)^{-1} = I^{-1} = I$, so $\hat{\boldsymbol\beta}_{\text{OLS}} = I\begin{pmatrix}3\\1\end{pmatrix} = \begin{pmatrix}3\\1\end{pmatrix}$.
+(b) Ridge at $\lambda=1$: $X^\top X + I = 2I$, so $(2I)^{-1} = \tfrac12 I$ and
+$$\hat{\boldsymbol\beta}_{\text{ridge}} = \tfrac12 I\begin{pmatrix}3\\1\end{pmatrix} = \begin{pmatrix}1.5\\0.5\end{pmatrix}.$$
+(c) Each coefficient was multiplied by $\tfrac{1}{1+\lambda}=\tfrac12$ — shrunk to **half**. Neither became exactly zero; ridge shrinks proportionally but keeps both predictors.
+
+**B4.**
+(a) $\det\begin{pmatrix}1&1\\1&1\end{pmatrix} = (1)(1)-(1)(1) = 0$ → **singular**, so OLS cannot invert it.
+(b) $X^\top X + I = \begin{pmatrix}2&1\\1&2\end{pmatrix}$, with $\det = (2)(2)-(1)(1) = 3 \neq 0$ → now **invertible**.
+(c) The eigenvalues of $\begin{pmatrix}1&1\\1&1\end{pmatrix}$ are $2$ and $0$; adding $\lambda I$ shifts them to $2+\lambda$ and $\lambda$, so the previously-zero eigenvalue becomes $\lambda>0$ and the matrix (whose determinant is the product of eigenvalues) is no longer singular.
+
+**B5.**
+(a) The ridge region $\beta_1^2+\beta_2^2\le t$ is a **disk / circle**; the lasso region $\lvert\beta_1\rvert+\lvert\beta_2\rvert\le t$ is a **diamond** with corners on the axes at $(\pm t,0)$ and $(0,\pm t)$.
+(b) The RSS contours are ellipses centred on the OLS point $(2,0.3)$, growing outward.
+The **lasso** is the one likely to return $\beta_2 = 0$ exactly: the diamond's corner on the $\beta_1$-axis is the part sticking out toward the ellipses, so an expanding contour tends to first touch there — and that corner has $\beta_2 = 0$. The circle has no corners, so the ridge touch point sits at a generic location with both coefficients nonzero. The **shape** (corners vs. smoothness) is what creates, or prevents, sparsity.
+
+**B6.** As $\lambda$ increases (moving right), the penalty is stronger, so coefficients get **smaller**. A path that reaches the horizontal axis and stays there means that predictor's coefficient has been set to **exactly zero** — the gene is dropped from the model. At the far right (largest $\lambda$) essentially **no** predictors remain (the model collapses toward just the intercept, predicting $\bar y$).
+
+**B7.**
+(a) **Lasso** (or elastic net): you explicitly want a short, interpretable panel, which requires setting most coefficients to zero — ridge would keep all 15 000 genes.
+(b) **Ridge**: you want to *keep* the co-regulated genes and let them share the weight; ridge shrinks them together without dropping any, whereas lasso would arbitrarily discard all but one.
+(c) **Elastic net**: you want selection ($p\gg n$) but stability across correlated modules — the L2 part makes correlated genes enter or leave together, giving a more reproducible list than pure lasso.
+
+**R1.**
+```r
+dim(x)      # 40 200  -> n = 40 rows, p = 200 columns
+40 < 200    # TRUE: p > n
+```
+
+**R2.**
+```r
+fit_ridge <- glmnet(x, y, alpha = 0)
+fit_lasso <- glmnet(x, y, alpha = 1)
+
+# number of nonzero coefficients at a moderate lambda = 0.5
+length(predict(fit_lasso, type = "nonzero", s = 0.5)[[1]])  # small: a handful
+length(predict(fit_ridge, type = "nonzero", s = 0.5)[[1]])  # all 200: ridge keeps everything
+```
+Lasso is sparse (few nonzero coefficients); ridge keeps essentially all 200 genes.
+
+**R3.**
+```r
+set.seed(1)
+cv_lasso <- cv.glmnet(x, y, alpha = 1, nfolds = 10)
+cv_lasso$lambda.min
+cv_lasso$lambda.1se
+
+beta <- coef(cv_lasso, s = "lambda.1se")
+selected <- rownames(beta)[which(beta != 0)]
+selected     # "(Intercept)" plus a short list; should include several of gene1..gene5
+```
+With a strong true signal the model typically recovers most of `gene1`…`gene5`, plus perhaps a few false positives. The exact set varies with the seed and CV split — an honest reminder that selection is not perfectly stable at small $n$.
+
+**R4.**
+```r
+set.seed(1)
+cv_ridge <- cv.glmnet(x, y, alpha = 0, nfolds = 10)
+beta_r <- coef(cv_ridge, s = "lambda.1se")
+sum(beta_r == 0)     # 0 (or nearly): ridge does not zero coefficients
+```
+Ridge shrinks every coefficient but leaves them nonzero — no feature selection.
+
+**R5.**
+```r
+y_bin <- as.integer(y > median(y))
+set.seed(1)
+cv_bin <- cv.glmnet(x, y_bin, family = "binomial", alpha = 1, nfolds = 10)
+
+beta_b <- coef(cv_bin, s = "lambda.1se")
+rownames(beta_b)[which(beta_b != 0)]   # selected genes for the binary phenotype
+```
+This is penalized **logistic** regression: same penalty machinery, a binary responder/non-responder outcome, still returning a sparse gene list.
+:::
+
+## Where this leads
+
+- **Cross-validation and model selection** are given a first look here; the full treatment (train/validation/test splits, nested CV, performance metrics) belongs to *Statistics and machine learning in bioinformatics*.
+- **Predictive vs. causal:** a selected gene is predictive, not proven causal — collinearity means a dropped gene may be equally relevant. Validation is experimental, not statistical.
+- **Penalized generalized linear models:** the same penalties extend to logistic and Poisson / negative-binomial outcomes — connecting to the count-distribution material (Poisson & negative binomial) for RNA-seq counts.
+- **Relation to PCA:** ridge and PCA both stabilise collinear predictors, but PCA (Applications block) builds new orthogonal directions, whereas ridge keeps the original genes — worth comparing once you have met both.

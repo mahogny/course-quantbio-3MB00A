@@ -1,0 +1,232 @@
+---
+title: "Exercise: Bayesian vs frequentist"
+format:
+  html:
+    toc: true
+    code-copy: true
+    code-overflow: wrap
+    highlight-style: github
+---
+
+## Goal
+
+By the end of this exercise you should be able to:
+
+- state, in your own words, how the **frequentist** and **Bayesian** views of probability differ,
+- write Bayes' rule and identify the **prior**, **likelihood**, and **posterior**,
+- use the working form **posterior $\propto$ likelihood $\times$ prior**,
+- update a **Beta** prior with **binomial** count data by hand — the conjugate rule $\text{Beta}(\alpha+k,\ \beta+n-k)$,
+- read a **posterior mean** and a **credible interval**, and say what a credible interval means (and what a **confidence interval** does *not* mean),
+- explain the difference between a **p-value** and a **posterior probability**.
+
+This is a **concept day** with light arithmetic. Do the by-hand parts first (the exam is by hand); the R section only confirms your numbers.
+
+::: {.callout-note title="This block is provisional"}
+The Bayesian statistics block may move to a later statistics / machine-learning course. Nothing else in this course depends on it — treat it as a self-contained introduction.
+:::
+
+## Background
+
+**Two views of probability.** A *frequentist* treats a parameter $p$ as a **fixed unknown** and probability as a **long-run frequency**; results are point estimates, confidence intervals, and p-values. A *Bayesian* treats $p$ as **uncertain** and describes it with a **probability distribution**, updated by data.
+
+**Bayes' rule.** For a hypothesis $H$ (a value of $p$) and observed data $D$,
+
+$$P(H \mid D) = \frac{P(D \mid H)\,P(H)}{P(D)} \qquad\Longrightarrow\qquad \underbrace{P(H\mid D)}_{\text{posterior}} \;\propto\; \underbrace{P(D\mid H)}_{\text{likelihood}}\;\underbrace{P(H)}_{\text{prior}}.$$
+
+The denominator $P(D)$ does not depend on $H$, so it is just a normaliser; the *shape* of the posterior is prior $\times$ likelihood.
+
+**The conjugate Beta–binomial (memorise this).** To estimate a proportion $p$ from $k$ successes in $n$ trials:
+
+1. **Likelihood** (binomial): $P(k\mid p) \propto p^{k}(1-p)^{n-k}$.
+2. **Prior** (Beta): $p \sim \text{Beta}(\alpha,\beta)$, with $P(p) \propto p^{\alpha-1}(1-p)^{\beta-1}$. Read $\alpha,\beta$ as **prior pseudo-counts** of successes and failures. $\text{Beta}(1,1)$ is **uniform** ("no opinion").
+3. **Posterior** — multiply and add the exponents:
+$$p \mid \text{data} \sim \text{Beta}(\alpha + k,\ \beta + n - k).$$
+The update is pure arithmetic: **add your successes to $\alpha$ and your failures to $\beta$.**
+4. **Summaries.** Posterior mean $= \dfrac{\alpha}{\alpha+\beta}$ (using the *posterior* $\alpha,\beta$). A **95% credible interval** holds 95% of the posterior probability; you may say *"there is a 95% probability that $p$ lies inside."*
+
+**Interpretation traps.** A frequentist **confidence** interval is a statement about the long-run *procedure*, not a probability about the parameter. A **p-value** is $P(\text{data this extreme}\mid H_0)$, **not** $P(H_0\mid\text{data})$.
+
+## By hand
+
+Throughout, the running example is counting marker-**positive** cells: $k$ positive out of $n$ examined.
+
+**B1.** In one sentence each, contrast the frequentist and Bayesian meaning of the word "probability." Then say which of the two is willing to write $P(p = 0.3)$, and why.
+
+**B2.** Label the three pieces of $\text{posterior} \propto \text{likelihood} \times \text{prior}$ for the cell-counting problem: which is the binomial term, which is the Beta term, and which is what you report at the end?
+
+**B3.** You examine $n = 20$ cells and find $k = 6$ positive. Using a **uniform** prior $\text{Beta}(1,1)$:
+(a) write the posterior distribution;
+(b) compute the posterior mean;
+(c) compare it to the frequentist estimate $\hat p = k/n$. Why are they close but not identical?
+
+**B4.** Repeat B3 with an **informative** prior $\text{Beta}(2,8)$ (three earlier experiments suggested about 20% positive). Write the posterior and its mean. Does the estimate move up or down relative to B3, and why?
+
+**B5.** Now suppose you had examined **ten times as many cells**, $n = 200$ with $k = 60$ (same fraction $0.30$). Redo the posterior mean under both priors $\text{Beta}(1,1)$ and $\text{Beta}(2,8)$. What happens to the gap between the two answers, and what general principle does this illustrate?
+
+**B6.** A colleague reports a **95% confidence interval** of $[0.14,\ 0.52]$ and says "so there's a 95% probability the true fraction is between 0.14 and 0.52." Is that interpretation correct for a confidence interval? State the correct meaning, and say under which framework the quoted sentence *would* be legitimate.
+
+**B7.** You test whether the positive fraction exceeds 25%. A frequentist reports $p\text{-value} = 0.08$ for $H_0: p = 0.25$. A student concludes "there's only an 8% chance the true fraction is 0.25 or below." Explain what the p-value actually says, and what Bayesian quantity the student is really reaching for.
+
+**B8. (pseudo-counts)** Explain why $\text{Beta}(1,1)$ barely moves the estimate while $\text{Beta}(20,80)$ (same 20% centre) would move it a lot, even though both are "centred at 0.2." Relate your answer to the idea of prior pseudo-counts.
+
+## In R
+
+Use R only to **confirm** your by-hand answers. Everything here is base R — no package needed.
+
+### The Beta–binomial update
+
+```r
+k <- 6; n <- 20
+
+# frequentist point estimate
+p_hat <- k / n                       # 0.30
+
+# Bayesian update, uniform prior Beta(1, 1)
+a0 <- 1; b0 <- 1
+a  <- a0 + k                         # posterior alpha = 7
+b  <- b0 + (n - k)                   # posterior beta  = 15
+
+a / (a + b)                          # posterior mean          -> 0.318
+```
+
+### Credible interval and a tail probability
+
+```r
+# 95% credible interval = 2.5% and 97.5% quantiles of the posterior
+qbeta(c(0.025, 0.975), a, b)         # ~ 0.14 .. 0.52
+
+# posterior probability that p exceeds 0.25
+1 - pbeta(0.25, a, b)                # ~ 0.75
+```
+
+### Swapping in an informative prior
+
+```r
+a0 <- 2; b0 <- 8                     # centred near 0.2, weak
+a  <- a0 + k                         # 8
+b  <- b0 + (n - k)                   # 22
+a / (a + b)                          # posterior mean          -> 0.267
+qbeta(c(0.025, 0.975), a, b)         # narrower, shifted down
+```
+
+### Tasks
+
+**R1.** Reproduce your **B3** posterior mean and add a 95% credible interval with `qbeta`. Confirm the mean matches $\alpha/(\alpha+\beta)$.
+
+**R2.** Reproduce your **B4** informative-prior mean, and compute `1 - pbeta(0.25, a, b)` under *both* priors. Which prior makes you more confident that $p > 0.25$, and does that match your intuition?
+
+**R3.** Reproduce **B5** in R: set `n <- 200; k <- 60` and recompute the posterior mean under both priors. Verify numerically that the two answers are much closer than in the $n = 20$ case.
+
+**R4.** (Seeing the shift.) Evaluate the two posterior densities on a grid and eyeball where they peak:
+
+```r
+p <- seq(0, 1, length.out = 501)
+plot(p, dbeta(p, 7, 15),  type = "l",              # uniform-prior posterior
+     xlab = "p", ylab = "posterior density")
+lines(p, dbeta(p, 8, 22), lty = 2)                 # informative-prior posterior
+abline(v = 6/20, col = "grey")                     # frequentist estimate 0.30
+```
+Which curve sits a little to the left, and why?
+
+## Hints
+
+::: {.callout-tip collapse="true" title="Hint 1 — the two meanings of probability"}
+Frequentist probability is a **long-run frequency** of repeatable events, so a fixed parameter has no distribution — a frequentist will not write $P(p = 0.3)$. Bayesian probability is a **degree of belief**, so it *can* describe uncertainty about a fixed-but-unknown parameter. See the [Wikipedia summary of the two interpretations](https://en.wikipedia.org/wiki/Bayesian_probability).
+:::
+
+::: {.callout-tip collapse="true" title="Hint 2 — the conjugate update"}
+Counting $k$ positives out of $n$ is [**binomial**](https://en.wikipedia.org/wiki/Binomial_distribution); the matching prior for the proportion is the [**Beta**](https://en.wikipedia.org/wiki/Beta_distribution) distribution. Multiplying $p^{\alpha-1}(1-p)^{\beta-1}$ by $p^{k}(1-p)^{n-k}$ just adds the exponents, giving $\text{Beta}(\alpha+k,\ \beta+n-k)$. So: **add successes to $\alpha$, failures to $\beta$.**
+:::
+
+::: {.callout-tip collapse="true" title="Hint 3 — posterior mean"}
+The mean of $\text{Beta}(\alpha,\beta)$ is $\alpha/(\alpha+\beta)$. Use the **posterior** parameters (after adding the data), not the prior ones.
+:::
+
+::: {.callout-tip collapse="true" title="Hint 4 — why prior vs data pull against each other"}
+Think of $\alpha,\beta$ as pretend prior counts. The total "evidence" is $\alpha+\beta+n$; the prior's share is $(\alpha+\beta)/(\alpha+\beta+n)$. When $n$ is small the prior is a big share (it moves the answer); when $n$ is large the data dominates and the prior fades.
+:::
+
+::: {.callout-tip collapse="true" title="Hint 5 — confidence vs credible"}
+A **credible** interval is a probability statement about the parameter ("95% probability $p$ is inside"). A **confidence** interval is a statement about the *procedure*: repeat the experiment many times and 95% of the intervals you build would contain the true fixed $p$. A single realised interval either contains $p$ or not — no probability attached. See [confidence interval](https://en.wikipedia.org/wiki/Confidence_interval) vs [credible interval](https://en.wikipedia.org/wiki/Credible_interval).
+:::
+
+::: {.callout-tip collapse="true" title="Hint 6 — what a p-value is"}
+A [p-value](https://en.wikipedia.org/wiki/P-value) is $P(\text{data at least this extreme}\mid H_0)$ — the probability of the data assuming the null is true. It is **not** $P(H_0\mid\text{data})$. The quantity the student wants (the probability the hypothesis is true given the data) is a **posterior** probability, obtainable with `pbeta` on the posterior.
+:::
+
+::: {.callout-tip collapse="true" title="Hint 7 — the R functions"}
+Build the posterior parameters by adding counts, then use [`dbeta`](https://rdrr.io/r/stats/Beta.html) (density), [`qbeta`](https://rdrr.io/r/stats/Beta.html) (quantiles → credible interval), and [`pbeta`](https://rdrr.io/r/stats/Beta.html) (cumulative → tail probabilities). `qbeta(c(0.025, 0.975), a, b)` gives a 95% credible interval; `1 - pbeta(x, a, b)` gives $P(p > x \mid \text{data})$.
+:::
+
+## Solutions
+
+::: {.callout-note collapse="true" title="Solution"}
+
+**B1.** *Frequentist:* probability is the long-run relative frequency of an outcome over many repetitions of an experiment. *Bayesian:* probability is a degree of belief about a proposition, given what you know. Only the **Bayesian** will write $P(p = 0.3)$, because Bayesian probability may describe uncertainty about a fixed-but-unknown parameter; for a frequentist the parameter is fixed (not random), so it has no probability distribution.
+
+**B2.** The **binomial** term $p^{6}(1-p)^{14}$ is the **likelihood** (how probable the observed 6-of-20 is for each value of $p$). The **Beta** term $p^{\alpha-1}(1-p)^{\beta-1}$ is the **prior** (belief about $p$ before the data). What you report is the **posterior**, $\text{Beta}(\alpha+6,\ \beta+14)$, obtained by multiplying the two and renormalising.
+
+**B3.**
+(a) Add successes to $\alpha$ and failures to $\beta$: $\text{Beta}(1+6,\ 1+14) = \text{Beta}(7,\ 15)$.
+(b) Posterior mean $= \dfrac{7}{7+15} = \dfrac{7}{22} \approx 0.318$.
+(c) The frequentist estimate is $\hat p = 6/20 = 0.30$. They are close because the uniform prior carries almost no information (just one pseudo-success and one pseudo-failure). They are not identical because those pseudo-counts nudge the estimate very slightly toward $0.5$ (the centre of the uniform prior).
+
+**B4.** $\text{Beta}(2+6,\ 8+14) = \text{Beta}(8,\ 22)$, mean $= \dfrac{8}{30} \approx 0.267$. The estimate moves **down** relative to B3 (0.318 → 0.267) because the informative prior $\text{Beta}(2,8)$ is centred near $0.2$ (its mean is $2/10 = 0.2$) and pulls the posterior toward the earlier experiments. With only $n = 20$ cells that pull is noticeable.
+
+**B5.** With $n = 200$, $k = 60$, failures $= 140$:
+
+- Uniform $\text{Beta}(1,1)$: posterior $\text{Beta}(61,\ 141)$, mean $= 61/202 \approx 0.302$.
+- Informative $\text{Beta}(2,8)$: posterior $\text{Beta}(62,\ 148)$, mean $= 62/210 \approx 0.295$.
+
+The gap shrinks from $0.318$ vs $0.267$ (a difference of $0.051$ at $n=20$) to $0.302$ vs $0.295$ (a difference of $0.007$ at $n=200$). **Principle:** as data accumulates, the likelihood dominates and the choice of prior matters less — the two posteriors converge on the data estimate $0.30$. Priors matter most when data is scarce.
+
+**B6.** The interpretation is **not** correct for a *confidence* interval. Correct meaning: the interval was produced by a procedure that, over many repeated experiments, yields intervals containing the true fixed $p$ 95% of the time. For this one realised interval $[0.14, 0.52]$, $p$ is either inside it or not — there is no 95% probability attached. The quoted sentence *would* be legitimate for a **credible** interval (a Bayesian interval), because there $p$ has a probability distribution.
+
+**B7.** The p-value $0.08$ is $P(\text{data at least this extreme}\mid H_0: p = 0.25)$ — the probability of seeing data this far from the null *if the null were exactly true*. It says nothing directly about how probable $H_0$ itself is. The student is reaching for a **posterior probability**, $P(p \le 0.25 \mid \text{data})$, which is a Bayesian quantity: you get it from the posterior with `pbeta(0.25, a, b)`. Confusing $P(\text{data}\mid H_0)$ with $P(H_0\mid\text{data})$ is the classic p-value misreading.
+
+**B8.** Both $\text{Beta}(1,1)$ and $\text{Beta}(20,80)$ (and $\text{Beta}(2,8)$) can share the centre $0.2$-ish, but they carry very different **amounts** of prior information, measured by $\alpha+\beta$. $\text{Beta}(1,1)$ has $\alpha+\beta = 2$ pseudo-counts, tiny next to $n = 20$ real observations, so the data dominates. $\text{Beta}(20,80)$ has $\alpha+\beta = 100$ pseudo-counts, *five times* the data, so it dominates and drags the estimate strongly toward $0.2$. The **width/strength** of a prior, not just its centre, controls how much it moves the answer — the concentration $\alpha+\beta$ is an effective prior sample size.
+
+**R1.**
+```r
+k <- 6; n <- 20
+a <- 1 + k; b <- 1 + (n - k)         # Beta(7, 15)
+a / (a + b)                          # 0.3181818  -> matches 7/22
+qbeta(c(0.025, 0.975), a, b)         # ~ 0.1435 .. 0.5216
+```
+The mean equals $\alpha/(\alpha+\beta) = 7/22$; the 95% credible interval is roughly $[0.14, 0.52]$.
+
+**R2.**
+```r
+k <- 6; n <- 20
+
+# uniform prior
+a <- 1 + k; b <- 1 + (n - k)         # Beta(7, 15)
+1 - pbeta(0.25, a, b)                # ~ 0.75
+
+# informative prior Beta(2,8)
+a <- 2 + k; b <- 8 + (n - k)         # Beta(8, 22)
+a / (a + b)                          # 0.2667
+1 - pbeta(0.25, a, b)                # ~ 0.55
+```
+The **uniform** prior gives a higher $P(p > 0.25)$ (~0.75) than the informative prior (~0.55). That matches intuition: the informative prior is centred at $0.2$, so it pulls belief below $0.25$ and makes you less sure the fraction exceeds a quarter.
+
+**R3.**
+```r
+n <- 200; k <- 60
+
+a <- 1 + k; b <- 1 + (n - k)         # Beta(61, 141)
+a / (a + b)                          # 0.3020
+
+a <- 2 + k; b <- 8 + (n - k)         # Beta(62, 148)
+a / (a + b)                          # 0.2952
+```
+The two means (0.302 and 0.295) differ by under $0.01$, far less than the $n = 20$ gap (0.318 vs 0.267). With ten times the data the prior barely matters.
+
+**R4.** The dashed curve, the $\text{Beta}(8,22)$ posterior from the informative prior, sits slightly to the **left** of the solid $\text{Beta}(7,15)$ curve, because the informative prior is centred near $0.2$ and pulls the posterior toward smaller $p$. Both peak below the grey line at $0.30$ (the pull is toward each prior's centre, above $0.2$ for the uniform, at $0.2$ for the informative). With more data both curves would narrow and slide onto $0.30$.
+:::
+
+## Where this leads
+
+- **Bayesian inference in R (if this block stays):** for non-conjugate models there is no closed-form posterior, and we sample it with **MCMC** (e.g. Stan / `rstan`, `brms`). The Beta–binomial here is the rare case that needs only `qbeta`/`pbeta`.
+- **Hierarchical / empirical-Bayes shrinkage:** the per-gene estimates in differential-expression tools (limma, DESeq2) borrow strength across genes exactly in the spirit of a prior — a hierarchical Bayesian idea, even when the software calls it something else.
+- **Count distributions:** the **Poisson** and **negative binomial** distributions (introduced with overdispersion in the count-data material) are the likelihoods you would pair with priors when modelling sequencing counts the Bayesian way.

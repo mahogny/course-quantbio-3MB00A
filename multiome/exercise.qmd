@@ -1,0 +1,249 @@
+---
+title: "Exercise: multiome data integration"
+format:
+  html:
+    toc: true
+    code-copy: true
+    code-overflow: wrap
+    highlight-style: github
+---
+
+## Goal
+
+By the end of this exercise you should be able to:
+
+- explain the **premise** of multiome integration — the same samples measured by several modalities (matched rows, different columns),
+- say **why** we integrate: shared biology, independent noise,
+- perform the two essential pre-processing steps by hand and in R — **normalize within each modality**, then **block-scale** so no modality dominates,
+- build a **joint latent space** with the simplest method, concatenation + PCA,
+- describe what **CCA** and **MOFA-style factors** add, and when each is appropriate,
+- read a factor's **loadings** across modalities to spot **concordance** (co-varying genes and proteins) and **discordance** (mRNA vs protein disagreement).
+
+This is an **Applications day**. It leans on Principal component analysis — a joint latent space is still a small set of directions found from covariance. Do the by-hand parts first; the R confirms them.
+
+## Background
+
+Two (or more) matrices are measured on the **same samples**:
+
+$$X_{\text{RNA}}:\ n \times p_1, \qquad X_{\text{prot}}:\ n \times p_2,$$
+
+with the **same $n$ rows** (samples) but different, and differently sized, columns (features). We want a **joint latent space**: one set of coordinates per sample, and a set of **loadings per modality** telling us how each feature reads out along each shared axis.
+
+**The two pre-processing steps that make integration fair:**
+
+1. **Normalize within each modality.** Each data type needs its own appropriate transform (e.g. log-transform RNA counts, standardize protein intensities). You cannot pool raw counts and intensities into one table.
+2. **Block-scale.** After normalization, the modality with **more features carries more total variance** simply because it has more columns. Divide each block by a measure of its overall size (here we use its Frobenius norm, $\lVert X\rVert_F = \sqrt{\sum_{ij} X_{ij}^2}$) so that each modality contributes comparably.
+
+**Three method families** (all need the two steps above first):
+
+- **Concatenation + PCA** — paste the scaled blocks side by side and run PCA. Simplest.
+- **CCA** — find directions in each modality whose sample scores are maximally **correlated** across modalities.
+- **MOFA-style factors** — learn shared factor scores $Z$ with a **separate loading matrix per modality**, so a factor can be active in some modalities and silent in others.
+
+**Interpretation.** On a shared factor, features with large loadings in **both** modalities **co-vary**. When a gene loads high but its protein does not (or vice versa), that is **discordance** — a real biological signal, since mRNA and protein levels correlate only modestly (translation and degradation intervene).
+
+## By hand
+
+**B1.** Two assays are run. Assay A measures 3 genes on 4 cells; assay B measures 2 proteins on the **same 4 cells**. Write the shapes of the two matrices. Which dimension must match, and why is that the whole premise of integration?
+
+**B2.** You are told assay A measures cells 1–4 and assay B measures cells 5–8 (different cells). Can you use concatenation, CCA, or MOFA as described here? Explain in one sentence what breaks.
+
+**B3.** Here is a normalized (mean-centred) RNA block $X_r$ and protein block $X_p$ for 4 cells:
+
+$$X_r = \begin{pmatrix} 2 & -2 & 0 \\ -2 & 2 & 0 \\ 1 & -1 & 0 \\ -1 & 1 & 0 \end{pmatrix}, \qquad X_p = \begin{pmatrix} 1 \\ -1 \\ 0.5 \\ -0.5 \end{pmatrix}.$$
+
+Compute the Frobenius norm $\lVert X\rVert_F = \sqrt{\sum_{ij} X_{ij}^2}$ of **each** block. Which block carries more total variance, and by roughly what factor?
+
+**B4.** Using your two norms from B3, **block-scale** each matrix (divide every entry of a block by that block's Frobenius norm). Confirm each scaled block now has Frobenius norm 1. Why does this stop the RNA block from dominating a concatenated PCA?
+
+**B5.** After block-scaling, we **concatenate**: $X = [\,X_r \mid X_p\,]$. What are the dimensions of $X$? How many loadings will principal component 1 have, and how do they split between the two modalities?
+
+**B6. (concordance vs discordance)** For a single shared factor, the loadings are:
+
+| feature | modality | loading on factor 1 |
+|---|---|---|
+| gene *CD3D* | RNA | +0.81 |
+| gene *MS4A1* | RNA | +0.05 |
+| protein CD3 | protein | +0.77 |
+| protein CD20 | protein | +0.04 |
+
+(a) Which gene–protein pair **co-varies** on this factor (concordance)? (b) *CD3D* is the gene, CD3 is its protein product — is this factor concordant for CD3? (c) Now suppose a second factor has gene *X* loading +0.9 but protein *X* loading +0.02. Give one biological explanation for that discordance.
+
+**B7. (matching methods to questions)** For each aim, name the most appropriate of {concatenation+PCA, CCA, MOFA-style factors} and give a one-line reason:
+(a) a quick shared embedding of two well-scaled blocks;
+(b) explicitly finding the signal on which RNA and protein **agree**, ignoring modality-specific variation;
+(c) five modalities, some samples missing in some blocks, and you want to know which factors are **modality-specific**.
+
+## In R
+
+Use R to **confirm** the by-hand answers. Everything below is illustrative and self-contained (small toy matrices). In practice the RNA normalization would be a proper count transform, not just `scale()`.
+
+### Set up the two matched blocks
+
+```r
+# same 4 cells (rows) in both blocks; different features (columns)
+Xr <- matrix(c( 2, -2, 0,
+               -2,  2, 0,
+                1, -1, 0,
+               -1,  1, 0), nrow = 4, byrow = TRUE)   # RNA: 4 cells x 3 genes
+Xp <- matrix(c( 1,
+               -1,
+                0.5,
+               -0.5), nrow = 4, byrow = TRUE)        # protein: 4 cells x 1
+
+dim(Xr)   # 4 3
+dim(Xp)   # 4 1
+```
+
+### Frobenius norms (block sizes)
+
+```r
+fro <- function(M) sqrt(sum(M^2))
+fro(Xr)   # sqrt(4+4+4+4 + 1+1+1+1) = sqrt(20) ~ 4.47
+fro(Xp)   # sqrt(1+1+0.25+0.25)     = sqrt(2.5) ~ 1.58
+```
+
+### Block-scale so neither dominates
+
+```r
+Xr_s <- Xr / fro(Xr)
+Xp_s <- Xp / fro(Xp)
+fro(Xr_s)   # 1
+fro(Xp_s)   # 1
+```
+
+### Concatenate and build the joint latent space
+
+```r
+X <- cbind(Xr_s, Xp_s)   # 4 cells x (3 + 1) = 4 x 4, rows still matched
+dim(X)                   # 4 4
+pc <- prcomp(X)          # joint PCA: scores in pc$x, loadings in pc$rotation
+pc$rotation[, 1]         # PC1 loadings: first 3 are genes, last 1 is protein
+```
+
+### A quick look at cross-modal agreement (CCA)
+
+```r
+# base-R canonical correlation; overfits when features >> samples,
+# so treat as illustration only (use sparse CCA for real data)
+cc <- cancor(Xr_s, Xp_s)
+cc$cor                   # canonical correlation(s) between the two blocks
+```
+
+### Tasks
+
+**R1.** Reproduce the two Frobenius norms from **B3** with the `fro()` helper. Do they match your hand values $\sqrt{20}$ and $\sqrt{2.5}$?
+
+**R2.** Block-scale both blocks and confirm each scaled block has Frobenius norm 1 (as in **B4**).
+
+**R3.** Concatenate the scaled blocks and run `prcomp()`. Confirm the joint matrix is $4\times4$ (**B5**) and that `pc$rotation[, 1]` has 4 loadings — 3 for genes, 1 for the protein.
+
+**R4.** Run `prcomp()` on the concatenation of the **un-scaled** blocks `cbind(Xr, Xp)` as well. Compare `pc$rotation[, 1]` to the scaled version: does the protein loading shrink relative to the gene loadings when you skip block-scaling? This is the domination problem in miniature.
+
+## Hints
+
+::: {.callout-tip collapse="true" title="Hint 1 — matrix shapes and matched rows"}
+Write shapes as `rows x columns`. Rows are **samples** (cells), columns are **features** (genes / proteins). For any of today's methods the **row count and row order** must be identical across blocks — that is what "same samples" means. The column counts are free to differ.
+:::
+
+::: {.callout-tip collapse="true" title="Hint 2 — Frobenius norm"}
+$\lVert X\rVert_F = \sqrt{\sum_{ij} X_{ij}^2}$: square every entry, add them all up, take the square root. In R that is `sqrt(sum(M^2))`. It measures the overall "size" (total variance, up to a constant) of a whole block.
+:::
+
+::: {.callout-tip collapse="true" title="Hint 3 — why block-scale"}
+Total variance grows with the number of columns, so a many-feature block has a larger Frobenius norm just from having more features. Dividing each block by its own norm puts both on the same footing (norm 1), so a concatenated [`prcomp`](https://rdrr.io/r/stats/prcomp.html) does not let the bigger block dictate every principal component.
+:::
+
+::: {.callout-tip collapse="true" title="Hint 4 — reading loadings across modalities"}
+On one factor, a feature with a **large** loading contributes strongly to that axis. Co-variation across modalities means a gene **and** a protein both have large loadings on the **same** factor. Small loading = that feature barely participates in the factor. Compare the gene loading and its protein product's loading to judge concordance vs discordance.
+:::
+
+::: {.callout-tip collapse="true" title="Hint 5 — mRNA/protein discordance"}
+mRNA and protein abundance correlate only modestly because protein level is also set by **translation rate** and **protein degradation**, not transcription alone. So high mRNA + low protein can mean translational repression or fast protein turnover; low mRNA + high protein can mean a stable, long-lived protein whose transcript has already decayed.
+:::
+
+::: {.callout-tip collapse="true" title="Hint 6 — matching methods to aims"}
+Concatenation+PCA optimizes **total variance** (simple, fast). CCA optimizes **correlation between** the two modalities (the agreement). MOFA-style factors reconstruct **each block** with shared scores and **per-modality loadings**, so they handle many modalities, missing data, and modality-specific factors. Match the aim's keyword to the method's objective.
+:::
+
+## Solutions
+
+::: {.callout-note collapse="true" title="Solution"}
+
+**B1.** Assay A is $4\times3$ (4 cells × 3 genes); assay B is $4\times2$ (4 cells × 2 proteins). The **row dimension (4 cells) must match**, and the rows must be in the **same order** — row $i$ is the same physical cell in both. That shared row identity is the entire premise: it is what lets us look for structure (cell identity, state) that appears in **both** matrices. The column dimensions (3 vs 2) are free to differ.
+
+**B2.** No. If assay A measures cells 1–4 and assay B measures cells 5–8, the rows do **not** correspond to the same samples, so gluing, correlating, or jointly factoring them is meaningless — there is no shared row to carry shared biology. This unpaired case needs a different family of methods (anchor / mutual-nearest-neighbour alignment), not the matched-sample methods here.
+
+**B3.** Frobenius norm = square all entries, sum, square-root.
+
+$$\lVert X_r\rVert_F = \sqrt{2^2+2^2+0^2 + 2^2+2^2+0^2 + 1^2+1^2+0^2 + 1^2+1^2+0^2} = \sqrt{4+4+4+4+1+1+1+1} = \sqrt{20} \approx 4.47.$$
+
+$$\lVert X_p\rVert_F = \sqrt{1^2 + 1^2 + 0.5^2 + 0.5^2} = \sqrt{1+1+0.25+0.25} = \sqrt{2.5} \approx 1.58.$$
+
+The **RNA block carries more total variance**, by a factor of $\sqrt{20}/\sqrt{2.5} = \sqrt{8} \approx 2.83$ in norm (a factor of $8$ in squared/variance terms). Much of that is simply because it has three columns rather than one.
+
+**B4.** Divide each block by its own norm:
+
+$$X_r^{\text{scaled}} = X_r / \sqrt{20}, \qquad X_p^{\text{scaled}} = X_p / \sqrt{2.5}.$$
+
+Now $\lVert X_r^{\text{scaled}}\rVert_F = \sqrt{20}/\sqrt{20} = 1$ and $\lVert X_p^{\text{scaled}}\rVert_F = \sqrt{2.5}/\sqrt{2.5} = 1$. Both blocks now contribute the **same total variance** to a concatenated analysis, so PCA can no longer let the larger RNA block dominate the principal components purely on the strength of having more features and bigger numbers.
+
+**B5.** $X = [\,X_r \mid X_p\,]$ is $4 \times (3+1) = 4 \times 4$ (same 4 cells, $3+1 = 4$ features). PC1 has **4 loadings**, one per column: the **first 3 belong to the genes** and the **last 1 belongs to the protein**. That natural split of the loading vector by modality is what later lets us read a factor in both "languages".
+
+**B6.**
+(a) *CD3D* (RNA, +0.81) and protein **CD3** (+0.77) both load strongly on factor 1, so they **co-vary** — concordance. *MS4A1* and CD20 have near-zero loadings and do not participate in this factor.
+(b) Yes — *CD3D* is the transcript and CD3 is (part of) its protein product, and both load high, so the factor is **concordant** for CD3: the T-cell signal shows up in RNA and protein together, corroborating it.
+(c) Gene *X* high (+0.9) but protein *X* near zero (+0.02) is **discordance**. A plausible explanation: **translational repression** (the transcript is present but not efficiently translated) or **rapid protein turnover / degradation** (protein is made but does not accumulate). The reverse pattern (protein high, mRNA low) would instead suggest a **stable, long-lived protein** whose transcript has already decayed.
+
+**B7.**
+(a) **Concatenation + PCA** — quickest shared embedding once both blocks are normalized and block-scaled.
+(b) **CCA** — its objective is exactly the correlation **between** modalities, so it isolates the signal on which RNA and protein agree and downweights modality-specific variation.
+(c) **MOFA-style factors** — it handles many modalities and missing samples, and its shared-scores / per-modality-loadings structure directly tells you which factors are **modality-specific**.
+
+**R1.** With the `fro()` helper:
+
+```r
+fro <- function(M) sqrt(sum(M^2))
+fro(Xr)   # 4.472136  = sqrt(20)
+fro(Xp)   # 1.581139  = sqrt(2.5)
+```
+Both match the hand values.
+
+**R2.**
+
+```r
+Xr_s <- Xr / fro(Xr)
+Xp_s <- Xp / fro(Xp)
+fro(Xr_s)   # 1
+fro(Xp_s)   # 1
+```
+Each scaled block has Frobenius norm 1, as in B4.
+
+**R3.**
+
+```r
+X  <- cbind(Xr_s, Xp_s)
+dim(X)             # 4 4                 -> matches B5
+pc <- prcomp(X)
+length(pc$rotation[, 1])   # 4           -> 4 loadings on PC1
+pc$rotation[, 1]           # first 3 = genes, last 1 = protein
+```
+The joint matrix is $4\times4$ and PC1 carries one loading per feature, split 3 (genes) + 1 (protein).
+
+**R4.**
+
+```r
+pc_unscaled <- prcomp(cbind(Xr, Xp))     # skip block-scaling
+pc_scaled   <- prcomp(cbind(Xr_s, Xp_s)) # with block-scaling
+
+pc_unscaled$rotation[, 1]   # protein (4th) loading is small vs the gene loadings
+pc_scaled$rotation[, 1]     # protein loading is comparable to the gene loadings
+```
+Without block-scaling the RNA block's larger raw variance pulls PC1 toward the genes and the single protein feature contributes little; after block-scaling the protein participates on comparable footing. This is the modality-domination problem the pre-processing exists to prevent.
+:::
+
+## Where this leads
+
+- **MOFA and production multi-omics:** for many modalities, missing data, and interpretable per-block loadings, the `MOFA2` (Bioconductor) framework implements the shared-factor model; you would call it rather than roll your own, then read its factors and loadings exactly as here.
+- **Batch effects and normalization:** integration does **not** remove per-modality batch structure; correcting it belongs with the normalization step for each block, before the joint analysis.
+- **Principal component analysis:** the joint latent space is PCA-thinking extended from one matrix to several measured on the same samples — the same scores-and-loadings vocabulary, now shared across modalities.

@@ -1,0 +1,238 @@
+---
+title: "Exercise: hierarchical models"
+format:
+  html:
+    toc: true
+    code-copy: true
+    code-overflow: wrap
+    highlight-style: github
+---
+
+## Goal
+
+By the end of this exercise you should be able to:
+
+- tell a **biological** replicate from a **technical** one, and count the *effective* sample size of a design,
+- recognise **pseudoreplication** in a described analysis and say what goes wrong,
+- compute a **partial-pooling** (shrinkage) estimate **by hand** from the precision-weighted-average formula,
+- read the two variance components ($\sigma^2$ within, $\tau^2$ between) and turn them into an **ICC**,
+- write the R model formula `y ~ x + (1 | group)` and say what each part means in both `lme4` and `brms`.
+
+::: {.callout-warning}
+This **Bayesian statistics** block is provisional and may move to a later statistics / ML course. Focus on the *concepts* (replicates, pooling, shrinkage) — the by-hand shrinkage calculation is the part most likely to survive into any version.
+:::
+
+## Background
+
+Grouped data have (at least) **two levels** of variation. For measurement $j$ in group $i$:
+
+$$
+y_{ij} = \mu + b_i + \varepsilon_{ij},
+\qquad
+b_i \sim \mathcal N(0,\tau^2),
+\quad
+\varepsilon_{ij} \sim \mathcal N(0,\sigma^2).
+$$
+
+- $\mu$ — overall mean (**fixed effect**).
+- $b_i$ — group $i$'s deviation (**random effect**), a draw from a shared $\mathcal N(0,\tau^2)$.
+- $\sigma^2$ — **within**-group (technical / measurement) variance.
+- $\tau^2$ — **between**-group (biological) variance.
+
+**Partial pooling.** The estimate for a group is a precision-weighted average of its own mean $\bar y_i$ (from $n_i$ measurements) and the grand mean $\hat\mu$:
+
+$$
+\hat\mu_i = w_i\,\bar y_i + (1-w_i)\,\hat\mu,
+\qquad
+w_i = \frac{n_i/\sigma^2}{\,n_i/\sigma^2 + 1/\tau^2\,}.
+$$
+
+The pull of $\hat\mu_i$ toward $\hat\mu$ is **shrinkage**; it is larger when $n_i$ is small or $\tau^2$ is small.
+
+**Variance partition.** The intraclass correlation
+
+$$
+\text{ICC} = \frac{\tau^2}{\tau^2 + \sigma^2}
+$$
+
+is the fraction of variance that is *between* groups — how much your hierarchy matters.
+
+## By hand
+
+**B1.** A study reports: *"We measured a protein in 4 mice, taking 50 sections per mouse (n = 200), and found a significant difference between genotypes (p < 0.001)."* For the between-**genotype** question, what is the relevant number of independent units? Name the error being made.
+
+**B2.** For each design, say whether the extra measurements are **biological** or **technical** replicates:
+(a) the same blood sample split into three tubes and each assayed once;
+(b) three separately recruited patients, each assayed once;
+(c) one cell line grown, then split and sequenced in three lanes;
+(d) three independently grown cultures of the same cell line, each sequenced once.
+
+**B3.** A group has $n_i = 4$ measurements with sample mean $\bar y_i = 10$. The grand mean is $\hat\mu = 6$, the within-group variance is $\sigma^2 = 8$, and the between-group variance is $\tau^2 = 2$.
+(a) Compute the weight $w_i$.
+(b) Compute the partial-pooling estimate $\hat\mu_i$.
+(c) In one sentence, why is $\hat\mu_i$ between 6 and 10?
+
+**B4.** Using the same $\sigma^2 = 8$, $\tau^2 = 2$, $\hat\mu = 6$, now consider a group with only $n_i = 1$ measurement whose single value is $\bar y_i = 10$. Compute $w_i$ and $\hat\mu_i$. Compared with B3, does this group shrink **more** or **less** toward the grand mean? Explain in terms of $n_i$.
+
+**B5.** With $\sigma^2 = 8$ and $\tau^2 = 2$, compute the **ICC**. Interpret it: if two measurements come from the same group, how correlated are they, and does grouping matter much here?
+
+**B6.** Take the partial-pooling weight $w_i = \dfrac{n_i/\sigma^2}{n_i/\sigma^2 + 1/\tau^2}$. Show algebraically that:
+(a) as $\tau^2 \to 0$, $w_i \to 0$ (which pooling regime is this?);
+(b) as $\tau^2 \to \infty$, $w_i \to 1$ (which pooling regime is this?).
+
+**B7. (design)** You have budget for 40 assays and want to compare treated vs control. You can spend it as **4 patients × 10 measurements** or **20 patients × 2 measurements**. If the ICC is high (patients differ a lot, within-patient noise is small), which design gives you more power for the *between-patient* comparison, and why?
+
+## In R
+
+R is only for **confirming** the by-hand answers and seeing the model syntax. Nothing here is executed at build time (no packages are installed), so treat these as templates to run in your own session.
+
+### Confirm a shrinkage calculation (base R, no packages)
+
+```r
+# B3 by hand, reproduced in R
+n_i    <- 4
+ybar_i <- 10
+mu_hat <- 6
+sigma2 <- 8
+tau2   <- 2
+
+w    <- (n_i / sigma2) / (n_i / sigma2 + 1 / tau2)
+mu_i <- w * ybar_i + (1 - w) * mu_hat
+c(weight = w, estimate = mu_i)     # compare against your hand answer
+```
+
+### The ICC
+
+```r
+sigma2 <- 8
+tau2   <- 2
+icc    <- tau2 / (tau2 + sigma2)
+icc                                # fraction of variance that is between-group
+```
+
+### Fitting the model (templates — run in your own session)
+
+```r
+# Frequentist multilevel model
+library(lme4)
+fit <- lmer(biomarker ~ treatment + (1 | patient), data = d)
+summary(fit)     # fixed effect + variance components (tau^2, sigma^2)
+ranef(fit)       # the shrunken per-patient deviations b_i
+```
+
+```r
+# Bayesian version — identical formula
+library(brms)
+fit <- brm(biomarker ~ treatment + (1 | patient),
+           data = d, family = gaussian())
+summary(fit)     # posterior means + credible intervals
+```
+
+### Tasks
+
+**R1.** Reproduce **B3** and **B4** with the base-R shrinkage snippet (change only `n_i`). Confirm the $n_i = 1$ group shrinks more.
+
+**R2.** Compute the ICC for $\sigma^2 = 8, \tau^2 = 2$ (matches **B5**), then re-compute it for $\tau^2 = 32$. Which scenario makes grouping matter more?
+
+**R3.** Write, without running, the `lmer`/`brm` formula for a design with **cells nested in patients** where you want a treatment fixed effect. (Hint below.)
+
+## Hints
+
+::: {.callout-tip collapse="true" title="Hint 1 — biological vs technical"}
+Ask: *does this measurement come from a new, independent biological unit, or from the same unit measured again?* A new unit = **biological** replicate (lets you generalise). Same unit remeasured = **technical** replicate (only reduces measurement noise). See the replicate discussion in the lecture and the ideas of independent sampling from the *Statistics and data science for biologists* course.
+:::
+
+::: {.callout-tip collapse="true" title="Hint 2 — pseudoreplication (B1)"}
+The number that limits a between-**group** claim is the number of independent **groups**, not the total count of measurements. Counting technical/within-unit measurements as if they were independent biological units is **pseudoreplication**; it makes standard errors too small and p-values too optimistic.
+:::
+
+::: {.callout-tip collapse="true" title="Hint 3 — the shrinkage formula (B3, B4)"}
+Plug into $w_i = \dfrac{n_i/\sigma^2}{n_i/\sigma^2 + 1/\tau^2}$, then $\hat\mu_i = w_i\bar y_i + (1-w_i)\hat\mu$. Compute the two "precisions" first: $n_i/\sigma^2$ (how much the group knows about itself) and $1/\tau^2$ (how tightly groups cluster). The weight is the group's precision as a fraction of the total.
+:::
+
+::: {.callout-tip collapse="true" title="Hint 4 — why smaller n shrinks more (B4)"}
+$w_i$ increases with $n_i$: more of its own measurements → the group trusts its own mean more → less shrinkage. With $n_i = 1$ the group carries little information, so it leans on the grand mean.
+:::
+
+::: {.callout-tip collapse="true" title="Hint 5 — ICC (B5)"}
+$\text{ICC} = \dfrac{\tau^2}{\tau^2+\sigma^2}$ is a fraction between 0 and 1. It is *both* the fraction of total variance that is between-group *and* the correlation between two measurements from the same group. Near 1 → grouping dominates; near 0 → groups are interchangeable.
+:::
+
+::: {.callout-tip collapse="true" title="Hint 6 — the limits (B6)"}
+Substitute the extreme value of $\tau^2$ into the weight. For $\tau^2 \to 0$, the term $1/\tau^2 \to \infty$ dominates the denominator, so $w_i \to 0$. For $\tau^2 \to \infty$, $1/\tau^2 \to 0$ vanishes, leaving $w_i \to (n_i/\sigma^2)/(n_i/\sigma^2) = 1$. Match each to complete vs no pooling.
+:::
+
+::: {.callout-tip collapse="true" title="Hint 7 — R formulas"}
+In [`lme4::lmer`](https://rdrr.io/cran/lme4/man/lmer.html) and [`brms::brm`](https://paul-buerkner.github.io/brms/reference/brm.html) the syntax is identical. `(1 | group)` = a random intercept per level of `group`. Nesting is written `(1 | patient/cell)` (equivalently `(1 | patient) + (1 | patient:cell)`); crossed factors are separate terms `(1 | batch) + (1 | patient)`. Fixed effects (the ones you care about, with few chosen levels) go on the left, e.g. `treatment`.
+:::
+
+## Solutions
+
+::: {.callout-note collapse="true" title="Solution"}
+
+**B1.** The between-genotype comparison has **4** independent units (the 4 mice), *not* 200. The 50 sections per mouse are **technical / within-unit** replicates: they make each mouse's value more precise but do not add independent biological units. Analysing the 200 sections as if independent is **pseudoreplication**; it understates the standard error and produces a p-value that is too small. The honest design has $n = 4$ for the genotype question.
+
+**B2.**
+(a) **Technical** — one sample split into three; same biological unit measured three times.
+(b) **Biological** — three independently recruited patients; three independent units.
+(c) **Technical** — one culture split across lanes; the lanes are sequencing (measurement) replicates of the same unit.
+(d) **Biological** — three *independently grown* cultures; the independent growth is what makes them biological replicates.
+
+**B3.**
+(a) Precisions: group precision $n_i/\sigma^2 = 4/8 = 0.5$; between-group precision $1/\tau^2 = 1/2 = 0.5$.
+$$w_i = \frac{0.5}{0.5 + 0.5} = \frac{0.5}{1.0} = 0.5.$$
+(b)
+$$\hat\mu_i = 0.5\cdot 10 + (1-0.5)\cdot 6 = 5 + 3 = 8.$$
+(c) $\hat\mu_i = 8$ lies between the group's own mean (10) and the grand mean (6) because the estimate is a **compromise**: the group's 4 measurements pull toward 10, the shared distribution of groups pulls toward 6, and here the two carry equal weight.
+
+**B4.** Now $n_i = 1$: group precision $n_i/\sigma^2 = 1/8 = 0.125$; between-group precision still $1/\tau^2 = 0.5$.
+$$w_i = \frac{0.125}{0.125 + 0.5} = \frac{0.125}{0.625} = 0.2.$$
+$$\hat\mu_i = 0.2\cdot 10 + 0.8\cdot 6 = 2 + 4.8 = 6.8.$$
+This group shrinks **more** toward the grand mean (6.8 is much closer to 6 than B3's 8 was). Reason: with only $n_i = 1$ measurement the group carries little information about itself ($w_i = 0.2 < 0.5$), so the estimate leans heavily on the group of groups.
+
+**B5.**
+$$\text{ICC} = \frac{\tau^2}{\tau^2 + \sigma^2} = \frac{2}{2 + 8} = \frac{2}{10} = 0.2.$$
+Two measurements from the same group are correlated $0.2$. Only 20% of the total variance is between groups, so grouping matters but is not dominant here — most variation is *within* groups (measurement/within-unit noise).
+
+**B6.**
+(a) As $\tau^2 \to 0$: $1/\tau^2 \to \infty$, so the denominator $n_i/\sigma^2 + 1/\tau^2 \to \infty$ while the numerator $n_i/\sigma^2$ stays finite, giving $w_i \to 0$. Then $\hat\mu_i \to \hat\mu$ for every group — **complete pooling** (groups treated as identical).
+(b) As $\tau^2 \to \infty$: $1/\tau^2 \to 0$, so $w_i \to \dfrac{n_i/\sigma^2}{n_i/\sigma^2 + 0} = 1$. Then $\hat\mu_i \to \bar y_i$ — **no pooling** (each group estimated on its own).
+
+**B7.** With a **high ICC**, most of the variance is between patients and within-patient measurements are highly redundant (each extra one adds little new information). The between-patient comparison is limited by the number of *patients*, so **20 patients × 2 measurements** gives far more power than **4 patients × 10 measurements**. Ten measurements on only 4 patients pins down each patient's mean precisely but still leaves you with just 4 independent units for the treatment question. General lesson: when ICC is high, add **groups**, not measurements per group.
+
+**R1.** Base-R reproduction:
+
+```r
+shrink <- function(n_i, ybar_i, mu_hat = 6, sigma2 = 8, tau2 = 2) {
+  w <- (n_i / sigma2) / (n_i / sigma2 + 1 / tau2)
+  c(weight = w, estimate = w * ybar_i + (1 - w) * mu_hat)
+}
+shrink(n_i = 4, ybar_i = 10)   # weight 0.5,  estimate 8.0   (B3)
+shrink(n_i = 1, ybar_i = 10)   # weight 0.2,  estimate 6.8   (B4)
+```
+The $n_i = 1$ group has the smaller weight (0.2 vs 0.5) and lands closer to the grand mean — more shrinkage, confirming B4.
+
+**R2.**
+
+```r
+icc <- function(sigma2, tau2) tau2 / (tau2 + sigma2)
+icc(sigma2 = 8, tau2 = 2)    # 0.2   (B5)
+icc(sigma2 = 8, tau2 = 32)   # 0.8
+```
+$\tau^2 = 32$ gives ICC $= 0.8$: now 80% of variance is between groups, so grouping matters much more and the effective sample size is close to the number of groups.
+
+**R3.** Cells nested in patients, treatment as a fixed effect:
+
+```r
+lmer(biomarker ~ treatment + (1 | patient/cell), data = d)
+# equivalently: biomarker ~ treatment + (1 | patient) + (1 | patient:cell)
+# Bayesian: brm(biomarker ~ treatment + (1 | patient/cell), data = d)
+```
+`treatment` is the fixed effect of interest; `(1 | patient/cell)` gives a random intercept for each patient *and* for each cell within a patient.
+:::
+
+## Where this leads
+
+- **Penalized linear models:** shrinkage here and ridge/lasso penalties there are the same idea from two angles — reining in extreme estimates. A random-effect variance $\tau^2$ plays the role of a penalty strength that the data choose for you.
+- **Prior, likelihood, posterior (this block):** the line $b_i \sim \mathcal N(0,\tau^2)$ is a **prior** on the group effects, with $\tau$ estimated from the data — an *adaptive* prior. Hierarchical modelling is Bayesian inference with an extra layer.
+- **Error models (Poisson / negative binomial):** real omics counts replace the Gaussian $\varepsilon_{ij}$ with a count distribution; the hierarchical structure carries over unchanged, and overdispersion is itself a between-unit variance.

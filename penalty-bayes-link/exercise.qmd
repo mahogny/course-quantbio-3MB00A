@@ -1,0 +1,239 @@
+---
+title: "Exercise: penalties as priors"
+format:
+  html:
+    toc: true
+    code-copy: true
+    code-overflow: wrap
+    highlight-style: github
+---
+
+::: {.callout-note title="Provisional unit"}
+This bridge unit links the **penalized-regression** and **Bayesian** blocks and may later move to a dedicated statistics / machine-learning course. It assumes you have already met **ridge and lasso as optimisation** and **Bayes' theorem (prior / likelihood / posterior)**.
+:::
+
+## Goal
+
+By the end of this exercise you should be able to:
+
+- state, in one sentence, why a **penalty** is the same thing as a **prior**,
+- turn *maximise posterior* into *minimise (negative log-likelihood + negative log-prior)* and read off the **fit term** and the **penalty term**,
+- match **ridge** ⇔ **Gaussian** prior and **lasso** ⇔ **Laplace** prior, and derive each penalty from the prior's density,
+- explain the identity $\lambda_{\text{ridge}} = \sigma^2/\tau^2$ and what it says about **prior precision**,
+- explain, from the **shape at $\beta = 0$**, why lasso produces exact zeros but ridge does not,
+- translate a **biological belief** (polygenic vs sparse) into the matching prior/penalty.
+
+This is a **concept day**. Spend most of your time on the by-hand reasoning; the R section only *illustrates* the ideas (a full `glmnet` treatment lives in **Ridge and lasso regression**).
+
+## Background
+
+**The bridge in one move.** The posterior peak (the **MAP** estimate) is
+
+$$\hat{\boldsymbol\beta}_{\text{MAP}} = \arg\max_{\boldsymbol\beta}\ p(\boldsymbol\beta\mid\text{data}) = \arg\min_{\boldsymbol\beta}\ \big[\underbrace{-\log p(\text{data}\mid\boldsymbol\beta)}_{\text{fit term}} \;+\; \underbrace{-\log p(\boldsymbol\beta)}_{\text{penalty term}}\big].$$
+
+(We may take $-\log$ because the logarithm is increasing, so it does not move the location of the peak; it turns the product prior $\times$ likelihood into a sum.)
+
+**The fit term.** With Gaussian noise, $y_i = \mathbf{x}_i^\top\boldsymbol\beta + \varepsilon_i$, $\varepsilon_i\sim\mathcal N(0,\sigma^2)$, the negative log-likelihood is $\tfrac{1}{2\sigma^2}\,\text{RSS} + \text{const}$. So the fit term is just the **residual sum of squares**.
+
+**The penalty term** is the negative log of whatever **prior** you place on the coefficients:
+
+| Prior on each $\beta_j$ | density $\propto$ | $-\log$ prior $\propto$ | Penalty | Method |
+|---|---|---|---|---|
+| Gaussian $\mathcal N(0,\tau^2)$ | $e^{-\beta_j^2/2\tau^2}$ | $\sum_j \beta_j^2$ | $\lVert\boldsymbol\beta\rVert_2^2$ | **ridge** |
+| Laplace (scale $b$) | $e^{-|\beta_j|/b}$ | $\sum_j |\beta_j|$ | $\lVert\boldsymbol\beta\rVert_1$ | **lasso** |
+
+Clearing the $\tfrac{1}{2\sigma^2}$ from the fit term gives $\lambda_{\text{ridge}} = \sigma^2/\tau^2$ and $\lambda_{\text{lasso}} = 2\sigma^2/b$. In words: **a large penalty is a tight, confident prior that effects are near zero.**
+
+## By hand
+
+**B1.** In one sentence each, translate between the two languages:
+(a) what does the **penalty term** correspond to on the Bayesian side?
+(b) what does the **fit term** (RSS) correspond to?
+(c) what point summary of the posterior does penalised regression compute — the mean, the mode/peak, or the median?
+
+**B2.** Starting from the Gaussian prior density $p(\beta_j) \propto \exp\!\big(-\beta_j^2/2\tau^2\big)$, take $-\log$ and sum over $j$ to show the penalty term is $\tfrac{1}{2\tau^2}\lVert\boldsymbol\beta\rVert_2^2$ (up to a constant). Which method does this give?
+
+**B3.** Do the same for the Laplace prior $p(\beta_j) \propto \exp\!\big(-|\beta_j|/b\big)$: take $-\log$, sum over $j$, and read off the penalty. Which method does this give?
+
+**B4.** Combine B2 with the Gaussian-noise fit term and show that
+$$\arg\min_{\boldsymbol\beta}\ \frac{1}{2\sigma^2}\text{RSS} + \frac{1}{2\tau^2}\lVert\boldsymbol\beta\rVert_2^2 \;=\; \arg\min_{\boldsymbol\beta}\ \text{RSS} + \lambda\lVert\boldsymbol\beta\rVert_2^2$$
+and give $\lambda$ in terms of $\sigma^2$ and $\tau^2$. (Hint: multiply the whole objective by a constant that does not change the minimiser.)
+
+**B5. (prior precision)** Using $\lambda_{\text{ridge}} = \sigma^2/\tau^2$:
+(a) Fix $\sigma^2 = 1$. Compute $\lambda$ for a **tight** prior $\tau^2 = 0.01$ and for a **loose** prior $\tau^2 = 100$. Which gives stronger shrinkage?
+(b) What happens to $\lambda$ as $\tau^2 \to \infty$ (a "flat", no-information prior), and what familiar estimator do you recover?
+
+**B6. (why lasso zeros out)** Sketch (or describe) the Gaussian and Laplace densities on the same axes, both centred at $0$. Focus on the behaviour **right at $\beta = 0$**. Which one has a **sharp cusp** there, and why does that cusp let the corresponding method set coefficients **exactly to zero** while the other only shrinks them?
+
+**B7. (biology → prior)** For each biological situation, state whether a **Gaussian (ridge)** or **Laplace (lasso)** prior better encodes the belief, and say why in one line:
+(a) A complex, **polygenic** trait where hundreds of variants each nudge the phenotype a little.
+(b) A drug whose response is thought to be driven by **two or three** key genes, the other 19 997 being irrelevant.
+(c) You want to hand a wet-lab colleague a **short, testable list** of candidate genes.
+(d) Predictors are strongly **correlated co-expressed genes** and you would rather shrink them together than arbitrarily drop all but one. (Hint: think about which prior, or blend of priors, keeps correlated coefficients similar.)
+
+## In R
+
+The code below only **illustrates** today's concepts — the shapes of the two priors and the reading of a fit as a MAP estimate. (Running `glmnet` in earnest is the job of **Ridge and lasso regression**; here we keep it to a static illustration since packages are not run at render time.)
+
+### The two prior shapes
+
+```r
+# Gaussian vs Laplace densities, both centred at 0, matched to unit variance.
+b_grid <- seq(-4, 4, length.out = 400)
+
+gauss   <- dnorm(b_grid, mean = 0, sd = 1)          # Gaussian  N(0, 1)
+laplace <- (1 / (2 * (1/sqrt(2)))) *                # Laplace, scale b = 1/sqrt(2)
+           exp(-abs(b_grid) / (1/sqrt(2)))          #   -> also variance 1
+
+plot(b_grid, laplace, type = "l", lwd = 2,
+     xlab = "beta", ylab = "prior density")
+lines(b_grid, gauss, lwd = 2, lty = 2)
+legend("topright", c("Laplace (lasso)", "Gaussian (ridge)"),
+       lwd = 2, lty = c(1, 2))
+# Note the sharp CUSP of the Laplace at beta = 0  -> exact zeros (variable selection)
+# vs the rounded top of the Gaussian            -> shrink but never exactly zero
+```
+
+### The penalties are the negative log-priors
+
+```r
+# Up to constants, the penalty term IS the negative log-prior.
+neg_log_gauss   <- function(b, tau2 = 1) b^2 / (2 * tau2)   # -> ridge:  sum(beta^2)
+neg_log_laplace <- function(b, bscale = 1) abs(b) / bscale  # -> lasso:  sum(|beta|)
+
+neg_log_gauss(c(-2, 0, 2))    # 2 0 2      quadratic in beta
+neg_log_laplace(c(-2, 0, 2))  # 2 0 2      linear in |beta|
+# same values here by coincidence of inputs; the SHAPE differs (quadratic vs V-shaped)
+```
+
+### Reading a glmnet call as a prior (illustration only)
+
+```r
+library(glmnet)
+
+# alpha selects the PRIOR SHAPE; lambda sets the PRIOR STRENGTH (precision).
+fit_ridge <- glmnet(X, y, alpha = 0)     # Gaussian prior
+fit_lasso <- glmnet(X, y, alpha = 1)     # Laplace  prior
+fit_enet  <- glmnet(X, y, alpha = 0.5)   # blend    -> elastic net
+
+# Cross-validating lambda = letting the DATA choose how confident a prior to hold.
+cvfit  <- cv.glmnet(X, y, alpha = 1)
+lambda <- cvfit$lambda.min               # small lambda = weak prior, large = strong
+```
+
+### Tasks
+
+**R1.** Run the "two prior shapes" block. Zoom the plot near $\beta = 0$ (e.g. restrict `b_grid` to `seq(-0.5, 0.5, length.out = 400)`). Describe in words how the two curves differ at the origin, and connect that to B6.
+
+**R2.** Evaluate `neg_log_gauss` and `neg_log_laplace` on a grid such as `seq(-3, 3, 0.5)` and plot each against `beta`. Confirm one is a **parabola** ($\beta^2$) and the other a **V** ($|\beta|$). Which corresponds to ridge and which to lasso?
+
+**R3.** With $\sigma^2 = 1$, compute `lambda <- 1 / tau2` for `tau2 <- c(0.01, 0.1, 1, 10, 100)`. Tabulate $\tau^2$ against $\lambda$ and state, in one sentence, the relationship between **prior confidence** and **penalty strength** (this is B5 in code).
+
+## Hints
+
+::: {.callout-tip collapse="true" title="Hint 1 — the master equation"}
+Everything follows from taking $-\log$ of `posterior ∝ likelihood × prior`. The $-\log$ turns the product into a **sum**, and turns *maximise* into *minimise*: $-\log(\text{likelihood}) + (-\log(\text{prior}))$. The first piece is the **fit term**, the second is the **penalty term**. See the summary table on the [`dnorm`](https://rdrr.io/r/stats/Normal.html) reference for the Gaussian density form.
+:::
+
+::: {.callout-tip collapse="true" title="Hint 2 — negative log of a Gaussian (B2, B4)"}
+For $p(\beta_j)\propto e^{-\beta_j^2/2\tau^2}$, $-\log p(\beta_j) = \dfrac{\beta_j^2}{2\tau^2} + \text{const}$. Summing over $j$ gives $\dfrac{1}{2\tau^2}\sum_j\beta_j^2 = \dfrac{1}{2\tau^2}\lVert\boldsymbol\beta\rVert_2^2$ — the **ridge** ($\ell_2$) penalty. To get a clean $\lambda$, multiply the *whole* objective by $2\sigma^2$: minimisers are unchanged by scaling by a positive constant.
+:::
+
+::: {.callout-tip collapse="true" title="Hint 3 — negative log of a Laplace (B3)"}
+For $p(\beta_j)\propto e^{-|\beta_j|/b}$, $-\log p(\beta_j) = \dfrac{|\beta_j|}{b} + \text{const}$. The **absolute value** in the exponent becomes an absolute value in the penalty: $\dfrac{1}{b}\sum_j|\beta_j| = \dfrac{1}{b}\lVert\boldsymbol\beta\rVert_1$ — the **lasso** ($\ell_1$) penalty.
+:::
+
+::: {.callout-tip collapse="true" title="Hint 4 — prior precision (B5)"}
+$\lambda = \sigma^2/\tau^2$, and **precision** is $1/\tau^2$. A **small** $\tau^2$ (tight prior, high precision) makes $\lambda$ **large** → strong shrinkage. As $\tau^2\to\infty$ the prior goes flat, $\lambda\to 0$, and MAP collapses to **maximum likelihood = ordinary least squares**.
+:::
+
+::: {.callout-tip collapse="true" title="Hint 5 — the cusp (B6)"}
+Compare the two densities *at the origin*. The Gaussian $e^{-\beta^2}$ has a **rounded** top with zero slope at $0$, so it never forces a coefficient to be exactly $0$. The Laplace $e^{-|\beta|}$ has a **kink / cusp** at $0$ — that corner is what lets the lasso land on coefficients that are **exactly zero**, giving variable selection.
+:::
+
+::: {.callout-tip collapse="true" title="Hint 6 — biology to prior (B7)"}
+Ask: *do I believe many small effects, or a few large ones?* Many small effects (polygenic) → dense, smooth shrinkage → **Gaussian / ridge**. A few drivers, most exactly zero → sparse → **Laplace / lasso**. If you need a **short candidate list**, you want the exact zeros of lasso. For **correlated** predictors you want a **blend** — the elastic net (mixed Gaussian + Laplace prior) shrinks correlated coefficients together instead of arbitrarily keeping one.
+:::
+
+::: {.callout-tip collapse="true" title="Hint 7 — the R illustration"}
+Build the density grid with [`seq`](https://rdrr.io/r/base/seq.html), the Gaussian with [`dnorm`](https://rdrr.io/r/stats/Normal.html), and the Laplace by hand as $\tfrac{1}{2b}e^{-|\beta|/b}$ using [`abs`](https://rdrr.io/r/base/MathFun.html) and [`exp`](https://rdrr.io/r/base/Log.html). Plot with [`plot`](https://rdrr.io/r/graphics/plot.default.html) / [`lines`](https://rdrr.io/r/graphics/lines.html). In `glmnet`, [`alpha`](https://glmnet.stanford.edu/articles/glmnet.html) mixes the two penalties (prior shapes) and `lambda` sets strength.
+:::
+
+## Solutions
+
+::: {.callout-note collapse="true" title="Solution"}
+
+**B1.**
+(a) The penalty term is the **negative log-prior** on the coefficients — a penalty *is* a prior belief that coefficients are small.
+(b) The fit term (RSS) is the **negative log-likelihood** under Gaussian noise (up to the $\tfrac{1}{2\sigma^2}$ factor and a constant).
+(c) Penalised regression finds the **mode / peak** of the posterior — the **MAP** estimate — not the posterior mean or median.
+
+**B2.** Take the negative log of the Gaussian density:
+$$-\log p(\beta_j) = -\log\!\Big(c\,e^{-\beta_j^2/2\tau^2}\Big) = \frac{\beta_j^2}{2\tau^2} - \log c.$$
+The $-\log c$ is a constant (no $\boldsymbol\beta$), so drop it. Summing over $j$:
+$$-\log p(\boldsymbol\beta) = \frac{1}{2\tau^2}\sum_{j}\beta_j^2 = \frac{1}{2\tau^2}\lVert\boldsymbol\beta\rVert_2^2 + \text{const}.$$
+This is the **sum-of-squares** ($\ell_2$) penalty → **ridge**.
+
+**B3.** Same steps with the Laplace density:
+$$-\log p(\beta_j) = -\log\!\Big(c\,e^{-|\beta_j|/b}\Big) = \frac{|\beta_j|}{b} - \log c.$$
+Drop the constant and sum:
+$$-\log p(\boldsymbol\beta) = \frac{1}{b}\sum_j |\beta_j| = \frac{1}{b}\lVert\boldsymbol\beta\rVert_1 + \text{const}.$$
+This is the **sum-of-absolute-values** ($\ell_1$) penalty → **lasso**.
+
+**B4.** Add the Gaussian-noise fit term $\tfrac{1}{2\sigma^2}\text{RSS}$ to the B2 penalty:
+$$\arg\min_{\boldsymbol\beta}\ \frac{1}{2\sigma^2}\text{RSS} + \frac{1}{2\tau^2}\lVert\boldsymbol\beta\rVert_2^2.$$
+Multiplying the whole objective by the positive constant $2\sigma^2$ does not change **where** the minimum is:
+$$= \arg\min_{\boldsymbol\beta}\ \text{RSS} + \frac{2\sigma^2}{2\tau^2}\lVert\boldsymbol\beta\rVert_2^2 = \arg\min_{\boldsymbol\beta}\ \text{RSS} + \frac{\sigma^2}{\tau^2}\lVert\boldsymbol\beta\rVert_2^2.$$
+So $\lambda = \dfrac{\sigma^2}{\tau^2}$ — the ridge penalty strength is the **noise variance over the prior variance**.
+
+**B5.**
+(a) With $\sigma^2 = 1$: tight prior $\tau^2 = 0.01 \Rightarrow \lambda = 1/0.01 = 100$; loose prior $\tau^2 = 100 \Rightarrow \lambda = 1/100 = 0.01$. The **tight** prior ($\tau^2 = 0.01$) gives the far larger $\lambda$ and hence **much stronger shrinkage** — as it should, since a tight prior insists the coefficients are near zero.
+(b) As $\tau^2 \to \infty$, $\lambda = \sigma^2/\tau^2 \to 0$. The prior becomes flat (no information), the penalty vanishes, and the MAP reduces to **ordinary least squares** (= maximum likelihood).
+
+**B6.** Both densities are bell-ish and centred at $0$, but they behave differently at the origin. The Gaussian $e^{-\beta^2/2\tau^2}$ is **smooth with zero slope at $0$** — a rounded top — so shrinking a coefficient toward $0$ is never quite "worth" driving it all the way; ridge shrinks but leaves every $\beta_j \ne 0$. The Laplace $e^{-|\beta|/b}$ has a **sharp cusp (kink)** at $0$ because of the $|\beta|$: the penalty has a corner there. That corner means the optimum frequently sits **exactly at $\beta_j = 0$**, so the lasso performs **variable selection** (exact zeros), whereas ridge does not.
+
+**B7.**
+(a) **Gaussian / ridge** — a polygenic trait is *many small nonzero effects*, which is exactly a dense Gaussian prior that shrinks all coefficients gently without zeroing them.
+(b) **Laplace / lasso** — "a few drivers, the rest exactly irrelevant" is a **sparse** belief; the Laplace prior's cusp zeroes out the irrelevant genes.
+(c) **Laplace / lasso** — you want the **exact zeros** so that only a short set of genes has nonzero coefficients, i.e. a testable candidate list.
+(d) **A blend (elastic net)** — pure lasso tends to pick one gene from a correlated group and zero the rest arbitrarily; adding a Gaussian (ridge) component shrinks correlated coefficients *together*. The elastic net is the MAP under a **mixed Gaussian + Laplace prior**.
+
+**R1.** Restricting the grid to $[-0.5, 0.5]$ shows the Laplace forming a sharp **point (cusp)** at $\beta = 0$ while the Gaussian is **rounded** there. This is the visual form of B6: the cusp is what enables lasso's exact zeros; the rounded top means ridge only shrinks.
+
+```r
+b_grid  <- seq(-0.5, 0.5, length.out = 400)
+gauss   <- dnorm(b_grid, 0, 1)
+laplace <- (1 / (2 * (1/sqrt(2)))) * exp(-abs(b_grid) / (1/sqrt(2)))
+plot(b_grid, laplace, type = "l", lwd = 2, xlab = "beta", ylab = "density")
+lines(b_grid, gauss, lwd = 2, lty = 2)   # Laplace has the pointed top; Gaussian is rounded
+```
+
+**R2.** The Gaussian negative-log is a **parabola** ($\propto\beta^2$) → **ridge**; the Laplace negative-log is a **V** ($\propto|\beta|$) → **lasso**.
+
+```r
+beta <- seq(-3, 3, 0.5)
+plot(beta, beta^2,  type = "b", ylab = "-log prior (up to const)")  # parabola -> ridge
+plot(beta, abs(beta), type = "b", ylab = "-log prior (up to const)") # V-shape  -> lasso
+```
+
+**R3.** $\lambda$ and $\tau^2$ move in **opposite** directions: the more confident (smaller-variance, higher-precision) the prior, the larger the penalty.
+
+```r
+tau2   <- c(0.01, 0.1, 1, 10, 100)
+lambda <- 1 / tau2          # sigma^2 = 1, so lambda = sigma^2 / tau2
+data.frame(tau2, precision = 1/tau2, lambda)
+#   tau2 precision lambda
+#  0.01     100.00 100.00   <- tight, confident prior -> strong penalty
+#  0.10      10.00  10.00
+#  1.00       1.00   1.00
+# 10.00       0.10   0.10
+# 100.00      0.01   0.01   <- loose prior            -> weak penalty
+```
+In one sentence: **penalty strength is prior precision** — a tighter (more confident) prior that effects are small corresponds to a larger $\lambda$ and stronger shrinkage.
+:::
+
+## Where this leads
+
+- **Bayesian inference:** here we found only the posterior **peak** (MAP). A full Bayesian treatment reports the **whole posterior** — the peak *and* its width — giving credible intervals on each coefficient that the MAP alone cannot.
+- **Ridge and lasso regression:** the penalties, the geometry of the $\ell_1$/$\ell_2$ constraint, cross-validating $\lambda$, and the elastic net in practice with `glmnet`.
+- **Hierarchical / empirical-Bayes models:** rather than fixing the prior variance $\tau^2$ (or cross-validating $\lambda$), one can put a prior on it too and let the data estimate how strong the prior should be — the principled version of tuning $\lambda$.

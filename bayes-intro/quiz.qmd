@@ -1,0 +1,107 @@
+---
+title: "Quiz: Bayesian vs frequentist"
+format:
+  html:
+    toc: true
+    code-copy: true
+    code-overflow: wrap
+    highlight-style: github
+---
+
+Short questions to test your understanding of Bayesian thinking and how it contrasts with the frequentist statistics you met earlier. Try each on paper first, then open the answer. Several are written in the style of the on-campus exam (no computer). The running example is estimating a proportion $p$ from $k$ successes in $n$ trials — e.g. marker-positive cells.
+
+---
+
+**Q1.** In one sentence each, state what "probability" means to a frequentist and to a Bayesian. Which of the two is willing to write $P(p = 0.3)$ for a fixed unknown parameter $p$?
+
+::: {.callout-tip collapse="true" title="Hint"}
+One meaning is a long-run frequency of repeatable events; the other is a degree of belief. Only one allows a distribution over a fixed parameter.
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+Frequentist: probability is the **long-run frequency** of an outcome over many repetitions. Bayesian: probability is a **degree of belief** about a proposition given what you know. The **Bayesian** is willing to write $P(p=0.3)$, because Bayesian probability can describe uncertainty about a fixed-but-unknown parameter; the frequentist treats $p$ as fixed (not random), so it has no distribution.
+:::
+
+---
+
+**Q2.** Write Bayes' rule and name the four pieces. Which piece is "what you believed before the data," and which is "what you believe after"?
+
+::: {.callout-tip collapse="true" title="Hint"}
+$P(H\mid D) = P(D\mid H)P(H)/P(D)$. Before = prior; after = posterior.
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+$P(H\mid D) = \dfrac{P(D\mid H)\,P(H)}{P(D)}$. Pieces: $P(H)$ = **prior** (belief before data), $P(D\mid H)$ = **likelihood** (how probable the data is under $H$), $P(H\mid D)$ = **posterior** (belief after data), $P(D)$ = **evidence** (normalising constant). Prior = before, posterior = after.
+:::
+
+---
+
+**Q3.** Explain the working shorthand $\text{posterior} \propto \text{likelihood} \times \text{prior}$. Why are we allowed to drop the denominator $P(D)$?
+
+::: {.callout-tip collapse="true" title="Hint"}
+Does $P(D)$ depend on the hypothesis $H$?
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+$P(D)$ is the same number for every hypothesis $H$ — it does not depend on $H$ — so it only rescales the posterior to sum to 1 without changing its **shape**. We can therefore compute prior $\times$ likelihood and fix the constant at the end. In words: posterior belief = prior belief reweighted by how well each hypothesis explains the data.
+:::
+
+---
+
+**Q4.** You examine $n = 20$ cells and find $k = 6$ positive. Starting from a uniform prior $\text{Beta}(1,1)$, write the posterior distribution and its mean.
+
+::: {.callout-tip collapse="true" title="Hint"}
+Conjugate update: add successes to $\alpha$, failures to $\beta$. Mean of $\text{Beta}(\alpha,\beta)$ is $\alpha/(\alpha+\beta)$.
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+Successes $k = 6$, failures $n-k = 14$. Posterior $= \text{Beta}(1+6,\ 1+14) = \text{Beta}(7,\ 15)$. Mean $= \dfrac{7}{7+15} = \dfrac{7}{22} \approx 0.318$ — just above the frequentist estimate $6/20 = 0.30$.
+:::
+
+---
+
+**Q5.** Same data ($k=6$, $n=20$), but now an informative prior $\text{Beta}(2,8)$ from earlier experiments. Give the posterior and its mean, and say which way it moves relative to Q4.
+
+::: {.callout-tip collapse="true" title="Hint"}
+$\text{Beta}(2,8)$ is centred at $2/10 = 0.2$. Add the same counts.
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+Posterior $= \text{Beta}(2+6,\ 8+14) = \text{Beta}(8,\ 22)$, mean $= \dfrac{8}{30} \approx 0.267$. It moves **down** from $0.318$ toward the prior's centre of $0.2$, because with only 20 cells the informative prior still carries real weight.
+:::
+
+---
+
+**Q6.** A 95% **confidence** interval comes back as $[0.14, 0.52]$. Is it correct to say "there is a 95% probability that $p$ is between 0.14 and 0.52"? Give the correct interpretation, and say for which kind of interval the quoted sentence *is* legitimate.
+
+::: {.callout-tip collapse="true" title="Hint"}
+A confidence interval is a statement about the long-run procedure, not about this one interval.
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+No. Correct meaning: if the experiment were repeated many times, 95% of the intervals built this way would contain the true fixed $p$; this particular interval either contains $p$ or it does not, with no probability attached. The "95% probability $p$ is inside" statement is legitimate only for a Bayesian **credible** interval, where $p$ has a probability distribution.
+:::
+
+---
+
+**Q7.** For $H_0: p = 0.25$ a test gives $p\text{-value} = 0.08$. A student says "so there's an 8% chance the true fraction is 0.25 or less." What does the p-value actually mean, and what quantity does the student really want?
+
+::: {.callout-tip collapse="true" title="Hint"}
+$P(\text{data}\mid H_0)$ is not the same as $P(H_0\mid\text{data})$.
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+The p-value is $P(\text{data at least this extreme}\mid H_0)$ — the probability of the observed (or more extreme) data assuming the null is true. It is **not** the probability that $H_0$ is true. The student wants a **posterior** probability such as $P(p \le 0.25 \mid \text{data})$, a Bayesian quantity you read from the posterior (`pbeta(0.25, a, b)`).
+:::
+
+---
+
+**Q8.** True or false: with a very large, clean dataset, the Bayesian posterior and the frequentist estimate usually agree, so the choice of a reasonable prior barely matters. Explain.
+
+::: {.callout-tip collapse="true" title="Hint"}
+Think of $\alpha,\beta$ as pseudo-counts competing against $n$ real observations.
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+**True.** The prior contributes a fixed number of pseudo-counts ($\alpha+\beta$); as the real sample size $n$ grows, the likelihood dominates and swamps the prior, so the posterior concentrates on the data estimate. Priors matter most when data is **scarce** (small $n$) or when the prior is very strong (large $\alpha+\beta$); with abundant clean data a reasonable prior barely changes the answer.
+:::

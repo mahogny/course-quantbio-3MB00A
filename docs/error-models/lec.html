@@ -1,0 +1,1103 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<script src="../site_libs/clipboard/clipboard.min.js"></script>
+<script src="../site_libs/quarto-html/tabby.min.js"></script>
+<script src="../site_libs/quarto-html/popper.min.js"></script>
+<script src="../site_libs/quarto-html/tippy.umd.min.js"></script>
+<link href="../site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="../site_libs/quarto-html/light-border.css" rel="stylesheet">
+<link href="../site_libs/quarto-html/quarto-syntax-highlighting-662ae1889177880cb371f83234c0a158.css" rel="stylesheet" id="quarto-text-highlighting-styles"><meta charset="utf-8">
+  <meta name="generator" content="quarto-1.7.30">
+
+  <meta name="author" content="Quantitative biology and integrative omics">
+  <title>Quantitative biology and integrative omics – Error models: exponential &amp; Poisson</title>
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, minimal-ui">
+  <link rel="stylesheet" href="../site_libs/revealjs/dist/reset.css">
+  <link rel="stylesheet" href="../site_libs/revealjs/dist/reveal.css">
+  <style>
+    code{white-space: pre-wrap;}
+    span.smallcaps{font-variant: small-caps;}
+    div.columns{display: flex; gap: min(4vw, 1.5em);}
+    div.column{flex: auto; overflow-x: auto;}
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+    ul.task-list{list-style: none;}
+    ul.task-list li input[type="checkbox"] {
+      width: 0.8em;
+      margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+      vertical-align: middle;
+    }
+    /* CSS for syntax highlighting */
+    html { -webkit-text-size-adjust: 100%; }
+    pre > code.sourceCode { white-space: pre; position: relative; }
+    pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+    pre > code.sourceCode > span:empty { height: 1.2em; }
+    .sourceCode { overflow: visible; }
+    code.sourceCode > span { color: inherit; text-decoration: inherit; }
+    div.sourceCode { margin: 1em 0; }
+    pre.sourceCode { margin: 0; }
+    @media screen {
+    div.sourceCode { overflow: auto; }
+    }
+    @media print {
+    pre > code.sourceCode { white-space: pre-wrap; }
+    pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+    }
+    pre.numberSource code
+      { counter-reset: source-line 0; }
+    pre.numberSource code > span
+      { position: relative; left: -4em; counter-increment: source-line; }
+    pre.numberSource code > span > a:first-child::before
+      { content: counter(source-line);
+        position: relative; left: -1em; text-align: right; vertical-align: baseline;
+        border: none; display: inline-block;
+        -webkit-touch-callout: none; -webkit-user-select: none;
+        -khtml-user-select: none; -moz-user-select: none;
+        -ms-user-select: none; user-select: none;
+        padding: 0 4px; width: 4em;
+      }
+    pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+    div.sourceCode
+      { color: #24292e;  }
+    @media screen {
+    pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+    }
+    code span { color: #24292e; } /* Normal */
+    code span.al { color: #ff5555; font-weight: bold; } /* Alert */
+    code span.an { color: #6a737d; } /* Annotation */
+    code span.at { color: #d73a49; } /* Attribute */
+    code span.bn { color: #005cc5; } /* BaseN */
+    code span.bu { color: #d73a49; } /* BuiltIn */
+    code span.cf { color: #d73a49; } /* ControlFlow */
+    code span.ch { color: #032f62; } /* Char */
+    code span.cn { color: #005cc5; } /* Constant */
+    code span.co { color: #6a737d; } /* Comment */
+    code span.cv { color: #6a737d; } /* CommentVar */
+    code span.do { color: #6a737d; } /* Documentation */
+    code span.dt { color: #d73a49; } /* DataType */
+    code span.dv { color: #005cc5; } /* DecVal */
+    code span.er { color: #ff5555; text-decoration: underline; } /* Error */
+    code span.ex { color: #d73a49; font-weight: bold; } /* Extension */
+    code span.fl { color: #005cc5; } /* Float */
+    code span.fu { color: #6f42c1; } /* Function */
+    code span.im { color: #032f62; } /* Import */
+    code span.in { color: #6a737d; } /* Information */
+    code span.kw { color: #d73a49; } /* Keyword */
+    code span.op { color: #24292e; } /* Operator */
+    code span.ot { color: #6f42c1; } /* Other */
+    code span.pp { color: #d73a49; } /* Preprocessor */
+    code span.re { color: #6a737d; } /* RegionMarker */
+    code span.sc { color: #005cc5; } /* SpecialChar */
+    code span.ss { color: #032f62; } /* SpecialString */
+    code span.st { color: #032f62; } /* String */
+    code span.va { color: #e36209; } /* Variable */
+    code span.vs { color: #032f62; } /* VerbatimString */
+    code span.wa { color: #ff5555; } /* Warning */
+  </style>
+  <link rel="stylesheet" href="../site_libs/revealjs/dist/theme/quarto-bf56578b9c06c165c166475cd19dbcd1.css">
+  <link href="../site_libs/revealjs/plugin/quarto-line-highlight/line-highlight.css" rel="stylesheet">
+  <link href="../site_libs/revealjs/plugin/reveal-menu/menu.css" rel="stylesheet">
+  <link href="../site_libs/revealjs/plugin/reveal-menu/quarto-menu.css" rel="stylesheet">
+  <link href="../site_libs/revealjs/plugin/quarto-support/footer.css" rel="stylesheet">
+  <style type="text/css">
+    .reveal div.sourceCode {
+      margin: 0;
+      overflow: auto;
+    }
+    .reveal div.hanging-indent {
+      margin-left: 1em;
+      text-indent: -1em;
+    }
+    .reveal .slide:not(.center) {
+      height: 100%;
+    }
+    .reveal .slide.scrollable {
+      overflow-y: auto;
+    }
+    .reveal .footnotes {
+      height: 100%;
+      overflow-y: auto;
+    }
+    .reveal .slide .absolute {
+      position: absolute;
+      display: block;
+    }
+    .reveal .footnotes ol {
+      counter-reset: ol;
+      list-style-type: none; 
+      margin-left: 0;
+    }
+    .reveal .footnotes ol li:before {
+      counter-increment: ol;
+      content: counter(ol) ". "; 
+    }
+    .reveal .footnotes ol li > p:first-child {
+      display: inline-block;
+    }
+    .reveal .slide ul,
+    .reveal .slide ol {
+      margin-bottom: 0.5em;
+    }
+    .reveal .slide ul li,
+    .reveal .slide ol li {
+      margin-top: 0.4em;
+      margin-bottom: 0.2em;
+    }
+    .reveal .slide ul[role="tablist"] li {
+      margin-bottom: 0;
+    }
+    .reveal .slide ul li > *:first-child,
+    .reveal .slide ol li > *:first-child {
+      margin-block-start: 0;
+    }
+    .reveal .slide ul li > *:last-child,
+    .reveal .slide ol li > *:last-child {
+      margin-block-end: 0;
+    }
+    .reveal .slide .columns:nth-child(3) {
+      margin-block-start: 0.8em;
+    }
+    .reveal blockquote {
+      box-shadow: none;
+    }
+    .reveal .tippy-content>* {
+      margin-top: 0.2em;
+      margin-bottom: 0.7em;
+    }
+    .reveal .tippy-content>*:last-child {
+      margin-bottom: 0.2em;
+    }
+    .reveal .slide > img.stretch.quarto-figure-center,
+    .reveal .slide > img.r-stretch.quarto-figure-center {
+      display: block;
+      margin-left: auto;
+      margin-right: auto; 
+    }
+    .reveal .slide > img.stretch.quarto-figure-left,
+    .reveal .slide > img.r-stretch.quarto-figure-left  {
+      display: block;
+      margin-left: 0;
+      margin-right: auto; 
+    }
+    .reveal .slide > img.stretch.quarto-figure-right,
+    .reveal .slide > img.r-stretch.quarto-figure-right  {
+      display: block;
+      margin-left: auto;
+      margin-right: 0; 
+    }
+  </style>
+</head>
+<body class="quarto-light">
+  <div class="reveal">
+    <div class="slides">
+
+<section id="title-slide" class="quarto-title-block center">
+  <h1 class="title">Error models: exponential &amp; Poisson</h1>
+  <p class="subtitle">Bayesian statistics — Error models: exponential &amp; Poisson</p>
+
+<div class="quarto-title-authors">
+<div class="quarto-title-author">
+<div class="quarto-title-author-name">
+Quantitative biology and integrative omics 
+</div>
+</div>
+</div>
+
+</section>
+<section id="about-this-lecture" class="slide level2">
+<h2>About this lecture</h2>
+<p>Every statistical analysis makes an assumption about <strong>how the data scatter around the truth</strong> — the <em>error model</em>, or <em>likelihood</em>. Choosing it well is most of the battle in genomics.</p>
+<ul>
+<li>What an <strong>error model</strong> is: the probability distribution you assume generated your data.</li>
+<li><strong>Gaussian</strong> for continuous measurements; <strong>Poisson</strong> for counts; <strong>exponential</strong> for waiting times; <strong>negative binomial</strong> for <em>overdispersed</em> counts.</li>
+<li>The signature of Poisson counts: <strong>mean = variance</strong>.</li>
+<li>Why real RNA-seq counts break Poisson (<strong>overdispersion</strong>) and need the negative binomial.</li>
+<li><strong>Why the wrong error model misleads</strong> — the practical cost is false discoveries.</li>
+</ul>
+<div title="Provisional block">
+<div class="callout callout-warning callout-titled callout-style-default">
+<div class="callout-body">
+<div class="callout-title">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<p><strong>Provisional block</strong></p>
+</div>
+<div class="callout-content">
+<p>This block (“Bayesian statistics”) is <strong>provisional</strong> and may move to a later statistics / machine-learning course. Treat the placement as a working draft, not a contract.</p>
+</div>
+</div>
+</div>
+</div>
+<aside class="notes">
+<p>The one idea for today: before you fit anything, you commit to a story about how noise entered your data, and that story is a probability distribution. Pick the wrong one and every downstream number — p-values, confidence intervals, effect sizes — is quietly wrong. This is a concept day: no heavy algebra, just building the reflex “what kind of data is this, and which distribution matches it?” We will lean on distributions students have used before (Gaussian, Poisson) but re-derive <em>why</em> each fits a data type. The likelihood introduced here is the same likelihood that plugs into Bayes’ theorem in the prior, likelihood and posterior unit — flag that connection but do not teach Bayes today.</p>
+<style type="text/css">
+        span.MJX_Assistive_MathML {
+          position:absolute!important;
+          clip: rect(1px, 1px, 1px, 1px);
+          padding: 1px 0 0 0!important;
+          border: 0!important;
+          height: 1px!important;
+          width: 1px!important;
+          overflow: hidden!important;
+          display:block!important;
+      }</style></aside>
+</section>
+<section id="a-biology-picture-first" class="slide level2 smaller">
+<h2>A biology picture first</h2>
+<p>You sequence RNA from two groups of cells and, for one gene, count how many reads map to it in each sample:</p>
+<ul>
+<li>Group A: <code>12, 9, 15, 11, 8</code></li>
+<li>Group B: <code>41, 38, 52, 44, 47</code></li>
+</ul>
+<p>You want to know if the gene is <strong>differentially expressed</strong>. A first instinct from earlier stats courses: run a t-test, which assumes the data are <strong>Gaussian</strong> with <strong>constant variance</strong>.</p>
+<p>But look: group B has a <strong>much larger spread</strong> than group A. That is not sloppy data — it is what <strong>counts</strong> do. A t-test’s constant-variance assumption is already wrong here.</p>
+
+<img data-src="fig02-count-dotstrips.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:70.0%"><aside class="notes">
+<p>Anchor everything in a concrete count table before any distribution theory. The key observation students should feel: the group with the higher mean also has the higher spread. For counts this is not a nuisance to be scrubbed away — it is a law (Poisson: variance equals mean). So the standard t-test / Gaussian assumption of one common variance is violated from the start. This motivates the whole lecture: count data has its own error model. Do not resolve the example yet; the payoff (Poisson, then negative binomial, then why it matters for the test) comes over the next slides.</p>
+<style type="text/css">
+        span.MJX_Assistive_MathML {
+          position:absolute!important;
+          clip: rect(1px, 1px, 1px, 1px);
+          padding: 1px 0 0 0!important;
+          border: 0!important;
+          height: 1px!important;
+          width: 1px!important;
+          overflow: hidden!important;
+          display:block!important;
+      }</style></aside>
+</section>
+<section id="what-is-an-error-model" class="slide level2 smaller">
+<h2>What is an error model?</h2>
+<p>A measurement is <strong>signal + noise</strong>. The error model is the probability distribution you assume for the noise — equivalently, the distribution the data are drawn from given the underlying truth.</p>
+<p><span class="math display">\[\text{data} \sim \text{Distribution}(\text{parameters})\]</span></p>
+<ul>
+<li>It answers: <em>“If the true value were <span class="math inline">\(\mu\)</span>, how likely is the number I actually observed?”</em></li>
+<li>That “how likely” is the <strong>likelihood</strong> — the same likelihood that feeds into Bayes’ theorem in the <strong>prior, likelihood and posterior</strong> unit.</li>
+<li>Fitting a model (a t-test, a linear model with <code>lm</code>, a genomics tool) always assumes <em>some</em> error model, whether or not you named it.</li>
+</ul>
+<p><strong>Choosing the error model = choosing the distribution that matches your data type.</strong></p>
+
+<img data-src="fig03-signal-plus-noise.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:65.0%"><aside class="notes">
+<p>Make the abstraction explicit: whenever you compute a p-value or fit a curve, a distribution is assumed in the background. <code>lm</code> assumes Gaussian residuals; a Poisson GLM assumes Poisson counts. The likelihood is just this distribution read as a function of the parameters for fixed data — the bridge to the Bayesian unit, where likelihood times prior gives the posterior. Today we stay frequentist-flavoured and focus only on <em>picking</em> the distribution. The recurring question for the rest of the lecture: what does my data type look like — continuous? counts? waiting times? — and which named distribution has that shape?</p>
+<style type="text/css">
+        span.MJX_Assistive_MathML {
+          position:absolute!important;
+          clip: rect(1px, 1px, 1px, 1px);
+          padding: 1px 0 0 0!important;
+          border: 0!important;
+          height: 1px!important;
+          width: 1px!important;
+          overflow: hidden!important;
+          display:block!important;
+      }</style></aside>
+</section>
+<section id="gaussian-continuous-measurements" class="slide level2 smaller">
+<h2>Gaussian: continuous measurements</h2>
+<p>The <strong>Gaussian</strong> (normal) distribution fits measurements that are <strong>continuous</strong> and scatter <strong>symmetrically</strong> around a mean.</p>
+<p><span class="math display">\[X \sim \mathcal{N}(\mu, \sigma^2), \qquad f(x) = \frac{1}{\sqrt{2\pi\sigma^2}}\, e^{-\frac{(x-\mu)^2}{2\sigma^2}}\]</span></p>
+<ul>
+<li>Two separate parameters: mean <span class="math inline">\(\mu\)</span> and variance <span class="math inline">\(\sigma^2\)</span> (<strong>spread is independent of the mean</strong>).</li>
+<li>Good for: protein concentration, cell diameter, <span class="math inline">\(\log\)</span>-transformed intensities, height, temperature.</li>
+<li>The default assumption behind the <strong>t-test</strong>, <strong>linear regression</strong>, and <code>lm</code>.</li>
+</ul>
+<p>It can take <strong>any real value</strong> — including negatives — which is exactly why it is wrong for counts.</p>
+
+<img data-src="fig04-gaussian-bell.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:60.0%"><aside class="notes">
+<p>Gaussian is the students’ familiar ground, so use it to set up the contrast. Two independent knobs: you can have a large mean with a small variance or vice versa — nothing ties them together. That is fine for genuinely continuous quantities. The tell-tale weakness for count data is on the last line: a Gaussian puts probability on negative numbers and on fractional values, but you can never observe -3 reads or 4.5 reads. Log-transforming counts is a common patch that partly Gaussian-ises them, but for low counts it distorts things; the honest fix is a count distribution, which is where we go next.</p>
+<style type="text/css">
+        span.MJX_Assistive_MathML {
+          position:absolute!important;
+          clip: rect(1px, 1px, 1px, 1px);
+          padding: 1px 0 0 0!important;
+          border: 0!important;
+          height: 1px!important;
+          width: 1px!important;
+          overflow: hidden!important;
+          display:block!important;
+      }</style></aside>
+</section>
+<section id="counts-are-not-gaussian" class="slide level2 smaller">
+<h2>Counts are not Gaussian</h2>
+<p>Sequencing gives <strong>counts</strong>: reads per gene, molecules per cell, variants per kilobase, colonies per plate. Counts have structure a Gaussian ignores:</p>
+<ul>
+<li><strong>Non-negative integers</strong> — you cannot observe <span class="math inline">\(-2\)</span> or <span class="math inline">\(3.7\)</span> reads.</li>
+<li><strong>Discrete</strong>, especially near zero (many genes have 0, 1, 2 reads).</li>
+<li><strong>Spread grows with the mean</strong> — highly expressed genes vary more, in absolute terms, than lowly expressed ones (we saw this in the two groups).</li>
+</ul>
+<p>A distribution built for counts should be discrete, non-negative, and let variance depend on the mean. That distribution is the <strong>Poisson</strong>.</p>
+
+<img data-src="fig05-counts-vs-gaussian.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:62.0%"><aside class="notes">
+<p>List the three ways count data violates Gaussian assumptions so students can recognise count data in the wild. The third point is the deepest and the one earlier stats courses rarely stress: for counts the variance is not a free parameter, it is welded to the mean. This is why you cannot just pool a single variance across genes of very different expression, and why naive constant-variance methods misbehave. The next slide introduces the distribution that has exactly these properties baked in.</p>
+<style type="text/css">
+        span.MJX_Assistive_MathML {
+          position:absolute!important;
+          clip: rect(1px, 1px, 1px, 1px);
+          padding: 1px 0 0 0!important;
+          border: 0!important;
+          height: 1px!important;
+          width: 1px!important;
+          overflow: hidden!important;
+          display:block!important;
+      }</style></aside>
+</section>
+<section id="poisson-the-count-distribution" class="slide level2 smaller">
+<h2>Poisson: the count distribution</h2>
+<p>The <strong>Poisson</strong> distribution models the number of independent events in a fixed interval (of time, space, or sequencing depth), occurring at constant average rate.</p>
+<p><span class="math display">\[X \sim \text{Poisson}(\lambda), \qquad P(X = k) = \frac{\lambda^k e^{-\lambda}}{k!}, \quad k = 0, 1, 2, \dots\]</span></p>
+<ul>
+<li><strong>One</strong> parameter <span class="math inline">\(\lambda &gt; 0\)</span> — the average count (the rate).</li>
+<li>Discrete and non-negative by construction.</li>
+<li><strong>Defining property:</strong> <span class="math inline">\(\;\mathbb{E}[X] = \lambda \;\)</span> and <span class="math inline">\(\; \text{Var}(X) = \lambda\)</span>.</li>
+</ul>
+<p><span class="math display">\[\boxed{\text{mean} = \text{variance} = \lambda}\]</span></p>
+
+<img data-src="fig06-poisson-pmf.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:70.0%"><aside class="notes">
+<p>Introduce Poisson as the natural law for “count of rare-ish independent events in a fixed window.” Reads mapping to a gene fit this picture: each of millions of reads independently has a small probability of landing on this gene. The headline, worth repeating aloud, is mean equals variance — a single parameter controls both. This is a strong, testable claim about data: if counts are truly Poisson, their sample variance should roughly equal their sample mean. Keep the factorial formula on screen but do not dwell on it; the conceptual content is the mean = variance identity and the “events in a window” picture.</p>
+<style type="text/css">
+        span.MJX_Assistive_MathML {
+          position:absolute!important;
+          clip: rect(1px, 1px, 1px, 1px);
+          padding: 1px 0 0 0!important;
+          border: 0!important;
+          height: 1px!important;
+          width: 1px!important;
+          overflow: hidden!important;
+          display:block!important;
+      }</style></aside>
+</section>
+<section id="poisson-a-small-example" class="slide level2 smaller">
+<h2>Poisson: a small example</h2>
+<p>A gene receives on average <span class="math inline">\(\lambda = 3\)</span> reads per sample. Then:</p>
+<p><span class="math display">\[P(0) = \frac{3^0 e^{-3}}{0!} = e^{-3} \approx 0.050, \quad P(3) = \frac{3^3 e^{-3}}{3!} = \frac{27 e^{-3}}{6} \approx 0.224\]</span></p>
+<p>The distribution is <strong>right-skewed</strong> for small <span class="math inline">\(\lambda\)</span> and piles up near zero; as <span class="math inline">\(\lambda\)</span> grows it becomes more symmetric.</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a aria-hidden="true" tabindex="-1"></a><span class="co"># probabilities for counts 0..8 when lambda = 3</span></span>
+<span id="cb1-2"><a aria-hidden="true" tabindex="-1"></a>lambda <span class="ot">&lt;-</span> <span class="dv">3</span></span>
+<span id="cb1-3"><a aria-hidden="true" tabindex="-1"></a>k <span class="ot">&lt;-</span> <span class="dv">0</span><span class="sc">:</span><span class="dv">8</span></span>
+<span id="cb1-4"><a aria-hidden="true" tabindex="-1"></a><span class="fu">dpois</span>(k, lambda)         <span class="co"># P(X = k)</span></span>
+<span id="cb1-5"><a aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-6"><a aria-hidden="true" tabindex="-1"></a>mean_sim <span class="ot">&lt;-</span> <span class="fu">mean</span>(<span class="fu">rpois</span>(<span class="fl">1e5</span>, lambda))   <span class="co"># ~ 3</span></span>
+<span id="cb1-7"><a aria-hidden="true" tabindex="-1"></a>var_sim  <span class="ot">&lt;-</span> <span class="fu">var</span>(<span class="fu">rpois</span>(<span class="fl">1e5</span>, lambda))    <span class="co"># ~ 3  -&gt; mean = variance</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+
+<img data-src="fig07-poisson-lambda3.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:55.0%"><aside class="notes">
+<p>Do the two hand calculations so the formula is not abstract: P(0) is just e^-lambda, P(3) plugs in and simplifies. Point out the shape: for small lambda the mass sits near zero and the tail stretches right — nothing like a symmetric bell. The static R shows the two functions they will use, dpois for exact probabilities and rpois to simulate; the simulated mean and variance both land near 3, confirming mean = variance empirically. Remind them these chunks are illustrative and not executed at render time. This mean = variance check is exactly the diagnostic they will apply to real data to decide whether Poisson is adequate.</p>
+<style type="text/css">
+        span.MJX_Assistive_MathML {
+          position:absolute!important;
+          clip: rect(1px, 1px, 1px, 1px);
+          padding: 1px 0 0 0!important;
+          border: 0!important;
+          height: 1px!important;
+          width: 1px!important;
+          overflow: hidden!important;
+          display:block!important;
+      }</style></aside>
+</section>
+<section id="where-poisson-comes-from-rare-events" class="slide level2 smaller">
+<h2>Where Poisson comes from: rare events</h2>
+<p>Poisson is the limit of <strong>many independent trials, each with tiny success probability</strong>.</p>
+<ul>
+<li><span class="math inline">\(n\)</span> reads in a library, each landing on our gene with small probability <span class="math inline">\(p\)</span>.</li>
+<li>Total on-gene reads is <span class="math inline">\(\text{Binomial}(n, p)\)</span>; as <span class="math inline">\(n \to \infty\)</span>, <span class="math inline">\(p \to 0\)</span> with <span class="math inline">\(np = \lambda\)</span> fixed, this becomes <span class="math inline">\(\text{Poisson}(\lambda)\)</span>.</li>
+</ul>
+<p>That is precisely the sequencing picture: <strong>millions of reads</strong>, each with a <strong>tiny</strong> chance of hitting any one gene. So idealised counts of independent molecules are Poisson.</p>
+<p>This same “stream of random events” also has a <strong>waiting-time</strong> description — which is where the <strong>exponential</strong> enters.</p>
+
+<img data-src="fig08-binomial-to-poisson.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:72.0%"><aside class="notes">
+<p>Give the mechanistic justification so Poisson is not a distribution pulled from a hat. The binomial-to-Poisson limit is the law of rare events: huge number of chances, each unlikely, expected count fixed. Sequencing is the textbook instance — n in the millions, p per gene minuscule. Under idealised independence, counts are therefore Poisson; the fact that real data exceeds Poisson variance (overdispersion) is a signal that some assumption — usually independence / identical rate across samples — is violated, which we reach shortly. End by teeing up the dual view: the same event stream, described by the gaps between events instead of the count, gives the exponential distribution.</p>
+<style type="text/css">
+        span.MJX_Assistive_MathML {
+          position:absolute!important;
+          clip: rect(1px, 1px, 1px, 1px);
+          padding: 1px 0 0 0!important;
+          border: 0!important;
+          height: 1px!important;
+          width: 1px!important;
+          overflow: hidden!important;
+          display:block!important;
+      }</style></aside>
+</section>
+<section id="exponential-waiting-times" class="slide level2 smaller">
+<h2>Exponential: waiting times</h2>
+<p>The <strong>exponential</strong> distribution models the <strong>waiting time</strong> until the next event in a stream of random events occurring at rate <span class="math inline">\(\lambda\)</span>.</p>
+<p><span class="math display">\[T \sim \text{Exp}(\lambda), \qquad f(t) = \lambda e^{-\lambda t}, \quad t \ge 0\]</span></p>
+<ul>
+<li><strong>Continuous</strong> and non-negative (a time, a distance, a length).</li>
+<li><span class="math inline">\(\mathbb{E}[T] = \dfrac{1}{\lambda}, \qquad \text{Var}(T) = \dfrac{1}{\lambda^2}\)</span>.</li>
+<li><strong>Memoryless:</strong> the chance of waiting another <span class="math inline">\(s\)</span> seconds does not depend on how long you have already waited.</li>
+</ul>
+<p>Biology: time between action-potential spikes, intervals between mutations along a genome, survival/dwell times, gaps between binding events.</p>
+
+<img data-src="fig09-exponential-density.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:62.0%"><aside class="notes">
+<p>Exponential is the continuous partner to Poisson: Poisson counts events, exponential times the gaps between them. Stress it is continuous and non-negative — a duration or a distance, never a count. The memoryless property is the striking feature: an exponential process has no aging, the wait resets at every instant. Biological examples worth naming: inter-spike intervals in neurons, spacing of mutations along a chromosome (events per base), dwell times of a molecule bound to DNA. The rate lambda is the same lambda as in Poisson when both describe one underlying process — the next slide makes that link explicit.</p>
+<style type="text/css">
+        span.MJX_Assistive_MathML {
+          position:absolute!important;
+          clip: rect(1px, 1px, 1px, 1px);
+          padding: 1px 0 0 0!important;
+          border: 0!important;
+          height: 1px!important;
+          width: 1px!important;
+          overflow: hidden!important;
+          display:block!important;
+      }</style></aside>
+</section>
+<section id="exponential-a-small-example" class="slide level2 smaller">
+<h2>Exponential: a small example</h2>
+<p>Mutations fall along a genome at rate <span class="math inline">\(\lambda = 2\)</span> per megabase. The waiting <strong>distance</strong> to the next mutation is <span class="math inline">\(\text{Exp}(2)\)</span> (in Mb):</p>
+<p><span class="math display">\[\mathbb{E}[T] = \frac{1}{2} = 0.5 \text{ Mb}, \qquad P(T &gt; 1) = e^{-\lambda \cdot 1} = e^{-2} \approx 0.135\]</span></p>
+<p>So there is a ~13.5% chance of a gap longer than 1 Mb.</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a aria-hidden="true" tabindex="-1"></a>lambda <span class="ot">&lt;-</span> <span class="dv">2</span></span>
+<span id="cb2-2"><a aria-hidden="true" tabindex="-1"></a><span class="dv">1</span> <span class="sc">-</span> <span class="fu">pexp</span>(<span class="dv">1</span>, <span class="at">rate =</span> lambda)     <span class="co"># P(T &gt; 1) = e^{-2} ~ 0.135</span></span>
+<span id="cb2-3"><a aria-hidden="true" tabindex="-1"></a><span class="fu">mean</span>(<span class="fu">rexp</span>(<span class="fl">1e5</span>, <span class="at">rate =</span> lambda)) <span class="co"># ~ 0.5  = 1/lambda</span></span>
+<span id="cb2-4"><a aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-5"><a aria-hidden="true" tabindex="-1"></a><span class="co"># count of events in a 1-Mb window is Poisson(lambda) -- same process</span></span>
+<span id="cb2-6"><a aria-hidden="true" tabindex="-1"></a><span class="fu">mean</span>(<span class="fu">rpois</span>(<span class="fl">1e5</span>, lambda))       <span class="co"># ~ 2</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+
+<img data-src="fig10-exponential-tail.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:55.0%"><aside class="notes">
+<p>Concrete numbers again. The mean gap is 1/lambda = 0.5 Mb, and the survival probability P(T &gt; 1) is just e^{-lambda} — a clean hand calculation. The R shows pexp for the tail probability and rexp to simulate gaps averaging 0.5. The final rpois line quietly makes the punchline of the next slide: the same rate lambda describes both the gaps (exponential, mean 1/lambda) and the count per window (Poisson, mean lambda). Keep it light; the goal is that students see waiting-time data and reach for exponential, and count-per-window data and reach for Poisson.</p>
+<style type="text/css">
+        span.MJX_Assistive_MathML {
+          position:absolute!important;
+          clip: rect(1px, 1px, 1px, 1px);
+          padding: 1px 0 0 0!important;
+          border: 0!important;
+          height: 1px!important;
+          width: 1px!important;
+          overflow: hidden!important;
+          display:block!important;
+      }</style></aside>
+</section>
+<section id="two-views-of-one-process" class="slide level2 smaller">
+<h2>Two views of one process</h2>
+<p>The <strong>Poisson process</strong> is a single model of random events at rate <span class="math inline">\(\lambda\)</span>, seen two ways:</p>
+<table class="caption-top">
+<colgroup>
+<col style="width: 33%">
+<col style="width: 33%">
+<col style="width: 33%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Question</th>
+<th>Distribution</th>
+<th>Parameter meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>How <strong>many</strong> events in a fixed window?</td>
+<td><span class="math inline">\(\text{Poisson}(\lambda)\)</span></td>
+<td>mean count <span class="math inline">\(= \lambda\)</span></td>
+</tr>
+<tr class="even">
+<td>How <strong>long</strong> until the next event?</td>
+<td><span class="math inline">\(\text{Exp}(\lambda)\)</span></td>
+<td>mean wait <span class="math inline">\(= 1/\lambda\)</span></td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li><strong>Counts</strong> in a window <span class="math inline">\(\to\)</span> Poisson.</li>
+<li><strong>Gaps</strong> between events <span class="math inline">\(\to\)</span> exponential.</li>
+</ul>
+<p>Same underlying randomness, different question. Which one you use is set by <strong>what you measured</strong>, not by the biology alone.</p>
+
+<img data-src="fig11-poisson-process-timeline.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:75.0%"><aside class="notes">
+<p>This is the unifying slide. One process, two questions. If you tallied events per fixed interval you have counts and use Poisson; if you recorded the time or distance between consecutive events you have waiting times and use exponential. The distinction is about the measurement, not the phenomenon — the same neuron gives Poisson spike counts per second or exponential inter-spike intervals depending on what you logged. Getting students to ask “did I measure a count or a gap?” is the transferable skill. Next we return to counts and confront the fact that real genomics counts are wilder than Poisson allows.</p>
+<style type="text/css">
+        span.MJX_Assistive_MathML {
+          position:absolute!important;
+          clip: rect(1px, 1px, 1px, 1px);
+          padding: 1px 0 0 0!important;
+          border: 0!important;
+          height: 1px!important;
+          width: 1px!important;
+          overflow: hidden!important;
+          display:block!important;
+      }</style></aside>
+</section>
+<section id="real-counts-are-overdispersed" class="slide level2 smaller">
+<h2>Real counts are overdispersed</h2>
+<p>Poisson makes a strict promise: <strong>variance = mean</strong>. Real RNA-seq counts break it — their <strong>variance is larger than the mean</strong>. This excess is called <strong>overdispersion</strong>.</p>
+<p>Why? Poisson assumes every sample has the <em>identical</em> underlying rate. But biological replicates differ:</p>
+<ul>
+<li>genetically and environmentally variable individuals,</li>
+<li>cell-state and batch differences,</li>
+<li>the true rate <span class="math inline">\(\lambda\)</span> itself <strong>varies from sample to sample</strong>.</li>
+</ul>
+<p>Extra variation in <span class="math inline">\(\lambda\)</span> adds variance <strong>on top of</strong> the Poisson counting noise. Technical replicates can look Poisson; <strong>biological</strong> replicates almost never do.</p>
+
+<img data-src="fig12-mean-variance-overdispersion.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:60.0%"><aside class="notes">
+<p>This is the single most important practical fact for genomics count analysis. Poisson is the floor of variability — pure counting noise assuming a fixed rate. Real biological replicates carry additional variation because the rate itself fluctuates between samples (genetics, environment, cell state, batch). By the law of total variance, letting lambda vary inflates the variance above the mean. The classic distinction: technical replicates (same sample resequenced) can be near-Poisson; biological replicates (different organisms/cultures) are overdispersed. Any method that assumes Poisson for biological replicates will understate the true variability — the consequence, quantified two slides on, is too many false positives.</p>
+<style type="text/css">
+        span.MJX_Assistive_MathML {
+          position:absolute!important;
+          clip: rect(1px, 1px, 1px, 1px);
+          padding: 1px 0 0 0!important;
+          border: 0!important;
+          height: 1px!important;
+          width: 1px!important;
+          overflow: hidden!important;
+          display:block!important;
+      }</style></aside>
+</section>
+<section id="negative-binomial-overdispersed-counts" class="slide level2 smaller">
+<h2>Negative binomial: overdispersed counts</h2>
+<p>The <strong>negative binomial (NB)</strong> is a count distribution with a <strong>separate</strong> dispersion knob, letting variance exceed the mean.</p>
+<p><span class="math display">\[X \sim \text{NB}(\mu, \phi), \qquad \text{Var}(X) = \mu + \phi\,\mu^2\]</span></p>
+<ul>
+<li><span class="math inline">\(\mu\)</span> = mean; <span class="math inline">\(\phi \ge 0\)</span> = <strong>dispersion</strong>.</li>
+<li><span class="math inline">\(\phi = 0\)</span> recovers <strong>Poisson</strong> (variance <span class="math inline">\(= \mu\)</span>); larger <span class="math inline">\(\phi\)</span> = more overdispersion.</li>
+<li>The extra <span class="math inline">\(\phi\mu^2\)</span> term is why highly expressed genes vary <em>disproportionately</em> more.</li>
+</ul>
+<p>It arises naturally as a <strong>Poisson whose rate <span class="math inline">\(\lambda\)</span> is itself Gamma-distributed</strong> — exactly the “rate varies between samples” story.</p>
+<p>The workhorse error model of <strong><code>DESeq2</code></strong> and <strong><code>edgeR</code></strong> for RNA-seq differential expression.</p>
+
+<img data-src="fig13-gamma-poisson-mixture.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:72.0%"><aside class="notes">
+<p>NB is the fix for overdispersion: it is Poisson plus a dispersion parameter phi that decouples variance from mean. Variance = mu + phi*mu^2, so at phi = 0 it collapses back to Poisson, and the quadratic term means the variance gap widens for high-expression genes. Mechanistically it is a Gamma-Poisson mixture: draw a per-sample rate from a Gamma, then a Poisson count given that rate — precisely the “lambda varies between biological replicates” model from the previous slide. Name-drop DESeq2 and edgeR as the Bioconductor tools students will actually use; both are NB GLMs with clever dispersion estimation. Different sources parameterise phi differently (size = 1/phi in R’s dnbinom) — mention only if asked. This connects forward to the Poisson and negative binomial distributions unit if listed separately.</p>
+<style type="text/css">
+        span.MJX_Assistive_MathML {
+          position:absolute!important;
+          clip: rect(1px, 1px, 1px, 1px);
+          padding: 1px 0 0 0!important;
+          border: 0!important;
+          height: 1px!important;
+          width: 1px!important;
+          overflow: hidden!important;
+          display:block!important;
+      }</style></aside>
+</section>
+<section id="why-the-wrong-model-misleads" class="slide level2 smaller">
+<h2>Why the wrong model misleads</h2>
+<p>Using an error model whose variance is <strong>too small</strong> makes you <strong>overconfident</strong> — you declare differences “significant” that are just noise.</p>
+<ul>
+<li><strong>Gaussian / t-test on counts:</strong> assumes one shared variance and allows negative values; mis-estimates spread, especially for low counts and near zero.</li>
+<li><strong>Poisson on overdispersed RNA-seq:</strong> variance assumed <span class="math inline">\(= \mu\)</span>, but true variance is <span class="math inline">\(\mu + \phi\mu^2\)</span> (larger). The test <strong>understates</strong> noise <span class="math inline">\(\Rightarrow\)</span> p-values too small <span class="math inline">\(\Rightarrow\)</span> <strong>inflated false positives</strong>.</li>
+</ul>
+<div class="sourceCode" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a aria-hidden="true" tabindex="-1"></a><span class="co"># same mean (mu = 50), very different spread</span></span>
+<span id="cb3-2"><a aria-hidden="true" tabindex="-1"></a><span class="fu">mean</span>(<span class="fu">rpois</span>(<span class="fl">1e5</span>, <span class="dv">50</span>)); <span class="fu">var</span>(<span class="fu">rpois</span>(<span class="fl">1e5</span>, <span class="dv">50</span>))          <span class="co"># ~50, ~50</span></span>
+<span id="cb3-3"><a aria-hidden="true" tabindex="-1"></a>mu <span class="ot">&lt;-</span> <span class="dv">50</span>; size <span class="ot">&lt;-</span> <span class="dv">2</span>                                 <span class="co"># NB: size = 1/phi</span></span>
+<span id="cb3-4"><a aria-hidden="true" tabindex="-1"></a><span class="fu">mean</span>(<span class="fu">rnbinom</span>(<span class="fl">1e5</span>, <span class="at">mu =</span> mu, <span class="at">size =</span> size))            <span class="co"># ~50</span></span>
+<span id="cb3-5"><a aria-hidden="true" tabindex="-1"></a><span class="fu">var</span>(<span class="fu">rnbinom</span>(<span class="fl">1e5</span>, <span class="at">mu =</span> mu, <span class="at">size =</span> size))             <span class="co"># &gt;&gt; 50 (overdispersed)</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>Right shape, right conclusions. <strong>The error model is not a technicality — it sets your false-discovery rate.</strong></p>
+
+<img data-src="fig14-poisson-vs-nb-falsepositives.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:60.0%"><aside class="notes">
+<p>This is the “so what”. The direction of the error matters: assuming too little variance makes you anti-conservative — p-values shrink, and you call noise as signal. Poisson-on-biological-replicates is the canonical mistake, and it is why the field moved to negative binomial methods. The R makes it visceral: Poisson(50) has variance ~50; NB with the same mean but size = 2 has variance far above 50 (Var = mu + mu^2/size = 50 + 1250). A Poisson test on the NB data would treat that huge spread as if it were only 50, and every borderline gene becomes a false positive. Emphasise size = 1/phi in R’s parameterisation so the code matches the earlier formula. Land the closing line: choosing the error model directly controls how many false discoveries you make.</p>
+<style type="text/css">
+        span.MJX_Assistive_MathML {
+          position:absolute!important;
+          clip: rect(1px, 1px, 1px, 1px);
+          padding: 1px 0 0 0!important;
+          border: 0!important;
+          height: 1px!important;
+          width: 1px!important;
+          overflow: hidden!important;
+          display:block!important;
+      }</style></aside>
+</section>
+<section id="choosing-the-error-model" class="slide level2 smaller">
+<h2>Choosing the error model</h2>
+<p>Match the <strong>data type</strong> to the distribution:</p>
+<table class="caption-top">
+<colgroup>
+<col style="width: 33%">
+<col style="width: 33%">
+<col style="width: 33%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Your data</th>
+<th>Distribution</th>
+<th>Key feature</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Continuous, symmetric spread</td>
+<td><strong>Gaussian</strong> <span class="math inline">\(\mathcal{N}(\mu,\sigma^2)\)</span></td>
+<td>mean and variance independent</td>
+</tr>
+<tr class="even">
+<td>Counts, idealised / technical</td>
+<td><strong>Poisson</strong><span class="math inline">\((\lambda)\)</span></td>
+<td>variance = mean</td>
+</tr>
+<tr class="odd">
+<td>Counts, biological replicates</td>
+<td><strong>Negative binomial</strong><span class="math inline">\((\mu,\phi)\)</span></td>
+<td>variance = <span class="math inline">\(\mu + \phi\mu^2\)</span></td>
+</tr>
+<tr class="even">
+<td>Waiting times / gaps (continuous, <span class="math inline">\(\ge 0\)</span>)</td>
+<td><strong>Exponential</strong><span class="math inline">\((\lambda)\)</span></td>
+<td>memoryless, mean <span class="math inline">\(1/\lambda\)</span></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Diagnostic:</strong> for counts, compare the sample variance to the sample mean. Variance <span class="math inline">\(\approx\)</span> mean <span class="math inline">\(\to\)</span> Poisson may do; variance <span class="math inline">\(\gg\)</span> mean <span class="math inline">\(\to\)</span> overdispersed, use NB.</p>
+<aside class="notes">
+<p>The decision table is the take-home cheat-sheet. Walk each row: what does the data look like, and what is the one feature that picks the distribution. The practical diagnostic is the mean-variance comparison for counts — cheap and decisive. If variance tracks the mean, Poisson is defensible (often only for technical replicates); if variance blows past the mean, you have overdispersion and need the negative binomial. Note that exponential is the odd one out here — continuous waiting times, not counts — included because it is the same Poisson process seen the other way. Students should leave able to look at a column of numbers and name the right error model.</p>
+<style type="text/css">
+        span.MJX_Assistive_MathML {
+          position:absolute!important;
+          clip: rect(1px, 1px, 1px, 1px);
+          padding: 1px 0 0 0!important;
+          border: 0!important;
+          height: 1px!important;
+          width: 1px!important;
+          overflow: hidden!important;
+          display:block!important;
+      }</style></aside>
+</section>
+<section id="summary" class="slide level2 smaller">
+<h2>Summary</h2>
+<table class="caption-top">
+<colgroup>
+<col style="width: 50%">
+<col style="width: 50%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Idea</th>
+<th>Key fact</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Error model</td>
+<td>the distribution you assume generated the data (the <strong>likelihood</strong>)</td>
+</tr>
+<tr class="even">
+<td>Gaussian</td>
+<td>continuous, symmetric; mean and variance <strong>independent</strong></td>
+</tr>
+<tr class="odd">
+<td>Poisson</td>
+<td>counts; <strong>variance = mean = <span class="math inline">\(\lambda\)</span></strong>; limit of many rare events</td>
+</tr>
+<tr class="even">
+<td>Exponential</td>
+<td>waiting times/gaps; memoryless; mean <span class="math inline">\(1/\lambda\)</span></td>
+</tr>
+<tr class="odd">
+<td>Poisson process</td>
+<td>one process: counts <span class="math inline">\(\to\)</span> Poisson, gaps <span class="math inline">\(\to\)</span> exponential</td>
+</tr>
+<tr class="even">
+<td>Overdispersion</td>
+<td>real biological counts have <strong>variance &gt; mean</strong></td>
+</tr>
+<tr class="odd">
+<td>Negative binomial</td>
+<td>counts with dispersion; <span class="math inline">\(\text{Var} = \mu + \phi\mu^2\)</span>; RNA-seq (<code>DESeq2</code>, <code>edgeR</code>)</td>
+</tr>
+<tr class="even">
+<td>Wrong model</td>
+<td>too-small variance <span class="math inline">\(\to\)</span> overconfidence <span class="math inline">\(\to\)</span> <strong>false positives</strong></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Connects to:</strong> the <strong>prior, likelihood and posterior</strong> unit (this likelihood plugs into Bayes’ theorem); the <strong>Poisson and negative binomial distributions</strong> for count data.</p>
+<aside class="notes">
+<p>Recap as an exam cheat-sheet. Drill the reflex: name the data type, name the distribution, name its defining feature. The three claims most worth memorising: Poisson has variance = mean, real biological counts are overdispersed so need the negative binomial, and assuming too little variance inflates false positives. Close by pointing forward — the likelihood defined today is exactly what multiplies the prior in the Bayesian unit, and the negative binomial gets fuller treatment alongside the Poisson for count data. Keep the provisional-block caveat in mind: this material may relocate to a later stats/ML course.</p>
+<style type="text/css">
+        span.MJX_Assistive_MathML {
+          position:absolute!important;
+          clip: rect(1px, 1px, 1px, 1px);
+          padding: 1px 0 0 0!important;
+          border: 0!important;
+          height: 1px!important;
+          width: 1px!important;
+          overflow: hidden!important;
+          display:block!important;
+      }</style></aside>
+
+
+</section>
+    </div>
+  <div class="quarto-auto-generated-content" style="display: none;">
+<div class="footer footer-default">
+
+</div>
+</div></div>
+
+  <script>window.backupDefine = window.define; window.define = undefined;</script>
+  <script src="../site_libs/revealjs/dist/reveal.js"></script>
+  <!-- reveal.js plugins -->
+  <script src="../site_libs/revealjs/plugin/quarto-line-highlight/line-highlight.js"></script>
+  <script src="../site_libs/revealjs/plugin/pdf-export/pdfexport.js"></script>
+  <script src="../site_libs/revealjs/plugin/reveal-menu/menu.js"></script>
+  <script src="../site_libs/revealjs/plugin/reveal-menu/quarto-menu.js"></script>
+  <script src="../site_libs/revealjs/plugin/quarto-support/support.js"></script>
+  
+
+  <script src="../site_libs/revealjs/plugin/notes/notes.js"></script>
+  <script src="../site_libs/revealjs/plugin/search/search.js"></script>
+  <script src="../site_libs/revealjs/plugin/zoom/zoom.js"></script>
+  <script src="../site_libs/revealjs/plugin/math/math.js"></script>
+  <script>window.define = window.backupDefine; window.backupDefine = undefined;</script>
+
+  <script>
+
+      // Full list of configuration options available at:
+      // https://revealjs.com/config/
+      Reveal.initialize({
+'controlsAuto': true,
+'previewLinksAuto': false,
+'pdfSeparateFragments': false,
+'autoAnimateEasing': "ease",
+'autoAnimateDuration': 1,
+'autoAnimateUnmatched': true,
+'jumpToSlide': true,
+'menu': {"side":"left","useTextContentForMissingTitles":true,"markers":false,"loadIcons":false,"custom":[{"title":"Tools","icon":"<i class=\"fas fa-gear\"></i>","content":"<ul class=\"slide-menu-items\">\n<li class=\"slide-tool-item active\" data-item=\"0\"><a href=\"#\" onclick=\"RevealMenuToolHandlers.fullscreen(event)\"><kbd>f</kbd> Fullscreen</a></li>\n<li class=\"slide-tool-item\" data-item=\"1\"><a href=\"#\" onclick=\"RevealMenuToolHandlers.speakerMode(event)\"><kbd>s</kbd> Speaker View</a></li>\n<li class=\"slide-tool-item\" data-item=\"2\"><a href=\"#\" onclick=\"RevealMenuToolHandlers.overview(event)\"><kbd>o</kbd> Slide Overview</a></li>\n<li class=\"slide-tool-item\" data-item=\"3\"><a href=\"#\" onclick=\"RevealMenuToolHandlers.togglePdfExport(event)\"><kbd>e</kbd> PDF Export Mode</a></li>\n<li class=\"slide-tool-item\" data-item=\"4\"><a href=\"#\" onclick=\"RevealMenuToolHandlers.toggleScrollView(event)\"><kbd>r</kbd> Scroll View Mode</a></li>\n<li class=\"slide-tool-item\" data-item=\"5\"><a href=\"#\" onclick=\"RevealMenuToolHandlers.keyboardHelp(event)\"><kbd>?</kbd> Keyboard Help</a></li>\n</ul>"}],"openButton":true},
+'smaller': false,
+ 
+        // Display controls in the bottom right corner
+        controls: false,
+
+        // Help the user learn the controls by providing hints, for example by
+        // bouncing the down arrow when they first encounter a vertical slide
+        controlsTutorial: false,
+
+        // Determines where controls appear, "edges" or "bottom-right"
+        controlsLayout: 'edges',
+
+        // Visibility rule for backwards navigation arrows; "faded", "hidden"
+        // or "visible"
+        controlsBackArrows: 'faded',
+
+        // Display a presentation progress bar
+        progress: true,
+
+        // Display the page number of the current slide
+        slideNumber: 'c/t',
+
+        // 'all', 'print', or 'speaker'
+        showSlideNumber: 'all',
+
+        // Add the current slide number to the URL hash so that reloading the
+        // page/copying the URL will return you to the same slide
+        hash: true,
+
+        // Start with 1 for the hash rather than 0
+        hashOneBasedIndex: false,
+
+        // Flags if we should monitor the hash and change slides accordingly
+        respondToHashChanges: true,
+
+        // Push each slide change to the browser history
+        history: true,
+
+        // Enable keyboard shortcuts for navigation
+        keyboard: true,
+
+        // Enable the slide overview mode
+        overview: true,
+
+        // Disables the default reveal.js slide layout (scaling and centering)
+        // so that you can use custom CSS layout
+        disableLayout: false,
+
+        // Vertical centering of slides
+        center: false,
+
+        // Enables touch navigation on devices with touch input
+        touch: true,
+
+        // Loop the presentation
+        loop: false,
+
+        // Change the presentation direction to be RTL
+        rtl: false,
+
+        // see https://revealjs.com/vertical-slides/#navigation-mode
+        navigationMode: 'linear',
+
+        // Randomizes the order of slides each time the presentation loads
+        shuffle: false,
+
+        // Turns fragments on and off globally
+        fragments: true,
+
+        // Flags whether to include the current fragment in the URL,
+        // so that reloading brings you to the same fragment position
+        fragmentInURL: false,
+
+        // Flags if the presentation is running in an embedded mode,
+        // i.e. contained within a limited portion of the screen
+        embedded: false,
+
+        // Flags if we should show a help overlay when the questionmark
+        // key is pressed
+        help: true,
+
+        // Flags if it should be possible to pause the presentation (blackout)
+        pause: true,
+
+        // Flags if speaker notes should be visible to all viewers
+        showNotes: false,
+
+        // Global override for autoplaying embedded media (null/true/false)
+        autoPlayMedia: null,
+
+        // Global override for preloading lazy-loaded iframes (null/true/false)
+        preloadIframes: null,
+
+        // Number of milliseconds between automatically proceeding to the
+        // next slide, disabled when set to 0, this value can be overwritten
+        // by using a data-autoslide attribute on your slides
+        autoSlide: 0,
+
+        // Stop auto-sliding after user input
+        autoSlideStoppable: true,
+
+        // Use this method for navigation when auto-sliding
+        autoSlideMethod: null,
+
+        // Specify the average time in seconds that you think you will spend
+        // presenting each slide. This is used to show a pacing timer in the
+        // speaker view
+        defaultTiming: null,
+
+        // Enable slide navigation via mouse wheel
+        mouseWheel: false,
+
+        // The display mode that will be used to show slides
+        display: 'block',
+
+        // Hide cursor if inactive
+        hideInactiveCursor: true,
+
+        // Time before the cursor is hidden (in ms)
+        hideCursorTime: 5000,
+
+        // Opens links in an iframe preview overlay
+        previewLinks: false,
+
+        // Transition style (none/fade/slide/convex/concave/zoom)
+        transition: 'slide',
+
+        // Transition speed (default/fast/slow)
+        transitionSpeed: 'fast',
+
+        // Transition style for full page slide backgrounds
+        // (none/fade/slide/convex/concave/zoom)
+        backgroundTransition: 'none',
+
+        // Number of slides away from the current that are visible
+        viewDistance: 3,
+
+        // Number of slides away from the current that are visible on mobile
+        // devices. It is advisable to set this to a lower number than
+        // viewDistance in order to save resources.
+        mobileViewDistance: 2,
+
+        // The "normal" size of the presentation, aspect ratio will be preserved
+        // when the presentation is scaled to fit different resolutions. Can be
+        // specified using percentage units.
+        width: 1280,
+
+        height: 720,
+
+        // Factor of the display size that should remain empty around the content
+        margin: 0.1,
+
+        math: {
+          mathjax: 'https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.9/MathJax.js',
+          config: 'TeX-AMS_HTML-full',
+          tex2jax: {
+            inlineMath: [['\\(','\\)']],
+            displayMath: [['\\[','\\]']],
+            balanceBraces: true,
+            processEscapes: false,
+            processRefs: true,
+            processEnvironments: true,
+            preview: 'TeX',
+            skipTags: ['script','noscript','style','textarea','pre','code'],
+            ignoreClass: 'tex2jax_ignore',
+            processClass: 'tex2jax_process'
+          },
+        },
+
+        // reveal.js plugins
+        plugins: [QuartoLineHighlight, PdfExport, RevealMenu, QuartoSupport,
+
+          RevealMath,
+          RevealNotes,
+          RevealSearch,
+          RevealZoom
+        ]
+      });
+    </script>
+    <script id="quarto-html-after-body" type="application/javascript">
+      window.document.addEventListener("DOMContentLoaded", function (event) {
+        const tabsets =  window.document.querySelectorAll(".panel-tabset-tabby")
+        tabsets.forEach(function(tabset) {
+          const tabby = new Tabby('#' + tabset.id);
+        });
+        const isCodeAnnotation = (el) => {
+          for (const clz of el.classList) {
+            if (clz.startsWith('code-annotation-')) {                     
+              return true;
+            }
+          }
+          return false;
+        }
+        const onCopySuccess = function(e) {
+          // button target
+          const button = e.trigger;
+          // don't keep focus
+          button.blur();
+          // flash "checked"
+          button.classList.add('code-copy-button-checked');
+          var currentTitle = button.getAttribute("title");
+          button.setAttribute("title", "Copied!");
+          let tooltip;
+          if (window.bootstrap) {
+            button.setAttribute("data-bs-toggle", "tooltip");
+            button.setAttribute("data-bs-placement", "left");
+            button.setAttribute("data-bs-title", "Copied!");
+            tooltip = new bootstrap.Tooltip(button, 
+              { trigger: "manual", 
+                customClass: "code-copy-button-tooltip",
+                offset: [0, -8]});
+            tooltip.show();    
+          }
+          setTimeout(function() {
+            if (tooltip) {
+              tooltip.hide();
+              button.removeAttribute("data-bs-title");
+              button.removeAttribute("data-bs-toggle");
+              button.removeAttribute("data-bs-placement");
+            }
+            button.setAttribute("title", currentTitle);
+            button.classList.remove('code-copy-button-checked');
+          }, 1000);
+          // clear code selection
+          e.clearSelection();
+        }
+        const getTextToCopy = function(trigger) {
+            const codeEl = trigger.previousElementSibling.cloneNode(true);
+            for (const childEl of codeEl.children) {
+              if (isCodeAnnotation(childEl)) {
+                childEl.remove();
+              }
+            }
+            return codeEl.innerText;
+        }
+        const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+          text: getTextToCopy
+        });
+        clipboard.on('success', onCopySuccess);
+        if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+          const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+            text: getTextToCopy,
+            container: window.document.getElementById('quarto-embedded-source-code-modal')
+          });
+          clipboardModal.on('success', onCopySuccess);
+        }
+          var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+          var mailtoRegex = new RegExp(/^mailto:/);
+            var filterRegex = new RegExp('/' + window.location.host + '/');
+          var isInternal = (href) => {
+              return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+          }
+          // Inspect non-navigation links and adorn them if external
+         var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+          for (var i=0; i<links.length; i++) {
+            const link = links[i];
+            if (!isInternal(link.href)) {
+              // undo the damage that might have been done by quarto-nav.js in the case of
+              // links that we want to consider external
+              if (link.dataset.originalHref !== undefined) {
+                link.href = link.dataset.originalHref;
+              }
+            }
+          }
+        function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+          const config = {
+            allowHTML: true,
+            maxWidth: 500,
+            delay: 100,
+            arrow: false,
+            appendTo: function(el) {
+                return el.closest('section.slide') || el.parentElement;
+            },
+            interactive: true,
+            interactiveBorder: 10,
+            theme: 'light-border',
+            placement: 'bottom-start',
+          };
+          if (contentFn) {
+            config.content = contentFn;
+          }
+          if (onTriggerFn) {
+            config.onTrigger = onTriggerFn;
+          }
+          if (onUntriggerFn) {
+            config.onUntrigger = onUntriggerFn;
+          }
+            config['offset'] = [0,0];
+            config['maxWidth'] = 700;
+          window.tippy(el, config); 
+        }
+        const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+        for (var i=0; i<noterefs.length; i++) {
+          const ref = noterefs[i];
+          tippyHover(ref, function() {
+            // use id or data attribute instead here
+            let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+            try { href = new URL(href).hash; } catch {}
+            const id = href.replace(/^#\/?/, "");
+            const note = window.document.getElementById(id);
+            if (note) {
+              return note.innerHTML;
+            } else {
+              return "";
+            }
+          });
+        }
+        const findCites = (el) => {
+          const parentEl = el.parentElement;
+          if (parentEl) {
+            const cites = parentEl.dataset.cites;
+            if (cites) {
+              return {
+                el,
+                cites: cites.split(' ')
+              };
+            } else {
+              return findCites(el.parentElement)
+            }
+          } else {
+            return undefined;
+          }
+        };
+        var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+        for (var i=0; i<bibliorefs.length; i++) {
+          const ref = bibliorefs[i];
+          const citeInfo = findCites(ref);
+          if (citeInfo) {
+            tippyHover(citeInfo.el, function() {
+              var popup = window.document.createElement('div');
+              citeInfo.cites.forEach(function(cite) {
+                var citeDiv = window.document.createElement('div');
+                citeDiv.classList.add('hanging-indent');
+                citeDiv.classList.add('csl-entry');
+                var biblioDiv = window.document.getElementById('ref-' + cite);
+                if (biblioDiv) {
+                  citeDiv.innerHTML = biblioDiv.innerHTML;
+                }
+                popup.appendChild(citeDiv);
+              });
+              return popup.innerHTML;
+            });
+          }
+        }
+      });
+      </script>
+    
+
+</body></html>

@@ -1,0 +1,108 @@
+---
+title: "Quiz: ridge, lasso & elastic net"
+format:
+  html:
+    toc: true
+    code-copy: true
+    code-overflow: wrap
+    highlight-style: github
+---
+
+Short questions to test your understanding of penalized linear models. Try each on paper first, then open the answer. Several are written in the style of the on-campus exam (no computer).
+
+---
+
+**Q1.** Why does ordinary least squares fail (or become unstable) when you have 20 000 genes and 40 samples?
+
+::: {.callout-tip collapse="true" title="Hint"}
+Count unknowns versus equations, and ask whether $X^\top X$ can be inverted.
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+There are far more unknown coefficients ($p = 20\,000$) than samples ($n = 40$), so the system is **underdetermined** — infinitely many $\boldsymbol\beta$ fit perfectly, and OLS picks unstable, noise-fitting coefficients. Equivalently $X^\top X$ has rank at most $n < p$, so it is **singular** and $(X^\top X)^{-1}$ does not exist. This is the $p \gg n$ regime.
+:::
+
+---
+
+**Q2.** Write the general penalized objective, and state the penalty term for ridge and for lasso.
+
+::: {.callout-tip collapse="true" title="Hint"}
+Fit term plus $\lambda$ times a penalty. Squares vs. absolute values.
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+$$\hat{\boldsymbol\beta} = \arg\min_{\boldsymbol\beta}\ \lVert\mathbf{y}-X\boldsymbol\beta\rVert^2 + \lambda\cdot\text{penalty}(\boldsymbol\beta).$$
+Ridge (L2): penalty $= \sum_j \beta_j^2$. Lasso (L1): penalty $= \sum_j \lvert\beta_j\rvert$.
+:::
+
+---
+
+**Q3.** What is the single most important behavioural difference between ridge and lasso?
+
+::: {.callout-tip collapse="true" title="Hint"}
+What happens to a coefficient that is not useful?
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+**Lasso sets some coefficients exactly to zero** (dropping those predictors — automatic feature selection, a sparse model). **Ridge shrinks all coefficients toward zero but keeps them all nonzero.** So lasso selects; ridge only shrinks.
+:::
+
+---
+
+**Q4.** In the constraint-geometry picture, the ridge budget region is a **circle** and the lasso region is a **diamond**. Why does that difference produce zero coefficients for lasso but not for ridge?
+
+::: {.callout-tip collapse="true" title="Hint"}
+Where are the corners of the diamond, and what does the RSS ellipse tend to touch first?
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+The diamond has **corners that lie on the axes**, where one coordinate is exactly zero. The expanding RSS ellipse tends to first touch a pointy **corner**, so the lasso solution often lands with a coefficient exactly $0$. The circle is smooth with no corners, so ridge's touch point sits at a generic location with all coefficients nonzero.
+:::
+
+---
+
+**Q5.** What does the ridge closed form $(X^\top X + \lambda I)^{-1}X^\top\mathbf{y}$ show about how ridge handles collinearity or the $p>n$ case?
+
+::: {.callout-tip collapse="true" title="Hint"}
+What does adding $\lambda I$ do to the eigenvalues of $X^\top X$?
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+Adding $\lambda I$ raises every eigenvalue of $X^\top X$ by $\lambda$, so a zero (or near-zero) eigenvalue — which makes $X^\top X$ singular / non-invertible — becomes $\lambda > 0$. The matrix is then **invertible and well-conditioned**, giving stable coefficients even when predictors are collinear or $p > n$.
+:::
+
+---
+
+**Q6.** What is the elastic net, and what practical problem with lasso does it fix in genomics?
+
+::: {.callout-tip collapse="true" title="Hint"}
+It mixes two penalties with a parameter $\alpha$. Think about a group of co-regulated genes.
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+Elastic net uses a **mix** of L1 and L2: penalty $= \alpha\sum_j\lvert\beta_j\rvert + (1-\alpha)\sum_j\beta_j^2$, with $\alpha=1$ pure lasso and $\alpha=0$ pure ridge. It fixes lasso's tendency to pick **one gene arbitrarily** from a group of correlated (co-regulated) genes and drop the rest: the L2 part encourages correlated genes to be **selected or dropped together** (the grouping effect), giving more stable, biologically sensible selection.
+:::
+
+---
+
+**Q7.** How should you choose $\lambda$, and why can you **not** just pick the $\lambda$ that minimizes the training error?
+
+::: {.callout-tip collapse="true" title="Hint"}
+What happens to training error as $\lambda \to 0$? Which model does that favour?
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+Choose $\lambda$ by **cross-validation** — estimate error on held-out folds and pick the $\lambda$ with the lowest cross-validated error (`lambda.min`, or the sparser `lambda.1se` within one SE). You cannot use training error because it falls monotonically as $\lambda \to 0$, so it would always select the **overfit** OLS model. Only out-of-sample error reveals the right amount of shrinkage.
+:::
+
+---
+
+**Q8.** You run `cv.glmnet(x, y, alpha = 1)` and extract coefficients at `lambda.1se`. Most entries are zero; a few genes are nonzero. In biological terms, what is that short list, and what is one important caveat about it?
+
+::: {.callout-tip collapse="true" title="Hint"}
+Selected genes are a signature. Does "selected" mean "causal"?
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+The nonzero genes are the model's **selected predictive signature** — a short, testable panel that predicts the phenotype and could be turned into a targeted assay. Caveat: these genes are **predictive, not proven causal**. Because of collinearity a dropped gene may be just as relevant as the one kept, and the exact list can shift across CV splits at small $n$. Interpret it as a hypothesis to **validate experimentally**, not as established biology.
+:::

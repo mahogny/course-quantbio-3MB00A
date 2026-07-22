@@ -1,0 +1,108 @@
+---
+title: "Quiz: single-cell RNA-seq data & QC"
+format:
+  html:
+    toc: true
+    code-copy: true
+    code-overflow: wrap
+    highlight-style: github
+---
+
+Short questions to test your understanding of single-cell RNA-seq data and quality control. Try each on paper first, then open the answer. These are conceptual — the kind of understanding checked on the on-campus exam.
+
+---
+
+**Q1.** What does a single **entry** $X_{cg}$ of a single-cell count matrix represent, and what shape is the matrix (what are the rows and columns)?
+
+::: {.callout-tip collapse="true" title="Hint"}
+Think "sample × feature", but the samples are now individual cells.
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+$X_{cg}$ is the number of UMIs (mRNA molecules) of **gene $g$** detected in **cell $c$** — a non-negative **integer count**. The matrix has **cells in rows** and **genes in columns** (one row per cell, one column per gene). It is the single-cell analogue of a sample × feature omics table, with cells playing the role of samples.
+:::
+
+---
+
+**Q2.** Single-cell count matrices are typically **90%+ zeros**. Give the **two** distinct reasons a zero can appear, and say why we store the matrix in a **sparse** format.
+
+::: {.callout-tip collapse="true" title="Hint"}
+One reason is biology; one is a limitation of the measurement. And a dense 20,000 × 50,000 table of numbers is huge.
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+A zero can be **biological** (the gene is genuinely not expressed in that cell) or **technical** — a **dropout**, where the gene is expressed but its molecules were not captured/sequenced (a false zero from limited sensitivity). We usually cannot tell which from the count alone. We store the data **sparsely** (only the non-zero entries) because a dense matrix of, say, 20,000 genes × 50,000 cells would take tens of gigabytes, most of it storing zeros.
+:::
+
+---
+
+**Q3.** In the droplet workflow, what are the roles of the **cell barcode** and the **UMI**?
+
+::: {.callout-tip collapse="true" title="Hint"}
+One identifies *which cell*; the other identifies *which original molecule*.
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+The **cell barcode** tags every molecule from a given droplet with the same code, so after pooled sequencing the reads can be sorted back into individual cells (which cell). The **UMI** (unique molecular identifier) tags each *original* mRNA molecule before amplification, so reads sharing a UMI came from one molecule and are counted **once** (which molecule) — this removes PCR amplification bias, giving true molecule counts.
+:::
+
+---
+
+**Q4.** A cell has **95% of its counts coming from mitochondrial genes**. What does this suggest about the cell, and what is the biological mechanism?
+
+::: {.callout-tip collapse="true" title="Hint"}
+Where is mitochondrial RNA physically located when the cell membrane breaks?
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+A very high mitochondrial fraction is a hallmark of a **dying or damaged cell**, so it would normally be **filtered out**. Mechanism: when the cell membrane is compromised, **cytoplasmic mRNA leaks out** of the cell, but **mitochondrial mRNA stays trapped inside the mitochondria**. The *proportion* of remaining counts that is mitochondrial therefore rises. (Thresholds are dataset-dependent — some healthy, metabolically active tissues are genuinely mito-rich.)
+:::
+
+---
+
+**Q5.** What is a **doublet**, and why is it more dangerous than simple random noise?
+
+::: {.callout-tip collapse="true" title="Hint"}
+Two cells, one barcode. What would a T-cell + B-cell doublet appear to express?
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+A **doublet** is a single barcode that captured **two cells**, so its expression is a **blend** of two profiles. It is dangerous because it does not look like noise — it looks like a plausible cell. A T-cell + B-cell doublet expresses both T-cell and B-cell markers and can masquerade as a **novel "hybrid" cell type** or a fake transitional state, leading to false biological conclusions. Its signatures are unusually high total counts/genes and co-expression of markers that should be mutually exclusive.
+:::
+
+---
+
+**Q6.** What is an **empty droplet**, and what does a **barcode-rank ("knee") plot** show about it?
+
+::: {.callout-tip collapse="true" title="Hint"}
+Even a droplet with no cell captures a little floating RNA. Rank barcodes by total counts and look for a sudden drop.
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+An **empty droplet** contains no cell but still captures a little **ambient RNA** (mRNA released by lysed cells into the suspension), giving a low-count background profile. A **barcode-rank plot** sorts barcodes by total counts (descending, on log-log axes); real cells sit at high counts and there is a sharp **"knee"** where counts drop steeply to the empty-droplet background. The knee is used to separate true cells from empty droplets (dedicated tools like `EmptyDrops` model the ambient profile to do this more carefully).
+:::
+
+---
+
+**Q7.** After filtering, we **library-size normalize** and then apply **log1p**. What problem does each step solve?
+
+::: {.callout-tip collapse="true" title="Hint"}
+One step makes cells with different total counts comparable; the other tames genes that span orders of magnitude.
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+**Library-size normalization** (divide each cell by its total counts, rescale to a common size) removes differences in **total counts** that come from technical capture/sequencing depth rather than biology, making cells comparable — it converts counts into relative expression per cell. **log1p** ($\log(1+x)$) compresses the huge **dynamic range** of expression so a few very-high genes do not dominate variance/distance calculations, and stabilizes variance; the $+1$ keeps zeros at zero and avoids $\log 0 = -\infty$.
+:::
+
+---
+
+**Q8.** We keep only the ~2,000 **highly variable genes**. Why not simply keep the genes with the **highest variance**?
+
+::: {.callout-tip collapse="true" title="Hint"}
+In count data, how does a gene's variance relate to its mean expression?
+
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+Because in count data **variance grows with the mean**: a highly expressed gene (e.g. a housekeeping gene like `ACTB`) has a large raw variance simply because it is big, not because it distinguishes cell types. Ranking by raw variance would just pick the highest-expressed genes. HVG selection instead ranks genes by variance **relative to the mean–variance trend** — keeping genes that vary *more than expected for their mean*, which are the ones carrying real biological signal (e.g. cell-type markers that are off in most cells and high in one type).
+:::

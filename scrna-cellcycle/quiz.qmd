@@ -1,0 +1,120 @@
+---
+title: "Quiz: cell cycle & connection to PCA"
+format:
+  html:
+    toc: true
+    code-copy: true
+    code-overflow: wrap
+    highlight-style: github
+---
+
+Short questions to test your understanding of cell-cycle scoring and its link to PCA. Try each on paper first, then open the answer. Several are written in the style of the on-campus exam (no computer).
+
+---
+
+**Q1.** Why is the cell cycle a much larger problem in single-cell RNA-seq than in bulk RNA-seq?
+
+::: {.callout-tip collapse="true" title="Hint"}
+What happens to phase differences when you average over millions of cells?
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+Bulk RNA-seq averages over millions of cells, so cells in different phases cancel and the cycle largely washes out. In single-cell data each cell is captured at one definite phase, so cell-cycle variation is preserved and becomes one of the **largest axes of variation** across cells.
+:::
+
+---
+
+**Q2.** A cell-cycle module **score** is computed from a *set* of marker genes rather than a single marker gene. Give one reason why.
+
+::: {.callout-tip collapse="true" title="Hint"}
+Think about dropouts and noise in single-cell counts.
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+Single-cell counts are sparse and noisy (dropouts), so any one gene is unreliable. Averaging over a curated **set** of co-expressed phase markers gives a robust, stable estimate of whether the program is on.
+:::
+
+---
+
+**Q3.** In the background-corrected score $\text{Score}_{\mathcal{S}}(c) = \overline{x}_{\mathcal{S}}(c) - \overline{x}_{\text{ctrl}}(c)$, what is the purpose of subtracting the control-gene average?
+
+::: {.callout-tip collapse="true" title="Hint"}
+Some cells have more total counts / more genes detected than others.
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+It removes the **background** a cell would show anyway due to its overall expression level / sequencing depth. The expression-matched control set tracks that background, so subtracting it isolates the genuine cell-cycle signal. A score near 0 then means "no more than background".
+:::
+
+---
+
+**Q4.** A cell has $\text{Score}_S = -0.05$ and $\text{Score}_{G2M} = 0.48$. Which phase is it assigned, and why?
+
+::: {.callout-tip collapse="true" title="Hint"}
+If a program is on, its score is clearly positive; take the larger positive score.
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+**G2M.** The G2/M score is clearly positive and larger than the S score (which is around/below 0), so the G2/M program is the active one.
+:::
+
+---
+
+**Q5.** Why does the cell cycle so often show up as one of the **top principal components**?
+
+::: {.callout-tip collapse="true" title="Hint"}
+What does PCA maximise, and how do co-expressed genes affect covariance?
+
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+PCA returns the directions of **greatest variance** (eigenvectors of the covariance matrix). Cell-cycle genes are strongly **co-expressed**, so they contribute a large block of shared variance/covariance. That coordinated variation forms a leading eigenvector, so a top PC frequently aligns with the cell-cycle axis.
+:::
+
+---
+
+**Q6.** You want to check whether PC1 represents the cell cycle. Name **two** things you could look at.
+
+::: {.callout-tip collapse="true" title="Hint"}
+One uses the eigenvector entries; the other relates PC scores to a covariate you measured.
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+(1) The **loadings** of PC1 — if the top-loading genes are cell-cycle markers (*MKI67*, *TOP2A*, *PCNA*, *TYMS*...), the PC is the cycle. (2) The **correlation** between each cell's PC1 score and its `S.Score` / `G2M.Score` — a high correlation confirms PC1 tracks the cycle.
+:::
+
+---
+
+**Q7.** Regressing the cell cycle out is done with a per-gene linear model. Which part of the model do we keep and feed to PCA, and why?
+
+::: {.callout-tip collapse="true" title="Hint"}
+Split each gene's expression into a fitted part and what is left over.
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+We keep the **residuals** $\varepsilon_{gc}$. For each gene we regress its expression on the cell-cycle scores; the fitted part is the variation **explained by** the cycle, and the residual is the expression **with that part removed**. Feeding residuals to PCA flattens the cell-cycle axis so it no longer claims a top PC.
+:::
+
+---
+
+**Q8.** True or false: you should always regress the cell cycle out before clustering. Explain.
+
+::: {.callout-tip collapse="true" title="Hint"}
+Is proliferation ever the biology you actually want to study?
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+**False.** Regression removes real signal, so it is a judgement call. If proliferation *is* the biology (tumour, development, immune activation, stem/progenitor comparisons), removing the cycle can erase your result. Regress it out only when it is a **nuisance** hiding the cell identities you want — and consider regressing only `S.Score - G2M.Score` when you care *that* a cell divides but not *where* in the cycle it is.
+:::
+
+---
+
+**Q9.** State the general lesson this unit teaches about principal components (beyond the cell cycle specifically).
+
+::: {.callout-tip collapse="true" title="Hint"}
+What else besides cell cycle can a top PC turn out to be — batch, depth, stress...?
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+A principal component is simply the direction of **greatest variance**, and that can be **anything** — cell cycle, sequencing depth, mitochondrial/stress, batch/donor, ambient RNA, or real cell identity. PCA is unsupervised: it hands you directions, not meanings. The analyst must **interpret** each component (biological signal vs. technical artefact), typically by reading loadings and correlating PC scores with known covariates.
+:::

@@ -1,0 +1,238 @@
+---
+title: "Exercise: dimensionality reduction & clustering"
+format:
+  html:
+    toc: true
+    code-copy: true
+    code-overflow: wrap
+    highlight-style: github
+---
+
+## Goal
+
+By the end of this exercise you should be able to:
+
+- explain **why** we reduce with PCA *before* building a neighbour graph or a UMAP,
+- build a small **k-nearest-neighbour (kNN) graph** by hand from cell coordinates and Euclidean distances,
+- read off the **communities** (clusters) of a small graph by eye,
+- state precisely what a **UMAP may and may not** be used to conclude,
+- predict how the **resolution** parameter changes the number of clusters,
+- run and read the standard **Seurat** pipeline (`RunPCA` → `FindNeighbors` → `FindClusters` → `RunUMAP`) as a recipe.
+
+This is an **applied concept day**. The pen-and-paper part is the kNN/graph reasoning; the R part is reading the standard pipeline and reproducing the neighbour step in base R. No cluster count today is "the right answer" — judging that is part of the skill.
+
+## Background
+
+A cell is a **point in gene-expression space** (one axis per gene). Cells of the same type express similar genes, so they sit **close together**; the whole task is to find those close-together groups without being told the labels (**unsupervised**).
+
+The standard pipeline, from the Dimensionality reduction & clustering lecture:
+
+$$
+\underbrace{X}_{\text{cells × genes}}
+\xrightarrow{\text{PCA}}
+\underbrace{Z}_{\text{cells × }\sim 30}
+\xrightarrow{\text{kNN}}
+\underbrace{G}_{\text{graph}}
+\xrightarrow{\begin{array}{c}\text{UMAP}\\\text{clustering}\end{array}}
+\text{2D map + labels}
+$$
+
+1. **PCA** compresses ~2000 genes to ~30 principal components — this **denoises** and speeds everything up. Distances are more meaningful in ~30 clean dimensions than in 2000 noisy ones. (Same method as Principal component analysis and PCA in R.)
+2. **kNN graph:** for each cell, connect it to its $k$ nearest neighbours (typical $k \approx 15$) by **Euclidean distance** in PC space,
+$$
+\text{dist}(\mathbf{x}_i, \mathbf{x}_j) = \lVert \mathbf{x}_i - \mathbf{x}_j \rVert = \sqrt{\sum_{p} (x_{ip} - x_{jp})^2}.
+$$
+3. **UMAP** lays the graph out in 2D. It is **non-linear** and preserves **local** neighbourhoods only — its axes and inter-cluster distances are **not quantitative**.
+4. **Clustering** (Louvain / **Leiden**) cuts the **same graph** into densely connected **communities**; the **resolution** parameter controls how many. UMAP and clustering are two views of one graph, not one derived from the other.
+
+**Key discipline:** *local structure is trustworthy, global geometry is decorative.*
+
+## By hand
+
+Use this toy dataset throughout. Six cells have already been reduced to their **top 2 principal components** $(\text{PC}_1, \text{PC}_2)$:
+
+| Cell | PC1 | PC2 |
+|---|---:|---:|
+| A | 0 | 0 |
+| B | 1 | 0 |
+| C | 0 | 1 |
+| D | 5 | 5 |
+| E | 6 | 5 |
+| F | 5 | 6 |
+
+**B1.** Compute the Euclidean distance between: (a) A and B, (b) A and C, (c) B and C, (d) A and D, (e) D and E. Leave square roots where they are not whole numbers.
+
+**B2.** For **each** of the six cells, list its **two nearest neighbours** ($k = 2$). Then draw the kNN graph (six nodes; an edge from each cell to each of its two nearest neighbours).
+
+**B3.** How many **connected groups** does your graph split into? List which cells are in each. If a graph-based clustering algorithm ran on this graph, how many clusters would it return, and why?
+
+**B4.** Conceptual — **order of operations.** A classmate proposes: "skip PCA, just build the kNN graph directly on all 2000 genes." Give **two** reasons the pipeline runs PCA first.
+
+**B5.** Conceptual — **reading a UMAP.** For each statement, say whether it is a **legitimate** reading of a UMAP or **not**, and why:
+(a) "Cells X and Y are in the same tight island, so they are similar."
+(b) "Cluster 1 is twice as far from cluster 2 as from cluster 3, so it is twice as different from cluster 2."
+(c) "The red island is much bigger than the blue one, so that cell type is more variable / more abundant."
+(d) "There are five clearly separated islands, so there are probably several cell populations."
+(e) "UMAP-1 is about 8 for these cells, which is biologically meaningful."
+
+**B6.** Conceptual — **resolution.** You cluster the same graph at resolution $0.2$, then at $0.8$, then at $2.0$. Order these three runs by the number of clusters they will produce (fewest to most), and explain the trend. Is there a "correct" number of clusters? What should you check a cluster against before believing it?
+
+## In R
+
+Read the standard pipeline as a **recipe** (no packages are installed here — nothing runs), then reproduce the neighbour step yourself in base R.
+
+### The standard Seurat pipeline
+
+```r
+library(Seurat)
+# `seu` is the QC-ed, normalized object from the preprocessing unit
+
+seu <- ScaleData(seu)
+seu <- RunPCA(seu, npcs = 50)
+ElbowPlot(seu)                       # how many PCs to keep? (scree/elbow)
+
+seu <- FindNeighbors(seu, dims = 1:30, k.param = 15)  # kNN graph in PC space
+seu <- FindClusters(seu, resolution = 0.5)            # Leiden/Louvain communities
+seu <- RunUMAP(seu, dims = 1:30)                      # 2D layout, display only
+
+DimPlot(seu, reduction = "umap", label = TRUE)        # UMAP coloured by cluster
+```
+
+Note the two calls that share `dims = 1:30`: `FindNeighbors` and `RunUMAP` both start from the **same top-30 PCs**, and `FindClusters` works on the **graph** that `FindNeighbors` built — **not** on the UMAP.
+
+### Reproduce the kNN step in base R
+
+```r
+# the six toy cells, already reduced to 2 PCs
+Z <- rbind(
+  A = c(0, 0), B = c(1, 0), C = c(0, 1),
+  D = c(5, 5), E = c(6, 5), F = c(5, 6))
+
+D2 <- as.matrix(dist(Z))     # all pairwise Euclidean distances
+round(D2, 2)
+
+# two nearest neighbours of each cell (column 1 of each sort is the cell itself)
+apply(D2, 1, function(col) names(sort(col))[2:3])
+```
+
+### Tasks
+
+**R1.** Type in the `Z` matrix and run `as.matrix(dist(Z))`. Confirm the distances match your hand answers from **B1**.
+
+**R2.** Run the `apply(...)` line. Confirm the two-nearest-neighbour lists match your **B2** answers, and that each cell's neighbours are its own group-mates.
+
+**R3.** Change $k$ from 2 to 3 conceptually: with only three cells per group, what happens when a cell must pick a **third** neighbour? Predict whether the two groups stay separate, then reason about it (you may modify the `[2:3]` index to `[2:4]` to check).
+
+**R4.** In the Seurat block, which single line would you edit to (a) keep more principal components, (b) get **more** clusters, (c) change how many neighbours each cell connects to? Name the argument in each case.
+
+## Hints
+
+::: {.callout-tip collapse="true" title="Hint 1 — Euclidean distance (B1)"}
+The distance between points $\mathbf{a}=(a_1,a_2)$ and $\mathbf{b}=(b_1,b_2)$ is $\sqrt{(a_1-b_1)^2 + (a_2-b_2)^2}$ — the [Pythagorean](https://en.wikipedia.org/wiki/Euclidean_distance) length of the difference vector. For A$(0,0)$ and B$(1,0)$ that is $\sqrt{1^2+0^2}=1$. In R this is one call to [`dist`](https://rdrr.io/r/stats/dist.html).
+:::
+
+::: {.callout-tip collapse="true" title="Hint 2 — nearest neighbours (B2)"}
+For each cell, compute its distance to the **other five** and keep the **two smallest**. The three "origin" cells (A, B, C) are all within distance $\le \sqrt{2}\approx1.41$ of each other, while any origin-to-far distance is $\ge\sqrt{50}\approx7.07$ — so a cell's nearest neighbours are always in its own group.
+:::
+
+::: {.callout-tip collapse="true" title="Hint 3 — communities (B3)"}
+A **connected group** is a set of nodes you can reach from one another by following edges. If no edge ever links an origin cell to a far cell, the graph falls into two separate pieces. Graph-based clustering ([Leiden / Louvain](https://en.wikipedia.org/wiki/Leiden_algorithm)) returns one cluster per such densely connected community.
+:::
+
+::: {.callout-tip collapse="true" title="Hint 4 — why PCA first (B4)"}
+Think about (i) **noise**: single-cell counts are noisy, and distances in 2000 noisy dimensions are dominated by scatter, whereas the top PCs concentrate the real signal; (ii) **speed/stability**: computing neighbours in 30 dimensions for thousands of cells is far cheaper and more stable than in 2000. This is the denoising role of PCA from Choosing components & pitfalls.
+:::
+
+::: {.callout-tip collapse="true" title="Hint 5 — reading a UMAP (B5)"}
+The rule from the lecture: **local grouping is trustworthy; axes, inter-cluster distances, and island sizes are not.** Same island ⇒ similar (OK). Anything that reads a *number* off the axes, or treats the *gap between* islands or the *area of* an island as quantitative, is not legitimate.
+:::
+
+::: {.callout-tip collapse="true" title="Hint 6 — resolution (B6)"}
+Higher resolution ⇒ **more, smaller** clusters; lower resolution ⇒ **fewer, larger** clusters (monotone). There is **no true number of clusters** — the right granularity depends on the biological question. Validate a cluster against **known marker genes**, not against which picture looks tidiest (previewing cell-type annotation).
+:::
+
+::: {.callout-tip collapse="true" title="Hint 7 — the R neighbour step (R1–R3)"}
+[`dist`](https://rdrr.io/r/stats/dist.html)`(Z)` returns pairwise Euclidean distances; wrap it in [`as.matrix`](https://rdrr.io/r/base/matrix.html) to get a full labelled matrix. For each row, [`sort`](https://rdrr.io/r/base/sort.html) puts the cell itself first (distance 0), so its nearest neighbours are entries `2:3`. To take three neighbours instead of two, index `2:4`.
+:::
+
+## Solutions
+
+::: {.callout-note collapse="true" title="Solution"}
+
+**B1.** Using $\sqrt{(\Delta \text{PC}_1)^2 + (\Delta \text{PC}_2)^2}$:
+
+- (a) A$(0,0)$–B$(1,0)$: $\sqrt{1^2+0^2} = 1$.
+- (b) A$(0,0)$–C$(0,1)$: $\sqrt{0^2+1^2} = 1$.
+- (c) B$(1,0)$–C$(0,1)$: $\sqrt{(1)^2+(1)^2} = \sqrt{2} \approx 1.41$.
+- (d) A$(0,0)$–D$(5,5)$: $\sqrt{5^2+5^2} = \sqrt{50} \approx 7.07$.
+- (e) D$(5,5)$–E$(6,5)$: $\sqrt{1^2+0^2} = 1$.
+
+The within-group distances ($1$ and $\sqrt2$) are tiny next to the between-group distance ($\sqrt{50}$).
+
+**B2.** By symmetry the far group (D, E, F) mirrors the near group (A, B, C). Distances: within each group the two "axis" cells are at distance $1$ from the corner and $\sqrt2$ from each other. Two nearest neighbours ($k=2$):
+
+- **A** → B $(1)$, C $(1)$ → $\{B, C\}$
+- **B** → A $(1)$, C $(\sqrt2)$ → $\{A, C\}$
+- **C** → A $(1)$, B $(\sqrt2)$ → $\{A, B\}$
+- **D** → E $(1)$, F $(1)$ → $\{E, F\}$
+- **E** → D $(1)$, F $(\sqrt2)$ → $\{D, F\}$
+- **F** → D $(1)$, E $(\sqrt2)$ → $\{D, E\}$
+
+The graph: A–B, A–C, B–C form a triangle; D–E, D–F, E–F form a second triangle. **No edge** ever crosses between the two triangles.
+
+**B3.** The graph splits into **two connected groups**: $\{A, B, C\}$ and $\{D, E, F\}$. No path of edges links one triangle to the other. A graph-based clustering algorithm (Leiden/Louvain) would return **2 clusters**, because each triangle is a community densely connected within itself and disconnected from the other — exactly the "two cell populations" answer we wanted.
+
+**B4.** Any two of:
+
+- **Denoising.** Single-cell counts are noisy; in 2000 gene-dimensions the Euclidean distance is dominated by random scatter, so neighbours computed there are unreliable. The top ~30 PCs concentrate the coordinated (biological) variation and discard per-gene noise, so distances — and hence neighbours — are more meaningful.
+- **Speed and stability.** Finding nearest neighbours for thousands of cells is far cheaper and numerically more stable in ~30 dimensions than in 2000; the whole downstream pipeline (kNN, UMAP, clustering) runs faster and more reproducibly.
+- (Also acceptable: PCA **removes redundancy** — co-regulated genes are highly correlated, so 2000 genes carry far fewer than 2000 independent directions.)
+
+**B5.**
+
+- (a) **Legitimate.** Same tight island = neighbours in the graph = similar expression. Local structure is what UMAP preserves.
+- (b) **Not legitimate.** Inter-cluster **distances** in a UMAP are not quantitative — a bigger gap does **not** mean "more different". You cannot compare gaps.
+- (c) **Not legitimate.** Island **size / spread** reflects the layout algorithm's crowding control, not biological variability or cell count. To compare abundance, **count the cells**; to compare variability, look in PC or expression space.
+- (d) **Legitimate.** Several clearly separated islands is reasonable evidence of several populations — a **qualitative, local** reading. (It still needs confirmation by marker genes.)
+- (e) **Not legitimate.** The UMAP **axes have no interpretation**; never report or reason from an axis value.
+
+**B6.** Fewest to most clusters: **resolution $0.2$ < $0.8$ < $2.0$**. Resolution and cluster count move **together** (monotone): raising it lets the community-detection algorithm split groups more finely, lowering it merges them. There is **no correct number of clusters** — the right granularity depends on the biological question (broad lineages vs fine subtypes), and pushing resolution too high eventually splits noise into fake "types". Before believing a cluster, check it against **known marker genes** (does it express a coherent, recognisable programme?), not against which resolution produced the tidiest picture. This is the handoff to cell-type annotation.
+
+**R1.** `as.matrix(dist(Z))` gives (rounded):
+
+```r
+     A    B    C    D    E    F
+A 0.00 1.00 1.00 7.07 7.81 7.81
+B 1.00 0.00 1.41 6.40 7.07 7.81
+C 1.00 1.41 0.00 6.40 7.81 7.07
+D 7.07 6.40 6.40 0.00 1.00 1.00
+E 7.81 7.07 7.81 1.00 0.00 1.41
+F 7.81 7.81 7.07 1.00 1.41 0.00
+```
+
+The A–B, A–C entries are $1$, B–C is $1.41=\sqrt2$, A–D is $7.07=\sqrt{50}$, D–E is $1$ — matching **B1** exactly.
+
+**R2.** `apply(D2, 1, function(col) names(sort(col))[2:3])` returns, for each column (cell), its two nearest neighbours:
+
+```r
+     A   B   C   D   E   F
+[1,] "B" "A" "A" "E" "D" "D"
+[2,] "C" "C" "B" "F" "F" "E"
+```
+
+Every cell's two neighbours are its own group-mates — identical to the hand answer in **B2**. (`sort` puts the cell itself, distance 0, first, so we take entries `2:3`.)
+
+**R3.** With $k=3$ each cell must add a **third** neighbour, but there are only **two** other cells in its own group. The third-nearest cell is therefore in the **other** group — so an edge now crosses between the triangles, and the graph becomes **connected**. Taking `[2:4]` shows, e.g., A's third neighbour is a D/E/F cell. Lesson: with tiny groups, a large $k$ forces cross-group edges and can **merge** genuinely separate clusters — $k$ (like resolution) is a parameter that trades off how finely you resolve structure. (On real data with thousands of cells this is rarely a problem, since each group has far more than $k$ members.)
+
+**R4.**
+
+- (a) keep more PCs → change **`npcs`** in `RunPCA` (and widen `dims = 1:30` in `FindNeighbors`/`RunUMAP` to use them).
+- (b) more clusters → **raise `resolution`** in `FindClusters`.
+- (c) more/fewer neighbours per cell → change **`k.param`** in `FindNeighbors`.
+:::
+
+## Where this leads
+
+- **Cell-type annotation:** the anonymous clusters (0, 1, 2, …) become named cell types by checking **marker genes** — the biological validation that today's caveats keep pointing to.
+- **Cell-cycle analysis:** proliferating cells vary strongly along the cell cycle, which can dominate a UMAP and split a real cell type by phase. That unit returns to **PCA** to identify and regress out the cell-cycle signal — a direct reuse of the eigen-decomposition machinery.
+- **Trajectory / pseudotime methods** (beyond this course) build on the same kNN graph to order cells along differentiation paths, rather than cutting it into discrete clusters.

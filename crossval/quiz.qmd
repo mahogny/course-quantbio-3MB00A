@@ -1,0 +1,121 @@
+---
+title: "Quiz: cross-validation & model selection"
+format:
+  html:
+    toc: true
+    code-copy: true
+    code-overflow: wrap
+    highlight-style: github
+---
+
+Short questions to test your understanding of cross-validation and honest model selection. Try each on paper first, then open the answer. Several are in the style of the on-campus exam (no computer).
+
+---
+
+**Q1.** In one sentence, why is the error measured on your training data a poor estimate of how the model will do on new patients?
+
+::: {.callout-tip collapse="true" title="Hint"}
+What can a flexible model do to the data it was fitted on, especially when there are far more genes than samples?
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+A flexible model can fit the **noise** of the training samples, so its training error is **optimistically** low; the honest test is data the model never saw during fitting. The bias is worst when $p \gg n$ (many genes, few patients).
+:::
+
+---
+
+**Q2.** You run 10-fold CV on 90 samples. How large is each fold, how many samples does each model train on, and how many models are fitted?
+
+::: {.callout-tip collapse="true" title="Hint"}
+Fold size is $n/k$; each model trains on the other $k-1$ folds; one model per fold.
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+Fold size $= 90/10 = 9$ samples. Each model trains on the other $9$ folds $= 90 - 9 = 81$ samples. **10** models are fitted (one per held-out fold), and every sample is validated exactly once.
+:::
+
+---
+
+**Q3.** What are the two distinct jobs cross-validation does in a penalized-regression workflow?
+
+::: {.callout-tip collapse="true" title="Hint"}
+One job is about choosing a knob; the other is about reporting a number.
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+(1) **Tuning** — choosing the penalty strength $\lambda$ (the value that minimises CV error), and (2) **estimation** — giving an honest estimate of predictive performance. If the *same* CV both chose $\lambda$ and reports the number, the number is mildly optimistic, which is why a separate held-out **test set** (or nested CV) is needed for the final estimate.
+:::
+
+---
+
+**Q4.** In `cv.glmnet`, what is the difference between `lambda.min` and `lambda.1se`, and why might you prefer `lambda.1se`?
+
+::: {.callout-tip collapse="true" title="Hint"}
+One is the outright minimum; the other applies a "within one standard error" rule and gives a simpler model.
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+`lambda.min` is the $\lambda$ with the **lowest** CV error. `lambda.1se` is the **largest** $\lambda$ (most shrinkage, fewest genes) whose CV error is still within **one standard error** of that minimum. Since the two are statistically indistinguishable, `lambda.1se` gives a **simpler, more reproducible** signature — usually the better scientific choice for a biomarker list.
+:::
+
+---
+
+**Q5.** A student filters 20,000 genes down to the 200 most correlated with disease using **all** samples, then cross-validates a lasso on those 200 genes and reports 95% accuracy. What is wrong, and how do you fix it?
+
+::: {.callout-tip collapse="true" title="Hint"}
+Did the gene filter look at the outcome of the samples that later become "held out"?
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+This is **information leakage**: the gene filter used the outcome $y$ of every sample, including those later held out, so the folds are no longer naive and 95% is optimistically biased. **Fix:** move the gene selection **inside** each CV fold and compute it on the **training rows only** (or hold out a test set that no filtering step ever touches). Any step that uses $y$ is part of fitting.
+:::
+
+---
+
+**Q6.** True or false: the test set may be used to decide which of several models to keep. Explain.
+
+::: {.callout-tip collapse="true" title="Hint"}
+How many times may a genuine test set be used, and for what?
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+**False.** The moment you use the test set to *choose* something, it has influenced the model and is no longer an unbiased test — it has become a validation set. A genuine test set is locked away and opened **once**, only to report the final performance. Model selection belongs to the validation (CV) stage.
+:::
+
+---
+
+**Q7.** You are classifying a disease where only 6% of samples are cases. Why is plain accuracy a bad CV metric here, and what is a better one?
+
+::: {.callout-tip collapse="true" title="Hint"}
+What accuracy does a model that always predicts "healthy" achieve?
+
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+A trivial model that always predicts "healthy" is **94% accurate**, so accuracy rewards ignoring the cases entirely. **AUC** is better: it scores whether the model *ranks* cases above controls, is threshold-free, and is robust to class imbalance. (Deviance / log-loss is another honest choice.)
+:::
+
+---
+
+**Q8.** Training error is $0.03$ and 10-fold CV error is $0.28$. What does the gap tell you, and which way should you move $\lambda$?
+
+::: {.callout-tip collapse="true" title="Hint"}
+A large gap between memorising the training data and doing well in CV is the fingerprint of one specific problem.
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+The large train–CV gap is the signature of **overfitting**: the model nearly memorises the training data but generalises poorly. **Increase $\lambda$** (shrink harder) to reduce flexibility and close the gap; trust the CV error ($0.28$), not the training error, as the estimate of real performance.
+:::
+
+---
+
+**Q9.** You have single-cell data with thousands of cells from each of 12 patients, and you want to predict a patient-level phenotype. Why is a plain random split of cells into folds misleading, and what should you do instead?
+
+::: {.callout-tip collapse="true" title="Hint"}
+Are cells from the same patient independent? What happens if the same patient appears in both training and validation?
+
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+Cells from one patient are **not independent**, so a random cell-level split puts the same patient in both training and validation — the model can recognise the patient rather than the phenotype, leaking information and inflating performance. Use **grouped CV**: keep all cells from a patient **together** in one fold, so folds split at the **patient** level.
+:::

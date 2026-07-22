@@ -1,0 +1,107 @@
+---
+title: "Quiz: error models — exponential & Poisson"
+format:
+  html:
+    toc: true
+    code-copy: true
+    code-overflow: wrap
+    highlight-style: github
+---
+
+Short questions to test your understanding of choosing an error model for a data type. Try each on paper first, then open the answer. Several are written in the style of the on-campus exam (no computer).
+
+---
+
+**Q1.** What is an "error model", and why does every analysis assume one — even a plain t-test?
+
+::: {.callout-tip collapse="true" title="Hint"}
+Think about what "significant" means: significant relative to what assumed spread?
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+The error model is the probability distribution you assume generated the data (given the truth) — read as a function of the parameters, it is the **likelihood**. A t-test assumes the data are **Gaussian** with a common variance; that assumption is what turns a difference in means into a p-value. Every method assumes *some* distribution, named or not.
+:::
+
+---
+
+**Q2.** State the single defining property of the Poisson distribution relating its mean and variance.
+
+::: {.callout-tip collapse="true" title="Hint"}
+Poisson has only one parameter, $\lambda$.
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+$\text{mean} = \text{variance} = \lambda$. The one parameter $\lambda$ controls both, so the spread is fixed once the mean is fixed.
+:::
+
+---
+
+**Q3.** You measure reads mapped to a gene across biological replicates and find sample mean $\approx 30$, sample variance $\approx 300$. Is Poisson an appropriate error model? If not, what is happening and what should you use?
+
+::: {.callout-tip collapse="true" title="Hint"}
+Compare variance to mean against the Poisson promise.
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+No. Poisson requires variance $=$ mean, but here variance ($300$) $\gg$ mean ($30$). The data are **overdispersed** — the true rate varies between biological replicates, adding variance on top of counting noise. Use the **negative binomial**, whose variance $\mu + \phi\mu^2$ can exceed the mean.
+:::
+
+---
+
+**Q4.** For a Poisson process at rate $\lambda$, which distribution describes the **number of events in a fixed window**, and which describes the **waiting time to the next event**?
+
+::: {.callout-tip collapse="true" title="Hint"}
+One process, two questions: "how many?" versus "how long?".
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+Number of events in a fixed window: **Poisson$(\lambda)$** (or Poisson$(\lambda t)$ for a window of length $t$). Waiting time to the next event: **Exponential$(\lambda)$**, with mean $1/\lambda$. Same underlying process, seen two ways.
+:::
+
+---
+
+**Q5.** A gene has a Poisson mean of $\lambda = 1$ read. Compute $P(X = 0)$ and $P(X \ge 1)$.
+
+::: {.callout-tip collapse="true" title="Hint"}
+$P(X=k) = \lambda^k e^{-\lambda}/k!$; for "at least one" use the complement.
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+$P(0) = \dfrac{1^0 e^{-1}}{0!} = e^{-1} \approx 0.368$. $P(X \ge 1) = 1 - P(0) = 1 - e^{-1} \approx 0.632$.
+:::
+
+---
+
+**Q6.** The exponential distribution is "memoryless." Explain what that means for a protein whose dwell time on DNA is exponential.
+
+::: {.callout-tip collapse="true" title="Hint"}
+Does how long it has already stayed change the chance it stays longer?
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+$P(T > s + t \mid T > s) = P(T > t)$: the probability of staying an additional $t$ seconds does not depend on how long it has already been bound. The protein "does not age" — its remaining dwell time always has the same distribution.
+:::
+
+---
+
+**Q7.** You analyse overdispersed RNA-seq counts with a test that assumes the Poisson error model. Are your p-values likely too large or too small, and does that inflate false positives or false negatives?
+
+::: {.callout-tip collapse="true" title="Hint"}
+Poisson assumes less variance than the data actually have.
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+Poisson assumes variance $=$ mean, but the true variance is larger (overdispersion). Assuming too little noise makes the test **overconfident**, so p-values are **too small**, inflating **false positives** (Type I errors) — you call noise as differential expression. This is why RNA-seq tools use the negative binomial.
+:::
+
+---
+
+**Q8.** In R, `rnbinom(n, mu = 50, size = 5)`. Using $\text{Var} = \mu + \mu^2/\text{size}$, what is the variance, and how does it compare to a Poisson with the same mean?
+
+::: {.callout-tip collapse="true" title="Hint"}
+R's `size` equals $1/\phi$; a Poisson would have variance equal to the mean.
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+$\text{Var} = 50 + 50^2/5 = 50 + 500 = 550$. A Poisson with the same mean has variance $50$, so the negative binomial here is about **11 times more variable** — overdispersed. As `size` $\to \infty$ ($\phi \to 0$), the negative binomial variance shrinks back to $50$ and recovers the Poisson.
+:::

@@ -1,0 +1,108 @@
+---
+title: "Quiz: cell-type annotation"
+format:
+  html:
+    toc: true
+    code-copy: true
+    code-overflow: wrap
+    highlight-style: github
+---
+
+Short questions to test your understanding of annotating single-cell clusters. Try each on paper first, then open the answer. Several are written in the style of the on-campus exam (no computer).
+
+---
+
+**Q1.** What is the difference between a **cluster** and a **cell type**?
+
+::: {.callout-tip collapse="true" title="Hint"}
+One is produced by an algorithm; the other is a biological label.
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+A **cluster** is a group of similar cells found by an unsupervised algorithm — it is just an anonymous label ("cluster 3"). A **cell type** is the biological identity (T cell, macrophage). **Annotation** is the step that attaches a cell-type name to a cluster, using marker genes or a reference.
+:::
+
+---
+
+**Q2.** In a one-vs-rest marker search, a gene has `avg_log2FC = 3`. How many-fold higher is its mean expression in the cluster than in the rest?
+
+::: {.callout-tip collapse="true" title="Hint"}
+The value is a $\log_2$; invert it.
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+$2^3 = 8$-fold higher. `avg_log2FC` is the $\log_2$ of the ratio of mean expression (cluster / rest), so exponentiate base 2 to get the fold change.
+:::
+
+---
+
+**Q3.** In a FindMarkers table, a gene for cluster 3 shows `pct.1 = 0.95` and `pct.2 = 0.08`. What do these two numbers tell you, and is this a good marker?
+
+::: {.callout-tip collapse="true" title="Hint"}
+`pct.1` is inside the cluster, `pct.2` is outside. Think sensitivity vs specificity.
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+`pct.1 = 0.95`: the gene is detected in 95% of the **cluster** cells (**sensitive** — on in almost all of them). `pct.2 = 0.08`: detected in only 8% of the **rest** (**specific** — off elsewhere). High `pct.1` with low `pct.2` is exactly the profile of a **good marker**.
+:::
+
+---
+
+**Q4.** Why is the default differential-expression test for markers the **Wilcoxon rank-sum** test rather than a t-test?
+
+::: {.callout-tip collapse="true" title="Hint"}
+Think about the distribution of single-cell counts — are they Gaussian?
+
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+Single-cell expression is **sparse, skewed, and overdispersed** (count data, not Gaussian — recall the negative-binomial story). The Wilcoxon rank-sum test is **non-parametric**: it only asks whether one group ranks systematically higher, so it does not assume normality and is robust to the many zeros and the long tail.
+:::
+
+---
+
+**Q5.** A cluster's `p_val_adj` for its top gene is essentially $0$, yet you are told a tiny p-value alone does **not** confirm a marker. Why not?
+
+::: {.callout-tip collapse="true" title="Hint"}
+How many cells are in the test, and what does that do to p-values?
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+With thousands of cells per group, even a **biologically trivial** difference becomes statistically significant, so almost every gene gets a tiny p-value. Significance must be paired with **effect size** (`avg_log2FC`) and **detection** (`pct.1` high, `pct.2` low). The p-value says the difference is real; the fold change and pct columns say whether it is *useful* as a marker. (The p-value is also **adjusted** for multiple testing because ~20 000 genes are tested per cluster.)
+:::
+
+---
+
+**Q6.** You find a small cluster that expresses both `CD3D` (a T-cell marker) and `MS4A1` (a B-cell marker) at high level. What is the most likely explanation, and what should you do?
+
+::: {.callout-tip collapse="true" title="Hint"}
+Two exclusive lineages in "one cell." What could put two cells' RNA together?
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+Most likely a **doublet** cluster — droplets that captured two cells (a T cell and a B cell), whose profile is the *sum* of both types. Do **not** call a new "T/B hybrid" type. Run a doublet detector (`scDblFinder`, `DoubletFinder`), remove flagged cells, and re-check. Co-expression of two lineages' exclusive markers is a doublet until proven otherwise.
+:::
+
+---
+
+**Q7.** Contrast **manual (marker-based)** and **reference-based** annotation. Give one strength of each and the main weakness of reference-based annotation.
+
+::: {.callout-tip collapse="true" title="Hint"}
+Where does each get its knowledge — a curated marker list, or a labelled dataset?
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+**Manual**: match a cluster's markers to curated signatures — transparent and encodes expert knowledge, good for novel or unusual tissue, but slow and subjective. **Reference-based** (e.g. `SingleR`, `Azimuth`, `CellTypist`): copy labels from a labelled atlas by similarity (correlation) to reference profiles — fast, consistent, per-cell. Its **main weakness**: it is only as good as the reference — a cell type **absent from the reference** cannot be labelled correctly and will be forced onto the nearest wrong label. In practice the two are combined.
+:::
+
+---
+
+**Q8.** In a developing tissue, cells lie on a smooth gradient from progenitor to mature. What is the danger of forcing them into discrete cluster labels, and what alternative better matches the biology?
+
+::: {.callout-tip collapse="true" title="Hint"}
+Is identity here a set of boxes or a continuum?
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+Clustering **discretises** what is really a **continuum**, so the boundaries — and therefore the "types" — are partly arbitrary and can be artefacts of where the algorithm cut the gradient. A **trajectory / pseudotime** analysis, which orders cells along the continuous developmental axis instead of boxing them, is truer to the biology. (Activation states and the cell cycle are other continuous states that resist discrete labels.)
+:::

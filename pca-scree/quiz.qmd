@@ -1,0 +1,126 @@
+---
+title: "Quiz: choosing components & pitfalls"
+format:
+  html:
+    toc: true
+    code-copy: true
+    code-overflow: wrap
+    highlight-style: github
+---
+
+Short questions to test your understanding of how many principal components to keep, and how PCA can mislead. Try each on paper first, then open the answer. Several are written in the style of the on-campus exam (no computer).
+
+---
+
+**Q1.** A `prcomp` object reports `sdev = c(3, 2, 1)`. What is the proportion of variance explained by PC1?
+
+::: {.callout-tip collapse="true" title="Hint"}
+`sdev` is a **standard deviation** — the eigenvalue (variance) is its square. PVE is one eigenvalue divided by the sum of all of them.
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+Eigenvalues are $3^2, 2^2, 1^2 = 9, 4, 1$, summing to 14. So PVE$_1 = 9/14 \approx 0.64$, i.e. about **64%**. (A common slip is to use `sdev` directly, $3/6=0.5$ — wrong, because you must square first.)
+:::
+
+---
+
+**Q2.** In one sentence, what is the difference between the **scree/elbow** rule and the **cumulative-variance threshold** rule for choosing the number of PCs?
+
+::: {.callout-tip collapse="true" title="Hint"}
+One is read by eye off a plot; the other is a fixed cut-off on a running total.
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+The **elbow** rule keeps the PCs before the scree plot flattens (an eyeballed, sometimes ambiguous judgement), while the **threshold** rule keeps the smallest number of PCs whose **cumulative** PVE reaches a chosen target (e.g. 90%) — reproducible, but with an arbitrary threshold. Both are heuristics.
+:::
+
+---
+
+**Q3.** The **Kaiser criterion** keeps PCs with eigenvalue $> 1$. Why does this cut-off only make sense for a PCA of **standardised** data (`scale. = TRUE`)?
+
+::: {.callout-tip collapse="true" title="Hint"}
+After standardising, what is the variance of each original feature, and what do the eigenvalues therefore average to?
+
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+Standardising sets every feature's variance to 1, so the eigenvalues (which sum to the number of features $p$) **average to exactly 1**. Then "$\lambda>1$" means "this PC captures more than an average single feature's worth of variance," a meaningful bar. On raw covariance eigenvalues, whose scale depends on the data's units, the number 1 has no special meaning. (Note Kaiser also tends to **over-retain** components.)
+:::
+
+---
+
+**Q4.** PCA of a dataset with two known tumour subtypes separates the subtypes cleanly, but only on **PC6** (3% of variance), not on PC1–PC2. Did the PCA fail? What does this illustrate?
+
+::: {.callout-tip collapse="true" title="Hint"}
+Does PCA ever look at your group labels? What does it actually maximise?
+
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+No, the PCA did exactly its job. PCA is **unsupervised**: it ranks directions by **variance** and never sees the labels. So the largest-variance axis need not be the biologically interesting one — here the subtype contrast is real but small, buried under larger nuisance variation. To find the axis that best **separates** known groups, use a **supervised** method such as the **OPLS model** (this block) or LDA.
+:::
+
+---
+
+**Q5.** You colour a PCA score plot by biological group and see no structure; colouring the same plot by **sequencing run** splits the samples perfectly along PC1. What is PC1 capturing, and why did it end up first?
+
+::: {.callout-tip collapse="true" title="Hint"}
+Technical variation can be larger than biological variation. What does PCA sort components by?
+
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+PC1 is capturing a **batch effect** (the technical difference between sequencing runs), not biology. It lands on PC1 because the batch effect is **large** — often larger than the biological signal — and PCA orders components by variance, so the biggest source of variation comes first. Fixes: **randomise** samples across batches by design, apply **batch correction** (single-cell block), and always colour scores by technical variables before interpreting.
+:::
+
+---
+
+**Q6.** True or false: running `prcomp(X, scale. = TRUE)` versus `prcomp(X, scale. = FALSE)` can give you different principal components and a different scree plot. Briefly justify.
+
+::: {.callout-tip collapse="true" title="Hint"}
+`scale. = FALSE` decomposes the covariance matrix; `scale. = TRUE` decomposes the correlation matrix. Are those the same matrix?
+
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+**True.** With `scale. = FALSE` PCA decomposes the **covariance** matrix (high-variance features dominate); with `scale. = TRUE` it decomposes the **correlation** matrix (every feature standardised to variance 1, all weighted equally). These are different matrices, so the eigenvectors, eigenvalues, and hence the scree plot differ. Scaling is a real modelling choice — standardise when features are on different scales/units, and always report which you used.
+:::
+
+---
+
+**Q7.** In a score plot, one sample sits far from a tight cluster of all the others along PC1, which "explains 50% of the variance." What is the likely explanation, and what should you check?
+
+::: {.callout-tip collapse="true" title="Hint"}
+Variance is dominated by large deviations. What is the largest deviation in this plot?
+
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+Almost certainly an **outlier** — a technical failure, mislabel, or contamination — that is single-handedly defining PC1 (its large deviation dominates the variance). Before interpreting PC1, **investigate that sample** (QC metrics, metadata), decide whether it is a genuine biological extreme or an artefact, and **re-run the PCA without it** to see how much PC1 changes. A "PC1" that is really one point's variance is not describing your population.
+:::
+
+---
+
+**Q8.** PCA struggles to summarise data lying on a **curved** manifold (e.g. a developmental trajectory). Why, and what kind of method is designed for such structure?
+
+::: {.callout-tip collapse="true" title="Hint"}
+What shape is a principal component — a straight line or a curve?
+
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+Every principal component is a **linear combination** of the features — a **straight** axis — so PCA can only capture **linear** structure. A curved trajectory has no good straight axis, so PCA flattens it or spreads it across many PCs. **Non-linear** embeddings such as **UMAP** (or t-SNE), which preserve **local** neighbourhoods, are built for this; you meet UMAP in the single-cell block (usually run on the top PCs, so today's "how many PCs" choice still matters). Note UMAP is for *seeing* structure, not measuring it — inter-cluster distances on a UMAP are not meaningful.
+:::
+
+---
+
+**Q9.** In one sentence: what does **ICA** seek that ordinary PCA does not, and when does that difference actually matter?
+
+::: {.callout-tip collapse="true" title="Hint"}
+PCA components are uncorrelated. Is "uncorrelated" the same as "independent"?
+
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+**ICA** seeks components that are **statistically independent** (a stronger condition than PCA's mere lack of **correlation**), which matters for **non-Gaussian** signals — for Gaussian data, uncorrelated already implies independent, so ICA adds nothing there. In biology this can, for example, separate overlapping transcriptional programmes that PCA would blend.
+:::
