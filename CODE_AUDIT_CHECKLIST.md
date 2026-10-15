@@ -79,10 +79,11 @@ Mark an item complete only after a reviewer has checked every executable chunk f
 - [x] `scrna-intro/lec.qmd`
 - [x] `scrna-umap/exercise.qmd`
 - [x] `scrna-umap/lec.qmd`
-- [x] `solving-systems-r/exercise.qmd`
-- [x] `solving-systems-r/lec.qmd`
+- [ ] `solving-systems-r/exercise.qmd` — 2026-10-15: rank replaces det as the singularity check (det now bonus); needs re-audit
+- [ ] `solving-systems-r/lec.qmd` — 2026-10-15: rank replaces det as the singularity check (det now bonus); needs re-audit
 - [ ] `solving-systems/exercise.qmd` — inverse via [A | I] added 2026-10-15, needs re-audit
 - [ ] `solving-systems/lec.qmd` — inverse via [A | I] added 2026-10-15, needs re-audit
+- [ ] `solving-systems/quiz.qmd` — 2026-10-15: Q12 added (2×2 inverse by row-reducing [A | I]); needs re-audit
 - [x] `vectors-projection/exercise.qmd`
 - [x] `vectors-projection/lec.qmd`
 - [x] `warmups/01-matrix-anatomy-and-arithmetic.qmd`
@@ -93,7 +94,7 @@ Mark an item complete only after a reviewer has checked every executable chunk f
 - [x] `warmups/06-solving-3x3.qmd`
 - [x] `warmups/07-determinants.qmd`
 - [ ] `warmups/08-inverse-2x2.qmd` — rewritten 2026-10-15 (inverse via [A | I] row reduction; det formula now bonus); R chunk re-run, needs re-audit
-- [x] `warmups/09-mixed-drills.qmd`
+- [ ] `warmups/09-mixed-drills.qmd` — 2026-10-15: inverses via [A | I] row reduction, drill 9 via parallel columns (det bonus); needs re-audit
 
 ## Build and presentation code
 

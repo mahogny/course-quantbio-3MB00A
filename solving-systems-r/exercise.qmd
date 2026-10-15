@@ -45,7 +45,8 @@ $n$ columns (cell types / unknowns):
 Two key facts:
 
 - $A$ (square) is **singular** when one equation is a combination of the others
-  — it carries no new information. Then $\det A = 0$.
+  — it carries no new information. Its columns are then not independent, and
+  `solve()` stops with an error. (Bonus, not for exam: then $\det A = 0$.)
 - The **rank** of $A$ is the number of genuinely independent equations. Full
   rank ($=n$) with a square $A$ is exactly the unique-solution case.
 
@@ -119,12 +120,11 @@ distinguish them.
 
 ```r
 A_bc <- matrix(c(1, 1, 2, 2), nrow = 2, byrow = TRUE)
-det(A_bc)        # ~0  -> singular, so NOT a unique-solution system
 qr(A_bc)$rank    # 1   -> only one independent equation (of 2 unknowns)
+det(A_bc)        # 0   -> bonus: the same verdict from the determinant
 ```
 
-Use [`det`](https://rdrr.io/r/base/det.html),
-[`qr`](https://rdrr.io/r/base/qr.html)`$rank`, and
+Use [`qr`](https://rdrr.io/r/base/qr.html)`$rank` and
 [`dim`](https://rdrr.io/r/base/dim.html) to characterise a system *before*
 trying to solve it.
 
@@ -259,14 +259,14 @@ solve(matrix(c(1, 1, 1, -1), 2, byrow = TRUE), c(4, 0))   # 2 2
 ```
 
 **Step 3 — diagnostics.** For the (b)/(c) matrix, row 2 is $2\times$ row 1, so
-the determinant is $1\cdot2 - 1\cdot2 = 0$ and only **one** of the two rows is
-independent (rank 1). Rank $1 < 2$ unknowns confirms the system is **not**
+only **one** of the two rows is independent (rank 1). (Bonus: the
+determinant is $1\cdot2 - 1\cdot2 = 0$.) Rank $1 < 2$ unknowns confirms the system is **not**
 unique without even attempting to solve it.
 
 ```r
 A_bc <- matrix(c(1, 1, 2, 2), nrow = 2, byrow = TRUE)
-det(A_bc)        # 0
 qr(A_bc)$rank    # 1   (< 2 unknowns -> not unique)
+det(A_bc)        # 0   (bonus)
 ```
 
 **Step 4 — over-determined system, least squares.** $A$ is $5\times 2$ (tall),
