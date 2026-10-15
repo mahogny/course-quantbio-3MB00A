@@ -458,14 +458,18 @@ u_p &amp;\sim \text{Normal}(0,\ \sigma_{\text{patient}}) &amp;&amp;\text{(betwee
 <p>One <code>brms</code> call expresses the entire model; it writes and compiles a Stan program under the hood (the R-STAN unit).</p>
 <div class="sourceCode" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(brms)</span>
 <span id="cb3-2"><a aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-3"><a aria-hidden="true" tabindex="-1"></a>fit <span class="ot">&lt;-</span> <span class="fu">brm</span>(</span>
-<span id="cb3-4"><a aria-hidden="true" tabindex="-1"></a>  count <span class="sc">~</span> treatment <span class="sc">+</span> age_c <span class="sc">+</span> <span class="fu">offset</span>(log_exp) <span class="sc">+</span> (<span class="dv">1</span> <span class="sc">|</span> patient),</span>
-<span id="cb3-5"><a aria-hidden="true" tabindex="-1"></a>  <span class="at">data    =</span> dat,</span>
-<span id="cb3-6"><a aria-hidden="true" tabindex="-1"></a>  <span class="at">family  =</span> <span class="fu">negbinomial</span>(),        <span class="co"># log link + dispersion phi</span></span>
-<span id="cb3-7"><a aria-hidden="true" tabindex="-1"></a>  <span class="at">prior   =</span> priors,               <span class="co"># from the previous slide</span></span>
-<span id="cb3-8"><a aria-hidden="true" tabindex="-1"></a>  <span class="at">chains  =</span> <span class="dv">4</span>, <span class="at">iter =</span> <span class="dv">2000</span>, <span class="at">warmup =</span> <span class="dv">1000</span>,</span>
-<span id="cb3-9"><a aria-hidden="true" tabindex="-1"></a>  <span class="at">cores   =</span> <span class="dv">4</span>, <span class="at">seed =</span> <span class="dv">1</span></span>
-<span id="cb3-10"><a aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb3-3"><a aria-hidden="true" tabindex="-1"></a><span class="co"># Centre age before using it in the formula; this makes the intercept the</span></span>
+<span id="cb3-4"><a aria-hidden="true" tabindex="-1"></a><span class="co"># baseline log-rate at the average age.</span></span>
+<span id="cb3-5"><a aria-hidden="true" tabindex="-1"></a>dat<span class="sc">$</span>age_c <span class="ot">&lt;-</span> dat<span class="sc">$</span>age <span class="sc">-</span> <span class="fu">mean</span>(dat<span class="sc">$</span>age)</span>
+<span id="cb3-6"><a aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-7"><a aria-hidden="true" tabindex="-1"></a>fit <span class="ot">&lt;-</span> <span class="fu">brm</span>(</span>
+<span id="cb3-8"><a aria-hidden="true" tabindex="-1"></a>  count <span class="sc">~</span> treatment <span class="sc">+</span> age_c <span class="sc">+</span> <span class="fu">offset</span>(log_exp) <span class="sc">+</span> (<span class="dv">1</span> <span class="sc">|</span> patient),</span>
+<span id="cb3-9"><a aria-hidden="true" tabindex="-1"></a>  <span class="at">data    =</span> dat,</span>
+<span id="cb3-10"><a aria-hidden="true" tabindex="-1"></a>  <span class="at">family  =</span> <span class="fu">negbinomial</span>(),        <span class="co"># log link + dispersion phi</span></span>
+<span id="cb3-11"><a aria-hidden="true" tabindex="-1"></a>  <span class="at">prior   =</span> priors,               <span class="co"># from the previous slide</span></span>
+<span id="cb3-12"><a aria-hidden="true" tabindex="-1"></a>  <span class="at">chains  =</span> <span class="dv">4</span>, <span class="at">iter =</span> <span class="dv">2000</span>, <span class="at">warmup =</span> <span class="dv">1000</span>,</span>
+<span id="cb3-13"><a aria-hidden="true" tabindex="-1"></a>  <span class="at">cores   =</span> <span class="dv">4</span>, <span class="at">seed =</span> <span class="dv">1</span></span>
+<span id="cb3-14"><a aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <ul>
 <li><code>treatment + age_c</code> are the fixed effects; <code>offset(log_exp)</code> is the exposure term.</li>
 <li><code>(1 | patient)</code> is the per-patient random intercept — the hierarchy.</li>

@@ -24,14 +24,14 @@ In Matrices as transformations, a matrix is a **function** that moves vectors ar
 
 - Most vectors get **rotated** by a matrix. A few special ones only get **scaled** — those are **eigenvectors**.
 - The amount of scaling is the **eigenvalue** $\lambda$, and the whole idea is one equation: $A\mathbf{v} = \lambda\mathbf{v}$.
-- How to find them **by hand** for a $2\times2$: the **characteristic equation** $\det(A - \lambda I) = 0$.
+- How to find them **by hand** in the cases that matter: **check** a candidate, **read** a diagonal or triangular matrix, the **symmetric** $2\times2$ pattern, and **geometry**. Everything else: `eigen()` in R.
 - Why **symmetric** matrices (like a covariance matrix) are special: **real** eigenvalues, **orthogonal** eigenvectors.
 - Biology: the eigenvectors of a covariance matrix point along the **main axes of variation** in a dataset — the seed of PCA (in the Applications block).
 
-This is a **concept** day. The exam will ask you to find eigenvalues by hand, so practise the pen-and-paper recipe.
+This is a **concept** day. The exam asks you to check and find eigenvectors by hand in these simple cases, so practise them on paper. No determinants are needed (the classic determinant recipe is a bonus at the end).
 
 ::: notes
-The single mental image for today: a transformation grabs the plane and distorts it, but a couple of special directions don't get knocked off their line — they only get longer or shorter. Those are eigenvectors. Everything else (the characteristic equation, symmetric matrices, the PCA preview) hangs off that one picture. Tell students this is the most exam-heavy by-hand skill of the whole block, so the goal today is to make the recipe automatic. Keep an R session open for the demos but emphasise this is concept day, R fluency comes in Eigenvalues in R.
+The single mental image for today: a transformation grabs the plane and distorts it, but a couple of special directions don't get knocked off their line — they only get longer or shorter. Those are eigenvectors. (Students have seen this literally in Transforming images with matrices: the gallery slide where 2 × 2 matrices stretch, shear and rotate a micrograph of a cell — e.g. under the shear, the x-axis is such a special direction.) Everything else (the by-hand checks, symmetric matrices, the PCA preview) hangs off that one picture. The examinable skills are deliberately determinant-free: multiply A by a candidate and see whether it only scales, read eigenvalues off diagonal and triangular matrices, use the symmetric [[a, b], [b, a]] pattern, and reason geometrically. The characteristic equation det(A - lambda I) = 0 is kept as bonus slides after the Summary, for those who want to see where eigenvalues come from in general. Keep an R session open for the demos but emphasise this is concept day, R fluency comes in Eigenvalues in R.
 :::
 
 ## A biology picture first {.smaller}
@@ -103,107 +103,89 @@ $$A(2\mathbf{v}) = 2(A\mathbf{v}) = 2(\lambda\mathbf{v}) = \lambda(2\mathbf{v})$
 A frequent source of confusion: students compute (2,2) and panic because R reported (0.707, 0.707). They are the SAME eigenvector — the same direction, different length. Make this explicit now so it doesn't bite in Eigenvalues in R. The takeaway: an eigenvector is really an eigen-line; we scale it to whatever length is convenient. By hand, pick small integers; R normalises to length 1. Both are correct.
 :::
 
-## Finding eigenvalues: the characteristic equation {.smaller}
+## Test a candidate: just multiply {.smaller}
 
-Start from $A\mathbf{v} = \lambda\mathbf{v}$. Move everything to one side (write $\lambda\mathbf{v} = \lambda I\mathbf{v}$ so the shapes match):
+To check whether a given $\mathbf v$ is an eigenvector, compute $A\mathbf v$ and ask: **is the output a multiple of the input?**
 
-$$A\mathbf{v} - \lambda I\mathbf{v} = \mathbf{0} \quad\Longrightarrow\quad (A - \lambda I)\mathbf{v} = \mathbf{0}$$
+With $A = \begin{pmatrix} 2 & 1 \\ 1 & 2 \end{pmatrix}$:
 
-We need a **nonzero** $\mathbf{v}$ that the matrix $(A-\lambda I)$ sends to zero. A matrix can only crush a nonzero vector to zero if it is **singular** — i.e. its determinant is zero:
+- $\mathbf v = (1, -1)$: $\ A\mathbf v = (2-1,\ 1-2) = (1, -1) = 1\cdot\mathbf v$. **Yes**, eigenvector with $\lambda = 1$.
+- $\mathbf v = (1, 2)$: $\ A\mathbf v = (2+2,\ 1+4) = (4, 5)$. Is $(4, 5) = \lambda(1, 2)$? It would need $\lambda = 4$ **and** $\lambda = 2.5$. **No.**
 
-$$\boxed{\ \det(A - \lambda I) = 0\ }$$
-
-This is the **characteristic equation**. Solving it gives the eigenvalues $\lambda$.
-
-::: notes
-This derivation is worth doing slowly because it explains WHERE the determinant condition comes from — it is not magic. Key logical step: (A - lambda I) v = 0 with v nonzero means the matrix has a nontrivial null space, which means it is not invertible, which means det = 0. Students met determinants and singular matrices in Linear systems by hand and Linear systems in R (when a system has non-unique solutions), so lean on that. The lambda I insertion (rather than just lambda) is the technical detail that trips people up: you subtract lambda from the diagonal.
-:::
-
-## The determinant of a $2\times2$ {.smaller}
-
-For a $2\times2$ matrix the determinant is a single easy formula:
-
-$$\det\begin{pmatrix} a & b \\ c & d \end{pmatrix} = ad - bc$$
-
-To build $A - \lambda I$, **subtract $\lambda$ from each diagonal entry**:
-
-$$A - \lambda I = \begin{pmatrix} a & b \\ c & d \end{pmatrix} - \begin{pmatrix} \lambda & 0 \\ 0 & \lambda \end{pmatrix} = \begin{pmatrix} a-\lambda & b \\ c & d-\lambda \end{pmatrix}$$
-
-So the characteristic equation is:
-
-$$\det(A - \lambda I) = (a-\lambda)(d-\lambda) - bc = 0$$
-
-a **quadratic in $\lambda$** — solve it like any quadratic.
-
-![](fig07-det-2x2.svg){width="70%" fig-align="center"}
+The eigenvalue is read off by comparing entries: $\lambda = (A\mathbf v)_1 / v_1 = (A\mathbf v)_2 / v_2$. Both ratios must agree.
 
 ::: notes
-Two mechanical facts they must memorise for the exam: det of a 2x2 is ad - bc, and A - lambda*I just subtracts lambda from the two diagonal entries (off-diagonals untouched). Multiplying out (a-lambda)(d-lambda) - bc always gives a quadratic in lambda, so finding 2x2 eigenvalues is always "set up a quadratic, solve it." Reassure them they already know how to solve quadratics — factor or use the formula. The next slide does a full worked example.
+This is the most basic and most useful by-hand skill: no formulas, only one matrix-vector product. The test is "same ratio in every entry". Watch out for zero entries in v: if v_1 = 0, then (Av)_1 must also be 0. In R this is A %*% v compared with lambda * v.
 :::
 
-## Worked example: eigenvalues by hand {.smaller}
+## Eigenvalues you can read off {.smaller}
 
-$$A = \begin{pmatrix} 2 & 1 \\ 1 & 2 \end{pmatrix}$$
+**Diagonal** matrix: each axis is only scaled, so the axes are the eigenvectors and the diagonal entries are the eigenvalues.
 
-$$\det(A - \lambda I) = (2-\lambda)(2-\lambda) - (1)(1) = \lambda^2 - 4\lambda + 4 - 1 = \lambda^2 - 4\lambda + 3$$
+$$\begin{pmatrix} 4 & 0 \\ 0 & 2 \end{pmatrix}: \quad \lambda = 4 \text{ for } (1,0), \qquad \lambda = 2 \text{ for } (0,1)$$
 
-Set to zero and factor:
+**Triangular** matrix (zeros below **or** above the diagonal): the eigenvalues are still the **diagonal entries**.
 
-$$\lambda^2 - 4\lambda + 3 = (\lambda - 3)(\lambda - 1) = 0 \quad\Longrightarrow\quad \lambda_1 = 3,\ \lambda_2 = 1$$
+$$A = \begin{pmatrix} 3 & 1 \\ 0 & 2 \end{pmatrix}: \quad \lambda = 3 \text{ and } \lambda = 2$$
 
-Two eigenvalues: **3** (we already saw the $(1,1)$ direction stretched by 3) and **1**.
+- One eigenvector comes for free: $A(1, 0) = (3, 0) = 3\,(1, 0)$.
+- The other is found on the next slide.
 
 ::: notes
-Walk every algebraic step on screen: expand (2-lambda)^2, subtract the bc term (1*1=1), collect into lambda^2 - 4 lambda + 3, factor into (lambda-3)(lambda-1). Land on lambda = 3 and lambda = 1, and immediately connect lambda=3 back to the (1,1)->(3,3) demo from earlier so the abstract root has a concrete meaning. This is the canonical exam problem; tell students to reproduce it from memory tonight. Sanity checks (next slide) catch arithmetic slips.
+Why the diagonal works for triangular matrices: A(1,0) is the first column, (3, 0), which is a multiple of (1,0), so the x-axis is an eigenvector with the top-left entry as eigenvalue. The other diagonal entry is also an eigenvalue (we take that as a rule here; the bonus slides show why). The shear from Transforming images with matrices, [[1, 0.5], [0, 1]], is triangular: its eigenvalue is 1 (twice), and the x-axis is its only eigen-direction.
 :::
 
-## Two sanity checks (trace and determinant) {.smaller}
+## Finding the eigenvector for a known $\lambda$ {.smaller}
 
-Before trusting your eigenvalues, check them against $A = \begin{pmatrix} 2 & 1 \\ 1 & 2 \end{pmatrix}$:
+Once you know $\lambda$, the eigenvector is a small linear system. Start from $A\mathbf{v} = \lambda\mathbf{v}$ and move everything to one side (write $\lambda\mathbf{v} = \lambda I\mathbf{v}$ so the shapes match):
 
-- **Sum** of eigenvalues = **trace** (sum of the diagonal): $3 + 1 = 4 = 2 + 2$. ✓
-- **Product** of eigenvalues = **determinant** of $A$: $3 \times 1 = 3 = (2)(2) - (1)(1)$. ✓
+$$(A - \lambda I)\mathbf{v} = \mathbf{0}, \qquad A - \lambda I = \text{$A$ with $\lambda$ subtracted from each diagonal entry.}$$
 
-These two checks catch most arithmetic mistakes for free — use them on the exam.
+For $A = \begin{pmatrix} 3 & 1 \\ 0 & 2 \end{pmatrix}$ and $\lambda = 2$:
+
+$$A - 2I = \begin{pmatrix} 1 & 1 \\ 0 & 0 \end{pmatrix}$$
+
+Row 1 says $v_1 + v_2 = 0$, i.e. $v_2 = -v_1$. Pick $v_1 = 1$: $\ \mathbf v = (1, -1)$.
+
+**Verify:** $A(1,-1) = (3-1,\ 0-2) = (2, -2) = 2\,(1,-1)$. ✓
 
 ::: notes
-These checks are cheap insurance and examiners love them. Trace = sum of diagonal = sum of eigenvalues; det = product of eigenvalues. If a student's two roots don't add to the trace, they made an arithmetic error and should redo it. Have them verify on the worked example: 3+1 = 4 = trace, 3*1 = 3 = det. Encourage building this reflex.
+Subtract lambda from the diagonal only, off-diagonals untouched. For an eigenvalue the two rows of A - lambda I always say the same thing (or one of them is all zeros), so one row gives the relation between v1 and v2. There is a free choice of scale (the whole line is special); pick the simplest integers. Always verify by multiplying: it is the cheapest check there is. This is the same row reasoning as in Linear systems by hand.
 :::
 
-## Finding the eigenvector for each $\lambda$ {.smaller}
+## The symmetric $2\times2$ pattern {.smaller}
 
-Plug each eigenvalue back into $(A - \lambda I)\mathbf{v} = \mathbf{0}$ and solve for $\mathbf{v}$.
+For a symmetric matrix with **equal diagonal entries**, the eigenvectors are always the two diagonals of the plane:
 
-For $\lambda = 3$ with $A = \begin{pmatrix} 2 & 1 \\ 1 & 2 \end{pmatrix}$:
+$$A = \begin{pmatrix} a & b \\ b & a \end{pmatrix}: \qquad A\begin{pmatrix}1\\1\end{pmatrix} = (a+b)\begin{pmatrix}1\\1\end{pmatrix}, \qquad A\begin{pmatrix}1\\-1\end{pmatrix} = (a-b)\begin{pmatrix}1\\-1\end{pmatrix}$$
 
-$$A - 3I = \begin{pmatrix} 2-3 & 1 \\ 1 & 2-3 \end{pmatrix} = \begin{pmatrix} -1 & 1 \\ 1 & -1 \end{pmatrix}$$
-
-Row 1 says $-v_1 + v_2 = 0$, i.e. $v_2 = v_1$. Pick $v_1 = 1$:
-
-$$\mathbf{v}_1 = \begin{pmatrix} 1 \\ 1 \end{pmatrix} \quad\text{(eigenvector for } \lambda = 3\text{)}$$
-
-::: notes
-The mechanics: substitute the eigenvalue, write out the (now singular) matrix, and read off the relationship between v1 and v2 from any one row — the rows are redundant precisely because the determinant is zero. Here -v1 + v2 = 0 gives v2 = v1, so (1,1). Stress that there is a free choice of scale (the line again); pick the simplest integers. Verify on the spot: A(1,1) = (3,3) = 3(1,1). Next slide does lambda = 1.
-:::
-
-## The second eigenvector {.smaller}
-
-For $\lambda = 1$ with $A = \begin{pmatrix} 2 & 1 \\ 1 & 2 \end{pmatrix}$:
-
-$$A - 1\cdot I = \begin{pmatrix} 1 & 1 \\ 1 & 1 \end{pmatrix}$$
-
-Row 1 says $v_1 + v_2 = 0$, i.e. $v_2 = -v_1$. Pick $v_1 = 1$:
-
-$$\mathbf{v}_2 = \begin{pmatrix} 1 \\ -1 \end{pmatrix} \quad\text{(eigenvector for } \lambda = 1\text{)}$$
-
-**Verify:** $A\begin{pmatrix}1\\-1\end{pmatrix} = \begin{pmatrix}2-1\\1-2\end{pmatrix} = \begin{pmatrix}1\\-1\end{pmatrix} = 1\cdot\mathbf{v}_2$. ✓
+For our $A = \begin{pmatrix} 2 & 1 \\ 1 & 2 \end{pmatrix}$: $\lambda_1 = 2 + 1 = 3$ for $(1,1)$ and $\lambda_2 = 2 - 1 = 1$ for $(1,-1)$.
 
 Notice: $\mathbf{v}_1\cdot\mathbf{v}_2 = (1)(1) + (1)(-1) = 0$ — the two eigenvectors are **orthogonal**!
 
-![](fig11-orthogonal-eigvecs.svg){width="50%" fig-align="center"}
+![](fig11-orthogonal-eigvecs.svg){width="45%" fig-align="center"}
 
 ::: notes
-Repeat the recipe for the second eigenvalue and always verify by plugging back into A v = lambda v — this is the cheapest possible check and an exam habit worth drilling. Then highlight the punchline: the dot product of the two eigenvectors is zero, so they are perpendicular. This is not a coincidence; it happens because A is symmetric, which is the topic of the next slide and the bridge to covariance/PCA.
+Prove the pattern on the board by multiplying: A(1,1) = (a+b, b+a) and A(1,-1) = (a-b, b-a) = (a-b)(1,-1). Nothing to memorise beyond "the diagonals of the plane". Many covariance matrices of two equally variable, correlated variables have exactly this form, so it covers a lot of exam-style examples. Then highlight the punchline: the dot product is zero, so the eigenvectors are perpendicular. This is not a coincidence; it happens because A is symmetric (next slides).
+:::
+
+## Eigenvectors you can see {.smaller}
+
+Think about what the matrix **does**; the directions it leaves on their own line are the eigenvectors.
+
+| Matrix | What it does | Eigenvectors and eigenvalues |
+|---|---|---|
+| $\begin{pmatrix} 1 & 0 \\ 0 & 0 \end{pmatrix}$ | projects onto the x-axis | $(1,0)$: $\lambda = 1$ (kept); $\ (0,1)$: $\lambda = 0$ (squashed) |
+| $\begin{pmatrix} 0 & 1 \\ 1 & 0 \end{pmatrix}$ | mirrors in the line $y = x$ | $(1,1)$: $\lambda = 1$ (on the mirror); $\ (1,-1)$: $\lambda = -1$ (flipped) |
+| $\begin{pmatrix} 1 & 0.5 \\ 0 & 1 \end{pmatrix}$ | shear | $(1,0)$: $\lambda = 1$; no other direction |
+| $\begin{pmatrix} 0 & -1 \\ 1 & 0 \end{pmatrix}$ | rotates $90^\circ$ | **none**: every direction is turned |
+
+**Check your answer:** the eigenvalues always **add up to the trace** (sum of the diagonal). For $\begin{pmatrix} 2 & 1 \\ 1 & 2 \end{pmatrix}$: $3 + 1 = 4 = 2 + 2$. ✓
+
+For any other matrix: let R do it with `eigen()` (Eigenvalues in R).
+
+::: notes
+Geometry first, algebra second: a projection keeps the line it projects onto (lambda 1) and kills the perpendicular direction (lambda 0); a mirror keeps the mirror line (1) and flips the perpendicular one (-1); a shear keeps only the x-axis; a rotation keeps nothing. Each can be verified by one multiplication. The trace check catches arithmetic slips for free: projection 1 + 0 = 1 = trace, mirror 1 + (-1) = 0 = trace. The examinable toolbox is now complete; general matrices are for eigen() in R. The determinant recipe is in the bonus slides at the end.
 :::
 
 ## Symmetric matrices are special {.smaller}
@@ -260,15 +242,57 @@ A short tour of the edge cases so they aren't surprised: a scalar multiple of th
 | Eigenvector | direction $A$ only **scales**, never rotates |
 | Eigen relation | $A\mathbf{v} = \lambda\mathbf{v}$ ($\mathbf{v}\neq\mathbf{0}$) |
 | Eigenvalue | the scaling factor $\lambda$ |
-| Find $\lambda$ (2×2) | solve $\det(A-\lambda I)=0$ — a quadratic |
-| $\det$ of 2×2 | $ad - bc$ |
-| Find $\mathbf{v}$ | solve $(A-\lambda I)\mathbf{v}=\mathbf{0}$, pick nice scale |
-| Checks | $\sum\lambda$ = trace, $\prod\lambda$ = det |
+| Test a candidate | compute $A\mathbf{v}$: a multiple of $\mathbf{v}$? |
+| Diagonal / triangular | eigenvalues = diagonal entries |
+| Symmetric $\begin{pmatrix} a & b \\ b & a \end{pmatrix}$ | $(1,1)$: $a+b$; $\ (1,-1)$: $a-b$ |
+| Find $\mathbf{v}$ for known $\lambda$ | solve $(A-\lambda I)\mathbf{v}=\mathbf{0}$, pick nice scale |
+| Check | $\sum\lambda$ = trace |
 | Symmetric $A$ | real eigenvalues, **orthogonal** eigenvectors |
 | Biology | eigenvectors of covariance = axes of variation (PCA engine) |
 
 **Next (Eigenvalues in R):** compute all of this in R with [`eigen`](https://rdrr.io/r/base/eigen.html).
 
 ::: notes
-The summary is the exam cheat-sheet. Drill the by-hand pipeline one more time verbally: subtract lambda from the diagonal, take ad-bc, solve the quadratic, plug each lambda back to get the eigenvector, verify and use the trace/det checks. Remind them symmetric = real + orthogonal, and that covariance matrices are the biological payoff. Preview Eigenvalues in R: eigen() does all the arithmetic instantly, but they must still understand the output, which only makes sense if today's concepts are solid.
+The summary is the exam cheat-sheet. Drill the by-hand toolbox one more time verbally: test a candidate by multiplying, read diagonal/triangular matrices, use the symmetric pattern, reason geometrically, find v for a known lambda from (A - lambda I) v = 0, and check with the trace. No determinants needed; the bonus slides after this one show the general determinant recipe for those who want it. Remind them symmetric = real + orthogonal, and that covariance matrices are the biological payoff. Preview Eigenvalues in R: eigen() does all the arithmetic instantly, but they must still understand the output, which only makes sense if today's concepts are solid.
+:::
+
+## Bonus: the characteristic equation (not for exam) {.smaller}
+
+Where do eigenvalues come from in general? From $(A - \lambda I)\mathbf{v} = \mathbf{0}$: we need a **nonzero** $\mathbf{v}$ that $A-\lambda I$ sends to zero. A matrix can only crush a nonzero vector to zero if it is **singular** — i.e. its determinant is zero:
+
+$$\boxed{\ \det(A - \lambda I) = 0\ }$$
+
+For a $2\times2$, $\det\begin{pmatrix} a & b \\ c & d \end{pmatrix} = ad - bc$, so
+
+$$\det(A - \lambda I) = (a-\lambda)(d-\lambda) - bc = 0,$$
+
+a **quadratic in $\lambda$**.
+
+![](fig07-det-2x2.svg){width="62%" fig-align="center"}
+
+[Bonus material: you do not need to memorise determinants for the exam.]{style="font-size: 0.8em; color: #bc4749;"}
+
+::: notes
+Bonus slide: not examined. It explains where eigenvalues come from for any matrix. Key logical step: (A - lambda I) v = 0 with v nonzero means A - lambda I is not invertible, which means det = 0 (see the bonus determinant slide in Matrices as transformations: det 0 means the plane collapses onto a line). It also explains why the triangular rule works: for a triangular matrix bc = 0, so the quadratic is (a - lambda)(d - lambda) = 0.
+:::
+
+## Bonus: a worked example (not for exam) {.smaller}
+
+$$A = \begin{pmatrix} 2 & 1 \\ 1 & 2 \end{pmatrix}$$
+
+$$\det(A - \lambda I) = (2-\lambda)(2-\lambda) - (1)(1) = \lambda^2 - 4\lambda + 3 = (\lambda - 3)(\lambda - 1) = 0$$
+
+So $\lambda_1 = 3,\ \lambda_2 = 1$ — the same as the symmetric pattern gave.
+
+Two checks:
+
+- **Sum** of eigenvalues = **trace**: $3 + 1 = 4 = 2 + 2$. ✓
+- **Product** of eigenvalues = **determinant** of $A$: $3 \times 1 = 3 = (2)(2) - (1)(1)$. ✓
+
+The same method works for matrices without a pattern, e.g. $\begin{pmatrix} 2 & 1 \\ 1 & 0 \end{pmatrix}$ gives $\lambda^2 - 2\lambda - 1 = 0$, so $\lambda = 1 \pm \sqrt 2$. A rotation gives $\lambda^2 + 1 = 0$: no real solution.
+
+[Bonus material: you do not need to memorise determinants for the exam.]{style="font-size: 0.8em; color: #bc4749;"}
+
+::: notes
+Bonus slide: not examined. Expand (2 - lambda)^2 - 1, factor, and land on 3 and 1, matching the symmetric pattern from earlier. The product = det check is only available with determinants; the sum = trace check is the examinable one. The last line shows the method's real strength: matrices with no pattern and the rotation's missing real eigenvalues. In practice, eigen() in R does this for any size.
 :::

@@ -37,7 +37,7 @@ In R, `prcomp(X, center = TRUE, scale. = TRUE)` does all of this and returns `$s
 
 **Convention:** samples are **rows**, features are **columns**. If your omics table is genes × samples, transpose it with [`t`](https://rdrr.io/r/base/t.html) first.
 
-For the by-hand part, recall that for a $2\times2$ symmetric $C$, the eigenvalues solve $\det(C - \lambda I) = 0$ (a quadratic), and $\sum\lambda = \text{trace}$, $\prod\lambda = \det C$ are handy checks.
+For the by-hand part, recall the symmetric pattern from Eigenvalues & eigenvectors: $\begin{pmatrix} a & b \\ b & a \end{pmatrix}$ has eigenvectors $(1,1)$ with $\lambda = a+b$ and $(1,-1)$ with $\lambda = a-b$, and $\sum\lambda = \text{trace}$ is a handy check.
 
 ## By hand
 
@@ -49,7 +49,7 @@ $$X = \begin{pmatrix} 2 & 2 \\ 4 & 6 \\ 6 & 4 \end{pmatrix}\quad\text{(rows: s1,
 
 **B2.** Using the centered data, compute the $2\times2$ **covariance matrix** $C = \begin{pmatrix} \text{var}(g_1) & \text{cov}(g_1,g_2) \\ \text{cov}(g_1,g_2) & \text{var}(g_2) \end{pmatrix}$. Use the $n-1$ denominator (here $n-1 = 2$).
 
-**B3.** Find the **eigenvalues** of $C$ from the characteristic equation $\det(C-\lambda I)=0$. Confirm with the trace and determinant checks.
+**B3.** Find the **eigenvalues** of $C$ (use the symmetric pattern and verify by multiplying). Confirm with the trace check.
 
 **B4.** Find a **unit-length eigenvector** for each eigenvalue. These are the **loadings** — the directions of PC1 and PC2. Verify the two are orthogonal.
 
@@ -158,7 +158,7 @@ With centered columns $u$ and $v$ and $n$ samples, $\text{var}(u) = \frac{1}{n-1
 :::
 
 ::: {.callout-tip collapse="true" title="Hint 3 — eigenvalues (B3)"}
-This is exactly the recipe from Eigenvalues & eigenvectors: form $C - \lambda I$ (subtract $\lambda$ from each diagonal entry) and solve $\det(C-\lambda I) = (a-\lambda)(d-\lambda) - bc = 0$. Check with $\lambda_1 + \lambda_2 = $ trace and $\lambda_1\lambda_2 = \det C$. In R: [`eigen`](https://rdrr.io/r/base/eigen.html)`(C)$values`.
+$C$ has the form $\begin{pmatrix} a & b \\ b & a \end{pmatrix}$, so multiply it by $(1,1)$ and by $(1,-1)$: the eigenvalues are $a+b$ and $a-b$. Check with $\lambda_1 + \lambda_2 = $ trace. In R: [`eigen`](https://rdrr.io/r/base/eigen.html)`(C)$values`. (Bonus, not for exam: the characteristic equation $\det(C-\lambda I) = 0$ gives the same.)
 :::
 
 ::: {.callout-tip collapse="true" title="Hint 4 — unit eigenvectors (B4)"}
@@ -197,8 +197,8 @@ $$X_c = \begin{pmatrix} 2-4 & 2-4 \\ 4-4 & 6-4 \\ 6-4 & 4-4 \end{pmatrix} = \beg
 
 $$C = \begin{pmatrix} 4 & 2 \\ 2 & 4 \end{pmatrix}.$$
 
-**B3 — eigenvalues.** $\det(C-\lambda I) = (4-\lambda)^2 - (2)(2) = (4-\lambda)^2 - 4$. Expand: $\lambda^2 - 8\lambda + 16 - 4 = \lambda^2 - 8\lambda + 12 = 0$. Factor: $(\lambda - 6)(\lambda - 2) = 0$, so $\lambda_1 = 6$, $\lambda_2 = 2$.
-Checks: trace $= 4 + 4 = 8 = 6 + 2$ ✓; $\det C = 16 - 4 = 12 = 6\cdot 2$ ✓.
+**B3 — eigenvalues.** $C$ has the symmetric pattern with $a = 4$, $b = 2$: $C(1,1) = (6,6) = 6\,(1,1)$ and $C(1,-1) = (2,-2) = 2\,(1,-1)$, so $\lambda_1 = 6$, $\lambda_2 = 2$.
+Check: trace $= 4 + 4 = 8 = 6 + 2$ ✓. (Bonus, not for exam: $\det(C-\lambda I) = (4-\lambda)^2 - 4 = \lambda^2 - 8\lambda + 12 = (\lambda-6)(\lambda-2) = 0$ gives the same, and $\det C = 12 = 6\cdot2$.)
 
 **B4 — unit eigenvectors (loadings).**
 For $\lambda = 6$: $C - 6I = \begin{pmatrix} -2 & 2 \\ 2 & -2 \end{pmatrix}$; row 1 gives $-2v_1 + 2v_2 = 0 \Rightarrow v_2 = v_1$, so the direction is $(1,1)$. Normalise: $(1,1)/\sqrt2 = (0.707, 0.707)$ — this is **PC1**.

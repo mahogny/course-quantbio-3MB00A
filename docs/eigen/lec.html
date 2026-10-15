@@ -145,13 +145,13 @@ Quantitative biology and integrative omics
 <ul>
 <li>Most vectors get <strong>rotated</strong> by a matrix. A few special ones only get <strong>scaled</strong> — those are <strong>eigenvectors</strong>.</li>
 <li>The amount of scaling is the <strong>eigenvalue</strong> <span class="math inline">\(\lambda\)</span>, and the whole idea is one equation: <span class="math inline">\(A\mathbf{v} = \lambda\mathbf{v}\)</span>.</li>
-<li>How to find them <strong>by hand</strong> for a <span class="math inline">\(2\times2\)</span>: the <strong>characteristic equation</strong> <span class="math inline">\(\det(A - \lambda I) = 0\)</span>.</li>
+<li>How to find them <strong>by hand</strong> in the cases that matter: <strong>check</strong> a candidate, <strong>read</strong> a diagonal or triangular matrix, the <strong>symmetric</strong> <span class="math inline">\(2\times2\)</span> pattern, and <strong>geometry</strong>. Everything else: <code>eigen()</code> in R.</li>
 <li>Why <strong>symmetric</strong> matrices (like a covariance matrix) are special: <strong>real</strong> eigenvalues, <strong>orthogonal</strong> eigenvectors.</li>
 <li>Biology: the eigenvectors of a covariance matrix point along the <strong>main axes of variation</strong> in a dataset — the seed of PCA (in the Applications block).</li>
 </ul>
-<p>This is a <strong>concept</strong> day. The exam will ask you to find eigenvalues by hand, so practise the pen-and-paper recipe.</p>
+<p>This is a <strong>concept</strong> day. The exam asks you to check and find eigenvectors by hand in these simple cases, so practise them on paper. No determinants are needed (the classic determinant recipe is a bonus at the end).</p>
 <aside class="notes">
-<p>The single mental image for today: a transformation grabs the plane and distorts it, but a couple of special directions don’t get knocked off their line — they only get longer or shorter. Those are eigenvectors. Everything else (the characteristic equation, symmetric matrices, the PCA preview) hangs off that one picture. Tell students this is the most exam-heavy by-hand skill of the whole block, so the goal today is to make the recipe automatic. Keep an R session open for the demos but emphasise this is concept day, R fluency comes in Eigenvalues in R.</p>
+<p>The single mental image for today: a transformation grabs the plane and distorts it, but a couple of special directions don’t get knocked off their line — they only get longer or shorter. Those are eigenvectors. (Students have seen this literally in Transforming images with matrices: the gallery slide where 2 × 2 matrices stretch, shear and rotate a micrograph of a cell — e.g.&nbsp;under the shear, the x-axis is such a special direction.) Everything else (the by-hand checks, symmetric matrices, the PCA preview) hangs off that one picture. The examinable skills are deliberately determinant-free: multiply A by a candidate and see whether it only scales, read eigenvalues off diagonal and triangular matrices, use the symmetric [[a, b], [b, a]] pattern, and reason geometrically. The characteristic equation det(A - lambda I) = 0 is kept as bonus slides after the Summary, for those who want to see where eigenvalues come from in general. Keep an R session open for the demos but emphasise this is concept day, R fluency comes in Eigenvalues in R.</p>
 <style type="text/css">
         span.MJX_Assistive_MathML {
           position:absolute!important;
@@ -262,82 +262,17 @@ Quantitative biology and integrative omics
           display:block!important;
       }</style></aside>
 </section>
-<section id="finding-eigenvalues-the-characteristic-equation" class="slide level2 smaller">
-<h2>Finding eigenvalues: the characteristic equation</h2>
-<p>Start from <span class="math inline">\(A\mathbf{v} = \lambda\mathbf{v}\)</span>. Move everything to one side (write <span class="math inline">\(\lambda\mathbf{v} = \lambda I\mathbf{v}\)</span> so the shapes match):</p>
-<p><span class="math display">\[A\mathbf{v} - \lambda I\mathbf{v} = \mathbf{0} \quad\Longrightarrow\quad (A - \lambda I)\mathbf{v} = \mathbf{0}\]</span></p>
-<p>We need a <strong>nonzero</strong> <span class="math inline">\(\mathbf{v}\)</span> that the matrix <span class="math inline">\((A-\lambda I)\)</span> sends to zero. A matrix can only crush a nonzero vector to zero if it is <strong>singular</strong> — i.e.&nbsp;its determinant is zero:</p>
-<p><span class="math display">\[\boxed{\ \det(A - \lambda I) = 0\ }\]</span></p>
-<p>This is the <strong>characteristic equation</strong>. Solving it gives the eigenvalues <span class="math inline">\(\lambda\)</span>.</p>
-<aside class="notes">
-<p>This derivation is worth doing slowly because it explains WHERE the determinant condition comes from — it is not magic. Key logical step: (A - lambda I) v = 0 with v nonzero means the matrix has a nontrivial null space, which means it is not invertible, which means det = 0. Students met determinants and singular matrices in Linear systems by hand and Linear systems in R (when a system has non-unique solutions), so lean on that. The lambda I insertion (rather than just lambda) is the technical detail that trips people up: you subtract lambda from the diagonal.</p>
-<style type="text/css">
-        span.MJX_Assistive_MathML {
-          position:absolute!important;
-          clip: rect(1px, 1px, 1px, 1px);
-          padding: 1px 0 0 0!important;
-          border: 0!important;
-          height: 1px!important;
-          width: 1px!important;
-          overflow: hidden!important;
-          display:block!important;
-      }</style></aside>
-</section>
-<section id="the-determinant-of-a-2times2" class="slide level2 smaller">
-<h2>The determinant of a <span class="math inline">\(2\times2\)</span></h2>
-<p>For a <span class="math inline">\(2\times2\)</span> matrix the determinant is a single easy formula:</p>
-<p><span class="math display">\[\det\begin{pmatrix} a &amp; b \\ c &amp; d \end{pmatrix} = ad - bc\]</span></p>
-<p>To build <span class="math inline">\(A - \lambda I\)</span>, <strong>subtract <span class="math inline">\(\lambda\)</span> from each diagonal entry</strong>:</p>
-<p><span class="math display">\[A - \lambda I = \begin{pmatrix} a &amp; b \\ c &amp; d \end{pmatrix} - \begin{pmatrix} \lambda &amp; 0 \\ 0 &amp; \lambda \end{pmatrix} = \begin{pmatrix} a-\lambda &amp; b \\ c &amp; d-\lambda \end{pmatrix}\]</span></p>
-<p>So the characteristic equation is:</p>
-<p><span class="math display">\[\det(A - \lambda I) = (a-\lambda)(d-\lambda) - bc = 0\]</span></p>
-<p>a <strong>quadratic in <span class="math inline">\(\lambda\)</span></strong> — solve it like any quadratic.</p>
-
-<img data-src="fig07-det-2x2.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:70.0%"><aside class="notes">
-<p>Two mechanical facts they must memorise for the exam: det of a 2x2 is ad - bc, and A - lambda*I just subtracts lambda from the two diagonal entries (off-diagonals untouched). Multiplying out (a-lambda)(d-lambda) - bc always gives a quadratic in lambda, so finding 2x2 eigenvalues is always “set up a quadratic, solve it.” Reassure them they already know how to solve quadratics — factor or use the formula. The next slide does a full worked example.</p>
-<style type="text/css">
-        span.MJX_Assistive_MathML {
-          position:absolute!important;
-          clip: rect(1px, 1px, 1px, 1px);
-          padding: 1px 0 0 0!important;
-          border: 0!important;
-          height: 1px!important;
-          width: 1px!important;
-          overflow: hidden!important;
-          display:block!important;
-      }</style></aside>
-</section>
-<section id="worked-example-eigenvalues-by-hand" class="slide level2 smaller">
-<h2>Worked example: eigenvalues by hand</h2>
-<p><span class="math display">\[A = \begin{pmatrix} 2 &amp; 1 \\ 1 &amp; 2 \end{pmatrix}\]</span></p>
-<p><span class="math display">\[\det(A - \lambda I) = (2-\lambda)(2-\lambda) - (1)(1) = \lambda^2 - 4\lambda + 4 - 1 = \lambda^2 - 4\lambda + 3\]</span></p>
-<p>Set to zero and factor:</p>
-<p><span class="math display">\[\lambda^2 - 4\lambda + 3 = (\lambda - 3)(\lambda - 1) = 0 \quad\Longrightarrow\quad \lambda_1 = 3,\ \lambda_2 = 1\]</span></p>
-<p>Two eigenvalues: <strong>3</strong> (we already saw the <span class="math inline">\((1,1)\)</span> direction stretched by 3) and <strong>1</strong>.</p>
-<aside class="notes">
-<p>Walk every algebraic step on screen: expand (2-lambda)^2, subtract the bc term (1*1=1), collect into lambda^2 - 4 lambda + 3, factor into (lambda-3)(lambda-1). Land on lambda = 3 and lambda = 1, and immediately connect lambda=3 back to the (1,1)-&gt;(3,3) demo from earlier so the abstract root has a concrete meaning. This is the canonical exam problem; tell students to reproduce it from memory tonight. Sanity checks (next slide) catch arithmetic slips.</p>
-<style type="text/css">
-        span.MJX_Assistive_MathML {
-          position:absolute!important;
-          clip: rect(1px, 1px, 1px, 1px);
-          padding: 1px 0 0 0!important;
-          border: 0!important;
-          height: 1px!important;
-          width: 1px!important;
-          overflow: hidden!important;
-          display:block!important;
-      }</style></aside>
-</section>
-<section id="two-sanity-checks-trace-and-determinant" class="slide level2 smaller">
-<h2>Two sanity checks (trace and determinant)</h2>
-<p>Before trusting your eigenvalues, check them against <span class="math inline">\(A = \begin{pmatrix} 2 &amp; 1 \\ 1 &amp; 2 \end{pmatrix}\)</span>:</p>
+<section id="test-a-candidate-just-multiply" class="slide level2 smaller">
+<h2>Test a candidate: just multiply</h2>
+<p>To check whether a given <span class="math inline">\(\mathbf v\)</span> is an eigenvector, compute <span class="math inline">\(A\mathbf v\)</span> and ask: <strong>is the output a multiple of the input?</strong></p>
+<p>With <span class="math inline">\(A = \begin{pmatrix} 2 &amp; 1 \\ 1 &amp; 2 \end{pmatrix}\)</span>:</p>
 <ul>
-<li><strong>Sum</strong> of eigenvalues = <strong>trace</strong> (sum of the diagonal): <span class="math inline">\(3 + 1 = 4 = 2 + 2\)</span>. ✓</li>
-<li><strong>Product</strong> of eigenvalues = <strong>determinant</strong> of <span class="math inline">\(A\)</span>: <span class="math inline">\(3 \times 1 = 3 = (2)(2) - (1)(1)\)</span>. ✓</li>
+<li><span class="math inline">\(\mathbf v = (1, -1)\)</span>: <span class="math inline">\(\ A\mathbf v = (2-1,\ 1-2) = (1, -1) = 1\cdot\mathbf v\)</span>. <strong>Yes</strong>, eigenvector with <span class="math inline">\(\lambda = 1\)</span>.</li>
+<li><span class="math inline">\(\mathbf v = (1, 2)\)</span>: <span class="math inline">\(\ A\mathbf v = (2+2,\ 1+4) = (4, 5)\)</span>. Is <span class="math inline">\((4, 5) = \lambda(1, 2)\)</span>? It would need <span class="math inline">\(\lambda = 4\)</span> <strong>and</strong> <span class="math inline">\(\lambda = 2.5\)</span>. <strong>No.</strong></li>
 </ul>
-<p>These two checks catch most arithmetic mistakes for free — use them on the exam.</p>
+<p>The eigenvalue is read off by comparing entries: <span class="math inline">\(\lambda = (A\mathbf v)_1 / v_1 = (A\mathbf v)_2 / v_2\)</span>. Both ratios must agree.</p>
 <aside class="notes">
-<p>These checks are cheap insurance and examiners love them. Trace = sum of diagonal = sum of eigenvalues; det = product of eigenvalues. If a student’s two roots don’t add to the trace, they made an arithmetic error and should redo it. Have them verify on the worked example: 3+1 = 4 = trace, 3*1 = 3 = det. Encourage building this reflex.</p>
+<p>This is the most basic and most useful by-hand skill: no formulas, only one matrix-vector product. The test is “same ratio in every entry”. Watch out for zero entries in v: if v_1 = 0, then (Av)_1 must also be 0. In R this is A %<em>% v compared with lambda </em> v.</p>
 <style type="text/css">
         span.MJX_Assistive_MathML {
           position:absolute!important;
@@ -350,15 +285,18 @@ Quantitative biology and integrative omics
           display:block!important;
       }</style></aside>
 </section>
-<section id="finding-the-eigenvector-for-each-lambda" class="slide level2 smaller">
-<h2>Finding the eigenvector for each <span class="math inline">\(\lambda\)</span></h2>
-<p>Plug each eigenvalue back into <span class="math inline">\((A - \lambda I)\mathbf{v} = \mathbf{0}\)</span> and solve for <span class="math inline">\(\mathbf{v}\)</span>.</p>
-<p>For <span class="math inline">\(\lambda = 3\)</span> with <span class="math inline">\(A = \begin{pmatrix} 2 &amp; 1 \\ 1 &amp; 2 \end{pmatrix}\)</span>:</p>
-<p><span class="math display">\[A - 3I = \begin{pmatrix} 2-3 &amp; 1 \\ 1 &amp; 2-3 \end{pmatrix} = \begin{pmatrix} -1 &amp; 1 \\ 1 &amp; -1 \end{pmatrix}\]</span></p>
-<p>Row 1 says <span class="math inline">\(-v_1 + v_2 = 0\)</span>, i.e.&nbsp;<span class="math inline">\(v_2 = v_1\)</span>. Pick <span class="math inline">\(v_1 = 1\)</span>:</p>
-<p><span class="math display">\[\mathbf{v}_1 = \begin{pmatrix} 1 \\ 1 \end{pmatrix} \quad\text{(eigenvector for } \lambda = 3\text{)}\]</span></p>
+<section id="eigenvalues-you-can-read-off" class="slide level2 smaller">
+<h2>Eigenvalues you can read off</h2>
+<p><strong>Diagonal</strong> matrix: each axis is only scaled, so the axes are the eigenvectors and the diagonal entries are the eigenvalues.</p>
+<p><span class="math display">\[\begin{pmatrix} 4 &amp; 0 \\ 0 &amp; 2 \end{pmatrix}: \quad \lambda = 4 \text{ for } (1,0), \qquad \lambda = 2 \text{ for } (0,1)\]</span></p>
+<p><strong>Triangular</strong> matrix (zeros below <strong>or</strong> above the diagonal): the eigenvalues are still the <strong>diagonal entries</strong>.</p>
+<p><span class="math display">\[A = \begin{pmatrix} 3 &amp; 1 \\ 0 &amp; 2 \end{pmatrix}: \quad \lambda = 3 \text{ and } \lambda = 2\]</span></p>
+<ul>
+<li>One eigenvector comes for free: <span class="math inline">\(A(1, 0) = (3, 0) = 3\,(1, 0)\)</span>.</li>
+<li>The other is found on the next slide.</li>
+</ul>
 <aside class="notes">
-<p>The mechanics: substitute the eigenvalue, write out the (now singular) matrix, and read off the relationship between v1 and v2 from any one row — the rows are redundant precisely because the determinant is zero. Here -v1 + v2 = 0 gives v2 = v1, so (1,1). Stress that there is a free choice of scale (the line again); pick the simplest integers. Verify on the spot: A(1,1) = (3,3) = 3(1,1). Next slide does lambda = 1.</p>
+<p>Why the diagonal works for triangular matrices: A(1,0) is the first column, (3, 0), which is a multiple of (1,0), so the x-axis is an eigenvector with the top-left entry as eigenvalue. The other diagonal entry is also an eigenvalue (we take that as a rule here; the bonus slides show why). The shear from Transforming images with matrices, [[1, 0.5], [0, 1]], is triangular: its eigenvalue is 1 (twice), and the x-axis is its only eigen-direction.</p>
 <style type="text/css">
         span.MJX_Assistive_MathML {
           position:absolute!important;
@@ -371,17 +309,92 @@ Quantitative biology and integrative omics
           display:block!important;
       }</style></aside>
 </section>
-<section id="the-second-eigenvector" class="slide level2 smaller">
-<h2>The second eigenvector</h2>
-<p>For <span class="math inline">\(\lambda = 1\)</span> with <span class="math inline">\(A = \begin{pmatrix} 2 &amp; 1 \\ 1 &amp; 2 \end{pmatrix}\)</span>:</p>
-<p><span class="math display">\[A - 1\cdot I = \begin{pmatrix} 1 &amp; 1 \\ 1 &amp; 1 \end{pmatrix}\]</span></p>
-<p>Row 1 says <span class="math inline">\(v_1 + v_2 = 0\)</span>, i.e.&nbsp;<span class="math inline">\(v_2 = -v_1\)</span>. Pick <span class="math inline">\(v_1 = 1\)</span>:</p>
-<p><span class="math display">\[\mathbf{v}_2 = \begin{pmatrix} 1 \\ -1 \end{pmatrix} \quad\text{(eigenvector for } \lambda = 1\text{)}\]</span></p>
-<p><strong>Verify:</strong> <span class="math inline">\(A\begin{pmatrix}1\\-1\end{pmatrix} = \begin{pmatrix}2-1\\1-2\end{pmatrix} = \begin{pmatrix}1\\-1\end{pmatrix} = 1\cdot\mathbf{v}_2\)</span>. ✓</p>
+<section id="finding-the-eigenvector-for-a-known-lambda" class="slide level2 smaller">
+<h2>Finding the eigenvector for a known <span class="math inline">\(\lambda\)</span></h2>
+<p>Once you know <span class="math inline">\(\lambda\)</span>, the eigenvector is a small linear system. Start from <span class="math inline">\(A\mathbf{v} = \lambda\mathbf{v}\)</span> and move everything to one side (write <span class="math inline">\(\lambda\mathbf{v} = \lambda I\mathbf{v}\)</span> so the shapes match):</p>
+<p><span class="math display">\[(A - \lambda I)\mathbf{v} = \mathbf{0}, \qquad A - \lambda I = \text{$A$ with $\lambda$ subtracted from each diagonal entry.}\]</span></p>
+<p>For <span class="math inline">\(A = \begin{pmatrix} 3 &amp; 1 \\ 0 &amp; 2 \end{pmatrix}\)</span> and <span class="math inline">\(\lambda = 2\)</span>:</p>
+<p><span class="math display">\[A - 2I = \begin{pmatrix} 1 &amp; 1 \\ 0 &amp; 0 \end{pmatrix}\]</span></p>
+<p>Row 1 says <span class="math inline">\(v_1 + v_2 = 0\)</span>, i.e.&nbsp;<span class="math inline">\(v_2 = -v_1\)</span>. Pick <span class="math inline">\(v_1 = 1\)</span>: <span class="math inline">\(\ \mathbf v = (1, -1)\)</span>.</p>
+<p><strong>Verify:</strong> <span class="math inline">\(A(1,-1) = (3-1,\ 0-2) = (2, -2) = 2\,(1,-1)\)</span>. ✓</p>
+<aside class="notes">
+<p>Subtract lambda from the diagonal only, off-diagonals untouched. For an eigenvalue the two rows of A - lambda I always say the same thing (or one of them is all zeros), so one row gives the relation between v1 and v2. There is a free choice of scale (the whole line is special); pick the simplest integers. Always verify by multiplying: it is the cheapest check there is. This is the same row reasoning as in Linear systems by hand.</p>
+<style type="text/css">
+        span.MJX_Assistive_MathML {
+          position:absolute!important;
+          clip: rect(1px, 1px, 1px, 1px);
+          padding: 1px 0 0 0!important;
+          border: 0!important;
+          height: 1px!important;
+          width: 1px!important;
+          overflow: hidden!important;
+          display:block!important;
+      }</style></aside>
+</section>
+<section id="the-symmetric-2times2-pattern" class="slide level2 smaller">
+<h2>The symmetric <span class="math inline">\(2\times2\)</span> pattern</h2>
+<p>For a symmetric matrix with <strong>equal diagonal entries</strong>, the eigenvectors are always the two diagonals of the plane:</p>
+<p><span class="math display">\[A = \begin{pmatrix} a &amp; b \\ b &amp; a \end{pmatrix}: \qquad A\begin{pmatrix}1\\1\end{pmatrix} = (a+b)\begin{pmatrix}1\\1\end{pmatrix}, \qquad A\begin{pmatrix}1\\-1\end{pmatrix} = (a-b)\begin{pmatrix}1\\-1\end{pmatrix}\]</span></p>
+<p>For our <span class="math inline">\(A = \begin{pmatrix} 2 &amp; 1 \\ 1 &amp; 2 \end{pmatrix}\)</span>: <span class="math inline">\(\lambda_1 = 2 + 1 = 3\)</span> for <span class="math inline">\((1,1)\)</span> and <span class="math inline">\(\lambda_2 = 2 - 1 = 1\)</span> for <span class="math inline">\((1,-1)\)</span>.</p>
 <p>Notice: <span class="math inline">\(\mathbf{v}_1\cdot\mathbf{v}_2 = (1)(1) + (1)(-1) = 0\)</span> — the two eigenvectors are <strong>orthogonal</strong>!</p>
 
-<img data-src="fig11-orthogonal-eigvecs.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:50.0%"><aside class="notes">
-<p>Repeat the recipe for the second eigenvalue and always verify by plugging back into A v = lambda v — this is the cheapest possible check and an exam habit worth drilling. Then highlight the punchline: the dot product of the two eigenvectors is zero, so they are perpendicular. This is not a coincidence; it happens because A is symmetric, which is the topic of the next slide and the bridge to covariance/PCA.</p>
+<img data-src="fig11-orthogonal-eigvecs.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:45.0%"><aside class="notes">
+<p>Prove the pattern on the board by multiplying: A(1,1) = (a+b, b+a) and A(1,-1) = (a-b, b-a) = (a-b)(1,-1). Nothing to memorise beyond “the diagonals of the plane”. Many covariance matrices of two equally variable, correlated variables have exactly this form, so it covers a lot of exam-style examples. Then highlight the punchline: the dot product is zero, so the eigenvectors are perpendicular. This is not a coincidence; it happens because A is symmetric (next slides).</p>
+<style type="text/css">
+        span.MJX_Assistive_MathML {
+          position:absolute!important;
+          clip: rect(1px, 1px, 1px, 1px);
+          padding: 1px 0 0 0!important;
+          border: 0!important;
+          height: 1px!important;
+          width: 1px!important;
+          overflow: hidden!important;
+          display:block!important;
+      }</style></aside>
+</section>
+<section id="eigenvectors-you-can-see" class="slide level2 smaller">
+<h2>Eigenvectors you can see</h2>
+<p>Think about what the matrix <strong>does</strong>; the directions it leaves on their own line are the eigenvectors.</p>
+<table class="caption-top">
+<colgroup>
+<col style="width: 33%">
+<col style="width: 33%">
+<col style="width: 33%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Matrix</th>
+<th>What it does</th>
+<th>Eigenvectors and eigenvalues</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><span class="math inline">\(\begin{pmatrix} 1 &amp; 0 \\ 0 &amp; 0 \end{pmatrix}\)</span></td>
+<td>projects onto the x-axis</td>
+<td><span class="math inline">\((1,0)\)</span>: <span class="math inline">\(\lambda = 1\)</span> (kept); <span class="math inline">\(\ (0,1)\)</span>: <span class="math inline">\(\lambda = 0\)</span> (squashed)</td>
+</tr>
+<tr class="even">
+<td><span class="math inline">\(\begin{pmatrix} 0 &amp; 1 \\ 1 &amp; 0 \end{pmatrix}\)</span></td>
+<td>mirrors in the line <span class="math inline">\(y = x\)</span></td>
+<td><span class="math inline">\((1,1)\)</span>: <span class="math inline">\(\lambda = 1\)</span> (on the mirror); <span class="math inline">\(\ (1,-1)\)</span>: <span class="math inline">\(\lambda = -1\)</span> (flipped)</td>
+</tr>
+<tr class="odd">
+<td><span class="math inline">\(\begin{pmatrix} 1 &amp; 0.5 \\ 0 &amp; 1 \end{pmatrix}\)</span></td>
+<td>shear</td>
+<td><span class="math inline">\((1,0)\)</span>: <span class="math inline">\(\lambda = 1\)</span>; no other direction</td>
+</tr>
+<tr class="even">
+<td><span class="math inline">\(\begin{pmatrix} 0 &amp; -1 \\ 1 &amp; 0 \end{pmatrix}\)</span></td>
+<td>rotates <span class="math inline">\(90^\circ\)</span></td>
+<td><strong>none</strong>: every direction is turned</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Check your answer:</strong> the eigenvalues always <strong>add up to the trace</strong> (sum of the diagonal). For <span class="math inline">\(\begin{pmatrix} 2 &amp; 1 \\ 1 &amp; 2 \end{pmatrix}\)</span>: <span class="math inline">\(3 + 1 = 4 = 2 + 2\)</span>. ✓</p>
+<p>For any other matrix: let R do it with <code>eigen()</code> (Eigenvalues in R).</p>
+<aside class="notes">
+<p>Geometry first, algebra second: a projection keeps the line it projects onto (lambda 1) and kills the perpendicular direction (lambda 0); a mirror keeps the mirror line (1) and flips the perpendicular one (-1); a shear keeps only the x-axis; a rotation keeps nothing. Each can be verified by one multiplication. The trace check catches arithmetic slips for free: projection 1 + 0 = 1 = trace, mirror 1 + (-1) = 0 = trace. The examinable toolbox is now complete; general matrices are for eigen() in R. The determinant recipe is in the bonus slides at the end.</p>
 <style type="text/css">
         span.MJX_Assistive_MathML {
           position:absolute!important;
@@ -492,26 +505,30 @@ Quantitative biology and integrative omics
 <td>the scaling factor <span class="math inline">\(\lambda\)</span></td>
 </tr>
 <tr class="even">
-<td>Find <span class="math inline">\(\lambda\)</span> (2×2)</td>
-<td>solve <span class="math inline">\(\det(A-\lambda I)=0\)</span> — a quadratic</td>
+<td>Test a candidate</td>
+<td>compute <span class="math inline">\(A\mathbf{v}\)</span>: a multiple of <span class="math inline">\(\mathbf{v}\)</span>?</td>
 </tr>
 <tr class="odd">
-<td><span class="math inline">\(\det\)</span> of 2×2</td>
-<td><span class="math inline">\(ad - bc\)</span></td>
+<td>Diagonal / triangular</td>
+<td>eigenvalues = diagonal entries</td>
 </tr>
 <tr class="even">
-<td>Find <span class="math inline">\(\mathbf{v}\)</span></td>
+<td>Symmetric <span class="math inline">\(\begin{pmatrix} a &amp; b \\ b &amp; a \end{pmatrix}\)</span></td>
+<td><span class="math inline">\((1,1)\)</span>: <span class="math inline">\(a+b\)</span>; <span class="math inline">\(\ (1,-1)\)</span>: <span class="math inline">\(a-b\)</span></td>
+</tr>
+<tr class="odd">
+<td>Find <span class="math inline">\(\mathbf{v}\)</span> for known <span class="math inline">\(\lambda\)</span></td>
 <td>solve <span class="math inline">\((A-\lambda I)\mathbf{v}=\mathbf{0}\)</span>, pick nice scale</td>
 </tr>
-<tr class="odd">
-<td>Checks</td>
-<td><span class="math inline">\(\sum\lambda\)</span> = trace, <span class="math inline">\(\prod\lambda\)</span> = det</td>
-</tr>
 <tr class="even">
+<td>Check</td>
+<td><span class="math inline">\(\sum\lambda\)</span> = trace</td>
+</tr>
+<tr class="odd">
 <td>Symmetric <span class="math inline">\(A\)</span></td>
 <td>real eigenvalues, <strong>orthogonal</strong> eigenvectors</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td>Biology</td>
 <td>eigenvectors of covariance = axes of variation (PCA engine)</td>
 </tr>
@@ -519,7 +536,56 @@ Quantitative biology and integrative omics
 </table>
 <p><strong>Next (Eigenvalues in R):</strong> compute all of this in R with <a href="https://rdrr.io/r/base/eigen.html"><code>eigen</code></a>.</p>
 <aside class="notes">
-<p>The summary is the exam cheat-sheet. Drill the by-hand pipeline one more time verbally: subtract lambda from the diagonal, take ad-bc, solve the quadratic, plug each lambda back to get the eigenvector, verify and use the trace/det checks. Remind them symmetric = real + orthogonal, and that covariance matrices are the biological payoff. Preview Eigenvalues in R: eigen() does all the arithmetic instantly, but they must still understand the output, which only makes sense if today’s concepts are solid.</p>
+<p>The summary is the exam cheat-sheet. Drill the by-hand toolbox one more time verbally: test a candidate by multiplying, read diagonal/triangular matrices, use the symmetric pattern, reason geometrically, find v for a known lambda from (A - lambda I) v = 0, and check with the trace. No determinants needed; the bonus slides after this one show the general determinant recipe for those who want it. Remind them symmetric = real + orthogonal, and that covariance matrices are the biological payoff. Preview Eigenvalues in R: eigen() does all the arithmetic instantly, but they must still understand the output, which only makes sense if today’s concepts are solid.</p>
+<style type="text/css">
+        span.MJX_Assistive_MathML {
+          position:absolute!important;
+          clip: rect(1px, 1px, 1px, 1px);
+          padding: 1px 0 0 0!important;
+          border: 0!important;
+          height: 1px!important;
+          width: 1px!important;
+          overflow: hidden!important;
+          display:block!important;
+      }</style></aside>
+</section>
+<section id="bonus-the-characteristic-equation-not-for-exam" class="slide level2 smaller">
+<h2>Bonus: the characteristic equation (not for exam)</h2>
+<p>Where do eigenvalues come from in general? From <span class="math inline">\((A - \lambda I)\mathbf{v} = \mathbf{0}\)</span>: we need a <strong>nonzero</strong> <span class="math inline">\(\mathbf{v}\)</span> that <span class="math inline">\(A-\lambda I\)</span> sends to zero. A matrix can only crush a nonzero vector to zero if it is <strong>singular</strong> — i.e.&nbsp;its determinant is zero:</p>
+<p><span class="math display">\[\boxed{\ \det(A - \lambda I) = 0\ }\]</span></p>
+<p>For a <span class="math inline">\(2\times2\)</span>, <span class="math inline">\(\det\begin{pmatrix} a &amp; b \\ c &amp; d \end{pmatrix} = ad - bc\)</span>, so</p>
+<p><span class="math display">\[\det(A - \lambda I) = (a-\lambda)(d-\lambda) - bc = 0,\]</span></p>
+<p>a <strong>quadratic in <span class="math inline">\(\lambda\)</span></strong>.</p>
+
+<img data-src="fig07-det-2x2.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:62.0%"><p><span style="font-size: 0.8em; color: #bc4749;">Bonus material: you do not need to memorise determinants for the exam.</span></p>
+<aside class="notes">
+<p>Bonus slide: not examined. It explains where eigenvalues come from for any matrix. Key logical step: (A - lambda I) v = 0 with v nonzero means A - lambda I is not invertible, which means det = 0 (see the bonus determinant slide in Matrices as transformations: det 0 means the plane collapses onto a line). It also explains why the triangular rule works: for a triangular matrix bc = 0, so the quadratic is (a - lambda)(d - lambda) = 0.</p>
+<style type="text/css">
+        span.MJX_Assistive_MathML {
+          position:absolute!important;
+          clip: rect(1px, 1px, 1px, 1px);
+          padding: 1px 0 0 0!important;
+          border: 0!important;
+          height: 1px!important;
+          width: 1px!important;
+          overflow: hidden!important;
+          display:block!important;
+      }</style></aside>
+</section>
+<section id="bonus-a-worked-example-not-for-exam" class="slide level2 smaller">
+<h2>Bonus: a worked example (not for exam)</h2>
+<p><span class="math display">\[A = \begin{pmatrix} 2 &amp; 1 \\ 1 &amp; 2 \end{pmatrix}\]</span></p>
+<p><span class="math display">\[\det(A - \lambda I) = (2-\lambda)(2-\lambda) - (1)(1) = \lambda^2 - 4\lambda + 3 = (\lambda - 3)(\lambda - 1) = 0\]</span></p>
+<p>So <span class="math inline">\(\lambda_1 = 3,\ \lambda_2 = 1\)</span> — the same as the symmetric pattern gave.</p>
+<p>Two checks:</p>
+<ul>
+<li><strong>Sum</strong> of eigenvalues = <strong>trace</strong>: <span class="math inline">\(3 + 1 = 4 = 2 + 2\)</span>. ✓</li>
+<li><strong>Product</strong> of eigenvalues = <strong>determinant</strong> of <span class="math inline">\(A\)</span>: <span class="math inline">\(3 \times 1 = 3 = (2)(2) - (1)(1)\)</span>. ✓</li>
+</ul>
+<p>The same method works for matrices without a pattern, e.g.&nbsp;<span class="math inline">\(\begin{pmatrix} 2 &amp; 1 \\ 1 &amp; 0 \end{pmatrix}\)</span> gives <span class="math inline">\(\lambda^2 - 2\lambda - 1 = 0\)</span>, so <span class="math inline">\(\lambda = 1 \pm \sqrt 2\)</span>. A rotation gives <span class="math inline">\(\lambda^2 + 1 = 0\)</span>: no real solution.</p>
+<p><span style="font-size: 0.8em; color: #bc4749;">Bonus material: you do not need to memorise determinants for the exam.</span></p>
+<aside class="notes">
+<p>Bonus slide: not examined. Expand (2 - lambda)^2 - 1, factor, and land on 3 and 1, matching the symmetric pattern from earlier. The product = det check is only available with determinants; the sum = trace check is the examinable one. The last line shows the method’s real strength: matrices with no pattern and the rotation’s missing real eigenvalues. In practice, eigen() in R does this for any size.</p>
 <style type="text/css">
         span.MJX_Assistive_MathML {
           position:absolute!important;

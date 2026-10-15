@@ -61,3 +61,17 @@ hand-rolled solver instead of the optimised one, a frequentist shortcut before t
 Bayesian treatment), say so plainly and name the day on which the proper treatment
 arrives. Students should always know what is a stepping stone and what is the real
 thing.
+
+## 7. Keep slide decks small — split, don't cut
+
+Each lecture deck is recorded as a **video**, so a deck should be a suitably
+sized, self-contained snippet on one topic. Which day a deck lands on is decided
+separately; size decks by topic, not by the timetable.
+
+No single lecture deck should grow large. When new material would make a deck
+too big, first ask whether it is really **its own topic** and should become a
+**separate deck** (its own unit folder with `lec.qmd` and `exercise.qmd`, placed
+next to the original in the sidebar). Prefer splitting over cutting good
+material. Cut or merge only slides that genuinely repeat a point. (For
+reference, decks currently run at roughly 15–19 content slides; treat the
+upper end as a ceiling, not a target.)

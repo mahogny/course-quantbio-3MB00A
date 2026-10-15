@@ -62,7 +62,7 @@ or catch up. Worked R walkthroughs are delivered **as recordings** (marked
 "R walkthrough"), not as in-person labs.
 
 Topics are distributed by difficulty (see
-[contentplan.md → Difficulty & day allocation](contentplan.md)): the hardest,
+[contentplan.md → Difficulty & day allocation](https://github.com/mahogny/course-quantbio-3MB00A/blob/main/contentplan.md) (on GitHub)): the hardest,
 most foundational blocks (linear algebra, Bayesian) get the most recordings, and
 each new method is followed by a recorded R walkthrough plus self-paced practice.
 

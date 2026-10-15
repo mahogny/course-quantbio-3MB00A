@@ -60,7 +60,7 @@ Adding $\lambda I$ lifts every eigenvalue of $X^\top X$ by $\lambda$, so $X^\top
 
 $$X^\top X = \begin{pmatrix} 1 & 1 \\ 1 & 1.01 \end{pmatrix}.$$
 
-(a) Compute $\det(X^\top X)$. (b) Is the matrix close to singular? (c) Recall that $(X^\top X)^{-1}$ divides by the determinant — what does a tiny determinant do to the size of the inverse, and hence to $\hat{\boldsymbol{\beta}}$?
+(a) Compare the two columns of $X^\top X$. Is the matrix close to singular? (b) Find $(X^\top X)^{-1}$ by row-reducing $[\,X^\top X \mid I\,]$ (as in the warm-up on the $2\times2$ inverse). How large are its entries? (c) What does that do to $\hat{\boldsymbol{\beta}} = (X^\top X)^{-1}X^\top\mathbf{y}$?
 
 **B4. (one-parameter ridge — the key calculation).** Take the simplest possible model: one predictor, no intercept, so $y \approx \beta x$ over the samples. The ridge objective is
 
@@ -104,7 +104,6 @@ solve(XtX)                           # ERROR: system is computationally singular
 ```r
 XtX <- matrix(c(1, 1,
                 1, 1.01), 2, byrow = TRUE)
-det(XtX)                             # 0.01  -> tiny
 solve(XtX)                           # entries around 100 -> huge, unstable
 ```
 
@@ -138,7 +137,7 @@ for (lambda in c(0, 5, 20)) {
 
 **R2.** For the one-parameter ridge loop, add $\lambda = 100$ and $\lambda = 1000$. Describe in one sentence the trajectory of $\hat{\beta}$ as $\lambda$ grows, and name the value it approaches.
 
-**R3.** In the near-singular block, change the `1.01` to `1.0001`. Predict what happens to `det(XtX)` and to the size of `solve(XtX)` before reading it off, then check your prediction.
+**R3.** In the near-singular block, change the `1.01` to `1.0001`. Predict what happens to the size of `solve(XtX)` before reading it off, then check your prediction.
 
 ## Hints
 
@@ -150,8 +149,8 @@ $X^\top X$ is $p \times p$ but its rank cannot exceed the number of samples $n$:
 Fewer independent equations than unknowns means the solution set is not a single point but a whole space of vectors, all fitting equally well. This is the same "infinitely many solutions" case you met when solving $A\mathbf{x}=\mathbf{b}$ with a rank-deficient $A$ in the Linear systems units. "Unidentifiable" just means the data cannot single out one $\boldsymbol{\beta}$.
 :::
 
-::: {.callout-tip collapse="true" title="Hint 3 — determinant and the inverse (B3)"}
-For a $2\times2$ matrix, $\det\begin{pmatrix}a&b\\c&d\end{pmatrix}=ad-bc$, and the inverse is $\frac{1}{ad-bc}\begin{pmatrix}d&-b\\-c&a\end{pmatrix}$. The determinant sits in the **denominator**, so a determinant near zero makes every entry of the inverse enormous — and those large numbers multiply through to $\hat{\boldsymbol{\beta}}$, giving huge, unstable coefficients. Use [`det`](https://rdrr.io/r/base/det.html) and [`solve`](https://rdrr.io/r/base/solve.html) to check.
+::: {.callout-tip collapse="true" title="Hint 3 — a nearly singular matrix and its inverse (B3)"}
+Two columns that are almost parallel make a matrix **nearly singular**: row reduction leaves an almost-zero row on the left. Here R2 $-$ R1 gives the row $(0,\ 0.01)$, and turning that $0.01$ into a $1$ means multiplying the row by $100$ — which makes the inverse's entries huge. Those large numbers multiply through to $\hat{\boldsymbol{\beta}}$, giving huge, unstable coefficients. Check with [`solve`](https://rdrr.io/r/base/solve.html). (Bonus, not for exam: the determinant $ad - bc$ is the number that sits in the denominator of the inverse; here it is $0.01$.)
 :::
 
 ::: {.callout-tip collapse="true" title="Hint 4 — differentiating the ridge objective (B4)"}
@@ -178,9 +177,19 @@ A diagonal matrix wears its eigenvalues on the diagonal. Adding $\lambda I$ adds
 **B2.** Two equations in three unknowns: there are more free parameters (3) than constraints (2), so the exactly-fitting $\boldsymbol{\beta}$ form a whole **line** (a one-dimensional solution space) — **infinitely many** vectors fit perfectly. The data cannot pick one out, so the model is **unidentifiable**. This is the same rank-deficient "infinitely many solutions" case from the Linear systems units, and it is exactly what $p > n$ produces in general.
 
 **B3.**
-(a) $\det = (1)(1.01) - (1)(1) = 1.01 - 1 = 0.01$.
-(b) Yes — the determinant is tiny (a genuinely singular matrix would have $\det = 0$), so this matrix is **nearly singular**. The two columns are almost identical, mirroring two almost-perfectly-correlated genes.
-(c) The inverse divides by the determinant: $(X^\top X)^{-1} = \frac{1}{0.01}\begin{pmatrix}1.01 & -1\\ -1 & 1\end{pmatrix}$, so its entries are around **100** — huge. Those large numbers multiply $X^\top\mathbf{y}$, so $\hat{\boldsymbol{\beta}}$ becomes **enormous and unstable**: a tiny change in the data (or the `1.01`) swings the coefficients wildly. This is multicollinearity.
+(a) The columns $(1, 1)$ and $(1, 1.01)$ are almost identical — almost parallel — mirroring two almost-perfectly-correlated genes. With exactly parallel columns the matrix would be singular (no inverse); this one is **nearly singular**.
+(b) Row reduction:
+$$
+\left[\begin{array}{cc|cc} 1 & 1 & 1 & 0 \\ 1 & 1.01 & 0 & 1 \end{array}\right]
+\xrightarrow{\;\text{R2}\,-\,\text{R1}\;}
+\left[\begin{array}{cc|cc} 1 & 1 & 1 & 0 \\ 0 & 0.01 & -1 & 1 \end{array}\right]
+\xrightarrow{\;100\,\text{R2}\;}
+\left[\begin{array}{cc|cc} 1 & 1 & 1 & 0 \\ 0 & 1 & -100 & 100 \end{array}\right]
+\xrightarrow{\;\text{R1}\,-\,\text{R2}\;}
+\left[\begin{array}{cc|cc} 1 & 0 & 101 & -100 \\ 0 & 1 & -100 & 100 \end{array}\right],
+$$
+so $(X^\top X)^{-1} = \begin{pmatrix}101 & -100\\ -100 & 100\end{pmatrix}$: entries around **100** — huge. The almost-zero row $(0,\ 0.01)$ had to be multiplied by 100.
+(c) Those large numbers multiply $X^\top\mathbf{y}$, so $\hat{\boldsymbol{\beta}}$ becomes **enormous and unstable**: a tiny change in the data (or the `1.01`) swings the coefficients wildly. This is multicollinearity. (Bonus, not for exam: $\det(X^\top X) = 1.01 - 1 = 0.01$, and the inverse is $\frac{1}{0.01}\begin{pmatrix}1.01 & -1\\ -1 & 1\end{pmatrix}$.)
 
 **B4.**
 (a) Differentiate:
@@ -221,7 +230,7 @@ $$-\sum_i x_i y_i + \beta\Big(\sum_i x_i^2 + \lambda\Big) = 0 \quad\Longrightarr
 
 $\hat{\beta}$ decreases monotonically toward **0** as $\lambda$ grows — the coefficient is shrunk ever harder and approaches zero in the limit.
 
-**R3.** With `1.0001`, $\det = (1)(1.0001) - 1 = 0.0001$ — ten times smaller than before, so the matrix is even closer to singular. The inverse divides by this, so `solve(XtX)` entries grow by roughly a factor of 10 (around 10,000). Prediction: smaller determinant, larger and more unstable inverse — confirmed by running it. This is why highly correlated genes are so damaging without a penalty.
+**R3.** With `1.0001`, the columns are even closer to parallel: row reduction now leaves the row $(0,\ 0.0001)$, which must be multiplied by 10,000. So `solve(XtX)` has entries around **10,000** (exactly $\begin{pmatrix}10001 & -10000\\ -10000 & 10000\end{pmatrix}$), 100 times larger than before. Prediction: closer to singular, larger and more unstable inverse — confirmed by running it. (Bonus, not for exam: the determinant drops from $0.01$ to $0.0001$.) This is why highly correlated genes are so damaging without a penalty.
 :::
 
 ## Where this leads

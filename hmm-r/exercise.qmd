@@ -127,7 +127,8 @@ islands[islands$state == "H", ]
 ### Task 4 — learn the parameters with `baumWelch`
 
 Now pretend you never knew $A$ and $B$. Learn them from `obs` alone, starting
-from a deliberately uninformative guess.
+from a deliberately imperfect but **asymmetric** guess. EM needs this small
+symmetry break: identical state rows remain identical under its updates.
 
 ```r
 guess <- initHMM(states, symbols,
@@ -135,7 +136,8 @@ guess <- initHMM(states, symbols,
                  transProbs    = matrix(c(0.6, 0.4,
                                           0.4, 0.6), 2, byrow = TRUE,
                                         dimnames = list(states, states)),
-                 emissionProbs = matrix(rep(0.25, 8), 2, byrow = TRUE,
+                 emissionProbs = matrix(c(0.3, 0.2, 0.2, 0.3,
+                                          0.2, 0.3, 0.3, 0.2), 2, byrow = TRUE,
                                         dimnames = list(states, symbols)))
 
 bw <- baumWelch(guess, obs, maxIterations = 100)
@@ -244,9 +246,10 @@ ll
 ```
 
 **Q2:** $P(\mathbf{x})$ is a product of ~200 emission and ~200 transition
-factors, each below 1, so it is around $10^{-117}$ — far smaller than a `double`
-can represent. Working with the **log** keeps the number in a sane range; this
-is exactly why the by-hand products in Hidden Markov models collapsed toward zero so quickly.
+factors, each below 1, so it is around $10^{-117}$. That is small but still
+representable as a `double` at this length; working with the **log** is the
+numerically stable convention and prevents underflow for longer sequences.
+This is exactly why the by-hand products in Hidden Markov models collapsed toward zero so quickly.
 
 ### Task 3 — decoding
 

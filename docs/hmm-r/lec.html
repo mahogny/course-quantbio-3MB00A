@@ -194,7 +194,7 @@
 
 <section id="title-slide" class="quarto-title-block center">
   <h1 class="title">Fitting HMMs in R: finding CpG islands</h1>
-  <p class="subtitle">Linear algebra — Fitting HMMs in R</p>
+  <p class="subtitle">Extra material — Fitting HMMs in R</p>
 
 <div class="quarto-title-authors">
 <div class="quarto-title-author">
@@ -207,7 +207,7 @@ Quantitative biology and integrative omics
 </section>
 <section id="about-this-lecture" class="slide level2">
 <h2>About this lecture</h2>
-<p>This is the <strong>last unit</strong> of the linear-algebra block. In Hidden Markov models you built HMMs by hand; today we let R do the heavy lifting on genome-like data. By the end you will be able to:</p>
+<p>This is an <strong>extra-material</strong> unit following Hidden Markov models. There you built HMMs by hand; today we let R do the heavy lifting on genome-like data. By the end you will be able to:</p>
 <ul>
 <li>Build an HMM in R with the CRAN <a href="https://cran.r-project.org/package=HMM"><code>HMM</code></a> package via <code>initHMM</code> (states, symbols, <span class="math inline">\(\boldsymbol{\pi}\)</span>, <span class="math inline">\(A\)</span>, <span class="math inline">\(B\)</span>).</li>
 <li><strong>Simulate</strong> sequence with <code>simHMM</code> and recover its likelihood with <code>forward</code>.</li>
@@ -217,7 +217,7 @@ Quantitative biology and integrative omics
 </ul>
 <p>Notation as in Hidden Markov models: transition matrix <span class="math inline">\(A\)</span>, emission matrix <span class="math inline">\(B\)</span>, initial distribution <span class="math inline">\(\boldsymbol{\pi}\)</span>, hidden states <span class="math inline">\(\mathbf{z}\)</span>, observations <span class="math inline">\(\mathbf{x}\)</span>.</p>
 <aside class="notes">
-<p>Welcome to the last unit of the linear-algebra block. Hidden Markov models was all concept and pen-and-paper; today is hands-on R. We use the same two-state GC-rich versus normal model so nothing about the biology is new — only the tooling. The HMM package gives us one function per task: build, simulate, score, decode, and learn. Code on these slides is illustrative, not executable; the exercise is where you run it.</p>
+<p>Welcome to the second HMM unit (extra material). Hidden Markov models was all concept and pen-and-paper; today is hands-on R. We use the same two-state GC-rich versus normal model so nothing about the biology is new — only the tooling. The HMM package gives us one function per task: build, simulate, score, decode, and learn. Code on these slides is illustrative, not executable; the exercise is where you run it.</p>
 <style type="text/css">
         span.MJX_Assistive_MathML {
           position:absolute!important;
@@ -361,7 +361,7 @@ Quantitative biology and integrative omics
 <span id="cb4-8"><a aria-hidden="true" tabindex="-1"></a>  m <span class="sc">+</span> <span class="fu">log</span>(<span class="fu">sum</span>(<span class="fu">exp</span>(col <span class="sc">-</span> m)))</span>
 <span id="cb4-9"><a aria-hidden="true" tabindex="-1"></a>}</span>
 <span id="cb4-10"><a aria-hidden="true" tabindex="-1"></a><span class="fu">logLik</span>(f[, <span class="fu">length</span>(obs)])</span>
-<span id="cb4-11"><a aria-hidden="true" tabindex="-1"></a><span class="co"># e.g.  -39.5      (a log-probability: the raw probability is astronomically tiny)</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb4-11"><a aria-hidden="true" tabindex="-1"></a><span class="co"># e.g.  -39.5      (a log-probability; use logs to remain stable for long sequences)</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>Probabilities of long sequences are vanishingly small, so the package works in <strong>logs</strong> — this is why your by-hand products from Hidden Markov models shrank so fast.</p>
 
 <img data-src="fig05-forward-trellis.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:70.0%"><aside class="notes">
@@ -412,21 +412,23 @@ Quantitative biology and integrative omics
 <section id="learning-with-baumwelch" class="slide level2 smaller">
 <h2>Learning with <code>baumWelch</code></h2>
 <p>So far we <strong>supplied</strong> <span class="math inline">\(A, B, \boldsymbol{\pi}\)</span>. The realistic case: only raw sequence, no labels. <code>baumWelch</code> learns the parameters by EM.</p>
-<div class="sourceCode" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a aria-hidden="true" tabindex="-1"></a><span class="co"># start from a deliberately WRONG guess to show it can learn</span></span>
-<span id="cb6-2"><a aria-hidden="true" tabindex="-1"></a>guess <span class="ot">&lt;-</span> <span class="fu">initHMM</span>(states, symbols,</span>
-<span id="cb6-3"><a aria-hidden="true" tabindex="-1"></a>                 <span class="at">transProbs    =</span> <span class="fu">matrix</span>(<span class="fu">c</span>(<span class="fl">0.5</span>,<span class="fl">0.5</span>, <span class="fl">0.5</span>,<span class="fl">0.5</span>), <span class="dv">2</span>, <span class="at">byrow=</span><span class="cn">TRUE</span>,</span>
-<span id="cb6-4"><a aria-hidden="true" tabindex="-1"></a>                                        <span class="at">dimnames=</span><span class="fu">list</span>(states,states)),</span>
-<span id="cb6-5"><a aria-hidden="true" tabindex="-1"></a>                 <span class="at">emissionProbs =</span> <span class="fu">matrix</span>(<span class="fu">rep</span>(<span class="fl">0.25</span>, <span class="dv">8</span>), <span class="dv">2</span>, <span class="at">byrow=</span><span class="cn">TRUE</span>,</span>
-<span id="cb6-6"><a aria-hidden="true" tabindex="-1"></a>                                        <span class="at">dimnames=</span><span class="fu">list</span>(states,symbols)))</span>
-<span id="cb6-7"><a aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb6-8"><a aria-hidden="true" tabindex="-1"></a>bw <span class="ot">&lt;-</span> <span class="fu">baumWelch</span>(guess, obs, <span class="at">maxIterations =</span> <span class="dv">100</span>)</span>
+<div class="sourceCode" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a aria-hidden="true" tabindex="-1"></a><span class="co"># Start from an imperfect, asymmetric guess. Identical state rows would remain</span></span>
+<span id="cb6-2"><a aria-hidden="true" tabindex="-1"></a><span class="co"># identical under EM, so they cannot teach the algorithm to distinguish states.</span></span>
+<span id="cb6-3"><a aria-hidden="true" tabindex="-1"></a>guess <span class="ot">&lt;-</span> <span class="fu">initHMM</span>(states, symbols,</span>
+<span id="cb6-4"><a aria-hidden="true" tabindex="-1"></a>                 <span class="at">transProbs    =</span> <span class="fu">matrix</span>(<span class="fu">c</span>(<span class="fl">0.5</span>,<span class="fl">0.5</span>, <span class="fl">0.5</span>,<span class="fl">0.5</span>), <span class="dv">2</span>, <span class="at">byrow=</span><span class="cn">TRUE</span>,</span>
+<span id="cb6-5"><a aria-hidden="true" tabindex="-1"></a>                                        <span class="at">dimnames=</span><span class="fu">list</span>(states,states)),</span>
+<span id="cb6-6"><a aria-hidden="true" tabindex="-1"></a>                 <span class="at">emissionProbs =</span> <span class="fu">matrix</span>(<span class="fu">c</span>(<span class="fl">0.3</span>,<span class="fl">0.2</span>,<span class="fl">0.2</span>,<span class="fl">0.3</span>,</span>
+<span id="cb6-7"><a aria-hidden="true" tabindex="-1"></a>                                          <span class="fl">0.2</span>,<span class="fl">0.3</span>,<span class="fl">0.3</span>,<span class="fl">0.2</span>), <span class="dv">2</span>, <span class="at">byrow=</span><span class="cn">TRUE</span>,</span>
+<span id="cb6-8"><a aria-hidden="true" tabindex="-1"></a>                                        <span class="at">dimnames=</span><span class="fu">list</span>(states,symbols)))</span>
 <span id="cb6-9"><a aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb6-10"><a aria-hidden="true" tabindex="-1"></a>bw<span class="sc">$</span>hmm<span class="sc">$</span>transProbs      <span class="co"># learned A  -&gt; should drift toward 0.8/0.2, 0.3/0.7</span></span>
-<span id="cb6-11"><a aria-hidden="true" tabindex="-1"></a>bw<span class="sc">$</span>hmm<span class="sc">$</span>emissionProbs   <span class="co"># learned B  -&gt; H row should become GC-heavy</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb6-10"><a aria-hidden="true" tabindex="-1"></a>bw <span class="ot">&lt;-</span> <span class="fu">baumWelch</span>(guess, obs, <span class="at">maxIterations =</span> <span class="dv">100</span>)</span>
+<span id="cb6-11"><a aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-12"><a aria-hidden="true" tabindex="-1"></a>bw<span class="sc">$</span>hmm<span class="sc">$</span>transProbs      <span class="co"># learned A; compare its stickiness with the generating model</span></span>
+<span id="cb6-13"><a aria-hidden="true" tabindex="-1"></a>bw<span class="sc">$</span>hmm<span class="sc">$</span>emissionProbs   <span class="co"># learned B; identify the GC-heavy row (its label can switch)</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p><code>baumWelch</code> returns <code>$hmm</code> (the fitted model) and <code>$difference</code> (convergence trace).</p>
 
 <img data-src="fig07-baumwelch-em.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:70.0%"><aside class="notes">
-<p>Baum-Welch is the learning step. We hand it a deliberately uninformative starting model — uniform transitions and uniform emissions — and let it iterate. With enough data it pulls the parameters toward the truth: the H row of the emission matrix becomes GC-heavy and the transitions become sticky. Point out the return structure: dollar hmm is the fitted model you then feed to viterbi, and dollar difference lets you check it converged. Then immediately raise the caveats on the next slide.</p>
+<p>Baum-Welch is the learning step. We hand it an imperfect starting model with slightly different emission rows, so it has a way to distinguish the latent states. Fully identical rows are a symmetry that EM preserves and therefore a bad teaching initialization. With enough data it can pull the parameters toward the truth: one emission row becomes GC-heavy and the transitions become sticky. Point out the return structure: dollar hmm is the fitted model you then feed to viterbi, and dollar difference lets you check it converged. Then immediately raise the caveats on the next slide.</p>
 <style type="text/css">
         span.MJX_Assistive_MathML {
           position:absolute!important;

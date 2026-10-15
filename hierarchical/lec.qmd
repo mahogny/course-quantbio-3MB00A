@@ -216,6 +216,12 @@ Frequentist multilevel fit with `lme4`:
 library(lme4)
 
 # random intercept per patient, plus a treatment fixed effect
+set.seed(1)
+d <- data.frame(patient = factor(rep(seq_len(40), each = 4)),
+                treatment = rep(c("control", "control", "treated", "treated"), 40))
+patient_effect <- rnorm(40, sd = sqrt(2))
+d$biomarker <- 6 + 1.5 * (d$treatment == "treated") +
+  patient_effect[as.integer(d$patient)] + rnorm(nrow(d), sd = sqrt(8))
 fit <- lmer(biomarker ~ treatment + (1 | patient), data = d)
 
 summary(fit)     # fixed effects + variance of the random intercept (tau^2) and residual (sigma^2)

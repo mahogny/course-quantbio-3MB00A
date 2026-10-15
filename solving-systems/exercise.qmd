@@ -16,6 +16,8 @@ After this exercise you will be able to:
   and write it as $A\mathbf{x} = \mathbf{b}$.
 - Solve $2\times 2$ and $3\times 3$ systems **by hand** using substitution and
   Gaussian elimination with an augmented matrix.
+- Compute the inverse of a $2\times 2$ matrix by row-reducing $[\,A \mid I\,]$
+  to $[\,I \mid A^{-1}\,]$, and use it to solve for several measurement vectors.
 - Check a solution by substituting it back into the original equations.
 - Reproduce your by-hand answers in R with [`solve`](https://rdrr.io/r/base/solve.html).
 
@@ -91,6 +93,16 @@ $$
 (b) Eliminate column 1, then column 2, to reach upper-triangular form.
 (c) Back-substitute to find $x_1, x_2, x_3$, and **check** all three equations.
 
+### Problem 4 — the inverse with an augmented matrix
+
+Use the signature matrix $A$ from Problem 1.
+
+(a) Write the augmented matrix $[\,A \mid I\,]$ and row-reduce it until the left
+side is $I$. Read off $A^{-1}$.
+(b) Check that $A^{-1}\mathbf{b}$ with $\mathbf{b} = (11, 7)$ gives your answer from Problem 1.
+(c) A second blood sample, with the same two cell types, measures G1 $= 8$ and
+G2 $= 6$. Find its amounts with **one** matrix–vector multiplication, and check them.
+
 ## In R
 
 Use R only to **verify** the answers you already found by hand.
@@ -121,6 +133,14 @@ x3
 
 # Verify the residual is (numerically) zero
 A3 %*% x3 - b3
+```
+
+```r
+# Problem 4 — the inverse
+Ainv <- solve(A)    # one argument: the inverse
+Ainv
+Ainv %*% A          # the identity
+Ainv %*% c(8, 6)    # the second sample
 ```
 
 Note `byrow = TRUE`: it fills the matrix row by row, so the R code reads in the
@@ -157,10 +177,18 @@ solve it. Carry that value into the row above, which now also has one remaining
 unknown, and continue upward.
 :::
 
-::: {.callout-tip collapse="true" title="Hint 5 — the R functions"}
+::: {.callout-tip collapse="true" title="Hint 5 — the inverse with [A | I]"}
+Work in three stages: (1) clear the entry **below** the diagonal, exactly as in
+Problem 2; (2) clear the entry **above** the diagonal, using row 2 to change
+row 1; (3) divide each row by its diagonal number so the left side becomes $I$.
+Every operation acts on all four numbers in the row. Check with
+$A^{-1}A = I$.
+:::
+
+::: {.callout-tip collapse="true" title="Hint 6 — the R functions"}
 [`matrix`](https://rdrr.io/r/base/matrix.html) builds a matrix (use
 `byrow = TRUE`); [`solve`](https://rdrr.io/r/base/solve.html) with two arguments
-solves $A\mathbf{x} = \mathbf{b}$;
+solves $A\mathbf{x} = \mathbf{b}$, and with one argument, `solve(A)`, returns $A^{-1}$;
 [`%*%`](https://rdrr.io/r/base/matmult.html) is matrix multiplication, used here
 to check the answer.
 :::
@@ -244,6 +272,32 @@ Check equation 1: $\tfrac{9}{7} + 2\cdot\tfrac{16}{7} + \tfrac{15}{7}
 = \tfrac{9 + 32 + 15}{7} = \tfrac{56}{7} = 8\ \checkmark$.
 (Equations 2 and 3 check out the same way.)
 
+### Problem 4 — the inverse
+
+(a) Clear below the diagonal (as in Problem 2), make the second pivot 1, clear
+above it, then scale row 1:
+$$
+\left[\begin{array}{cc|cc} 3 & 1 & 1 & 0 \\ 1 & 2 & 0 & 1 \end{array}\right]
+\xrightarrow{\;\text{R2}-\frac13\text{R1}\;}
+\left[\begin{array}{cc|cc} 3 & 1 & 1 & 0 \\ 0 & \tfrac53 & -\tfrac13 & 1 \end{array}\right]
+\xrightarrow{\;\text{R2}\,\times\,\frac35\;}
+\left[\begin{array}{cc|cc} 3 & 1 & 1 & 0 \\ 0 & 1 & -\tfrac15 & \tfrac35 \end{array}\right]
+$$
+$$
+\xrightarrow{\;\text{R1}-\text{R2}\;}
+\left[\begin{array}{cc|cc} 3 & 0 & \tfrac65 & -\tfrac35 \\ 0 & 1 & -\tfrac15 & \tfrac35 \end{array}\right]
+\xrightarrow{\;\text{R1}\,\div\,3\;}
+\left[\begin{array}{cc|cc} 1 & 0 & \tfrac25 & -\tfrac15 \\ 0 & 1 & -\tfrac15 & \tfrac35 \end{array}\right]
+$$
+So $A^{-1} = \begin{pmatrix} 0.4 & -0.2 \\ -0.2 & 0.6 \end{pmatrix}$.
+Check: $A^{-1}A = \begin{pmatrix} 0.4\cdot3 - 0.2\cdot1 & 0.4\cdot1 - 0.2\cdot2 \\ -0.2\cdot3 + 0.6\cdot1 & -0.2\cdot1 + 0.6\cdot2 \end{pmatrix} = \begin{pmatrix} 1 & 0 \\ 0 & 1 \end{pmatrix}$. $\checkmark$
+
+(b) $A^{-1}\mathbf{b} = \begin{pmatrix} 0.4\cdot 11 - 0.2\cdot 7 \\ -0.2\cdot 11 + 0.6\cdot 7 \end{pmatrix} = \begin{pmatrix} 3 \\ 2 \end{pmatrix}$, as in Problem 1.
+
+(c) $A^{-1}\begin{pmatrix} 8 \\ 6 \end{pmatrix} = \begin{pmatrix} 3.2 - 1.2 \\ -1.6 + 3.6 \end{pmatrix} = \begin{pmatrix} 2 \\ 2 \end{pmatrix}$: 2 units of Type A and 2 of Type B.
+Check: G1 $= 3\cdot2 + 1\cdot2 = 8$ and G2 $= 1\cdot2 + 2\cdot2 = 6$. $\checkmark$
+The inverse was computed once and reused; with many samples that saves redoing the elimination each time.
+
 ### R verification
 
 ```r
@@ -261,6 +315,14 @@ solve(A3, b3)
 
 A3 %*% solve(A3, b3) - b3
 # all entries ~0 (tiny floating-point residual)
+
+solve(A)
+#      [,1] [,2]
+# [1,]  0.4 -0.2
+# [2,] -0.2  0.6
+solve(A) %*% c(8, 6)
+# [1,] 2
+# [2,] 2
 ```
 
 :::

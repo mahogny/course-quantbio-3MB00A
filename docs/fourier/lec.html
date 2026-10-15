@@ -213,7 +213,6 @@ Quantitative biology and integrative omics
 <li>The transform is nothing exotic: it is a <strong>change of basis</strong>, exactly like the ones from Matrices as transformations and PCA.</li>
 <li>The waves form an <strong>orthogonal basis</strong>. Fourier uses a <strong>fixed</strong> basis; PCA learns a <strong>data-driven</strong> one. Same linear-algebra machinery, different choice of axes.</li>
 <li>Why biologists care: <strong>image compression</strong>, <strong>denoising</strong>, <strong>filtering</strong>, and <strong>feature extraction</strong> in microscopy and other signals.</li>
-<li>A teaser at the end: <strong>wavelets</strong>, a basis that is local in both space and frequency.</li>
 </ul>
 <p>This is a <strong>light, intuitive</strong> lecture — the goal is that you know this tool <em>exists</em> and understand <em>why</em> alternative basis functions are useful. No exam-level derivations today.</p>
 <aside class="notes">
@@ -234,15 +233,15 @@ Quantitative biology and integrative omics
 <h2>A biology picture first</h2>
 <p>Two everyday biological signals:</p>
 <ul>
-<li>A <strong>microscopy image</strong> of tissue — but it is grainy, and there is a faint periodic stripe artefact from the detector.</li>
+<li>A <strong>microscopy image</strong> of a cell (below) — with a periodic <strong>stripe artefact</strong> from the detector laid over it.</li>
 <li>A <strong>recording over time</strong> — say a fluorescence trace, an ECG-like electrophysiology signal, or an oscillating gene-expression readout — buried in noise.</li>
 </ul>
 <p>In both cases the <em>interesting</em> structure and the <em>unwanted</em> structure live at different <strong>scales of variation</strong>: smooth trends, fine texture, a repeating rhythm, random speckle.</p>
 <p><strong>Question:</strong> is there a representation in which “slow smooth stuff”, “a specific repeating pattern”, and “fine noise” become <em>separate, addressable</em> pieces?</p>
 <p>Yes — that representation is <strong>frequency</strong>. The Fourier transform sorts a signal by frequency.</p>
 
-<img data-src="fig02-biology-signals.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:75.0%"><aside class="notes">
-<p>Anchor the abstraction in two concrete biological signals before any maths, following the course’s method-biology pairing principle. The key intuition to plant: different kinds of structure (a slow trend, a repeating rhythm, fine grain) correspond to different frequencies, and once you sort by frequency you can treat them separately — keep the trend, remove the stripe, smooth the noise. Do not define anything formally yet. Just sell the promise: frequency is a viewpoint in which messy signals become separable.</p>
+<img data-src="fig02-cell-with-stripes.png" class="quarto-figure quarto-figure-center r-stretch"><aside class="notes">
+<p>Anchor the abstraction in two concrete biological signals before any maths, following the course’s method-biology pairing principle. The picture is a transmission electron micrograph of a mesenchymal stem cell with an artificial sinusoidal stripe added; we remove that stripe again on the denoising slide. The key intuition to plant: different kinds of structure (a slow trend, a repeating rhythm, fine grain) correspond to different frequencies, and once you sort by frequency you can treat them separately — keep the trend, remove the stripe, smooth the noise. Do not define anything formally yet. Just sell the promise: frequency is a viewpoint in which messy signals become separable.</p>
 <style type="text/css">
         span.MJX_Assistive_MathML {
           position:absolute!important;
@@ -353,8 +352,8 @@ Quantitative biology and integrative omics
           display:block!important;
       }</style></aside>
 </section>
-<section id="why-sinusoids-because-they-are-orthogonal" class="slide level2 smaller">
-<h2>Why sinusoids? Because they are orthogonal</h2>
+<section id="why-sinusoids-because-they-are-orthogonal-not-for-exam" class="slide level2 smaller">
+<h2>Why sinusoids? Because they are orthogonal (not for exam)</h2>
 <p>For a basis to give clean, <em>unique</em> coordinates, the basis directions should be <strong>orthogonal</strong> — perpendicular, non-overlapping — just like the orthogonal eigenvectors of a symmetric matrix in Eigenvalues &amp; eigenvectors.</p>
 <p>Sinusoids of different frequencies are orthogonal. The “dot product” of two whole signals is their overlap summed over all points:</p>
 <p><span class="math display">\[\langle f, g\rangle = \sum_t f(t)\,g(t)\]</span></p>
@@ -465,14 +464,14 @@ Quantitative biology and integrative omics
 <p>Most of the <em>visible</em> content of a natural image lives in its <strong>low frequencies</strong>. The high-frequency coefficients are often small and perceptually unimportant.</p>
 <p><strong>Recipe:</strong> transform to frequency space, keep the largest / lowest-frequency coefficients, throw the rest away, transform back.</p>
 <ul>
-<li>You store far fewer numbers, yet the image still looks nearly the same.</li>
+<li><strong>Why it matters:</strong> microscopy produces huge data — light-sheet, whole-slide and high-content screens reach terabytes per experiment. Storing, moving and sharing it depends on compression.</li>
 <li>This is the core idea behind <strong>JPEG</strong>, which uses a close Fourier relative, the <strong>discrete cosine transform (DCT)</strong>, on small image blocks.</li>
-<li>The trade-off is <strong>lossy</strong>: push it too far and you see “blocky” artefacts (the discarded high frequencies were real edges).</li>
+<li><strong>Below</strong>, pushed hard: only the largest <strong>3%</strong> of the Fourier coefficients are kept. The cell is still recognisable, but fine detail is gone and blotchy “ringing” artefacts appear — compression is <strong>lossy</strong>.</li>
 </ul>
 <p>Same lesson as truncating a PCA to its top components: <strong>keep the few coordinates that carry the signal, discard the rest.</strong></p>
 
-<img data-src="fig09-compression-truncation.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:75.0%"><aside class="notes">
-<p>Compression is the cleanest demonstration that a good basis concentrates information. In the Fourier/DCT basis, natural images have most of their energy in a handful of low-frequency coefficients, so you can zero out the many small high-frequency ones and lose little perceptual quality. Name JPEG and be precise that it uses the DCT (a real-valued cousin of the Fourier transform) on 8x8 blocks — do not overclaim it is “the Fourier transform.” Draw the explicit parallel to PCA truncation, which students just met: both are “represent in a smart basis, then keep only the coordinates that matter.” Mention lossiness and blocking artefacts to stay honest.</p>
+<img data-src="fig09-compression.png" class="quarto-figure quarto-figure-center r-stretch"><aside class="notes">
+<p>Compression is the cleanest demonstration that a good basis concentrates information. In the Fourier/DCT basis, natural images have most of their energy in a handful of low-frequency coefficients, so you can zero out the many small high-frequency ones and lose little perceptual quality. Name JPEG and be precise that it uses the DCT (a real-valued cousin of the Fourier transform) on 8x8 blocks — do not overclaim it is “the Fourier transform.” Draw the explicit parallel to PCA truncation, which students just met: both are “represent in a smart basis, then keep only the coordinates that matter.” Mention lossiness to stay honest: the figure deliberately keeps only 3% of the coefficients so the artefacts are visible (blur plus ringing, since this is a global Fourier transform rather than JPEG’s 8x8 blocks). Practical hook: data volume is a real bottleneck in imaging facilities, so compression is not an academic detail.</p>
 <style type="text/css">
         span.MJX_Assistive_MathML {
           position:absolute!important;
@@ -495,10 +494,11 @@ Quantitative biology and integrative omics
 </ul>
 <p>Filtering is <em>multiply the spectrum by a mask, then transform back.</em> This is efficient because of the <strong>convolution theorem</strong>:</p>
 <p><span class="math display">\[\text{convolution in space/time} \;\Longleftrightarrow\; \text{multiplication in frequency}\]</span></p>
-<p><strong>Caveat (be honest):</strong> sharp <em>real</em> edges are also high-frequency, so aggressive low-pass filtering blurs true detail. Filtering is a trade-off, not a free lunch.</p>
+<p><strong>Below:</strong> the stripe from the first picture is a single frequency — just <strong>two coefficients</strong> in the 2D spectrum. Set them to 0 (a notch filter) and transform back.</p>
+<p><strong>Caveat:</strong> a mask removes <em>everything</em> at its frequencies, real detail included — filtering is a trade-off.</p>
 
-<img data-src="fig10-filter-masks.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:75.0%"><aside class="notes">
-<p>Filtering is the operational reason biologists meet Fourier at the microscope and the electrophysiology rig. The mental model: transform, multiply the spectrum by a mask that keeps the frequencies you want, transform back. Low-pass smooths, high-pass sharpens, notch removes a single offending frequency (mains hum at 50/60 Hz, a periodic detector artefact). The convolution theorem is why this is fast and why “blurring = low-pass” — a smoothing convolution in space is a simple multiplication in frequency. Repeat the honesty note from earlier: noise and real edges share the high-frequency band, so filtering always trades noise reduction against detail loss. This caveat also motivates wavelets at the end.</p>
+<img data-src="fig10-stripe-removed.png" class="quarto-figure quarto-figure-center r-stretch"><aside class="notes">
+<p>Filtering is the operational reason biologists meet Fourier at the microscope and the electrophysiology rig. The mental model: transform, multiply the spectrum by a mask that keeps the frequencies you want, transform back. Low-pass smooths, high-pass sharpens, notch removes a single offending frequency (mains hum at 50/60 Hz, a periodic detector artefact). The convolution theorem is why this is fast and why “blurring = low-pass” — a smoothing convolution in space is a simple multiplication in frequency. The figure is the payoff of the first slide: the stripe sits at exactly one frequency, so zeroing its two coefficients removes it almost perfectly (the cell’s own tiny content at that frequency goes too — the largest pixel change is about 0.001). Repeat the honesty note: noise and real edges share the high-frequency band, so low-pass filtering always trades noise reduction against detail loss.</p>
 <style type="text/css">
         span.MJX_Assistive_MathML {
           position:absolute!important;
@@ -539,14 +539,15 @@ Quantitative biology and integrative omics
 <h2>In R: the transform in one function</h2>
 <p>Base R computes the Fourier transform with <code>fft()</code>. A tiny 1D demo (illustrative — not run here):</p>
 <div class="sourceCode" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a aria-hidden="true" tabindex="-1"></a><span class="co"># a signal: a slow 3-cycle wave plus a fast 20-cycle wave, plus noise</span></span>
-<span id="cb1-2"><a aria-hidden="true" tabindex="-1"></a>t <span class="ot">&lt;-</span> <span class="fu">seq</span>(<span class="dv">0</span>, <span class="dv">1</span>, <span class="at">length.out =</span> <span class="dv">256</span>)</span>
-<span id="cb1-3"><a aria-hidden="true" tabindex="-1"></a>x <span class="ot">&lt;-</span> <span class="fu">sin</span>(<span class="dv">2</span><span class="sc">*</span>pi<span class="sc">*</span><span class="dv">3</span><span class="sc">*</span>t) <span class="sc">+</span> <span class="fl">0.5</span><span class="sc">*</span><span class="fu">sin</span>(<span class="dv">2</span><span class="sc">*</span>pi<span class="sc">*</span><span class="dv">20</span><span class="sc">*</span>t) <span class="sc">+</span> <span class="fu">rnorm</span>(<span class="dv">256</span>, <span class="at">sd =</span> <span class="fl">0.2</span>)</span>
-<span id="cb1-4"><a aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-5"><a aria-hidden="true" tabindex="-1"></a>X    <span class="ot">&lt;-</span> <span class="fu">fft</span>(x)             <span class="co"># discrete Fourier transform (complex numbers)</span></span>
-<span id="cb1-6"><a aria-hidden="true" tabindex="-1"></a>mag  <span class="ot">&lt;-</span> <span class="fu">Mod</span>(X)             <span class="co"># magnitude = how much of each frequency</span></span>
-<span id="cb1-7"><a aria-hidden="true" tabindex="-1"></a>mag  <span class="ot">&lt;-</span> mag[<span class="dv">1</span><span class="sc">:</span><span class="dv">128</span>]         <span class="co"># keep the lower half (the rest is a mirror image)</span></span>
-<span id="cb1-8"><a aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-9"><a aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(mag, <span class="at">type =</span> <span class="st">"h"</span>)      <span class="co"># expect tall spikes near index 3 and 20</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb1-2"><a aria-hidden="true" tabindex="-1"></a>n <span class="ot">&lt;-</span> <span class="dv">256</span></span>
+<span id="cb1-3"><a aria-hidden="true" tabindex="-1"></a>t <span class="ot">&lt;-</span> (<span class="dv">0</span><span class="sc">:</span>(n <span class="sc">-</span> <span class="dv">1</span>)) <span class="sc">/</span> n  <span class="co"># n samples; frequency k is FFT bin k</span></span>
+<span id="cb1-4"><a aria-hidden="true" tabindex="-1"></a>x <span class="ot">&lt;-</span> <span class="fu">sin</span>(<span class="dv">2</span><span class="sc">*</span>pi<span class="sc">*</span><span class="dv">3</span><span class="sc">*</span>t) <span class="sc">+</span> <span class="fl">0.5</span><span class="sc">*</span><span class="fu">sin</span>(<span class="dv">2</span><span class="sc">*</span>pi<span class="sc">*</span><span class="dv">20</span><span class="sc">*</span>t) <span class="sc">+</span> <span class="fu">rnorm</span>(n, <span class="at">sd =</span> <span class="fl">0.2</span>)</span>
+<span id="cb1-5"><a aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-6"><a aria-hidden="true" tabindex="-1"></a>X    <span class="ot">&lt;-</span> <span class="fu">fft</span>(x)             <span class="co"># discrete Fourier transform (complex numbers)</span></span>
+<span id="cb1-7"><a aria-hidden="true" tabindex="-1"></a>mag  <span class="ot">&lt;-</span> <span class="fu">Mod</span>(X)             <span class="co"># magnitude = how much of each frequency</span></span>
+<span id="cb1-8"><a aria-hidden="true" tabindex="-1"></a>mag  <span class="ot">&lt;-</span> mag[<span class="dv">1</span><span class="sc">:</span>(n<span class="sc">/</span><span class="dv">2</span>)]       <span class="co"># keep the lower half (the rest is a mirror image)</span></span>
+<span id="cb1-9"><a aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-10"><a aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(mag, <span class="at">type =</span> <span class="st">"h"</span>)      <span class="co"># frequencies 3 and 20 are at R indices 4 and 21</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <ul>
 <li><code>fft()</code> returns <strong>complex</strong> numbers: <code>Mod()</code> gives amplitude, <code>Arg()</code> gives phase.</li>
 <li>The spectrum is <strong>mirror-symmetric</strong> for a real signal, so we look at the first half.</li>
@@ -555,32 +556,7 @@ Quantitative biology and integrative omics
 <p>For images, <code>fft()</code> also works on a matrix; production microscopy pipelines use dedicated imaging libraries.</p>
 
 <img data-src="fig12-fft-spectrum-demo.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:60.0%"><aside class="notes">
-<p>Show that the whole lecture is one function call, so the tool feels approachable. Walk the demo verbally: a signal made of a 3-cycle and a 20-cycle sinusoid plus noise; fft() returns complex coefficients; Mod() gives amplitudes and you see two clean spikes at frequencies 3 and 20 while the noise stays low and flat. Flag the two gotchas that trip everyone: the output is complex (magnitude and phase), and for a real signal the spectrum is mirror-symmetric so you only read the first half. Note base R’s fft is unnormalised, hence the divide-by-N on the inverse. This is static illustrative code — no packages assumed at render — and the exercise lets them reason about it on paper.</p>
-<style type="text/css">
-        span.MJX_Assistive_MathML {
-          position:absolute!important;
-          clip: rect(1px, 1px, 1px, 1px);
-          padding: 1px 0 0 0!important;
-          border: 0!important;
-          height: 1px!important;
-          width: 1px!important;
-          overflow: hidden!important;
-          display:block!important;
-      }</style></aside>
-</section>
-<section id="teaser-wavelets" class="slide level2 smaller">
-<h2>Teaser: wavelets</h2>
-<p>The Fourier transform has one blind spot: its basis waves stretch across the <strong>whole</strong> signal, so it tells you <em>which</em> frequencies are present but not <strong>where</strong> they occur.</p>
-<p>For signals whose content <strong>changes over time or space</strong> — a transient spike, an edge, a burst of activity — we want a basis that is <strong>local</strong>.</p>
-<ul>
-<li><strong>Wavelets</strong> are little wave-packets, localised in <strong>both</strong> position <strong>and</strong> frequency.</li>
-<li>They describe a signal at <strong>multiple scales at once</strong>: coarse shape <em>and</em> the location of fine features.</li>
-<li>Used in <strong>image compression</strong> (JPEG 2000), <strong>denoising</strong> with sharp-edge preservation, and multi-scale biological signal analysis.</li>
-</ul>
-<p>Same big idea, better-suited basis: <strong>choose the basis functions to match the structure you expect.</strong></p>
-
-<img data-src="fig13-wavelets-vs-fourier.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:75.0%"><aside class="notes">
-<p>End by opening a door rather than closing one. The honest limitation of Fourier is poor localisation: a global sinusoid basis cannot say <em>when</em> a frequency appeared, which is bad for transients and edges — exactly the detail that naive filtering blurs. Wavelets fix this with basis functions localised in both position and frequency, giving a multi-scale description. Name real uses (JPEG 2000, edge-preserving denoising) without going into the maths. The meta-lesson, and the through-line of the whole lecture, is the payoff sentence: analysis is the art of choosing a basis that matches your data’s structure — fixed sinusoids, learned PCA axes, or localised wavelets. Do not teach wavelet mechanics; this is a pointer only.</p>
+<p>Show that the whole lecture is one function call, so the tool feels approachable. Walk the demo verbally: a signal made of a 3-cycle and a 20-cycle sinusoid plus noise; fft() returns complex coefficients; Mod() gives amplitudes and you see two clean spikes at frequencies 3 and 20 while the noise stays low and flat. Flag the two gotchas that trip everyone: the output is complex (magnitude and phase), and for a real signal the spectrum is mirror-symmetric so you only read the first half. Note base R’s fft is unnormalised, hence the divide-by-N on the inverse. Mod and Arg are the r and theta of each complex coefficient seen as a point in the plane (Polar coordinates: measuring a ring). This is static illustrative code — no packages assumed at render — and the exercise lets them reason about it on paper.</p>
 <style type="text/css">
         span.MJX_Assistive_MathML {
           position:absolute!important;
@@ -639,15 +615,11 @@ Quantitative biology and integrative omics
 <td>Feature extraction</td>
 <td>spectral peaks, orientation, bandwidth = a compact feature vector</td>
 </tr>
-<tr class="odd">
-<td>Wavelets</td>
-<td>a <strong>local</strong> basis — where <em>and</em> which frequency; match the basis to the structure</td>
-</tr>
 </tbody>
 </table>
 <p><strong>In R:</strong> <code>fft()</code> for the transform, <code>Mod()</code>/<code>Arg()</code> for amplitude/phase.</p>
 <aside class="notes">
-<p>The summary doubles as the take-home vocabulary sheet. Drill the single unifying sentence one more time: a transform is a choice of basis, Fourier fixes it to sinusoids, PCA learns it from data, wavelets localise it — and every application (compression, denoising, filtering, feature extraction) is “represent in a good basis, then keep or mask the coordinates you want.” This is an Applications-block appreciation lecture, so success is conceptual fluency and comfort with the words, not a by-hand exam skill. Point them to the exercise (reasoning about a small spectrum and fft output on paper) and the quiz to consolidate.</p>
+<p>The summary doubles as the take-home vocabulary sheet. Drill the single unifying sentence one more time: a transform is a choice of basis, Fourier fixes it to sinusoids, PCA learns it from data — and every application (compression, denoising, filtering, feature extraction) is “represent in a good basis, then keep or mask the coordinates you want.” This is an Applications-block appreciation lecture, so success is conceptual fluency and comfort with the words, not a by-hand exam skill. Point them to the exercise (reasoning about a small spectrum and fft output on paper) and the quiz to consolidate.</p>
 <style type="text/css">
         span.MJX_Assistive_MathML {
           position:absolute!important;

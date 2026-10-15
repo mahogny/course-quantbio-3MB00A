@@ -1,6 +1,6 @@
 ---
 title: "Fitting HMMs in R: finding CpG islands"
-subtitle: "Linear algebra — Fitting HMMs in R"
+subtitle: "Extra material — Fitting HMMs in R"
 author: "Quantitative biology and integrative omics"
 format:
   revealjs:
@@ -20,7 +20,7 @@ format:
 
 ## About this lecture
 
-This is the **last unit** of the linear-algebra block. In Hidden Markov models you built HMMs
+This is an **extra-material** unit following Hidden Markov models. There you built HMMs
 by hand; today we let R do the heavy lifting on genome-like data. By the end
 you will be able to:
 
@@ -39,7 +39,7 @@ distribution $\boldsymbol{\pi}$, hidden states $\mathbf{z}$, observations
 $\mathbf{x}$.
 
 ::: notes
-Welcome to the last unit of the linear-algebra block. Hidden Markov models was all concept and
+Welcome to the second HMM unit (extra material). Hidden Markov models was all concept and
 pen-and-paper; today is hands-on R. We use the same two-state GC-rich versus
 normal model so nothing about the biology is new — only the tooling. The HMM
 package gives us one function per task: build, simulate, score, decode, and
@@ -168,7 +168,7 @@ logLik <- function(col) {
   m + log(sum(exp(col - m)))
 }
 logLik(f[, length(obs)])
-# e.g.  -39.5      (a log-probability: the raw probability is astronomically tiny)
+# e.g.  -39.5      (a log-probability; use logs to remain stable for long sequences)
 ```
 
 Probabilities of long sequences are vanishingly small, so the package works in
@@ -225,17 +225,19 @@ So far we **supplied** $A, B, \boldsymbol{\pi}$. The realistic case: only raw
 sequence, no labels. `baumWelch` learns the parameters by EM.
 
 ```r
-# start from a deliberately WRONG guess to show it can learn
+# Start from an imperfect, asymmetric guess. Identical state rows would remain
+# identical under EM, so they cannot teach the algorithm to distinguish states.
 guess <- initHMM(states, symbols,
                  transProbs    = matrix(c(0.5,0.5, 0.5,0.5), 2, byrow=TRUE,
                                         dimnames=list(states,states)),
-                 emissionProbs = matrix(rep(0.25, 8), 2, byrow=TRUE,
+                 emissionProbs = matrix(c(0.3,0.2,0.2,0.3,
+                                          0.2,0.3,0.3,0.2), 2, byrow=TRUE,
                                         dimnames=list(states,symbols)))
 
 bw <- baumWelch(guess, obs, maxIterations = 100)
 
-bw$hmm$transProbs      # learned A  -> should drift toward 0.8/0.2, 0.3/0.7
-bw$hmm$emissionProbs   # learned B  -> H row should become GC-heavy
+bw$hmm$transProbs      # learned A; compare its stickiness with the generating model
+bw$hmm$emissionProbs   # learned B; identify the GC-heavy row (its label can switch)
 ```
 
 `baumWelch` returns `$hmm` (the fitted model) and `$difference` (convergence
@@ -244,13 +246,14 @@ trace).
 ![](fig07-baumwelch-em.svg){width="70%" fig-align="center"}
 
 ::: notes
-Baum-Welch is the learning step. We hand it a deliberately uninformative
-starting model — uniform transitions and uniform emissions — and let it iterate.
-With enough data it pulls the parameters toward the truth: the H row of the
-emission matrix becomes GC-heavy and the transitions become sticky. Point out
-the return structure: dollar hmm is the fitted model you then feed to viterbi,
-and dollar difference lets you check it converged. Then immediately raise the
-caveats on the next slide.
+Baum-Welch is the learning step. We hand it an imperfect starting model with
+slightly different emission rows, so it has a way to distinguish the latent
+states. Fully identical rows are a symmetry that EM preserves and therefore a
+bad teaching initialization. With enough data it can pull the parameters toward
+the truth: one emission row becomes GC-heavy and the transitions become sticky.
+Point out the return structure: dollar hmm is the fitted model you then feed to
+viterbi, and dollar difference lets you check it converged. Then immediately
+raise the caveats on the next slide.
 :::
 
 ## Pitfalls of learning {.smaller}

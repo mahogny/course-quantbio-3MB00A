@@ -122,7 +122,7 @@ arrows(m[1], m[2], m[1] + 2*pc1[1], m[2] + 2*pc1[2],
 
 **R5.** Increase the noise: set `sd = 1.5` when making `g2`, rebuild `X`, `C`, and `ec`. How does the leading eigenvalue's *share* of the variance change, and what does the cloud look like? Explain in one sentence.
 
-**R6.** Confirm the symmetric reconstruction numerically: with `C` and its `ec` from block 4, check `all.equal(C, ec$vectors %*% diag(ec$values) %*% t(ec$vectors))` returns `TRUE`.
+**R6.** Confirm the symmetric reconstruction numerically: with `C` and its `ec` from block 4, check `all.equal(unname(C), unname(ec$vectors %*% diag(ec$values) %*% t(ec$vectors)))` returns `TRUE`. `unname()` ignores the feature labels, which `eigen()` does not retain on the reconstructed matrix.
 
 **R7. (complex eigenvalues)** Run `eigen(matrix(c(0, -1, 1, 0), 2, byrow = TRUE))`. What kind of numbers are the eigenvalues, and how does that match the fact that a $90^\circ$ rotation has no real eigen-direction (Eigenvalues & eigenvectors)?
 
@@ -161,12 +161,11 @@ For $\lambda=3$: $(1,1)/\sqrt2 = (1/\sqrt2,\ 1/\sqrt2) \approx (0.707,\ 0.707)$.
 For $\lambda=1$: $(1,-1)/\sqrt2 = (1/\sqrt2,\ -1/\sqrt2) \approx (0.707,\ -0.707)$.
 So `eigen(A)$vectors` should print roughly these columns. R may flip the sign of either whole column (an eigenvector is only defined up to sign and scale) — same direction, still correct.
 
-**B2.** Find the eigenvalues with the characteristic equation, step by step.
-Step 1 — $C-\lambda I = \begin{pmatrix}4-\lambda & 2\\ 2 & 4-\lambda\end{pmatrix}$.
-Step 2 — $\det = (4-\lambda)^2 - (2)(2) = (4-\lambda)^2 - 4 = 0$. So $(4-\lambda)^2 = 4 \Rightarrow 4-\lambda = \pm2$.
-Taking $4-\lambda = 2$ gives $\lambda = 2$; taking $4-\lambda = -2$ gives $\lambda = 6$. So $\lambda = 6$ and $\lambda = 2$.
-Step 3 — leading eigenvector (largest eigenvalue, $\lambda=6$): $C-6I = \begin{pmatrix}-2&2\\2&-2\end{pmatrix}$, row 1 gives $-2v_1+2v_2=0\Rightarrow v_2=v_1$, so $\mathbf v=(1,1)$ — the main axis of variation. (The other, for $\lambda=2$, is $(1,-1)$.)
-Step 4 — checks: trace $4+4 = 8 = 6+2$ ✓; $\det = 4\cdot4 - 2\cdot2 = 12 = 6\cdot2$ ✓.
+**B2.** $C$ has the symmetric pattern $\begin{pmatrix} a & b \\ b & a \end{pmatrix}$ with $a = 4$, $b = 2$, so the eigenvectors are $(1,1)$ and $(1,-1)$:
+$C(1,1) = (4+2,\ 2+4) = (6,6) = 6\,(1,1)$, so $\lambda = 6$; and $C(1,-1) = (4-2,\ 2-4) = (2,-2) = 2\,(1,-1)$, so $\lambda = 2$.
+The leading eigenvector (largest eigenvalue, $\lambda=6$) is $\mathbf v=(1,1)$ — the main axis of variation.
+Check: trace $4+4 = 8 = 6+2$ ✓.
+(Bonus, not for exam: the characteristic equation $(4-\lambda)^2 - 4 = 0$ gives the same $\lambda = 6, 2$.)
 
 **R1.** Run block 1 and read off the first eigenvector column.
 
@@ -215,7 +214,8 @@ n  <- 200
 g1 <- rnorm(n)
 g2 <- 0.8 * g1 + rnorm(n, sd = 1.5)   # noisier than before
 X  <- cbind(g1, g2)
-ec <- eigen(cov(X))
+C  <- cov(X)
+ec <- eigen(C)
 ec$values[1] / sum(ec$values)         # ~ 0.82  (was ~0.94)
 ```
 With `sd = 1.5`, gene 2 is noisier and less tied to gene 1, so the cloud becomes rounder and the leading eigenvalue's *share* of total variance drops from about 0.94 to about 0.82 — the two genes share less common variation, so the single leading axis no longer dominates as strongly. (Push the noise much higher and the noisy gene's own variance eventually dominates instead — try `sd = 4` and watch the leading axis swing toward the gene-2 direction.)
@@ -223,7 +223,7 @@ With `sd = 1.5`, gene 2 is noisier and less tied to gene 1, so the cloud becomes
 **R6.** Reconstruct the symmetric covariance matrix from its eigen-decomposition and compare.
 
 ```r
-all.equal(C, ec$vectors %*% diag(ec$values) %*% t(ec$vectors))   # TRUE
+all.equal(unname(C), unname(ec$vectors %*% diag(ec$values) %*% t(ec$vectors)))   # TRUE
 ```
 It returns `TRUE`: the symmetric reconstruction $V\Lambda V^\top$ rebuilds the covariance matrix exactly (within floating-point tolerance). Because $C$ is symmetric its eigenvectors are orthonormal, so $V^{-1}=V^\top$ and the transpose form works — no `solve()` needed.
 
@@ -233,7 +233,7 @@ It returns `TRUE`: the symmetric reconstruction $V\Lambda V^\top$ rebuilds the c
 eigen(matrix(c(0, -1, 1, 0), nrow = 2, byrow = TRUE))$values
 # [1] 0+1i 0-1i
 ```
-The eigenvalues are **complex** ($0+1i$ and $0-1i$), not real. A $90^\circ$ rotation moves every real direction, so it has no real eigenvector; the imaginary eigenvalues are exactly what the characteristic equation from Eigenvalues & eigenvectors, $\lambda^2 + 1 = 0$ (i.e. $\lambda = \pm i$) predicted.
+The eigenvalues are **complex** ($0+1i$ and $0-1i$), not real. A $90^\circ$ rotation moves every real direction, so it has no real eigenvector — the same conclusion as B6 in Eigenvalues & eigenvectors. (Bonus, not for exam: the characteristic equation $\lambda^2 + 1 = 0$, i.e. $\lambda = \pm i$, predicts exactly these imaginary values.)
 :::
 
 ## Where this leads

@@ -115,6 +115,12 @@ icc                                # fraction of variance that is between-group
 ```r
 # Frequentist multilevel model
 library(lme4)
+set.seed(1)
+d <- data.frame(patient = factor(rep(seq_len(40), each = 4)),
+                treatment = rep(c("control", "control", "treated", "treated"), 40))
+patient_effect <- rnorm(40, sd = sqrt(2))
+d$biomarker <- 6 + 1.5 * (d$treatment == "treated") +
+  patient_effect[as.integer(d$patient)] + rnorm(nrow(d), sd = sqrt(8))
 fit <- lmer(biomarker ~ treatment + (1 | patient), data = d)
 summary(fit)     # fixed effect + variance components (tau^2, sigma^2)
 ranef(fit)       # the shrunken per-patient deviations b_i

@@ -34,7 +34,7 @@ Two families of use:
 - **Compression** keeps the few large (usually low-frequency) coefficients and discards the rest — like truncating a PCA to its top components (JPEG uses the DCT, a Fourier relative).
 - **Filtering** multiplies the spectrum by a mask and transforms back: **low-pass** smooths/denoises, **high-pass** sharpens, a **notch** removes one artefact frequency. This is fast because of the **convolution theorem** (convolution in space = multiplication in frequency).
 
-**Fixed vs learned basis:** Fourier commits to sinusoids for every signal; **PCA** learns axes from the data's covariance. **Wavelets** offer a basis that is **local** in both position and frequency — good where the content changes across the signal.
+**Fixed vs learned basis:** Fourier commits to sinusoids for every signal; **PCA** learns axes from the data's covariance.
 
 ## By hand (reasoning)
 
@@ -54,7 +54,7 @@ Two families of use:
 
 **B6.** A microscopy image has a faint, perfectly regular diagonal **stripe artefact** from the detector. In the 2D spectrum this appears as an isolated pair of bright dots. Describe how you would remove the artefact using the frequency domain, and name the filter type. What real structure might you accidentally damage, and how does that connect to the honesty caveat from the lecture?
 
-**B7.** "Noise is high-frequency, so I'll just delete all high frequencies and my image will be clean." Give one reason this works reasonably well and one reason it can go wrong. Which alternative basis mentioned in the lecture is designed to handle this better?
+**B7.** "Noise is high-frequency, so I'll just delete all high frequencies and my image will be clean." Give one reason this works reasonably well and one reason it can go wrong.
 
 **B8. (compression)** An image's Fourier coefficients are dominated by a handful of large low-frequency values; the rest are tiny. Explain the compression recipe in three steps, and state the analogy to truncating a PCA. Why is this **lossy**, and what artefact appears if you keep too few coefficients?
 
@@ -68,7 +68,7 @@ Use R only to **confirm** the intuition above. This is illustrative static code 
 # a signal: a slow 3-cycle wave + a smaller fast 20-cycle wave + noise
 set.seed(1)
 n <- 256
-t <- seq(0, 1, length.out = n)
+t <- (0:(n - 1)) / n  # n equally spaced samples; frequency k is FFT bin k
 x <- sin(2*pi*3*t) + 0.5*sin(2*pi*20*t) + rnorm(n, sd = 0.2)
 
 X   <- fft(x)          # discrete Fourier transform -> complex numbers
@@ -76,7 +76,7 @@ mag <- Mod(X)          # magnitude = amount of each frequency
 mag <- mag[1:(n/2)]    # keep the lower half; the upper half mirrors it
 
 plot(mag, type = "h", xlab = "frequency index", ylab = "amplitude")
-# expect two clear spikes: a tall one near index 3, a shorter one near index 20
+# expect two clear spikes: a tall one at R index 4 (frequency 3), another at index 21 (frequency 20)
 ```
 
 ### The transform is reversible
@@ -156,11 +156,11 @@ A perfectly periodic artefact is localised in frequency (a few bright dots), so 
 
 **B6.** Transform the image to the 2D frequency domain, locate the isolated bright dots produced by the periodic stripe, set those coefficients (a small band around them) to zero — a **notch / band-stop** filter — then apply the inverse transform to get the cleaned image. Risk: if any genuine image structure happens to sit at that same spatial frequency, it is removed along with the artefact. This is the lecture's honesty caveat — filtering in frequency space cannot distinguish "artefact at frequency $f$" from "real signal at frequency $f$", so it is always a trade-off.
 
-**B7.** *Works reasonably well because* random noise really is spread across high frequencies, so cutting them removes a lot of noise. *Can go wrong because* sharp **real** edges and fine true detail are also high-frequency, so a blunt cut blurs genuine structure along with the noise. The alternative designed to handle this is **wavelets**, whose basis functions are local in both position and frequency, so they can suppress noise while preserving the *location* of real edges.
+**B7.** *Works reasonably well because* random noise really is spread across high frequencies, so cutting them removes a lot of noise. *Can go wrong because* sharp **real** edges and fine true detail are also high-frequency, so a blunt cut blurs genuine structure along with the noise. A frequency mask cannot tell noise from real detail when both sit at the same frequencies, so filtering is always a trade-off between removing noise and keeping detail.
 
 **B8.** Three-step compression recipe: (1) transform the image to the frequency domain; (2) keep only the largest / lowest-frequency coefficients and discard the many small ones; (3) transform back (or store the kept coefficients and reconstruct on demand). This is the same idea as **truncating a PCA** to its top components — represent the data in a smart basis, then keep only the coordinates that carry most of the signal. It is **lossy** because the discarded coefficients held some (small) real information; keep too few and you lose real high-frequency content, producing visible **blocky / blurred artefacts** (in JPEG, block boundaries become visible because the DCT is applied on small blocks).
 
-**R1.** Spikes at frequency indices **3** and **20** (the two sinusoids in `x`). The index-3 spike is **taller**, because that component has amplitude 1 versus 0.5 for the index-20 component. The noise contributes a low, roughly flat floor across all frequencies.
+**R1.** The spikes are at frequencies **3** and **20**. In this one-based R vector they appear at indices **4** and **21**, because index 1 is the zero-frequency (DC) term. The frequency-3 spike is **taller**, because that component has amplitude 1 versus 0.5 for the frequency-20 component. The noise contributes a low, roughly flat floor across all frequencies.
 
 **R2.** We take `Mod(X)` because `fft()` returns **complex** numbers (real + imaginary parts encoding amplitude *and* phase); `Mod()` extracts the amplitude, which is what we want to see. We keep only `mag[1:(n/2)]` because for a **real** input signal the spectrum is **mirror-symmetric** (the upper half is a redundant reflection of the lower half), so the first half contains all the information.
 
@@ -173,4 +173,3 @@ A perfectly periodic artefact is localised in frequency (a few bright dots), so 
 
 - **PCA (this Applications block):** the data-driven counterpart to Fourier — instead of fixing the basis to sinusoids, it learns the orthogonal axes from the data's covariance. Both are "represent in an orthogonal basis, then keep the coordinates that matter."
 - **Chemometrics:** spectra (mass, IR, Raman) are signals in frequency/wavelength; Fourier methods, filtering, and PCA of spectra are everyday tools there.
-- **Wavelets (pointer only):** a basis local in both position and frequency, for signals whose content changes across time or space — used in edge-preserving denoising and JPEG 2000. Not examined here; noted so you know it exists.

@@ -324,20 +324,23 @@ and/or **pseudocounts** (add a small constant to every count) to avoid this.
 the accuracy. The largest "true" error is the biggest absolute difference
 `max(abs(Phat - Ptrue))`:
 ```r
-# with n = 200      : Phat is noticeably noisy, e.g.
-round(Phat, 3)
-#        A     C     G     T
-# A  0.281 0.219 0.250 0.250     # several entries off Ptrue by ~0.05-0.15
-# ...
-# max(abs(Phat - Ptrue))  ~ 0.10-0.15
+estimate_P <- function(n, Ptrue, bases) {
+  s <- character(n)
+  s[1] <- "A"
+  for (t in 2:n) s[t] <- sample(bases, 1, prob = Ptrue[s[t - 1], ])
+  N <- table(factor(s[-n], levels = bases), factor(s[-1], levels = bases))
+  N / rowSums(N)
+}
 
-# with n = 20000    : close to Ptrue
-# max(abs(Phat - Ptrue))  ~ 0.01      (about two decimals)
-
-# with n = 200000   : very tight
-# max(abs(Phat - Ptrue))  ~ 0.003     (about three decimals)
+set.seed(1)
+for (n in c(200, 20000, 200000)) {
+  Phat <- estimate_P(n, Ptrue, bases)
+  cat("n =", n, "max error =", round(max(abs(Phat - Ptrue)), 4), "\n")
+}
 ```
-As the sequence gets longer the estimate `Phat` converges to `Ptrue`. This is
+The error is typically much larger at `n = 200` than at `n = 20000`, and
+smaller again at `n = 200000` (the exact values depend on the simulated
+sequence). As the sequence gets longer the estimate `Phat` converges to `Ptrue`. This is
 the law of large numbers: more observed transitions out of each base → more
 accurate maximum-likelihood estimates $\hat p_{ij} = N_{ij}/\sum_k N_{ik}$.
 :::

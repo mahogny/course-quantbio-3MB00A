@@ -351,6 +351,52 @@ unknown, and so on. Then check all three original equations. This is the full
 recipe they need for the exam.
 :::
 
+## The inverse: one matrix that undoes $A$
+
+The **inverse** $A^{-1}$ is the matrix with $A^{-1}A = I$. Once you have it, every system with this $A$ is one multiplication:
+
+$$A\mathbf{x} = \mathbf{b} \quad\Rightarrow\quad \mathbf{x} = A^{-1}\mathbf{b}$$
+
+Why bother? In deconvolution the signatures $A$ stay the same and only the measurements $\mathbf{b}$ change from sample to sample. Invert once, reuse for every sample.
+
+**How:** put the identity on the right, $[\,A \mid I\,]$, and keep doing row operations until the **left** side is $I$. Then the right side is $A^{-1}$:
+
+$$[\,A \mid I\,] \;\longrightarrow\; \cdots \;\longrightarrow\; [\,I \mid A^{-1}\,]$$
+
+- Same row operations as before, applied to the whole row.
+- New: after reaching the staircase, also eliminate **upwards**, then divide each row by its diagonal number. (This is called Gauss–Jordan elimination.)
+
+::: notes
+The augmented matrix [A | b] solved for one right-hand side. [A | I] solves for the two columns of I at the same time: the first column of the result solves A x = (1, 0), the second solves A x = (0, 1), and together those columns are A^{-1}. So nothing new is being invented: it is elimination with two right-hand sides at once, carried all the way to I instead of stopping at the staircase. No determinants needed.
+:::
+
+## Inverse by hand: our 2×2
+
+$A = \begin{pmatrix} 2 & 1 \\ 1 & 3 \end{pmatrix}$ from before. Clear below the diagonal, then above it, then scale:
+
+$$
+\left[\begin{array}{cc|cc} 2 & 1 & 1 & 0 \\ 1 & 3 & 0 & 1 \end{array}\right]
+\xrightarrow{\;\text{R2}\,-\,\frac12\text{R1}\;}
+\left[\begin{array}{cc|cc} 2 & 1 & 1 & 0 \\ 0 & 2.5 & -0.5 & 1 \end{array}\right]
+\xrightarrow{\;\text{R2}\,\div\,2.5\;}
+\left[\begin{array}{cc|cc} 2 & 1 & 1 & 0 \\ 0 & 1 & -0.2 & 0.4 \end{array}\right]
+$$
+
+$$
+\xrightarrow{\;\text{R1}\,-\,\text{R2}\;}
+\left[\begin{array}{cc|cc} 2 & 0 & 1.2 & -0.4 \\ 0 & 1 & -0.2 & 0.4 \end{array}\right]
+\xrightarrow{\;\text{R1}\,\div\,2\;}
+\left[\begin{array}{cc|cc} 1 & 0 & 0.6 & -0.2 \\ 0 & 1 & -0.2 & 0.4 \end{array}\right]
+$$
+
+So $A^{-1} = \begin{pmatrix} 0.6 & -0.2 \\ -0.2 & 0.4 \end{pmatrix}$. **Check:** $A^{-1}\mathbf{b} = \begin{pmatrix} 0.6\cdot 8 - 0.2\cdot 9 \\ -0.2\cdot 8 + 0.4\cdot 9 \end{pmatrix} = \begin{pmatrix} 3 \\ 2 \end{pmatrix}$, the same answer as before. $\checkmark$
+
+**No inverse?** If elimination leaves a row of **zeros on the left**, you can never reach $I$: the matrix is **singular** (its columns point along the same line) and has no inverse.
+
+::: notes
+Walk the four steps slowly: the first is exactly the elimination step from before, the second makes the pivot 1, the third clears the entry above the pivot, the fourth scales row 1. Every operation is applied to all four numbers in the row. Two checks students can always do: multiply A^{-1} b and compare with the earlier answer, or multiply A %*% A^{-1} and get I. The singular case connects to Linear systems in R: a zero row on the left is the same situation as "no unique solution". (The ad - bc formula for 2x2 inverses is a bonus shortcut, not needed for the exam.)
+:::
+
 ## The same idea in R (preview) {.smaller}
 
 In Linear systems in R we let the computer do the elimination. The code is short:
@@ -362,10 +408,11 @@ A <- matrix(c(1, 1, 1,
 b <- c(6, 7, 8)
 solve(A, b)
 # [1] 2 3 1
+solve(A)       # one argument: the inverse
 ```
 
 `solve()` runs Gaussian elimination internally — exactly what you just did by
-hand, but on any size.
+hand, but on any size. With one argument it returns $A^{-1}$.
 
 ::: notes
 A quick reassurance and a hook into Linear systems in R. We will not type matrices by hand
@@ -382,6 +429,8 @@ allowed. Note byrow = TRUE so the matrix reads like the page.
 - **Substitution** for tiny systems; **Gaussian elimination** (via the
   augmented matrix) for anything bigger — eliminate to upper-triangular, then
   back-substitute.
+- **Inverse:** row-reduce $[\,A \mid I\,]$ to $[\,I \mid A^{-1}\,]$; then $\mathbf{x} = A^{-1}\mathbf{b}$
+  for any $\mathbf{b}$. A zero row on the left means no inverse.
 - **Always check** by substituting back into the original equations.
 - Biology hook: recovering cell-type amounts from bulk measurements.
 

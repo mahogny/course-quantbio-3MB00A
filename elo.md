@@ -4,7 +4,7 @@ A second-cycle course (**3MB00A**, 7.5 ECTS) on the mathematical and statistical
 methods used in modern bioinformatics. Each topic pairs a method with a biological
 problem that motivates it: students never learn a technique in the abstract.
 
-See [audience.md](audience.md) for the assumed background and
+See [audience.md](https://github.com/mahogny/course-quantbio-3MB00A/blob/main/audience.md) (on GitHub) for the assumed background and
 [courseplan.md](courseplan.md) for the formal syllabus.
 
 ## Overall course outcome

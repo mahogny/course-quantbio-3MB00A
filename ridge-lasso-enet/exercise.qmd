@@ -58,8 +58,8 @@ $$X^\top X = \begin{pmatrix} 1 & 0 \\ 0 & 1 \end{pmatrix}, \qquad X^\top\mathbf{
 (c) By what factor was each coefficient shrunk? Did either become exactly zero?
 
 **B4. (collinearity and the diagonal).** For a collinear design suppose $X^\top X = \begin{pmatrix} 1 & 1 \\ 1 & 1 \end{pmatrix}$.
-(a) Show it is **singular** (compute the determinant) — so OLS cannot invert it.
-(b) Form $X^\top X + \lambda I$ with $\lambda = 1$ and compute its determinant. Is it now invertible?
+(a) Show it is **singular** (its columns are parallel; row-reduce $[\,X^\top X \mid I\,]$ and see what happens) — so OLS cannot invert it.
+(b) Form $X^\top X + \lambda I$ with $\lambda = 1$ and find its inverse by row-reducing $[\,X^\top X + I \mid I\,]$. Is it now invertible?
 (c) In one sentence, connect this to the eigenvalue fact that adding $\lambda I$ shifts every eigenvalue up by $\lambda$ (recall Eigenvalues & eigenvectors).
 
 **B5. (the geometry).** Sketch, in the $(\beta_1,\beta_2)$ plane:
@@ -147,8 +147,8 @@ Just plug into $\hat\beta(\lambda) = \dfrac{8}{4+\lambda}$. The denominator grow
 When $X^\top X$ is the identity, $X^\top X + \lambda I = (1+\lambda)I$, whose inverse is $\frac{1}{1+\lambda}I$. So the ridge estimate is simply $\hat{\boldsymbol\beta}_{\text{ridge}} = \frac{1}{1+\lambda}\,X^\top\mathbf{y}$ — every OLS coefficient scaled by $\frac{1}{1+\lambda}$. At $\lambda=1$ that factor is $\tfrac12$.
 :::
 
-::: {.callout-tip collapse="true" title="Hint 4 — determinant and adding lambda*I (B4)"}
-For a $2\times2$, $\det\begin{pmatrix}a&b\\c&d\end{pmatrix} = ad-bc$. A determinant of $0$ means singular (non-invertible). Adding $\lambda I$ adds $\lambda$ to each diagonal entry. Because adding $\lambda I$ raises every eigenvalue by $\lambda$, a zero eigenvalue (which makes the determinant zero) becomes $\lambda > 0$, so the matrix becomes invertible.
+::: {.callout-tip collapse="true" title="Hint 4 — a singular matrix and adding lambda*I (B4)"}
+A matrix with parallel columns is singular (non-invertible): row reduction gives a row of zeros on the left. Adding $\lambda I$ adds $\lambda$ to each diagonal entry, which breaks the parallel columns. For the eigenvalues of $\begin{pmatrix}1&1\\1&1\end{pmatrix}$, use the symmetric pattern from Eigenvalues & eigenvectors. A zero eigenvalue means some direction is squashed to zero (singular); adding $\lambda I$ raises every eigenvalue by $\lambda$, so it becomes $\lambda > 0$ and the matrix becomes invertible.
 :::
 
 ::: {.callout-tip collapse="true" title="Hint 5 — the geometry (B5)"}
@@ -185,9 +185,19 @@ $$\hat{\boldsymbol\beta}_{\text{ridge}} = \tfrac12 I\begin{pmatrix}3\\1\end{pmat
 (c) Each coefficient was multiplied by $\tfrac{1}{1+\lambda}=\tfrac12$ — shrunk to **half**. Neither became exactly zero; ridge shrinks proportionally but keeps both predictors.
 
 **B4.**
-(a) $\det\begin{pmatrix}1&1\\1&1\end{pmatrix} = (1)(1)-(1)(1) = 0$ → **singular**, so OLS cannot invert it.
-(b) $X^\top X + I = \begin{pmatrix}2&1\\1&2\end{pmatrix}$, with $\det = (2)(2)-(1)(1) = 3 \neq 0$ → now **invertible**.
-(c) The eigenvalues of $\begin{pmatrix}1&1\\1&1\end{pmatrix}$ are $2$ and $0$; adding $\lambda I$ shifts them to $2+\lambda$ and $\lambda$, so the previously-zero eigenvalue becomes $\lambda>0$ and the matrix (whose determinant is the product of eigenvalues) is no longer singular.
+(a) The two columns are both $(1,1)$ — parallel. Row reduction: $\left[\begin{array}{cc|cc} 1 & 1 & 1 & 0 \\ 1 & 1 & 0 & 1 \end{array}\right] \xrightarrow{\;\text{R2}\,-\,\text{R1}\;} \left[\begin{array}{cc|cc} 1 & 1 & 1 & 0 \\ 0 & 0 & -1 & 1 \end{array}\right]$: a zero row on the left → **singular**, so OLS cannot invert it.
+(b) $X^\top X + I = \begin{pmatrix}2&1\\1&2\end{pmatrix}$. Row reduction:
+$$
+\left[\begin{array}{cc|cc} 2 & 1 & 1 & 0 \\ 1 & 2 & 0 & 1 \end{array}\right]
+\xrightarrow{\;\text{R2}\,-\,\frac12\text{R1}\;}
+\left[\begin{array}{cc|cc} 2 & 1 & 1 & 0 \\ 0 & \tfrac32 & -\tfrac12 & 1 \end{array}\right]
+\xrightarrow{\;\frac23\text{R2}\;}
+\left[\begin{array}{cc|cc} 2 & 1 & 1 & 0 \\ 0 & 1 & -\tfrac13 & \tfrac23 \end{array}\right]
+\xrightarrow{\;\frac12(\text{R1}\,-\,\text{R2})\;}
+\left[\begin{array}{cc|cc} 1 & 0 & \tfrac23 & -\tfrac13 \\ 0 & 1 & -\tfrac13 & \tfrac23 \end{array}\right],
+$$
+so it is now **invertible**, with inverse $\tfrac13\begin{pmatrix}2&-1\\-1&2\end{pmatrix}$.
+(c) By the symmetric pattern, $\begin{pmatrix}1&1\\1&1\end{pmatrix}$ has eigenvalue $2$ for $(1,1)$ and $0$ for $(1,-1)$: the $(1,-1)$ direction is squashed to zero, which is why it is singular. Adding $\lambda I$ shifts the eigenvalues to $2+\lambda$ and $\lambda$, so the previously-zero eigenvalue becomes $\lambda>0$ and the matrix is no longer singular. (Bonus, not for exam: the determinant goes from $1 - 1 = 0$ to $4 - 1 = 3$; it is the product of the eigenvalues, $3 \cdot 1$.)
 
 **B5.**
 (a) The ridge region $\beta_1^2+\beta_2^2\le t$ is a **disk / circle**; the lasso region $\lvert\beta_1\rvert+\lvert\beta_2\rvert\le t$ is a **diamond** with corners on the axes at $(\pm t,0)$ and $(0,\pm t)$.
