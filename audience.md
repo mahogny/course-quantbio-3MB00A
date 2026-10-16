@@ -37,15 +37,57 @@ entry-level student can catch up from a linked refresher rather than being lost.
   may be shaky in R specifically — keep R idioms lightly explained the first time.
 
 ### Statistics (from prior courses)
+
+What the teacher of *Statistics and data science for biologists* says the course
+covers (2026-10-16):
+
+> Det jag tar upp är beskrivande statistik, punktskattningar av de vanligaste
+> parametrarna, konfidensintervall, formulera hypoteser, test för väntevärde,
+> median och proportioner för 1, 2 och flera populationer, justerade p-värden,
+> korrelation och multipel linjär regression. Allt med en väldigt icke-matematisk
+> framställning, där fokus ligger på att förstå hur och när metoderna ska användas
+> och hur R kan användas för att göra analyserna.
+
+In English: descriptive statistics; point estimates of the most common
+parameters; confidence intervals; formulating hypotheses; tests for means,
+medians and proportions in one, two and several populations; adjusted p-values;
+correlation; multiple linear regression. All presented in a **very non-mathematical**
+way: the focus is on how and when to use each method, and how to run it in R.
+
+So, for this course:
+- They know **when** to use a t-test, a test of proportions, `lm` with several
+  predictors, correlation and multiple-testing correction, and how to run them
+  in R. We can use these as familiar tools without re-teaching them.
+- They have **not** seen the maths behind them: no derivations, no matrix form of
+  regression ($X\beta$, the normal equations), no likelihood. Anything
+  mathematical about these methods is new here.
+- Distributions are known by name and use, not from first principles.
+
+Summary of what to expect:
 - Descriptive statistics, common distributions by name, sampling, estimation.
-- Hypothesis testing, p-values, confidence intervals.
-- Linear regression / linear models as a fitted tool (`lm`).
+- Hypothesis testing, p-values, confidence intervals, adjusted p-values.
+- Linear regression / multiple linear regression as a fitted tool (`lm`).
 - Data wrangling and plotting on real datasets (from the *Statistics and data
   science for biologists* course).
 - *Entry-level caveat:* a stand-alone student has only "basic statistics," so
   treat anything past descriptive stats + a t-test as "recap, don't assume."
 - **Not assumed:** machine learning, train/test workflows, or PCA — the ML course
   is not a prerequisite. PCA / dimensional reduction is introduced *here*.
+
+### Mathematics
+
+The same teacher's advice (2026-10-16):
+
+> Utgå ifrån att de matematiska kunskaperna är på enklare gymnasienivå.
+
+In English: assume their mathematics is at a **basic upper-secondary (gymnasium)
+level**. So:
+- Arithmetic, fractions, simple algebra (solving for $x$), plotting a function, and
+  straight lines $y = kx + m$ can be assumed.
+- Recap, don't assume: logarithms and exponentials, powers and roots, sums with
+  $\Sigma$, sine and cosine (rotation, polar coordinates, Fourier), vectors, and
+  anything from calculus (derivatives, integrals).
+- Introduce notation slowly and always with numbers next to it.
 
 ## What we should NOT assume they know
 

@@ -76,6 +76,30 @@ Two interpretation rules to carry throughout:
 
 **B5. (reporting).** A methods paragraph reads: *"We fit a lasso with glmnet and report the selected genes as the drug-response signature."* List **three** pieces of information a reader needs before they can reproduce or trust this, and name **one** claim the sentence risks over-stating.
 
+## Explore: which gene does the lasso keep?
+
+The demo shows B1–B2 for two standardized genes. The grey ellipses are RSS contours around the OLS point (drag it), the green region is the penalty region at the current $\lambda$, and the purple dot is the penalized estimate where the smallest contour touches the region. "corr" is the correlation between the two genes; at $0.9$ the ellipses become a long valley along which many splits of the weight fit almost equally well. The right panel shows the coefficient path against $\lambda$. (The demo uses the objective $\lVert\mathbf{y}-X\boldsymbol\beta\rVert^2 + \lambda\,\text{penalty}$, so its $\lambda$ is on a different scale from the $\tfrac{1}{2n}$ version above.)
+
+```{=html}
+<link rel="stylesheet" href="../demos/dist/demo.css">
+<div data-demo="penaltygeom" data-ols="1.5 0.5" data-corr="0.9" data-lambda="2.5" data-alpha="1"></div>
+<script src="../demos/dist/penaltygeom.js"></script>
+```
+
+**E1.** After **Reset** (lasso, corr $0.9$, OLS $= (1.5, 0.5)$, $\lambda = 2.5$), which gene does the lasso keep? Drag the OLS point along the valley to about $(0.5, 1.5)$. Which gene is kept now? Relate this to B2.
+
+**E2.** Repeat E1 with **Ridge** and with **Elastic net** ($\alpha = 0.5$). How are the two coefficients split at the two OLS positions?
+
+**E3.** Back to the lasso at OLS $(1.5, 0.5)$: lower $\lambda$ to $0.5$. How many genes are in the model? Use the path panel to read off roughly the $\lambda$ at which gene 2 drops out.
+
+::: {.callout-note collapse="true" title="Solutions"}
+**E1.** At OLS $(1.5, 0.5)$ the lasso gives $\hat{\boldsymbol\beta} \approx (0.70, 0)$: gene 1 is kept and gene 2 is exactly zero (the solution is on a corner of the diamond). At $(0.5, 1.5)$ it gives $\approx (0, 0.70)$: the choice flips to gene 2. With strongly correlated genes the OLS point is poorly determined along the valley, so a small change in the data (one sample dropped) can move it from one side of the diagonal to the other, and the lasso's pick flips with it, as argued in B2.
+
+**E2.** Ridge gives about $(0.45, 0.41)$ and $(0.41, 0.45)$; elastic net about $(0.44, 0.37)$ and $(0.37, 0.44)$. Both keep **both** genes with similar weights, and moving the OLS point only shifts the weights a little: the weight is spread across the group (ridge, B1(b)) and correlated genes stay in together (the elastic-net grouping effect).
+
+**E3.** At $\lambda = 0.5$ both genes are in the model, about $(1.37, 0.37)$. On the path, $\hat\beta_2$ reaches zero at about $\lambda \approx 1.9$, and $\hat\beta_1$ at about $\lambda \approx 3.9$. Which gene survives longest is decided by which side of the valley the OLS point fell on.
+:::
+
 ## In R
 
 Use these as static references — read them, predict the output, then run them in your own session. Assume `x` is a standardized **samples × genes** matrix and `y` a numeric response.

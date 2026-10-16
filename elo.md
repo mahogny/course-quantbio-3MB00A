@@ -23,9 +23,13 @@ The official syllabus groups outcomes into three categories.
 
 A student can:
 
-- explain statistical distributions and where they arise in biological data;
-- distinguish Bayesian from frequentist approaches;
-- describe the solution space of a system of linear equations (unique, none, infinitely many);
+- explain where common statistical distributions come from, and where they arise
+  in biological data;
+- contrast Bayesian and frequentist approaches;
+- describe the solution space of a linear system, including over- and
+  underdetermined systems (unique, none, infinitely many);
+- explain memoryless (Markov) processes;
+- distinguish linear from nonlinear systems;
 - explain what a latent space is and why dimensional reduction is useful.
 
 ### Skills and abilities
@@ -34,8 +38,11 @@ A student can:
 
 - solve systems of linear equations (by hand for small systems, in R for larger ones);
 - formulate a biological problem as a Markov chain and analyse its behaviour;
-- analyse large-scale data using latent-space methods (PCA / OLS);
-- apply chemometrics to a biological dataset.
+- analyse large-scale data in latent spaces, with linear (PCA / OLS) and nonlinear
+  methods;
+- build hierarchical models with alternative distributions, in particular Poisson
+  and negative binomial;
+- apply chemometrics and single-cell methods to large datasets.
 
 ### Judgement and approach
 
@@ -43,43 +50,6 @@ A student can:
 
 - assess the validity of a mathematical model for a biological system — state its
   assumptions and recognise when they break.
-
-## Day-by-day outcomes (working draft)
-
-> This is a planning scaffold, not a contract. Days will shift, merge, and split
-> as the method ↔ biology pairings become clearer. Topics below are taken from the
-> syllabus content; the ordering is a first proposal.
-
-### Linear algebra I — vectors and matrices
-- Read vectors and matrices as data; matrix–vector and matrix–matrix products in R (`%*%`).
-- **Bio examples:** an expression matrix as samples × genes; design matrices.
-
-### Linear algebra II — solving linear systems
-- Solve `Ax = b`; describe the solution space (unique / none / infinitely many); `solve()`.
-- **Bio examples:** deconvolution; mass-balance / stoichiometry.
-
-### Markov chains
-- Transition matrices, state evolution, stationary distributions via power iteration.
-- **Bio examples:** sequence models; cell-state transitions.
-
-### Eigenvalues and dimensional reduction (PCA)
-- Eigenvalues/eigenvectors; covariance; PCA via `prcomp`; reading a latent space.
-- **Bio examples:** PCA of bulk and single-cell expression data.
-
-### Regression and OLS
-- Ordinary least squares as projection; `lm`; relating OLS to the linear-algebra view.
-- **Bio examples:** dose–response; expression vs. covariates.
-
-### Statistical distributions for counts
-- Poisson and negative binomial; overdispersion; when each applies.
-- **Bio examples:** RNA-seq and single-cell count models.
-
-### Bayesian statistics
-- Bayes' theorem; prior / likelihood / posterior; Bayesian vs. frequentist framing.
-- **Bio examples:** small-sample estimation; shrinkage.
-
-### Applications — chemometrics & single-cell
-- Putting the methods together on real biological datasets.
 
 ## Assessment
 

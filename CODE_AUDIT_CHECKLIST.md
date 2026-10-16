@@ -77,6 +77,9 @@ Mark an item complete only after a reviewer has checked every executable chunk f
 - [x] `scrna-cellcycle/lec.qmd`
 - [x] `scrna-intro/exercise.qmd`
 - [x] `scrna-intro/lec.qmd`
+- [ ] `scrna-log/exercise.qmd` — added 2026-10-15; needs audit
+- [ ] `scrna-log/lec.qmd` — added 2026-10-15; needs audit
+- [ ] `scrna-log/make-log-figs.R` — added 2026-10-15; needs audit
 - [x] `scrna-umap/exercise.qmd`
 - [x] `scrna-umap/lec.qmd`
 - [ ] `solving-systems-r/exercise.qmd` — 2026-10-15: rank replaces det as the singularity check (det now bonus); needs re-audit

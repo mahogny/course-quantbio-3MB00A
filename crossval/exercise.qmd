@@ -76,6 +76,39 @@ $$\text{MSE} = \frac{1}{n}\sum_{i}(y_i - \hat y_i)^2, \qquad \text{RMSE} = \sqrt
 
 **B7.** For each outcome, name a sensible CV metric and justify it in one line: (a) predicting a patient's age from DNA methylation; (b) predicting RNA-seq read counts of a gene; (c) classifying tumour vs normal when only 8% of samples are tumours.
 
+## Explore: leakage on pure noise
+
+The demo runs the B5 blunder on data that contain **no signal at all**: $n$ samples × $p$ genes of random noise, with random disease labels (half cases, half controls). A simple classifier (*nearest centroid*: a held-out sample is assigned to the class whose average profile over the $k$ selected genes is closest) is scored by 5-fold CV in two ways:
+
+- **Leaky:** the $k$ genes with the largest $|t|$-statistic between the two classes are chosen once, using **all** samples; then CV is run on those genes.
+- **Honest:** the split comes first; inside each fold the $k$ genes are re-chosen on the **training** part only.
+
+Since the labels are random, no method can truly predict them: an honest estimate should sit around 50% (chance). Each dot under the accuracy is one held-out sample (filled = classified right).
+
+```{=html}
+<link rel="stylesheet" href="../demos/dist/demo.css">
+<div data-demo="leakage" data-n="40" data-p="2000" data-k="20"></div>
+<script src="../demos/dist/leakage.js"></script>
+```
+
+**E1.** With the default $n = 40$, $p = 2000$, $k = 20$, press **Repeat 50×**. Where does each histogram sit relative to the chance line? Which of the two numbers would you report for new patients?
+
+**E2.** Keep $n = 40$, $k = 20$ and try $p = 100$, $p = 500$ and $p = 5000$ (press **Repeat 50×** after each change). How does the leaky accuracy change with $p$? Why do *more* noise genes make the leak worse?
+
+**E3.** Set $p = 2000$, $k = 20$ and compare $n = 20$ with $n = 100$. What happens to the leaky accuracy? Does the centre of the honest histogram move? Does its width change?
+
+**E4.** In the honest panel, single datasets sometimes reach 65–75%. Why is that not evidence of a real signal, and what does it say about trusting one CV run on a small study?
+
+::: {.callout-note collapse="true" title="Solutions"}
+**E1.** The leaky histogram piles up near the top (mean about 95–97%, almost every dataset above 90%); the honest one is centred on 50% with a spread of roughly ±10 percentage points. Only the honest number estimates performance on new patients: on new samples the labels are still random, so the true accuracy is 50%. The leaky 97% is pure leakage.
+
+**E2.** The leaky accuracy rises with $p$: roughly 82% at $p = 100$, 92% at $p = 500$ and 98% at $p = 5000$. With more genes there are more chances for some gene to separate *these particular* 40 labels by luck, and the filter on all samples finds exactly those lucky genes, including their luck on the samples later held out. The honest estimate stays at about 50% for every $p$.
+
+**E3.** The leaky accuracy falls as $n$ grows (about 99% at $n = 20$, about 87% at $n = 100$): with more samples a noise gene is less likely to line up with the labels by chance, so the leak is smaller, but it is still far above 50%. The honest histogram stays centred at 50%; it gets *narrower* with larger $n$ (spread roughly ±15 points at $n = 20$, ±6 at $n = 100$), because the accuracy is then averaged over more held-out samples.
+
+**E4.** The honest estimate is unbiased but noisy: with 40 held-out predictions, chance alone moves the accuracy by about ±10 points, so 65–75% turns up now and then even though there is nothing to find. One CV run on a small study is one draw from that histogram. Before believing a modest accuracy, look at its uncertainty (for example the standard error across folds) and compare it with the chance level.
+:::
+
 ## In R
 
 Use R to **confirm** the reasoning above. Nothing here needs a large dataset; the point is to read the outputs, not to build a real classifier (that comes in the elastic-net and chemometrics units).

@@ -215,7 +215,7 @@ Quantitative biology and integrative omics
 <li><strong>Quality control:</strong> removing low-quality cells, empty droplets, and doublets.</li>
 <li><strong>Preprocessing:</strong> normalization, log transform, and picking <strong>highly variable genes</strong>.</li>
 </ul>
-<p>This is a <strong>concept + data-handling</strong> day. No new by-hand math; the linear algebra payoff (PCA, UMAP) comes in the next unit, Single-cell RNA-seq: dimensionality reduction.</p>
+<p>This is a <strong>concept + data-handling</strong> day. No new by-hand math; the log transform gets its own unit next (Log and pseudolog transforms), and the linear algebra payoff (PCA, UMAP) comes after that, in Dimensionality reduction &amp; clustering.</p>
 <aside class="notes">
 <p>Frame the whole unit as a shift in resolution: bulk RNA-seq averages over a tissue, single-cell resolves the individual cells that make it up. Everything today is about (1) understanding the data structure that comes out of the machine and (2) cleaning it so the downstream analysis is trustworthy. Emphasise that we deliberately stop before PCA/clustering — those need the cleaned matrix we build today. Keep it conceptual; the R shown is Seurat-style pseudocode to read, not to run in the lecture.</p>
 <style type="text/css">
@@ -504,10 +504,10 @@ Quantitative biology and integrative omics
 <li>Log <strong>compresses</strong> the large values and <strong>stabilizes variance</strong>, so highly and lowly expressed genes contribute more comparably.</li>
 <li>The <span class="math inline">\(+1\)</span> keeps <strong>zeros as zeros</strong> (<span class="math inline">\(\log(1+0)=0\)</span>) and avoids <span class="math inline">\(\log 0 = -\infty\)</span>.</li>
 </ul>
-<p>The pair <strong>(library-size normalize, then log1p)</strong> is the standard baseline single-cell transform.</p>
+<p>The pair <strong>(library-size normalize, then log1p)</strong> is the standard baseline single-cell transform. More in the next unit, <a href="../scrna-log/lec.html">Log and pseudolog transforms</a>.</p>
 
 <img data-src="fig13-log1p-curve.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:60.0%"><aside class="notes">
-<p>The log serves two purposes: it tames the enormous dynamic range (a handful of housekeeping/ribosomal genes can be thousands of counts while most are single digits) so they do not swamp variance-based methods, and it roughly stabilises variance for count-like data. The +1 pseudocount is what lets zeros survive as zeros and avoids log(0). Emphasise this normalize-then-log pipeline is the default baseline that PCA/clustering assume in the next unit. Flag that Poisson/negative-binomial-aware alternatives exist (and that the count nature connects to the overdispersion topic from the distributions block) but are beyond today.</p>
+<p>The log serves two purposes: it tames the enormous dynamic range (a handful of housekeeping/ribosomal genes can be thousands of counts while most are single digits) so they do not swamp variance-based methods, and it roughly stabilises variance for count-like data. The +1 pseudocount is what lets zeros survive as zeros and avoids log(0). Emphasise this normalize-then-log pipeline is the default baseline that PCA/clustering assume downstream. Flag that Poisson/negative-binomial-aware alternatives exist (and that the count nature connects to the overdispersion topic from the distributions block) but are beyond today. Keep this slide short: the next unit, Log and pseudolog transforms, covers why the log, why it is nonlinear (average before you log), and how the pseudocount and the 10,000 scale factor change low counts.</p>
 <style type="text/css">
         span.MJX_Assistive_MathML {
           position:absolute!important;
@@ -531,7 +531,7 @@ Quantitative biology and integrative omics
 <p>Working with ~2,000 informative genes instead of 20,000 <strong>cuts noise and computation</strong> — and sets up the dimensionality reduction that comes next.</p>
 
 <img data-src="fig14-mean-variance-hvg.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:65.0%"><aside class="notes">
-<p>Feature selection is the last preprocessing step. The key subtlety: you cannot just pick the highest-variance genes, because in count data variance grows with the mean — highly expressed genes are variable simply because they are big. So HVG selection ranks genes by variance <em>relative to what their mean predicts</em> (variance above a fitted mean-variance trend). Keeping ~2,000 top HVGs is the common default. Motivate it as noise reduction and computational tractability, and as the natural hand-off to the next unit where PCA runs on these selected, scaled genes. This is where the eigen/PCA machinery from the linear algebra block finally gets used on real data.</p>
+<p>Feature selection is the last preprocessing step. The key subtlety: you cannot just pick the highest-variance genes, because in count data variance grows with the mean — highly expressed genes are variable simply because they are big. So HVG selection ranks genes by variance <em>relative to what their mean predicts</em> (variance above a fitted mean-variance trend). Keeping ~2,000 top HVGs is the common default. Motivate it as noise reduction and computational tractability, and as the natural hand-off to Dimensionality reduction &amp; clustering, where PCA runs on these selected, scaled genes. This is where the eigen/PCA machinery from the linear algebra block finally gets used on real data.</p>
 <style type="text/css">
         span.MJX_Assistive_MathML {
           position:absolute!important;
@@ -567,7 +567,7 @@ Quantitative biology and integrative omics
 <span id="cb1-18"><a aria-hidden="true" tabindex="-1"></a>obj <span class="ot">&lt;-</span> <span class="fu">FindVariableFeatures</span>(obj, <span class="at">nfeatures =</span> <span class="dv">2000</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>Doublet detection (e.g.&nbsp;<code>scDblFinder</code>) is a separate step, usually run before or alongside filtering.</p>
 <aside class="notes">
-<p>Walk the pipeline top to bottom so the concepts map to real function names they will meet. Read10X loads the sparse matrix; CreateSeuratObject already does light gene/cell filtering (min.cells, min.features). PercentageFeatureSet computes pct.mt via the MT- pattern. subset() applies the QC thresholds — stress again these numbers are illustrative and must be chosen from the data. NormalizeData is the library-size + log1p we derived; FindVariableFeatures is HVG selection. Emphasise this is STATIC code to read — nothing is executed at render time and no packages are installed. The doublet step is separate. Next unit picks up the obj and runs PCA/UMAP/clustering.</p>
+<p>Walk the pipeline top to bottom so the concepts map to real function names they will meet. Read10X loads the sparse matrix; CreateSeuratObject already does light gene/cell filtering (min.cells, min.features). PercentageFeatureSet computes pct.mt via the MT- pattern. subset() applies the QC thresholds — stress again these numbers are illustrative and must be chosen from the data. NormalizeData is the library-size + log1p we derived; FindVariableFeatures is HVG selection. Emphasise this is STATIC code to read — nothing is executed at render time and no packages are installed. The doublet step is separate. Dimensionality reduction &amp; clustering picks up the obj and runs PCA/UMAP/clustering.</p>
 <style type="text/css">
         span.MJX_Assistive_MathML {
           position:absolute!important;
@@ -589,7 +589,7 @@ Quantitative biology and integrative omics
 <li><strong>Count-aware models</strong> — Poisson / negative-binomial treatments of the counts, connecting to the <strong>overdispersion</strong> ideas from the distributions block.</li>
 <li><strong>Ambient-RNA correction</strong> and advanced normalization (Pearson residuals / SCTransform).</li>
 </ul>
-<p>The eigenvalue/eigenvector and PCA machinery you built earlier is exactly what the <strong>next</strong> unit applies to this cleaned matrix.</p>
+<p>The eigenvalue/eigenvector and PCA machinery you built earlier is exactly what Dimensionality reduction &amp; clustering applies to this cleaned matrix.</p>
 <aside class="notes">
 <p>Be explicit about the stepping stones, per the course’s “honest about what we defer” principle. The cleaned matrix is the deliverable; everything glamorous (dimensionality reduction, clustering, annotation) comes next and reuses the eigen/PCA foundation from the linear algebra block. Flag that the simple normalize+log baseline will be contrasted with count-aware models, tying back to Poisson/negative-binomial and overdispersion from the probability block. This slide is the map: students should see today as the data-cleaning foundation the rest of single-cell analysis stands on.</p>
 <style type="text/css">
@@ -656,9 +656,9 @@ Quantitative biology and integrative omics
 </tr>
 </tbody>
 </table>
-<p><strong>Next (Single-cell RNA-seq: dimensionality reduction):</strong> run PCA and UMAP on this cleaned matrix.</p>
+<p><strong>Next (<a href="../scrna-log/lec.html">Log and pseudolog transforms</a>):</strong> why we log, what the +1 changes; then PCA and UMAP on this cleaned matrix.</p>
 <aside class="notes">
-<p>The summary is the revision sheet. Drill the pipeline as a story: counts come off the machine sparse and noisy → filter empties, doublets, and dying (high-mito) cells → normalize by library size and log → keep the highly variable genes → hand the clean matrix to PCA. Reconnect each technical step to its biological motivation (heterogeneity is the reason we do any of this). Preview the next unit: the eigen/PCA tools from the linear algebra block get applied to exactly this matrix to make the cell-type structure visible.</p>
+<p>The summary is the revision sheet. Drill the pipeline as a story: counts come off the machine sparse and noisy → filter empties, doublets, and dying (high-mito) cells → normalize by library size and log → keep the highly variable genes → hand the clean matrix to PCA. Reconnect each technical step to its biological motivation (heterogeneity is the reason we do any of this). Preview what follows: a closer look at the log transform (next unit), then the eigen/PCA tools from the linear algebra block get applied to exactly this matrix to make the cell-type structure visible.</p>
 <style type="text/css">
         span.MJX_Assistive_MathML {
           position:absolute!important;
@@ -745,7 +745,7 @@ Quantitative biology and integrative omics
         respondToHashChanges: true,
 
         // Push each slide change to the browser history
-        history: true,
+        history: false,
 
         // Enable keyboard shortcuts for navigation
         keyboard: true,
@@ -834,10 +834,10 @@ Quantitative biology and integrative omics
         previewLinks: false,
 
         // Transition style (none/fade/slide/convex/concave/zoom)
-        transition: 'slide',
+        transition: 'none',
 
         // Transition speed (default/fast/slow)
-        transitionSpeed: 'fast',
+        transitionSpeed: 'default',
 
         // Transition style for full page slide backgrounds
         // (none/fade/slide/convex/concave/zoom)

@@ -8,8 +8,8 @@ format:
     slide-number: c/t
     width: 1280
     height: 720
-    transition: slide
-    transition-speed: fast
+    transition: none
+    history: false
     highlight-style: github
     code-overflow: wrap
     code-line-numbers: false
@@ -146,6 +146,20 @@ This is the hierarchical-models unit (biological vs technical replicates) applie
 
 ::: notes
 The hierarchy is what makes this a proper analysis of a repeated-measures design rather than a pile of pseudo-replicated points. Split the variance conceptually: sigma_patient is variation between individuals (biological replicates), phi absorbs the leftover within-patient counting noise (closer to technical replication). Partial pooling / shrinkage is the payoff — a patient with only extreme samples is not trusted at face value; the model pulls it toward the cohort in proportion to how noisy it is. Connect explicitly to the replicates discussion from the hierarchical unit: ignoring the grouping inflates false positives.
+:::
+
+## Try it: shrinking the patients {.smaller}
+
+A Gaussian sketch on the log scale: a patient with $c$ activated cells counted has a raw log-rate with noise variance $\approx 1/c$, so its weight is $w_p = c/(c + 1/\sigma_{\text{patient}}^2)$.
+
+```{=html}
+<link rel="stylesheet" href="../demos/dist/demo.css">
+<div data-demo="shrinkage" data-n="8 12 15 20 25 30 40 50 60 80 110 150" data-mu="0" data-sigma2="1" data-tau2="0.1" data-prefix="P" data-nunit=" cells" data-tauname="σ²ₚ" data-xlabel="patient effect uₚ (log-rate)"></div>
+<script src="../demos/dist/shrinkage.js"></script>
+```
+
+::: notes
+This is the normal–normal version of partial pooling from the hierarchical unit, transplanted onto our twelve patients. It is a sketch, not the brms fit: on the log scale a Poisson count of c cells has a raw log-rate with variance about 1/c, so the number of cells counted plays the role of n_i/sigma^2. Rows are patients sorted by how many activated cells they contributed; the slider is sigma_patient^2, the between-patient variance; the green tick is the simulated true patient effect. At the true value, low-count patients (8–20 cells) are pulled strongly toward the cohort mean, high-count patients barely move. Slide to 0 (every patient identical: complete pooling) and to infinity (every patient on its own: no pooling), and point at the error box: the middle is usually best. In the real model sigma_patient is estimated, so the data choose the amount of shrinkage.
 :::
 
 ## Building block 4 — priors {.smaller}

@@ -112,6 +112,35 @@ lambda  8.10    0.02 0.55  7.05  8.08  9.22   980 1.00
 
 **B7. (concept)** The lecture said MCMC returns *draws* rather than a formula for the posterior. If you have 4000 draws of $\theta$ stored in a vector `draws`, write (in words or R) how you would obtain: (a) the posterior mean, (b) the 95% credible interval, (c) the posterior probability that $\theta > 0.5$.
 
+## Explore
+
+Stan's sampler is a black box; this demo opens a simple version of it. The posterior here has two parameters: intercept $a$ (expression at age 50) and slope $b$ (change per 10 years) of a small regression of gene expression on age, the example of the next Bayesian unit. The orange ellipses and curves show the true posterior, which you would not know in a real problem. The sampler is **random-walk Metropolis**: from the current point, propose a random jump of about "step size"; if the posterior is higher there, move; if it is lower, move only with probability (new posterior / old posterior); otherwise **stay and record the current point again**. Stan uses a smarter sampler (HMC/NUTS), but its output is read the same way: chains, warm-up, trace plots, `Rhat`.
+
+```{=html}
+<link rel="stylesheet" href="../demos/dist/demo.css">
+<div data-demo="mcmc" data-step="0.4" data-iter="1000" data-chains="4"></div>
+<script src="../demos/dist/mcmc.js"></script>
+```
+
+**E1.** Press **Step** about ten times and watch the four chains. What happens when a jump is rejected (red cross)? Why must the sampler record the old point again instead of simply trying another jump?
+
+**E2.** Load "tiny steps (0.02)" and press **Run**. What is the acceptance rate? Do the four chains meet before the warm-up ends? Read `R-hat` and compare the histograms with the orange curves. Why is a very high acceptance rate *not* a good sign?
+
+**E3.** Load "huge steps (3)" and run it. What is the acceptance rate now, and what do the trace plots look like? Relate this to a low `n_eff`.
+
+**E4.** Load "good steps (0.4)" and run it. Describe the traces after warm-up, the acceptance rate and `R-hat`. Then drag one start point (big circle) to the edge of the plot, even farther from the posterior, and run again: which part of the run absorbs the long walk in, and why is it discarded?
+
+::: {.callout-note collapse="true" title="Solutions"}
+
+**E1.** A rejected chain does not move: the trace stays flat for that iteration and the same $(a, b)$ is stored again. Repeating the point is what makes the draws proportional to the posterior: high-posterior points are hard to leave, so they are recorded many times, while low-posterior points are left quickly. If rejected jumps were simply retried, every visited point would count once and the histogram would no longer match the posterior.
+
+**E2.** About 90% of the jumps are accepted, but each is tiny, so the chains crawl. After 1000 iterations they are still on their way in from the corners and have not met; `R-hat` for $a$ is about 3.6 (far above 1.01, "chains disagree"), and the histograms are lumpy and too wide compared with the orange curves. Nearly every jump is accepted *because* nearly every jump is too small to change the posterior much; the chain explores very slowly.
+
+**E3.** Only about 1% of the jumps are accepted: almost every proposal lands far out in the tails, where the posterior is tiny. The traces are flat staircases, each chain often sitting on the same value for a hundred iterations or more, and the post-warm-up draws contain only about a dozen distinct values. Thousands of draws carry the information of a handful of independent ones, which is exactly what a low `n_eff` reports; `R-hat` (about 1.4) also flags the problem.
+
+**E4.** About 30% of the jumps are accepted. After warm-up the traces of the four chains overlap like "fuzzy caterpillars" around the same level, the histograms follow the orange curves, and `R-hat` is about 1.00–1.01 ("chains agree"). A start far away just makes the walk in longer; that walk happens during the **warm-up**, drawn faint on the left and shaded on the traces. Those iterations reflect where the chain *started*, not the posterior, which is why they are thrown away. (If a chain still has not arrived by the end of warm-up, `R-hat` will show it.)
+:::
+
 ## In R
 
 All code below is **illustrative** — treat it as something you reason about, not something that must execute here (no Stan is installed at render time). In a real session you would run it.

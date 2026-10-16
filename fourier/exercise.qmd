@@ -58,6 +58,35 @@ Two families of use:
 
 **B8. (compression)** An image's Fourier coefficients are dominated by a handful of large low-frequency values; the rest are tiny. Explain the compression recipe in three steps, and state the analogy to truncating a PCA. Why is this **lossy**, and what artefact appears if you keep too few coefficients?
 
+## Explore: filter an image
+
+The demo below is the lecture's micrograph (a 256 × 256 crop). Left: the image; middle: its 2D spectrum, log of the magnitude, with frequency 0 in the centre; right: the image rebuilt from the coefficients you keep. Removed coefficients are shown dark red. The readout gives the share of coefficients kept, the share of the image's variation they carry, and the RMS error of the rebuilt image (pixel values run from 0 to 1).
+
+```{=html}
+<link rel="stylesheet" href="../demos/dist/demo.css">
+<div data-demo="fourier2d" data-mode="low" data-r="30"></div>
+<script src="../demos/dist/fourier2d.js"></script>
+```
+
+**E1.** Choose **low-pass** and set the radius to 5, 30 and 90. For each, note the percentage of coefficients kept and the percentage of the variation kept. What does that tell you about where the image's content sits in the spectrum?
+
+**E2.** Choose **keep largest** at 3%. Then go back to **low-pass** and find the radius that also keeps about 3% of the coefficients. Which of the two has the smaller error? Look at where the kept coefficients lie in the spectrum in "keep largest" mode: why are the two results so similar?
+
+**E3.** Choose **high-pass** with radius 10. What is left of the cell? Why is the picture grey rather than black, although most of the low frequencies are gone?
+
+**E4.** Tick **add stripe artefact** and choose **no filter**: note the error. The stripe adds two bright coefficients to the spectrum, marked with yellow rings. Erase them by dragging over them. What happens to the error? Why are there **two** dots for one stripe? Then try removing the stripe with a **low-pass** filter instead, at radius 15. Which approach is better here?
+
+::: {.callout-note collapse="true" title="Solutions"}
+
+**E1.** Radius 5 keeps 0.12% of the coefficients but already 53% of the variation; radius 30 keeps 4.3% of the coefficients and 81% of the variation; radius 90 keeps 39% and 96%. A tiny disc of low frequencies carries most of the variation: the broad light and dark regions. The many high-frequency coefficients each carry little; together they make the fine detail (and the grain). This is why a frequency basis compresses natural images well.
+
+**E2.** Keep largest 3%: 81% of the variation, RMS error 0.100. Low-pass with radius 25 also keeps 3.0% of the coefficients: 78% of the variation, error 0.109. Keeping the largest coefficients is slightly better, because it picks the coefficients that matter for *this* image, while the disc is fixed in advance. They are similar because most of the largest coefficients are low frequencies anyway: in "keep largest" mode the kept coefficients crowd around the centre, with a scatter of single ones further out.
+
+**E3.** Only edges and fine texture remain: the outline of the nucleus, the membranes, the grain inside the cell. Large uniform regions all become the same grey, because their brightness is low-frequency content. The picture stays grey because the centre coefficient (frequency 0, the average brightness of the whole image) is always kept; without it the values would vary around 0 and the image would be mostly black.
+
+**E4.** With the stripe and no filter the error is 0.106 (the stripe itself). The stripe is a single 2D wave, so it adds a single bright pair of coefficients, about 19 units from the centre (16 across, 10 down, and its mirror image). Erasing them brings the error down to about 0.02; zeroing exactly the two coefficients would give 0.002, the brush also removes a few of the cell's own coefficients around them. There are two dots because a real-valued wave is the sum of a frequency and its mirror image ($+k$ and $-k$), the same mirror symmetry as in the 1D spectrum in R (R2 below). A low-pass filter at radius 15 also removes the stripe, but it removes the cell's detail too: the error is 0.127, *worse* than leaving the stripe in. A notch removes exactly what you want to remove; a low-pass removes everything above a frequency.
+:::
+
 ## In R
 
 Use R only to **confirm** the intuition above. This is illustrative static code — read it and predict the output before you would run it.
@@ -172,4 +201,5 @@ A perfectly periodic artefact is localised in frequency (a few bright dots), so 
 ## Where this leads
 
 - **PCA (this Applications block):** the data-driven counterpart to Fourier — instead of fixing the basis to sinusoids, it learns the orthogonal axes from the data's covariance. Both are "represent in an orthogonal basis, then keep the coordinates that matter."
+- **Polar coordinates: measuring a ring** (next unit): `Mod()` and `Arg()` are the distance $r$ and angle $\theta$ of each coefficient; that unit uses the same polar coordinates on an image, as an example of a useful but nonlinear transformation.
 - **Chemometrics:** spectra (mass, IR, Raman) are signals in frequency/wavelength; Fourier methods, filtering, and PCA of spectra are everyday tools there.

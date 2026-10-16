@@ -8,8 +8,8 @@ format:
     slide-number: c/t
     width: 1280
     height: 720
-    transition: slide
-    transition-speed: fast
+    transition: none
+    history: false
     highlight-style: github
     code-overflow: wrap
     code-line-numbers: false
@@ -259,6 +259,18 @@ Running several chains is a built-in **sanity check**, not just extra samples.
 
 ::: notes
 Motivate the multi-chain design. A single chain could get stuck in a bad region and you would never know. Four independent chains from different starting points give a cheap, powerful diagnostic: if they converge to the same distribution they agree on the answer; if they wander apart, the model or sampler has a problem. Warmup (Stan's term; also called burn-in) is the initial phase where the sampler locates and adapts to the posterior — those iterations are tuning, not sampling, so they are thrown away. The next slide turns "do the chains agree" into a single number, Rhat.
+:::
+
+## Try it: inside the sampler {.smaller}
+
+```{=html}
+<link rel="stylesheet" href="../demos/dist/demo.css">
+<div data-demo="mcmc" data-step="0.4" data-iter="1000" data-chains="4"></div>
+<script src="../demos/dist/mcmc.js"></script>
+```
+
+::: notes
+A look inside the black box, on a 2D posterior: intercept a and slope b of a small regression of gene expression on age (the example of the Bayesian fitting lecture; noise fixed so there are only two parameters). The orange ellipses are the true posterior, which a real problem would not show us. The sampler here is the simplest MCMC, random-walk Metropolis: propose a random jump of about "step size"; always accept if the posterior is higher there, sometimes accept if lower; if rejected, stay and record the same point again. Stan uses a smarter sampler (HMC/NUTS), but the output is read the same way. Press Step a few times first: each chain moves or shows a red cross for a rejected jump. Then Run: four chains start in the corners, walk in (warm-up, shaded on the traces and drawn faint on the left), then wander around the ellipses; the histograms fill with post-warm-up draws and match the orange curves. Then the presets: "tiny steps" accepts almost everything but crawls, so the chains have not met even after warm-up and R-hat is far above 1; "huge steps" rejects almost every jump, the traces become flat staircases and R-hat is again poor; "good steps" gives about 30% acceptance, overlapping fuzzy-caterpillar traces and R-hat close to 1. Optionally drag a start point (big circle) far away to show warm-up doing its job. The run is seeded, so it replays identically.
 :::
 
 ## Reading the output: `print(fit)` {.smaller}

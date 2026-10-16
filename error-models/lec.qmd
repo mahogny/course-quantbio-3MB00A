@@ -8,8 +8,8 @@ format:
     slide-number: c/t
     width: 1280
     height: 720
-    transition: slide
-    transition-speed: fast
+    transition: none
+    history: false
     highlight-style: github
     code-overflow: wrap
     code-line-numbers: false
@@ -261,6 +261,18 @@ The workhorse error model of **`DESeq2`** and **`edgeR`** for RNA-seq differenti
 
 ::: notes
 NB is the fix for overdispersion: it is Poisson plus a dispersion parameter phi that decouples variance from mean. Variance = mu + phi*mu^2, so at phi = 0 it collapses back to Poisson, and the quadratic term means the variance gap widens for high-expression genes. Mechanistically it is a Gamma-Poisson mixture: draw a per-sample rate from a Gamma, then a Poisson count given that rate — precisely the "lambda varies between biological replicates" model from the previous slide. Name-drop DESeq2 and edgeR as the Bioconductor tools students will actually use; both are NB GLMs with clever dispersion estimation. Different sources parameterise phi differently (size = 1/phi in R's dnbinom) — mention only if asked. This connects forward to the Poisson and negative binomial distributions unit if listed separately.
+:::
+
+## Try it: Poisson vs negative binomial {.smaller}
+
+```{=html}
+<link rel="stylesheet" href="../demos/dist/demo.css">
+<div data-demo="nbdisp" data-param="phi" data-mu="50" data-disp="0.5" data-unit="cells"></div>
+<script src="../demos/dist/nbdisp.js"></script>
+```
+
+::: notes
+The histogram is 1000 simulated counts (think: reads of one gene in 1000 cells) from a negative binomial with mean mu and dispersion phi, in this lecture's convention Var = mu + phi mu^2; the red dots are the NB probabilities, the dashed blue outline the Poisson with the same mean. Start at mu = 50, phi = 0.5 (exercise B5): the counts spread from near 0 to several hundred while the Poisson is a narrow bump around 50; the table shows theory and sample side by side, variance 1300, var/mean 26. Click "Poisson": phi = 0, histogram and dashed outline coincide, var/mean = 1. Then "mild" and "strong (many zeros)": the histogram flattens, piles up at zero (watch the zero count in the corner; the Poisson would give none) and grows a long right tail, while the mean stays at 50. "Low mean" with strong overdispersion shows the zero spike most clearly. "Draw again" shows that the sample variance jumps around much more than the sample mean. If time allows, tick the mean–variance plot: the Poisson line var = mu and the NB curve bending away above it — overdispersion grows with the mean.
 :::
 
 ## Why the wrong model misleads {.smaller}

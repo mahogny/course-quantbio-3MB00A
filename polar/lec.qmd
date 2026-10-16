@@ -1,6 +1,6 @@
 ---
 title: "Polar coordinates: measuring a ring"
-subtitle: "Linear algebra — Polar coordinates"
+subtitle: "Applications — Polar coordinates"
 author: "Quantitative biology and integrative omics"
 format:
   revealjs:
@@ -8,8 +8,8 @@ format:
     slide-number: c/t
     width: 1280
     height: 720
-    transition: slide
-    transition-speed: fast
+    transition: none
+    history: false
     highlight-style: github
     code-overflow: wrap
     code-line-numbers: false
@@ -23,14 +23,14 @@ format:
 Many things in biology grow or spread **outwards from a centre**: a drop of antibiotic, a colony, a tumour spheroid, a cell nucleus. For those, $(x, y)$ is the wrong way to describe a position. **Distance from the centre and direction** fit much better.
 
 - **Polar coordinates** $(r, \theta)$: how far from the centre, and in which direction.
-- Unlike rotation or shear, the change to polar coordinates is **not a matrix**.
+- A very **useful** transformation, but a **nonlinear** one: unlike rotation or shear, it is **not a matrix**.
 - **Unwrapping** an image around a centre turns rings into straight lines.
 - Biology: measuring the **zone of inhibition** of an antibiotic, from a photo of a real plate.
 
 You need the `jpeg` package from Transforming images with matrices.
 
 ::: notes
-This unit follows Transforming images with matrices and reuses its setup (image as img[x, y], pixel coordinates as a 2 x N matrix). The new idea is a coordinate change that is not linear, and the payoff is a real measurement that clinical microbiology labs make every day. The plate photo is from the CDC Public Health Image Library (PHIL #10785, Gilda L. Jones, 1972), public domain.
+This unit comes after Fourier in the Applications block and reuses the setup from Transforming images with matrices (image as img[x, y], pixel coordinates as a 2 x N matrix). The new idea is a coordinate change that is not linear, and the payoff is a real measurement that clinical microbiology labs make every day. The plate photo is from the CDC Public Health Image Library (PHIL #10785, Gilda L. Jones, 1972), public domain.
 :::
 
 ## Biology: the disk diffusion test {.smaller}
@@ -165,6 +165,18 @@ u <- unwrap(353, 356)                             # rows = r, columns = theta
 This is the "work backwards" trick mentioned at the end of Transforming images with matrices: instead of pushing input pixels forward (which leaves holes), we ask, for every output position, where it comes from in the input. Here that is easy, because x = x0 + r cos(theta) is an explicit formula. round() picks the nearest pixel; image software interpolates between neighbours instead. img[cbind(i, j)] looks up many pixels at once by their (x, y) indices. In the strip the zone edge is a straight horizontal line at r = 53, and rowMeans(u) gives the same radial profile as tapply on the previous slide.
 :::
 
+## Try it: move the centre
+
+```{=html}
+<link rel="stylesheet" href="../demos/dist/demo.css">
+<div data-demo="polar" data-disk="5" data-disks="5 4 11 7" data-offset="9 -6"></div>
+<script src="../demos/dist/polar.js"></script>
+```
+
+::: notes
+The same unwrapping as on the previous slide, live, with bilinear interpolation instead of round(). The demo starts with the centre about 11 pixels off disk 5. Point out the result first: in the strip (theta across, r up) the zone edge is a wave, not a line, and in the profile the drop is smeared out over many radii. Ask the class which way to move the centre: where the wave is highest, the edge is furthest away, so move towards that angle (0 degrees is to the right, 90 degrees is up). Drag the red cross, or press anywhere on the photo. When the centre is right the edge in the strip is flat, the profile drop is steep and it lies on the grey curve (the best centre). "Snap to best centre" first finds the dark paper disk, then nudges the centre until the edge is flattest. Then change the threshold: the yellow pixels are those brighter than the threshold, and the red line is the edge per angle, as in apply(u, 2, ...). Disk 4 stays wavy even at the best centre: the zone itself is not round (next slide). Disk 11 has a fuzzy edge: watch how far the edge moves with the threshold. Disk 7 is the smallest zone.
+:::
+
 ## A zone that is not round {.smaller}
 
 Disk 4 sits near the plate edge, between two other zones. Find the edge **separately for every angle**, one column of the strip at a time:
@@ -237,7 +249,7 @@ Pick one or two to mention depending on the audience. The spheroid case is the c
 | Shape of a zone | edge per angle, $r(\theta)$; flat means round | `apply(u, 2, ...)` |
 | Scale | a known object (6 mm disk) converts pixels to mm | `26.8 / 6` px per mm |
 
-**Next (Compensation & spectral unmixing):** back to matrices: undoing the colour mixing in flow cytometry with `solve()`.
+**Next (Bayesian statistics):** a new block, on fitting models to data with uncertainty.
 
 ::: notes
 The one-line takeaway: choose coordinates that match the shape of the problem. For something that spreads from a centre, distance and angle turn a hard 2D problem (where is the edge of this blob?) into an easy 1D one (where does this curve drop?).

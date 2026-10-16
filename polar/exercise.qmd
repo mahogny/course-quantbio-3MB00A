@@ -18,7 +18,7 @@ By the end of this exercise you should be able to:
 - **unwrap** an image around a centre and measure how round a zone is,
 - turn a distance in pixels into millimetres with an object of known size.
 
-This builds on Transforming images with matrices; the image setup is the same.
+This builds on Transforming images with matrices; the image setup is the same. Polar coordinates are a very useful transformation, but a **nonlinear** one: no matrix can do it.
 
 ## Background
 
@@ -39,6 +39,34 @@ and, going back, $x = x_0 + r\cos\theta$, $y = y_0 + r\sin\theta$. In R, `atan2(
 **B3.** Let $f$ map a point to its polar coordinates $(r, \theta)$ around the origin. Compute $f(p)$, $f(q)$ and $f(p + q)$ for $p = (1, 0)$ and $q = (0, 1)$. Is $f(p + q) = f(p) + f(q)$? What does that tell you about whether $f$ can be written as a matrix?
 
 **B4.** In a photo, a 6 mm disk is 27 pixels wide. The zone around it is 110 pixels across. What is the zone diameter in mm?
+
+## Explore
+
+The demo below shows the plate around one disk. Drag the red cross (or press anywhere on the photo) to move the centre. On the right: the photo **unwrapped** around that centre ($\theta$ across, $r$ up, as in R3) and the **radial profile** (mean grey level at each $r$, as in R2). Yellow marks pixels brighter than the threshold; the red line is the edge found separately for each angle, as in R4. The grey curve is the profile at the best centre.
+
+```{=html}
+<link rel="stylesheet" href="../demos/dist/demo.css">
+<div data-demo="polar" data-disk="5" data-disks="5 4 11 7" data-offset="9 -6"></div>
+<script src="../demos/dist/polar.js"></script>
+```
+
+**E1.** The demo starts with the centre a little off disk 5. What shape does the zone edge have in the strip, and at which angle is it furthest from the centre? In which direction, and roughly how far, should you move the centre? Try it, then compare with "snap to best centre".
+
+**E2.** At the best centre, read off the edge and the zone diameter. Compare with R2. Why is the drop in the profile so much steeper than at the starting centre?
+
+**E3.** Choose disk 4 and snap. Can any centre make its edge flat? What does that tell you about the zone?
+
+**E4.** Choose disk 11 and snap. Move the threshold between 0.5 and 0.6 and watch the profile edge. Do the same for disk 5. Which zone is more sensitive to the threshold, and why? (Compare R5.)
+
+::: {.callout-note collapse="true" title="Solutions"}
+**E1.** The edge is a wave instead of a straight line: about 41 to 66 pixels, furthest at about 145° (up and to the left) and nearest at about 305° (down and to the right). The true centre lies in the direction where the edge is furthest away, so move the centre up and to the left, by about half the spread: $(66 - 41) / 2 \approx 12$ pixels. The snap lands at about $(352, 356.5)$, 12 pixels from the start and within a pixel or two of the table centre $(353, 356)$.
+
+**E2.** The edge is at $r = 53$ pixels, a diameter of $2 \cdot 53 / 4.47 \approx 23.7$ mm, as in R2. The profile is a mean over all angles. When the centre is right, every angle sees the edge at (almost) the same $r$, so they all drop together. Off-centre, each angle drops at a different $r$ (41 to 66 pixels), and their mean falls slowly over that whole range: the edge is smeared out, and the profile edge (60 pixels at the start) is wrong.
+
+**E3.** No. At the best centre the edge per angle still runs from about 71 to 83 pixels; moving the centre only shifts which side is too far. The zone itself is not a circle (R4): it is cut short towards the plate rim and stretched towards disk 5.
+
+**E4.** At the best centre of disk 11, the profile edge moves from 69 pixels (threshold 0.5) to 62 (0.55) and 53 (0.6): from about 31 mm to 24 mm. For disk 5 it barely moves (54, 53, 53 pixels). Disk 11's zone fades out gradually (partial inhibition at its rim), so its profile drops slowly and every threshold crosses it at a different $r$. Disk 5 has a sharp edge: a steep drop, which any threshold between lawn and zone crosses at the same place. For disk 11 the per-angle edge is not even found in some directions at threshold 0.5.
+:::
 
 ## In R
 
@@ -186,7 +214,6 @@ With threshold 0.55 the zones range from 15 mm (disk 7) to 35 mm (disk 4). Chang
 
 ## Where this leads
 
-- **Eigenvalues & eigenvectors:** back to linear maps, where some directions are only scaled.
 - **Finding the centres automatically:** we were given the disk centres. Software finds them first, e.g. by looking for dark round blobs, then measures each zone exactly as here.
-- **Fourier transform & basis functions:** a complex number $a + bi$ is a point in the plane, and `Mod()` and `Arg()` are its $r$ and $\theta$. Fourier coefficients are usually read in this polar form: size and phase.
+- **Fourier transform & basis functions** (previous unit): a complex number $a + bi$ is a point in the plane, and `Mod()` and `Arg()` are its $r$ and $\theta$. That is why Fourier coefficients are read in polar form: size and phase.
 - **Other radial biology:** the same radial-profile code measures the necrotic core of a tumour spheroid or the spread of a protein from the centre of a nucleus. Directions alone (do cells move towards a chemoattractant?) need **circular statistics**, because 359° and 1° are close.

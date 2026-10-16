@@ -1,9 +1,9 @@
-.PHONY: all render preview clean gitadd help figs
+.PHONY: all render preview clean gitadd help figs demos typecheck
 
 # Default: render the site, then stage every source file in git.
 all: render gitadd
 
-render:
+render: demos
 	quarto render
 	@touch docs/.nojekyll
 
@@ -16,6 +16,16 @@ figs:
 	cd polar && Rscript make-polar-figs.R
 	cd compensation && Rscript make-comp-figs.R
 	cd fourier && Rscript make-fourier-figs.R
+	cd scrna-log && Rscript make-log-figs.R
+
+# Build the interactive demos (TypeScript, demos/src/) into demos/dist/.
+# One-time setup: npm i   (installs esbuild + typescript into node_modules/).
+demos:
+	demos/build.sh
+
+# Type-check the demo sources (esbuild only strips types, it does not check them).
+typecheck:
+	npx --no-install tsc --noEmit -p demos
 
 # Remove the rendered site and Quarto's cache.
 clean:
@@ -31,6 +41,8 @@ help:
 	@echo "  make           render the site, then git add all source files"
 	@echo "  make render    render the whole site to docs/"
 	@echo "  make preview   start a live-reload preview server"
-	@echo "  make figs      re-generate the R-made figures (matrix-images, polar, compensation, fourier)"
+	@echo "  make demos     build the interactive demos into demos/dist/ (needs npm i once)"
+	@echo "  make typecheck type-check the demo TypeScript sources"
+	@echo "  make figs      re-generate the R-made figures (matrix-images, polar, compensation, fourier, scrna-log)"
 	@echo "  make gitadd    stage all source files in git"
 	@echo "  make clean     remove docs/ and .quarto/"

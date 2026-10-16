@@ -8,8 +8,8 @@ format:
     slide-number: c/t
     width: 1280
     height: 720
-    transition: slide
-    transition-speed: fast
+    transition: none
+    history: false
     highlight-style: github
     code-overflow: wrap
     code-line-numbers: false
@@ -155,6 +155,18 @@ fit_enet <- cv.glmnet(x, y, alpha = 0.5)   # a middle ground; tune alpha too
 
 ::: notes
 Position this as the menu of trade-offs, not a winner. Ridge: stable coefficients, no selection — good when you want a predictor and do not need a short list. Lasso: maximal sparsity, unstable membership. Elastic net (Zou & Hastie's grouping effect): the practical default for correlated omics because it retains groups. Note honestly that alpha is a second tuning parameter — you cross-validate over it too, which costs you some of the tidiness. Tie back to Ridge, lasso & elastic net for the geometry; today we only care about the consequence for a correlated design.
+:::
+
+## Try it: which gene does the lasso keep?
+
+```{=html}
+<link rel="stylesheet" href="../demos/dist/demo.css">
+<div data-demo="penaltygeom" data-ols="1.5 0.5" data-corr="0.9" data-lambda="2.5" data-alpha="1"></div>
+<script src="../demos/dist/penaltygeom.js"></script>
+```
+
+::: notes
+Two co-expressed genes with correlation 0.9: the RSS contours are long thin ellipses lying along the valley where beta-1 + beta-2 is roughly constant, so many splits of the weight fit almost equally well. With the lasso at lambda = 2.5, the solution sits on the corner of the diamond: gene 1 is kept and gene 2 is exactly zero (red mark). Now drag the OLS point along the valley to about (0.5, 1.5): the choice flips to gene 2. Point out that with highly correlated genes the OLS point itself moves a lot along that valley from one sample to the next, so this drag is what dropping a single cell line can do; it is the MKI67/PCNA swap from the previous slides. Then click Ridge: both genes are kept with nearly equal, shrunk weights, and the drag barely changes them. Elastic net (alpha = 0.5) also keeps both, close to equal: the grouping effect. This sets up the question stability selection answers next: how often is each gene picked?
 :::
 
 ## Stability selection: the idea {.smaller}

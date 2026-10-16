@@ -62,6 +62,31 @@ $$\lambda = (6.0,\; 2.4,\; 0.9,\; 0.4,\; 0.2,\; 0.1).$$
 
 **B9. (beyond PCA).** In one sentence each: (a) what does **ICA** look for that PCA does not, and when does that extra condition actually matter; (b) why would you run **PCA before UMAP** rather than UMAP on the raw features, and what must you *not* read off a UMAP plot?
 
+## Explore
+
+This demo shows three of the pitfalls on small 2D datasets. The solid red line is PC1, the dashed red line PC2; the two strips underneath show each sample's **score** on PC1 and on PC2 (same scale as the scatter). Use it after B5–B8.
+
+```{=html}
+<link rel="stylesheet" href="../demos/dist/demo.css">
+<div data-demo="pca2d" data-mode="pitfalls" data-preset="units"></div>
+<script src="../demos/dist/pca2d.js"></script>
+```
+
+**E1. (scaling, compare B5).** Preset *1 · Units*. How much variance does PC1 explain, and what are its loadings on A and B? Now tick "Scale variables". What happens to the PC1 direction, its loadings, and its percentage? Why does PC1 end up at exactly $45^\circ$?
+
+**E2. (outlier, compare B8).** Preset *2 · Outlier*. Read the PC1 direction and percentage with and without the red sample. Then drag the red sample into the middle of the cloud, and finally far out to one side. What happens to PC1, and to the PC1 score strip?
+
+**E3. (unsupervised, compare B6).** Preset *3 · Two groups*. How much variance does PC1 explain? On which score strip are the blue and orange groups separated? What does this say about using PC1 to look for the group difference?
+
+::: {.callout-note collapse="true" title="Solutions"}
+
+**E1.** Unscaled, PC1 explains **99.99%** and is $\approx 1.00\cdot A + 0.01\cdot B$: it is simply metabolite A, because A's variance (SD $\approx 99$) dwarfs B's (SD $\approx 1.6$). After scaling, both variables have variance 1, PC1 turns to **$45^\circ$** with loadings $0.71, 0.71$ (A and B count equally) and explains about **87%**. The scaled covariance matrix is the correlation matrix $\begin{pmatrix}1 & r\\ r & 1\end{pmatrix}$, which has the symmetric $\begin{pmatrix}a & b\\ b & a\end{pmatrix}$ pattern, so its eigenvectors are $(1,1)$ and $(1,-1)$ whatever $r$ is.
+
+**E2.** Without the outlier, PC1 lies along the cloud at about **$18^\circ$** and explains about 77%. With it, PC1 swings to about **$100^\circ$** (explaining about 65%), pointing at the one sample. Dragged into the cloud, PC1 returns close to the grey dashed line; dragged far out, PC1 follows the outlier wherever it goes and the PC1 strip shows the typical symptom: one point far away, everyone else bunched together.
+
+**E3.** PC1 explains about **89%** of the variance, but the two colours overlap completely on the PC1 strip; they separate only on the **PC2** strip (about 11%). PCA ranks directions by variance and never sees the colours, so the group difference can sit on a small PC. To find the separating direction from known labels you would use a supervised method (OPLS or LDA).
+:::
+
 ## In R
 
 Use R to **confirm** the hand answers. Nothing here needs a real dataset except the last block.

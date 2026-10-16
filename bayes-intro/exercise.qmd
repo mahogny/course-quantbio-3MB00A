@@ -69,6 +69,35 @@ Throughout, the running example is counting marker-**positive** cells: $k$ posit
 
 **B8. (pseudo-counts)** Explain why $\text{Beta}(1,1)$ barely moves the estimate while $\text{Beta}(20,80)$ (same 20% centre) would move it a lot, even though both are "centred at 0.2." Relate your answer to the idea of prior pseudo-counts.
 
+## Explore
+
+Do B3–B5 by hand first, then use the demo to check your numbers and to see the curves. The sliders set the prior Beta($\alpha,\beta$) and the data ($k$ positive of $n$ cells); the presets load the lecture's cases. The solid red curve is the posterior, with its 95% credible interval shaded; below the plot the Bayesian interval is drawn next to the frequentist $k/n$ with its usual 95% confidence interval $\hat p \pm 1.96\sqrt{\hat p(1-\hat p)/n}$.
+
+```{=html}
+<link rel="stylesheet" href="../demos/dist/demo.css">
+<div data-demo="betabinom" data-a="1" data-b="1" data-k="6" data-n="20" data-truep="0.3"></div>
+<script src="../demos/dist/betabinom.js"></script>
+```
+
+**E1.** Load "6/20, flat prior" and then "6/20, Beta(2,8)". Check the posterior parameters and means against your B3 and B4 answers. Which of the two intervals below the plot moves when you change the prior, and which does not? Why?
+
+**E2.** Load "6/20, strong wrong prior" (Beta(40,10), centred at 0.8). Where does the posterior end up? Now load "60/200, strong wrong prior". Has the data "won" yet? Use the readout line *prior share of counts* to explain.
+
+**E3.** Keep the prior at Beta(2,8) and $k/n = 6/20$, but raise $\alpha$ and $\beta$ to Beta(20,80) (same centre 0.2). What happens to the posterior mean and the width of the credible interval? Relate this to B8.
+
+**E4.** Set a flat prior, press "no data", then "+1 negative" five times ($k = 0$, $n = 5$). Compare the frequentist interval with the Bayesian credible interval. Which one gives a sensible statement of uncertainty, and why does the other one fail?
+
+::: {.callout-note collapse="true" title="Solutions"}
+
+**E1.** Flat prior: posterior Beta(7, 15), mean 0.318, 95% credible interval about [0.146, 0.522]. With Beta(2,8): posterior Beta(8, 22), mean 0.267, interval about [0.127, 0.435]. Only the **Bayesian** interval moves. The frequentist estimate $k/n = 0.30$ and its confidence interval [0.10, 0.50] use the data alone, so the prior has no way to enter them.
+
+**E2.** With 6/20 the posterior is Beta(46, 24), mean 0.657 — much closer to the prior's 0.8 than to the data's 0.3, and its credible interval [0.54, 0.76] does not even contain 0.3. The prior carries 50 pseudo-counts against 20 real cells (prior share 71%). With 60/200 the posterior is Beta(100, 150), mean 0.40: better, but still well above 0.30, since the prior still makes up 20% of the counts. A confident prior in the wrong place needs a lot of data to overcome, which is why priors have to be defended and checked (sensitivity analysis).
+
+**E3.** Beta(20,80) + 6/20 gives Beta(26, 94), mean 0.217 (versus 0.267 with Beta(2,8)), and a narrower interval, about [0.15, 0.29] instead of [0.13, 0.44]. Both priors are centred at 0.2, but Beta(20,80) is worth 100 pseudo-cells, five times the data, so it pulls the estimate almost all the way to 0.2. The **strength** $\alpha+\beta$, not only the centre, decides how much a prior matters (B8).
+
+**E4.** The frequentist estimate is $0/5 = 0$ and the formula gives SE $= 0$, so the "95% interval" collapses to the single point [0, 0] — it claims certainty from five cells. The flat-prior posterior is Beta(1, 6), mean 0.143, with credible interval about [0.004, 0.46]: small fractions are most plausible, but values up to almost one half are not ruled out. The simple $\pm 1.96\,\text{SE}$ interval is an approximation that breaks down for small $n$ or when $k$ is 0 or $n$ (better frequentist intervals exist, e.g. `binom.test` in R); the Bayesian posterior handles these cases without a special rule.
+:::
+
 ## In R
 
 Use R only to **confirm** your by-hand answers. Everything here is base R — no package needed.
@@ -191,7 +220,7 @@ The gap shrinks from $0.318$ vs $0.267$ (a difference of $0.051$ at $n=20$) to $
 k <- 6; n <- 20
 a <- 1 + k; b <- 1 + (n - k)         # Beta(7, 15)
 a / (a + b)                          # 0.3181818  -> matches 7/22
-qbeta(c(0.025, 0.975), a, b)         # ~ 0.1435 .. 0.5216
+qbeta(c(0.025, 0.975), a, b)         # ~ 0.1459 .. 0.5218
 ```
 The mean equals $\alpha/(\alpha+\beta) = 7/22$; the 95% credible interval is roughly $[0.14, 0.52]$.
 
@@ -222,7 +251,7 @@ a / (a + b)                          # 0.2952
 ```
 The two means (0.302 and 0.295) differ by under $0.01$, far less than the $n = 20$ gap (0.318 vs 0.267). With ten times the data the prior barely matters.
 
-**R4.** The dashed curve, the $\text{Beta}(8,22)$ posterior from the informative prior, sits slightly to the **left** of the solid $\text{Beta}(7,15)$ curve, because the informative prior is centred near $0.2$ and pulls the posterior toward smaller $p$. Both peak below the grey line at $0.30$ (the pull is toward each prior's centre, above $0.2$ for the uniform, at $0.2$ for the informative). With more data both curves would narrow and slide onto $0.30$.
+**R4.** The dashed curve, the $\text{Beta}(8,22)$ posterior from the informative prior, sits slightly to the **left** of the solid $\text{Beta}(7,15)$ curve, because the informative prior is centred near $0.2$ and pulls the posterior toward smaller $p$. The flat-prior posterior Beta(7,15) peaks exactly on the grey line at $0.30$ (its mode $(7-1)/(7+15-2) = 6/20$ is the data estimate); the informative-prior posterior Beta(8,22) peaks below it, at $7/28 = 0.25$, pulled toward the prior's $0.2$. With more data both curves would narrow and slide onto $0.30$.
 :::
 
 ## Where this leads
