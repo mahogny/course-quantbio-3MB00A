@@ -1,0 +1,930 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<script src="../site_libs/clipboard/clipboard.min.js"></script>
+<script src="../site_libs/quarto-html/tabby.min.js"></script>
+<script src="../site_libs/quarto-html/popper.min.js"></script>
+<script src="../site_libs/quarto-html/tippy.umd.min.js"></script>
+<link href="../site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="../site_libs/quarto-html/light-border.css" rel="stylesheet">
+<link href="../site_libs/quarto-html/quarto-syntax-highlighting-662ae1889177880cb371f83234c0a158.css" rel="stylesheet" id="quarto-text-highlighting-styles"><meta charset="utf-8">
+  <meta name="generator" content="quarto-1.7.30">
+
+  <meta name="author" content="Quantitative biology and integrative omics">
+  <title>Quantitative biology and integrative omics – Variational autoencoders: encoders, decoders and generating cells</title>
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, minimal-ui">
+  <link rel="stylesheet" href="../site_libs/revealjs/dist/reset.css">
+  <link rel="stylesheet" href="../site_libs/revealjs/dist/reveal.css">
+  <style>
+    code{white-space: pre-wrap;}
+    span.smallcaps{font-variant: small-caps;}
+    div.columns{display: flex; gap: min(4vw, 1.5em);}
+    div.column{flex: auto; overflow-x: auto;}
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+    ul.task-list{list-style: none;}
+    ul.task-list li input[type="checkbox"] {
+      width: 0.8em;
+      margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+      vertical-align: middle;
+    }
+  </style>
+  <link rel="stylesheet" href="../site_libs/revealjs/dist/theme/quarto-bf56578b9c06c165c166475cd19dbcd1.css">
+  <link href="../site_libs/revealjs/plugin/quarto-line-highlight/line-highlight.css" rel="stylesheet">
+  <link href="../site_libs/revealjs/plugin/reveal-menu/menu.css" rel="stylesheet">
+  <link href="../site_libs/revealjs/plugin/reveal-menu/quarto-menu.css" rel="stylesheet">
+  <link href="../site_libs/revealjs/plugin/quarto-support/footer.css" rel="stylesheet">
+  <style type="text/css">
+    .reveal div.sourceCode {
+      margin: 0;
+      overflow: auto;
+    }
+    .reveal div.hanging-indent {
+      margin-left: 1em;
+      text-indent: -1em;
+    }
+    .reveal .slide:not(.center) {
+      height: 100%;
+    }
+    .reveal .slide.scrollable {
+      overflow-y: auto;
+    }
+    .reveal .footnotes {
+      height: 100%;
+      overflow-y: auto;
+    }
+    .reveal .slide .absolute {
+      position: absolute;
+      display: block;
+    }
+    .reveal .footnotes ol {
+      counter-reset: ol;
+      list-style-type: none; 
+      margin-left: 0;
+    }
+    .reveal .footnotes ol li:before {
+      counter-increment: ol;
+      content: counter(ol) ". "; 
+    }
+    .reveal .footnotes ol li > p:first-child {
+      display: inline-block;
+    }
+    .reveal .slide ul,
+    .reveal .slide ol {
+      margin-bottom: 0.5em;
+    }
+    .reveal .slide ul li,
+    .reveal .slide ol li {
+      margin-top: 0.4em;
+      margin-bottom: 0.2em;
+    }
+    .reveal .slide ul[role="tablist"] li {
+      margin-bottom: 0;
+    }
+    .reveal .slide ul li > *:first-child,
+    .reveal .slide ol li > *:first-child {
+      margin-block-start: 0;
+    }
+    .reveal .slide ul li > *:last-child,
+    .reveal .slide ol li > *:last-child {
+      margin-block-end: 0;
+    }
+    .reveal .slide .columns:nth-child(3) {
+      margin-block-start: 0.8em;
+    }
+    .reveal blockquote {
+      box-shadow: none;
+    }
+    .reveal .tippy-content>* {
+      margin-top: 0.2em;
+      margin-bottom: 0.7em;
+    }
+    .reveal .tippy-content>*:last-child {
+      margin-bottom: 0.2em;
+    }
+    .reveal .slide > img.stretch.quarto-figure-center,
+    .reveal .slide > img.r-stretch.quarto-figure-center {
+      display: block;
+      margin-left: auto;
+      margin-right: auto; 
+    }
+    .reveal .slide > img.stretch.quarto-figure-left,
+    .reveal .slide > img.r-stretch.quarto-figure-left  {
+      display: block;
+      margin-left: 0;
+      margin-right: auto; 
+    }
+    .reveal .slide > img.stretch.quarto-figure-right,
+    .reveal .slide > img.r-stretch.quarto-figure-right  {
+      display: block;
+      margin-left: auto;
+      margin-right: 0; 
+    }
+  </style>
+</head>
+<body class="quarto-light">
+  <div class="reveal">
+    <div class="slides">
+
+<section id="title-slide" class="quarto-title-block center">
+  <h1 class="title">Variational autoencoders: encoders, decoders and generating cells</h1>
+  <p class="subtitle">Extra material — Variational autoencoders</p>
+
+<div class="quarto-title-authors">
+<div class="quarto-title-author">
+<div class="quarto-title-author-name">
+Quantitative biology and integrative omics 
+</div>
+</div>
+</div>
+
+</section>
+<section id="about-this-lecture" class="slide level2">
+<h2>About this lecture</h2>
+<p>PCA and UMAP gave every cell a few coordinates in a <strong>latent space</strong>. This lecture is about a method that also goes the <strong>other way</strong>: from a few coordinates back to a whole cell.</p>
+<ul>
+<li>An <strong>autoencoder</strong> = an <strong>encoder</strong> (cell → a few numbers) and a <strong>decoder</strong> (a few numbers → cell).</li>
+<li><strong>PCA is the simplest autoencoder.</strong> A neural network allows curved maps instead of straight ones.</li>
+<li><strong>Variational</strong>: each cell becomes a small <strong>cloud</strong> in latent space, not a point.</li>
+<li>The decoder gives a <strong>distribution</strong> of counts (negative binomial), so it can <strong>generate</strong> new cells.</li>
+<li><strong>One latent point → many different cells</strong>, just as replicate cells of the same state differ.</li>
+</ul>
+<p>Pictures and intuition only: no training maths.</p>
+<aside class="notes">
+<p>This is extra material and deliberately non-technical. Students know PCA (scores and loadings), UMAP, the negative binomial from Error models, and the words prior and posterior from the Bayesian block. Everything today is built from those pieces. The one new ingredient is a neural network, which we treat as “a flexible curved function with many knobs that a computer tunes”. We never write down the training objective; one sentence in words is enough. The demo carries the main message: one latent point gives many cells.</p>
+<style type="text/css">
+        span.MJX_Assistive_MathML {
+          position:absolute!important;
+          clip: rect(1px, 1px, 1px, 1px);
+          padding: 1px 0 0 0!important;
+          border: 0!important;
+          height: 1px!important;
+          width: 1px!important;
+          overflow: hidden!important;
+          display:block!important;
+      }</style></aside>
+</section>
+<section id="many-genes-few-real-knobs" class="slide level2">
+<h2>Many genes, few real knobs</h2>
+<p>A cell is measured on <strong>~20,000 genes</strong>, but its expression is not 20,000 independent choices.</p>
+<ul>
+<li>What really varies between cells is a <strong>handful of factors</strong>: cell type, position along a differentiation path, cell-cycle phase, stress, …</li>
+<li>Genes respond to these factors <strong>together</strong>: a T cell switches on dozens of T-cell genes at once.</li>
+<li>So the cells lie close to a <strong>low-dimensional</strong> shape inside gene space.</li>
+</ul>
+<p>We have seen this already:</p>
+<table class="caption-top">
+<thead>
+<tr class="header">
+<th>Method</th>
+<th>Cell → few numbers</th>
+<th>Few numbers → cell</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>PCA</td>
+<td>scores (projection on the PCs)</td>
+<td>scores × loadings</td>
+</tr>
+<tr class="even">
+<td>UMAP</td>
+<td>2D layout</td>
+<td><strong>no way back</strong></td>
+</tr>
+<tr class="odd">
+<td>Autoencoder</td>
+<td><strong>encoder</strong></td>
+<td><strong>decoder</strong></td>
+</tr>
+</tbody>
+</table>
+<aside class="notes">
+<p>Start from biology. The number of genes is huge, but the number of things a cell can “decide” is small. That is why PCA works at all: 30 PCs capture most of the structured variation in a scRNA-seq dataset. The table is the map of today. PCA can go both ways: scores summarise a cell, and scores times loadings rebuild an approximation of it. UMAP only goes one way: there is no formula that turns a UMAP position into an expression profile. An autoencoder has both directions as explicit, learned functions, and they may be curved.</p>
+<style type="text/css">
+        span.MJX_Assistive_MathML {
+          position:absolute!important;
+          clip: rect(1px, 1px, 1px, 1px);
+          padding: 1px 0 0 0!important;
+          border: 0!important;
+          height: 1px!important;
+          width: 1px!important;
+          overflow: hidden!important;
+          display:block!important;
+      }</style></aside>
+</section>
+<section id="the-autoencoder-squeeze-then-rebuild" class="slide level2 smaller">
+<h2>The autoencoder: squeeze, then rebuild</h2>
+
+<img data-src="fig01-hourglass.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:92.0%"><ul>
+<li>The <strong>encoder</strong> compresses a cell into a few numbers <span class="math inline">\(z\)</span>, its position in latent space.</li>
+<li>The <strong>decoder</strong> rebuilds the whole expression profile from <span class="math inline">\(z\)</span> alone.</li>
+<li>Training adjusts both until the <strong>output is close to the input</strong>, for thousands of cells.</li>
+<li>The narrow <strong>bottleneck</strong> is the point: to rebuild 20,000 genes from 2 numbers, those 2 numbers must capture what matters most about the cell.</li>
+</ul>
+<aside class="notes">
+<p>The hourglass is the one picture to remember. If the bottleneck were as wide as the input, the network could just copy the cell through and learn nothing. Squeezing through two numbers forces it to find the main axes of variation, as PCA does. “Training” here means: start with random knobs, measure how badly the output matches the input, nudge all knobs to do a bit better, repeat many times. Students do not need to know how the nudging works.</p>
+<style type="text/css">
+        span.MJX_Assistive_MathML {
+          position:absolute!important;
+          clip: rect(1px, 1px, 1px, 1px);
+          padding: 1px 0 0 0!important;
+          border: 0!important;
+          height: 1px!important;
+          width: 1px!important;
+          overflow: hidden!important;
+          display:block!important;
+      }</style></aside>
+</section>
+<section id="pca-is-a-linear-autoencoder" class="slide level2 smaller">
+<h2>PCA is a linear autoencoder</h2>
+<div class="columns">
+<div class="column" style="width:52%;">
+<p><img data-src="fig02-pca-autoencoder.svg" style="width:100.0%"></p>
+</div><div class="column" style="width:48%;">
+<p>Two genes, one number (PC1, <span class="math inline">\(\mathbf{u} = (0.8, 0.6)\)</span>):</p>
+<ul>
+<li><strong>Encode</strong>: the score <span class="math inline">\(= \mathbf{x}\cdot\mathbf{u} = 0.8\cdot 3 + 0.6\cdot 1 = 3.0\)</span>.</li>
+<li><strong>Decode</strong>: score <span class="math inline">\(\times\ \mathbf{u} = 3.0\cdot(0.8, 0.6) = (2.4, 1.8)\)</span>.</li>
+<li><strong>Error</strong>: <span class="math inline">\((3, 1) - (2.4, 1.8) = (0.6, -0.8)\)</span>, squared length <span class="math inline">\(1.0\)</span>.</li>
+</ul>
+<p>Of all <strong>straight-line</strong> encoders and decoders, PCA gives the smallest total reconstruction error.</p>
+<p>A neural network replaces both straight maps by <strong>curved</strong> ones: same hourglass, more flexible.</p>
+</div></div>
+<aside class="notes">
+<p>This is the key bridge. Everything on this slide is from Principal component analysis: the score is the dot product with the unit PC, and multiplying the score back by the PC gives the point on the PC line. The red dashed segment is what is lost by keeping one number instead of two. For centred data, keeping k PCs gives the smallest possible squared error among all linear encode/decode pairs with k numbers; a linear autoencoder trained to minimise squared error ends up spanning the same subspace as the PCs. So an autoencoder is “PCA with curved maps”. The exercise works through this example and computes reconstruction error against the number of PCs in R.</p>
+<style type="text/css">
+        span.MJX_Assistive_MathML {
+          position:absolute!important;
+          clip: rect(1px, 1px, 1px, 1px);
+          padding: 1px 0 0 0!important;
+          border: 0!important;
+          height: 1px!important;
+          width: 1px!important;
+          overflow: hidden!important;
+          display:block!important;
+      }</style></aside>
+</section>
+<section id="why-curved-maps-help" class="slide level2">
+<h2>Why curved maps help</h2>
+<p>A differentiation path is a <strong>curve</strong> in gene space: stem genes fade, progenitor genes rise and fall, erythroid genes switch on.</p>
+<ul>
+<li>PCA needs <strong>two</strong> axes to hold this one curve, and draws it as a horseshoe (exercise, R part).</li>
+<li>A decoder with curved maps can lay the path along <strong>one</strong> latent direction and bend it back into gene space.</li>
+<li>The same idea as the “linear flattens the manifold” problem from Dimensionality reduction &amp; clustering, now with a way back to genes.</li>
+</ul>
+<p>A neural network is just a <strong>flexible function with many knobs</strong> (weights). Here it is small: one hidden layer of 32 units.</p>
+<aside class="notes">
+<p>Point back to the UMAP lecture: PCA is linear, so curved structures get flattened or need extra dimensions. UMAP solves the visualisation part but cannot rebuild a cell. A decoder network can do both: put cells on a low-dimensional latent space and map back. Do not go into neurons, activations or back-propagation; “a curved function with many adjustable numbers” is the right level. The trained model in the demo has 32 hidden units in each network, about 2,600 numbers in total; scVI uses larger networks.</p>
+<style type="text/css">
+        span.MJX_Assistive_MathML {
+          position:absolute!important;
+          clip: rect(1px, 1px, 1px, 1px);
+          padding: 1px 0 0 0!important;
+          border: 0!important;
+          height: 1px!important;
+          width: 1px!important;
+          overflow: hidden!important;
+          display:block!important;
+      }</style></aside>
+</section>
+<section id="what-a-plain-autoencoder-lacks" class="slide level2 smaller">
+<h2>What a plain autoencoder lacks</h2>
+
+<img data-src="fig03-point-vs-cloud.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:78.0%"><p>A plain autoencoder places each training cell at <strong>one point</strong>. Nothing says what the decoder should do <strong>between</strong> the points:</p>
+<ul>
+<li>A point in a gap may decode to something that looks like no real cell.</li>
+<li>There is no notion of <strong>how sure</strong> we are about a cell’s position.</li>
+<li>So we cannot simply pick a point and <strong>generate</strong> a believable new cell.</li>
+</ul>
+<aside class="notes">
+<p>The left panel is the problem. The decoder was only ever asked to rebuild the training cells, so it was only tested at those points; in the gaps it can do anything. And the position of a cell is a single number pair, with no error bar, even though a cell with 500 counts is far less certain than one with 20,000. The right panel is the fix on the next slide.</p>
+<style type="text/css">
+        span.MJX_Assistive_MathML {
+          position:absolute!important;
+          clip: rect(1px, 1px, 1px, 1px);
+          padding: 1px 0 0 0!important;
+          border: 0!important;
+          height: 1px!important;
+          width: 1px!important;
+          overflow: hidden!important;
+          display:block!important;
+      }</style></aside>
+</section>
+<section id="variational-a-cloud-instead-of-a-point" class="slide level2">
+<h2>“Variational”: a cloud instead of a point</h2>
+<p>The encoder outputs a <strong>centre</strong> and a <strong>spread</strong> for every cell: a small cloud of likely positions.</p>
+<ul>
+<li>During training, the decoder must rebuild the cell from <strong>random points inside its cloud</strong>, so every point near the cell has to decode to something like it.</li>
+<li>A <strong>penalty</strong> keeps every cloud close to one standard bell-shaped cloud around 0, so the clouds stay close together and fill the space with few gaps.</li>
+<li>The spread is a statement of <strong>uncertainty</strong>: few counts → wide cloud.</li>
+</ul>
+<p>In Bayesian words: the standard bell-shaped cloud is the <strong>prior</strong> for <span class="math inline">\(z\)</span>, and the cell’s cloud is an approximate <strong>posterior</strong> for where that cell sits in latent space. “Variational” names the method that finds these approximations.</p>
+<aside class="notes">
+<p>This is the whole difference between an autoencoder and a variational autoencoder, in words. Two forces act during training: rebuild the cell well (which pulls clouds apart and makes them small), and stay close to the standard cloud (which pulls them together and makes them wide). The balance gives a tidy latent space in which a point between two groups decodes to something reasonable, often an in-between profile. The link to the Bayesian block is a single sentence: prior on z, approximate posterior per cell. We do not write the penalty; it is a KL divergence, if a student asks, and the method was introduced by Kingma and Welling (2014). Reference: D. P. Kingma, M. Welling (2014), Auto-Encoding Variational Bayes, ICLR 2014, arXiv:1312.6114.</p>
+<style type="text/css">
+        span.MJX_Assistive_MathML {
+          position:absolute!important;
+          clip: rect(1px, 1px, 1px, 1px);
+          padding: 1px 0 0 0!important;
+          border: 0!important;
+          height: 1px!important;
+          width: 1px!important;
+          overflow: hidden!important;
+          display:block!important;
+      }</style></aside>
+</section>
+<section id="the-decoder-outputs-a-distribution" class="slide level2">
+<h2>The decoder outputs a distribution</h2>
+<p>For counts, the decoder does not output one cell. For every gene it outputs the parameters of a <strong>count distribution</strong>:</p>
+<p><span class="math display">\[\text{gene } g \text{ in a cell at } z: \qquad \text{count} \sim \text{NB}\big(\text{mean} = \mu_g(z),\ \text{dispersion } \phi_g\big)\]</span></p>
+<ul>
+<li>The <strong>mean</strong> <span class="math inline">\(\mu_g(z)\)</span> changes with the position <span class="math inline">\(z\)</span>: this is the biology.</li>
+<li>The <strong>spread</strong> around it is the overdispersed counting noise of Error models: <span class="math inline">\(\text{Var} = \mu + \phi\mu^2\)</span>.</li>
+<li>Training asks: how <strong>probable</strong> are the observed counts under this NB? (A likelihood, as in Bayesian statistics.)</li>
+</ul>
+<p>This is what <strong>scVI</strong> does for single-cell RNA-seq (Lopez et al.&nbsp;2018).</p>
+<aside class="notes">
+<p>Connect to Error models: the negative binomial with mean mu and dispersion phi, variance mu plus phi mu squared, is exactly the error model DESeq2 and edgeR use. Here the mean of every gene is not a fixed number but a function of the cell’s latent position. So the decoder separates two kinds of variation: biological (where the cell is in latent space) and technical/counting (the NB spread around the mean). The demo VAE was trained with an NB likelihood and a learned dispersion per gene. scVI also includes the library size of each cell, which we left out by giving all simulated cells the same depth. Reference: R. Lopez, J. Regier, M. B. Cole, M. I. Jordan, N. Yosef (2018), Deep generative modeling for single-cell transcriptomics, Nature Methods 15, 1053–1058.</p>
+<style type="text/css">
+        span.MJX_Assistive_MathML {
+          position:absolute!important;
+          clip: rect(1px, 1px, 1px, 1px);
+          padding: 1px 0 0 0!important;
+          border: 0!important;
+          height: 1px!important;
+          width: 1px!important;
+          overflow: hidden!important;
+          display:block!important;
+      }</style></aside>
+</section>
+<section id="generating-cells-one-z-many-cells" class="slide level2 smaller">
+<h2>Generating cells: one <span class="math inline">\(z\)</span>, many cells</h2>
+<p>To <strong>generate</strong> a cell: pick a point <span class="math inline">\(z\)</span> → decode to expected counts → <strong>draw</strong> counts from the NB.</p>
+
+<img data-src="fig04-one-z-many-cells.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:88.0%"><p>The <strong>same</strong> <span class="math inline">\(z\)</span> gives <strong>different</strong> cells every time. They differ only by sampling noise, as real cells in the <strong>same state</strong> do.</p>
+<aside class="notes">
+<p>This is the main message of the lecture. The bars are the decoder’s expected counts at one latent point (here from the hand-written decoder of the exercise, at z1 = −1: a stem-like cell). The dots and the heatmap rows are 12 cells drawn from the negative binomial around those means. Stem1 has mean 19.6 but the 12 cells range from 3 to 24. That spread is not a failure of the model; it is the model saying that cells in this state really do vary that much in their counts. Ask: if you sequenced 12 cells that are biologically identical, would you expect identical counts? No: Error models said counts are overdispersed. A generative model reproduces that.</p>
+<style type="text/css">
+        span.MJX_Assistive_MathML {
+          position:absolute!important;
+          clip: rect(1px, 1px, 1px, 1px);
+          padding: 1px 0 0 0!important;
+          border: 0!important;
+          height: 1px!important;
+          width: 1px!important;
+          overflow: hidden!important;
+          display:block!important;
+      }</style></aside>
+</section>
+<section id="a-walk-through-latent-space" class="slide level2 smaller">
+<h2>A walk through latent space</h2>
+<p>Different <span class="math inline">\(z\)</span> → different cell states. Moving <span class="math inline">\(z\)</span> along a line gives a <strong>smooth transition</strong>:</p>
+
+<img data-src="fig05-walk.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:82.0%"><p>The midpoint is <strong>not</strong> the average of the two end profiles: the progenitor gene peaks at <span class="math inline">\(z_1 = 0\)</span> (mean 15) but is only 5.5 at both ends. The decoder bends the path through gene space.</p>
+<aside class="notes">
+<p>The lines are decoded means along a straight walk from z1 = −2 to z1 = 2; the dots are one sampled cell per step, which wobble around the lines. A straight line in latent space is a curve in gene space. Averaging the two endpoint profiles would give a progenitor value of 5.5; decoding the latent midpoint gives 15. This is the nonlinear part: the transient programme appears only through the decoder. In real data this is how VAEs are used to explore trajectories or to ask “what lies between these two cell states?”. With a trained model, how believable the in-between profiles are depends on whether real cells lived there.</p>
+<style type="text/css">
+        span.MJX_Assistive_MathML {
+          position:absolute!important;
+          clip: rect(1px, 1px, 1px, 1px);
+          padding: 1px 0 0 0!important;
+          border: 0!important;
+          height: 1px!important;
+          width: 1px!important;
+          overflow: hidden!important;
+          display:block!important;
+      }</style></aside>
+</section>
+<section id="try-it-one-z-many-cells" class="slide level2">
+<h2>Try it: one <span class="math inline">\(z\)</span>, many cells</h2>
+<link rel="stylesheet" href="../demos/dist/demo.css">
+<div data-demo="vaegen" data-tabs="cells"></div>
+<script src="../demos/dist/vaegen.js"></script>
+<aside class="notes">
+<p>This is a real, small VAE, trained offline (plain JavaScript, fixed seed; the script is demos/src/vaegen/train.ts) on 1500 simulated cells × 36 genes: T cells, B cells, and a stem → progenitor → erythroid trajectory, with negative-binomial counts. Encoder and decoder have 32 hidden units each, the latent space has 2 dimensions, and the likelihood is negative binomial with a learned dispersion per gene. The faint dots are the encoder centres of the training cells. Drag z: the bars are the decoder’s expected counts; the dots and rows are 8 cells drawn from the same z. Press “Sample again”: the bars stay, the cells change. Set dispersion to 0 (Poisson) and the cells get more alike; at 3 they spread out. “between T and B” decodes to weak T and B genes together, a profile few real cells have. “far outside” decodes to stem and progenitor genes both high, higher than any training cell shows together: the decoder extrapolates, and nothing guarantees the result is biology. Walk mode: “stem → erythroid” shows the transition. Encode a cell: click any dot to see its cloud (±2 sd) and its reconstruction. Checks on this model: reconstruction error is about half that of a “same average cell for everyone” baseline (NB negative log-likelihood 52 vs 109 per cell) and much lower than PCA with 2 components on log counts; a 15-nearest-neighbour vote in the 2D latent space recovers the T/B/trajectory group of 100% of cells.</p>
+<style type="text/css">
+        span.MJX_Assistive_MathML {
+          position:absolute!important;
+          clip: rect(1px, 1px, 1px, 1px);
+          padding: 1px 0 0 0!important;
+          border: 0!important;
+          height: 1px!important;
+          width: 1px!important;
+          overflow: hidden!important;
+          display:block!important;
+      }</style></aside>
+</section>
+<section id="try-it-digits" class="slide level2">
+<h2>Try it: digits</h2>
+<link rel="stylesheet" href="../demos/dist/demo.css">
+<div data-demo="vaegen" data-tabs="digits"></div>
+<script src="../demos/dist/vaegen.js"></script>
+<aside class="notes">
+<p>The same idea on images, where encoding and decoding are easy to see: a VAE with a 2D latent space trained on MNIST handwritten digits (60,000 images of 28 × 28 pixels; Y. LeCun, C. Cortes and C. J. C. Burges; the Keras documentation states the copyright holders as LeCun and Cortes and the licence as CC BY-SA 3.0). Trained offline with torch (demos/src/vaegen/train_mnist.py), weights stored as 8-bit integers. Draw a digit, press Encode: the cross is the cloud centre and the small orange ellipse its spread; the big image is the reconstruction. Tick “decoded grid” to see the classic map: every region decodes to a digit and they morph into each other. “walk 1 → 7” shows a smooth morph. Images and counts differ in one way: for images the variation lives almost entirely in z (the decoder outputs a smooth picture and the cloud is tiny), while for counts a second source of variation sits in the sampling step, the NB noise around the decoded mean. Some digits overlap in 2D (4 and 9, 3/5/8): two numbers are too few to keep ten classes apart, and a 15-nearest-neighbour vote recovers the digit of 72% of test images.</p>
+<style type="text/css">
+        span.MJX_Assistive_MathML {
+          position:absolute!important;
+          clip: rect(1px, 1px, 1px, 1px);
+          padding: 1px 0 0 0!important;
+          border: 0!important;
+          height: 1px!important;
+          width: 1px!important;
+          overflow: hidden!important;
+          display:block!important;
+      }</style></aside>
+</section>
+<section id="uses-in-single-cell-analysis" class="slide level2 smaller">
+<h2>Uses in single-cell analysis</h2>
+
+<img data-src="fig06-scvi.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:80.0%"><ul>
+<li><strong>scVI</strong>: the latent <span class="math inline">\(z\)</span> is used for clustering and UMAP instead of PCA. Telling the decoder the <strong>batch</strong> lets <span class="math inline">\(z\)</span> ignore batch differences (batch correction), and decoded means give <strong>denoised</strong> expression.</li>
+<li><strong>Several modalities</strong> in one latent space: totalVI for RNA + surface proteins (Gayoso et al.&nbsp;2021), MultiVI for RNA + chromatin accessibility (Ashuach et al.&nbsp;2023). Compare the joint latent space of Multiome data integration.</li>
+<li><strong>Generating or imputing</strong>: decode <span class="math inline">\(z\)</span> to fill in missing values or simulate cells.</li>
+</ul>
+<aside class="notes">
+<p>Keep this brief. The batch trick is the most used feature: if the decoder already knows which batch a cell came from, the latent space does not need to encode batch, so cells from different batches but the same type land in the same place. Decoding a cell’s z with a different batch label gives “this cell as if measured in batch A”. totalVI and MultiVI give each modality its own decoder and its own error model, all reading from one shared z: the same joint-latent-space idea as in the Multiome unit, but nonlinear. All three are in the scvi-tools Python package. References: A. Gayoso et al.&nbsp;(2021), Joint probabilistic modeling of single-cell multi-omic data with totalVI, Nature Methods 18, 272–282. T. Ashuach et al.&nbsp;(2023), MultiVI: deep generative model for the integration of multimodal data, Nature Methods 20, 1222–1231.</p>
+<style type="text/css">
+        span.MJX_Assistive_MathML {
+          position:absolute!important;
+          clip: rect(1px, 1px, 1px, 1px);
+          padding: 1px 0 0 0!important;
+          border: 0!important;
+          height: 1px!important;
+          width: 1px!important;
+          overflow: hidden!important;
+          display:block!important;
+      }</style></aside>
+</section>
+<section id="caveats-do-not-over-interpret" class="slide level2">
+<h2>Caveats: do not over-interpret</h2>
+<ul>
+<li><strong>Latent axes have no fixed meaning.</strong> Unlike PCA loadings, <span class="math inline">\(z_1\)</span> and <span class="math inline">\(z_2\)</span> are not ranked or interpretable by construction; a rotated or flipped latent space can fit about as well.</li>
+<li><strong>Results depend on training</strong>: random starting values, network size and training length all change the latent space. Retrain with another seed and the picture moves.</li>
+<li><strong>Generated cells are only as good as the training data.</strong> Far from the data, the decoder extrapolates; between groups it interpolates. Neither is guaranteed to be biology.</li>
+<li><strong>Distances in latent space</strong> are not calibrated; the same reading rules as for a UMAP apply.</li>
+<li><strong>Uncertainty is approximate</strong>: the clouds are a convenient shape, not the exact posterior.</li>
+</ul>
+<aside class="notes">
+<p>Same spirit as the caveats in Dimensionality reduction &amp; clustering. The most common mistake is to read a decoded profile at an arbitrary latent point as a prediction of a real cell state. A decoded profile is a smooth guess based on nearby training cells; far from the data there are none. The second mistake is to name latent axes as if they were PCs: a VAE has no ordering of axes by variance, and the penalty is symmetric under rotation. Validate claims with marker genes and independent data, as with clusters.</p>
+<style type="text/css">
+        span.MJX_Assistive_MathML {
+          position:absolute!important;
+          clip: rect(1px, 1px, 1px, 1px);
+          padding: 1px 0 0 0!important;
+          border: 0!important;
+          height: 1px!important;
+          width: 1px!important;
+          overflow: hidden!important;
+          display:block!important;
+      }</style></aside>
+</section>
+<section id="summary" class="slide level2 smaller">
+<h2>Summary</h2>
+<table class="caption-top">
+<colgroup>
+<col style="width: 50%">
+<col style="width: 50%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Idea</th>
+<th>In one line</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Encoder</td>
+<td>cell → a few numbers <span class="math inline">\(z\)</span> (its place in latent space)</td>
+</tr>
+<tr class="even">
+<td>Decoder</td>
+<td><span class="math inline">\(z\)</span> → expected expression of every gene</td>
+</tr>
+<tr class="odd">
+<td>Autoencoder</td>
+<td>trained so that decode(encode(cell)) ≈ cell, through a narrow bottleneck</td>
+</tr>
+<tr class="even">
+<td>PCA</td>
+<td>the linear autoencoder: encode = project, decode = score × PC</td>
+</tr>
+<tr class="odd">
+<td>Variational</td>
+<td>each cell → a small <strong>cloud</strong>; clouds kept close to a standard bell-shaped cloud</td>
+</tr>
+<tr class="even">
+<td>Decoder output</td>
+<td>a distribution: NB per gene for counts (scVI)</td>
+</tr>
+<tr class="odd">
+<td>Generative</td>
+<td>one <span class="math inline">\(z\)</span> → many different cells; a walk in <span class="math inline">\(z\)</span> → a smooth transition</td>
+</tr>
+<tr class="even">
+<td>Caution</td>
+<td>axes not interpretable; far from the data the decoder only guesses</td>
+</tr>
+</tbody>
+</table>
+<aside class="notes">
+<p>Return to the table from slide 2: PCA, UMAP and autoencoders all put cells in a latent space, but only PCA and autoencoders can go back to genes, and only a variational autoencoder with a count distribution can generate realistic new cells. The exercise does PCA as an autoencoder by hand and in R, reads a small decoder table, and generates cells from one latent point with rnbinom.</p>
+<style type="text/css">
+        span.MJX_Assistive_MathML {
+          position:absolute!important;
+          clip: rect(1px, 1px, 1px, 1px);
+          padding: 1px 0 0 0!important;
+          border: 0!important;
+          height: 1px!important;
+          width: 1px!important;
+          overflow: hidden!important;
+          display:block!important;
+      }</style></aside>
+
+
+</section>
+    </div>
+  <div class="quarto-auto-generated-content" style="display: none;">
+<div class="footer footer-default">
+
+</div>
+</div></div>
+
+  <script>window.backupDefine = window.define; window.define = undefined;</script>
+  <script src="../site_libs/revealjs/dist/reveal.js"></script>
+  <!-- reveal.js plugins -->
+  <script src="../site_libs/revealjs/plugin/quarto-line-highlight/line-highlight.js"></script>
+  <script src="../site_libs/revealjs/plugin/pdf-export/pdfexport.js"></script>
+  <script src="../site_libs/revealjs/plugin/reveal-menu/menu.js"></script>
+  <script src="../site_libs/revealjs/plugin/reveal-menu/quarto-menu.js"></script>
+  <script src="../site_libs/revealjs/plugin/quarto-support/support.js"></script>
+  
+
+  <script src="../site_libs/revealjs/plugin/notes/notes.js"></script>
+  <script src="../site_libs/revealjs/plugin/search/search.js"></script>
+  <script src="../site_libs/revealjs/plugin/zoom/zoom.js"></script>
+  <script src="../site_libs/revealjs/plugin/math/math.js"></script>
+  <script>window.define = window.backupDefine; window.backupDefine = undefined;</script>
+
+  <script>
+
+      // Full list of configuration options available at:
+      // https://revealjs.com/config/
+      Reveal.initialize({
+'controlsAuto': true,
+'previewLinksAuto': false,
+'pdfSeparateFragments': false,
+'autoAnimateEasing': "ease",
+'autoAnimateDuration': 1,
+'autoAnimateUnmatched': true,
+'jumpToSlide': true,
+'menu': {"side":"left","useTextContentForMissingTitles":true,"markers":false,"loadIcons":false,"custom":[{"title":"Tools","icon":"<i class=\"fas fa-gear\"></i>","content":"<ul class=\"slide-menu-items\">\n<li class=\"slide-tool-item active\" data-item=\"0\"><a href=\"#\" onclick=\"RevealMenuToolHandlers.fullscreen(event)\"><kbd>f</kbd> Fullscreen</a></li>\n<li class=\"slide-tool-item\" data-item=\"1\"><a href=\"#\" onclick=\"RevealMenuToolHandlers.speakerMode(event)\"><kbd>s</kbd> Speaker View</a></li>\n<li class=\"slide-tool-item\" data-item=\"2\"><a href=\"#\" onclick=\"RevealMenuToolHandlers.overview(event)\"><kbd>o</kbd> Slide Overview</a></li>\n<li class=\"slide-tool-item\" data-item=\"3\"><a href=\"#\" onclick=\"RevealMenuToolHandlers.togglePdfExport(event)\"><kbd>e</kbd> PDF Export Mode</a></li>\n<li class=\"slide-tool-item\" data-item=\"4\"><a href=\"#\" onclick=\"RevealMenuToolHandlers.toggleScrollView(event)\"><kbd>r</kbd> Scroll View Mode</a></li>\n<li class=\"slide-tool-item\" data-item=\"5\"><a href=\"#\" onclick=\"RevealMenuToolHandlers.keyboardHelp(event)\"><kbd>?</kbd> Keyboard Help</a></li>\n</ul>"}],"openButton":true},
+'smaller': false,
+ 
+        // Display controls in the bottom right corner
+        controls: false,
+
+        // Help the user learn the controls by providing hints, for example by
+        // bouncing the down arrow when they first encounter a vertical slide
+        controlsTutorial: false,
+
+        // Determines where controls appear, "edges" or "bottom-right"
+        controlsLayout: 'edges',
+
+        // Visibility rule for backwards navigation arrows; "faded", "hidden"
+        // or "visible"
+        controlsBackArrows: 'faded',
+
+        // Display a presentation progress bar
+        progress: true,
+
+        // Display the page number of the current slide
+        slideNumber: 'c/t',
+
+        // 'all', 'print', or 'speaker'
+        showSlideNumber: 'all',
+
+        // Add the current slide number to the URL hash so that reloading the
+        // page/copying the URL will return you to the same slide
+        hash: true,
+
+        // Start with 1 for the hash rather than 0
+        hashOneBasedIndex: false,
+
+        // Flags if we should monitor the hash and change slides accordingly
+        respondToHashChanges: true,
+
+        // Push each slide change to the browser history
+        history: false,
+
+        // Enable keyboard shortcuts for navigation
+        keyboard: true,
+
+        // Enable the slide overview mode
+        overview: true,
+
+        // Disables the default reveal.js slide layout (scaling and centering)
+        // so that you can use custom CSS layout
+        disableLayout: false,
+
+        // Vertical centering of slides
+        center: false,
+
+        // Enables touch navigation on devices with touch input
+        touch: true,
+
+        // Loop the presentation
+        loop: false,
+
+        // Change the presentation direction to be RTL
+        rtl: false,
+
+        // see https://revealjs.com/vertical-slides/#navigation-mode
+        navigationMode: 'linear',
+
+        // Randomizes the order of slides each time the presentation loads
+        shuffle: false,
+
+        // Turns fragments on and off globally
+        fragments: true,
+
+        // Flags whether to include the current fragment in the URL,
+        // so that reloading brings you to the same fragment position
+        fragmentInURL: false,
+
+        // Flags if the presentation is running in an embedded mode,
+        // i.e. contained within a limited portion of the screen
+        embedded: false,
+
+        // Flags if we should show a help overlay when the questionmark
+        // key is pressed
+        help: true,
+
+        // Flags if it should be possible to pause the presentation (blackout)
+        pause: true,
+
+        // Flags if speaker notes should be visible to all viewers
+        showNotes: false,
+
+        // Global override for autoplaying embedded media (null/true/false)
+        autoPlayMedia: null,
+
+        // Global override for preloading lazy-loaded iframes (null/true/false)
+        preloadIframes: null,
+
+        // Number of milliseconds between automatically proceeding to the
+        // next slide, disabled when set to 0, this value can be overwritten
+        // by using a data-autoslide attribute on your slides
+        autoSlide: 0,
+
+        // Stop auto-sliding after user input
+        autoSlideStoppable: true,
+
+        // Use this method for navigation when auto-sliding
+        autoSlideMethod: null,
+
+        // Specify the average time in seconds that you think you will spend
+        // presenting each slide. This is used to show a pacing timer in the
+        // speaker view
+        defaultTiming: null,
+
+        // Enable slide navigation via mouse wheel
+        mouseWheel: false,
+
+        // The display mode that will be used to show slides
+        display: 'block',
+
+        // Hide cursor if inactive
+        hideInactiveCursor: true,
+
+        // Time before the cursor is hidden (in ms)
+        hideCursorTime: 5000,
+
+        // Opens links in an iframe preview overlay
+        previewLinks: false,
+
+        // Transition style (none/fade/slide/convex/concave/zoom)
+        transition: 'none',
+
+        // Transition speed (default/fast/slow)
+        transitionSpeed: 'default',
+
+        // Transition style for full page slide backgrounds
+        // (none/fade/slide/convex/concave/zoom)
+        backgroundTransition: 'none',
+
+        // Number of slides away from the current that are visible
+        viewDistance: 3,
+
+        // Number of slides away from the current that are visible on mobile
+        // devices. It is advisable to set this to a lower number than
+        // viewDistance in order to save resources.
+        mobileViewDistance: 2,
+
+        // The "normal" size of the presentation, aspect ratio will be preserved
+        // when the presentation is scaled to fit different resolutions. Can be
+        // specified using percentage units.
+        width: 1280,
+
+        height: 720,
+
+        // Factor of the display size that should remain empty around the content
+        margin: 0.1,
+
+        math: {
+          mathjax: 'https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.9/MathJax.js',
+          config: 'TeX-AMS_HTML-full',
+          tex2jax: {
+            inlineMath: [['\\(','\\)']],
+            displayMath: [['\\[','\\]']],
+            balanceBraces: true,
+            processEscapes: false,
+            processRefs: true,
+            processEnvironments: true,
+            preview: 'TeX',
+            skipTags: ['script','noscript','style','textarea','pre','code'],
+            ignoreClass: 'tex2jax_ignore',
+            processClass: 'tex2jax_process'
+          },
+        },
+
+        // reveal.js plugins
+        plugins: [QuartoLineHighlight, PdfExport, RevealMenu, QuartoSupport,
+
+          RevealMath,
+          RevealNotes,
+          RevealSearch,
+          RevealZoom
+        ]
+      });
+    </script>
+    <script id="quarto-html-after-body" type="application/javascript">
+      window.document.addEventListener("DOMContentLoaded", function (event) {
+        const tabsets =  window.document.querySelectorAll(".panel-tabset-tabby")
+        tabsets.forEach(function(tabset) {
+          const tabby = new Tabby('#' + tabset.id);
+        });
+        const isCodeAnnotation = (el) => {
+          for (const clz of el.classList) {
+            if (clz.startsWith('code-annotation-')) {                     
+              return true;
+            }
+          }
+          return false;
+        }
+        const onCopySuccess = function(e) {
+          // button target
+          const button = e.trigger;
+          // don't keep focus
+          button.blur();
+          // flash "checked"
+          button.classList.add('code-copy-button-checked');
+          var currentTitle = button.getAttribute("title");
+          button.setAttribute("title", "Copied!");
+          let tooltip;
+          if (window.bootstrap) {
+            button.setAttribute("data-bs-toggle", "tooltip");
+            button.setAttribute("data-bs-placement", "left");
+            button.setAttribute("data-bs-title", "Copied!");
+            tooltip = new bootstrap.Tooltip(button, 
+              { trigger: "manual", 
+                customClass: "code-copy-button-tooltip",
+                offset: [0, -8]});
+            tooltip.show();    
+          }
+          setTimeout(function() {
+            if (tooltip) {
+              tooltip.hide();
+              button.removeAttribute("data-bs-title");
+              button.removeAttribute("data-bs-toggle");
+              button.removeAttribute("data-bs-placement");
+            }
+            button.setAttribute("title", currentTitle);
+            button.classList.remove('code-copy-button-checked');
+          }, 1000);
+          // clear code selection
+          e.clearSelection();
+        }
+        const getTextToCopy = function(trigger) {
+            const codeEl = trigger.previousElementSibling.cloneNode(true);
+            for (const childEl of codeEl.children) {
+              if (isCodeAnnotation(childEl)) {
+                childEl.remove();
+              }
+            }
+            return codeEl.innerText;
+        }
+        const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+          text: getTextToCopy
+        });
+        clipboard.on('success', onCopySuccess);
+        if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+          const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+            text: getTextToCopy,
+            container: window.document.getElementById('quarto-embedded-source-code-modal')
+          });
+          clipboardModal.on('success', onCopySuccess);
+        }
+          var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+          var mailtoRegex = new RegExp(/^mailto:/);
+            var filterRegex = new RegExp('/' + window.location.host + '/');
+          var isInternal = (href) => {
+              return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+          }
+          // Inspect non-navigation links and adorn them if external
+         var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+          for (var i=0; i<links.length; i++) {
+            const link = links[i];
+            if (!isInternal(link.href)) {
+              // undo the damage that might have been done by quarto-nav.js in the case of
+              // links that we want to consider external
+              if (link.dataset.originalHref !== undefined) {
+                link.href = link.dataset.originalHref;
+              }
+            }
+          }
+        function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+          const config = {
+            allowHTML: true,
+            maxWidth: 500,
+            delay: 100,
+            arrow: false,
+            appendTo: function(el) {
+                return el.closest('section.slide') || el.parentElement;
+            },
+            interactive: true,
+            interactiveBorder: 10,
+            theme: 'light-border',
+            placement: 'bottom-start',
+          };
+          if (contentFn) {
+            config.content = contentFn;
+          }
+          if (onTriggerFn) {
+            config.onTrigger = onTriggerFn;
+          }
+          if (onUntriggerFn) {
+            config.onUntrigger = onUntriggerFn;
+          }
+            config['offset'] = [0,0];
+            config['maxWidth'] = 700;
+          window.tippy(el, config); 
+        }
+        const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+        for (var i=0; i<noterefs.length; i++) {
+          const ref = noterefs[i];
+          tippyHover(ref, function() {
+            // use id or data attribute instead here
+            let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+            try { href = new URL(href).hash; } catch {}
+            const id = href.replace(/^#\/?/, "");
+            const note = window.document.getElementById(id);
+            if (note) {
+              return note.innerHTML;
+            } else {
+              return "";
+            }
+          });
+        }
+        const findCites = (el) => {
+          const parentEl = el.parentElement;
+          if (parentEl) {
+            const cites = parentEl.dataset.cites;
+            if (cites) {
+              return {
+                el,
+                cites: cites.split(' ')
+              };
+            } else {
+              return findCites(el.parentElement)
+            }
+          } else {
+            return undefined;
+          }
+        };
+        var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+        for (var i=0; i<bibliorefs.length; i++) {
+          const ref = bibliorefs[i];
+          const citeInfo = findCites(ref);
+          if (citeInfo) {
+            tippyHover(citeInfo.el, function() {
+              var popup = window.document.createElement('div');
+              citeInfo.cites.forEach(function(cite) {
+                var citeDiv = window.document.createElement('div');
+                citeDiv.classList.add('hanging-indent');
+                citeDiv.classList.add('csl-entry');
+                var biblioDiv = window.document.getElementById('ref-' + cite);
+                if (biblioDiv) {
+                  citeDiv.innerHTML = biblioDiv.innerHTML;
+                }
+                popup.appendChild(citeDiv);
+              });
+              return popup.innerHTML;
+            });
+          }
+        }
+      });
+      </script>
+    
+
+</body></html>

@@ -1,0 +1,374 @@
+---
+title: "Exercise: variational autoencoders"
+format:
+  html:
+    toc: true
+    code-copy: true
+    code-overflow: wrap
+    highlight-style: github
+---
+
+## Goal
+
+By the end of this exercise you should be able to, **by hand and in R**:
+
+- use PCA as an **encoder** (cell → score) and a **decoder** (score → cell), and compute a **reconstruction error**,
+- read expected counts off a **decoder** and say how much cells generated from one latent point will vary,
+- **interpolate** between two latent points and see why the result is not the average of the two cells,
+- **generate** many cells from one latent point, and a path of cells along a line, with `rnbinom` in base R.
+
+No neural networks are trained here. The "decoder" in the by-hand and R parts is a small hand-written function that behaves like a trained one; the demo uses a real, trained VAE.
+
+## Background
+
+| Word | Meaning |
+|---|---|
+| Latent space | a few coordinates $z = (z_1, z_2, \dots)$ that summarise a cell |
+| Encoder | a function: cell → $z$ (for PCA: the scores) |
+| Decoder | a function: $z$ → expected counts of every gene (for PCA: scores × loadings, plus the mean) |
+| Reconstruction error | how far decode(encode(cell)) is from the cell |
+| Variational encoder | gives a small **cloud** (centre and spread) instead of one point |
+| Generating a cell | pick $z$, decode to expected counts $\mu_g(z)$, then draw counts from $\text{NB}(\mu_g, \phi)$ |
+
+**PCA as an autoencoder** (centred data, unit PC vector $\mathbf{u}$): encode $s = \mathbf{x}\cdot\mathbf{u}$, decode $\hat{\mathbf{x}} = s\,\mathbf{u}$, error $\lVert \mathbf{x} - \hat{\mathbf{x}} \rVert^2$.
+
+**Negative binomial** (from Error models): mean $\mu$, dispersion $\phi$, $\text{Var} = \mu + \phi\mu^2$; $\phi = 0$ is the Poisson. In R, `rnbinom(n, mu = mu, size = 1/phi)`.
+
+**Interpolation** between latent points $z_A$ and $z_B$: $z(t) = (1 - t)\,z_A + t\,z_B$ for $t$ from 0 to 1.
+
+## By hand
+
+### Part A — PCA as an encoder and a decoder
+
+Two genes, already centred. PC1 is $\mathbf{u} = (0.8,\ 0.6)$, a unit vector.
+
+**B1.** Encode the cell $\mathbf{x} = (3,\ 1)$: compute its PC1 score.
+
+**B2.** Decode that score back to two genes. What is the reconstruction error vector, and its squared length?
+
+**B3.** Do the same for $\mathbf{y} = (-1.6,\ -1.2)$ and $\mathbf{w} = (-0.6,\ 0.8)$. Which cell is reconstructed perfectly, and which one is reconstructed as the average cell $(0, 0)$? Explain both in terms of the PC1 line.
+
+**B4.** Now keep **two** PCs, with PC2 $= (-0.6,\ 0.8)$. What is the reconstruction error of $\mathbf{x}$ now? What does that say about an "autoencoder" whose bottleneck is as wide as its input?
+
+### Part B — reading a decoder
+
+A hand-written decoder gives, for a latent point $z = (z_1, 0)$, these expected counts for three genes:
+
+| $z_1$ | $-2$ | $-1$ | $-0.5$ | $0$ | $0.5$ | $1$ | $2$ |
+|---|---|---|---|---|---|---|---|
+| stem gene | 19.99 | 19.64 | 17.62 | 10 | 2.38 | 0.36 | 0.01 |
+| progenitor gene | 0.27 | 5.52 | 11.68 | 15 | 11.68 | 5.52 | 0.27 |
+| erythroid gene | 0.01 | 0.36 | 2.38 | 10 | 17.62 | 19.64 | 19.99 |
+
+Counts are drawn from a negative binomial with dispersion $\phi = 0.2$.
+
+**B5.** Which kind of cell does $z_1 = -1$ describe? And $z_1 = 1$? Which gene changes most between $z_1 = -0.5$ and $z_1 = 0.5$?
+
+**B6.** Take $z_1 = 0$. For the stem gene, compute the variance and the standard deviation of the counts of cells generated at this point. Roughly what range (mean ± 2 sd) do you expect? What would the variance be with a Poisson instead?
+
+**B7.** You generate two cells at $z_1 = 0$ and get stem-gene counts 4 and 17. Does that mean the decoder is broken, or that the two cells are in different states? Use B6.
+
+### Part C — walking between two latent points
+
+**B8.** Let $z_A = (-1, 0)$ and $z_B = (1, 0)$. Write $z(t)$ for $t = 0, 0.25, 0.5, 0.75, 1$.
+
+**B9.** For the progenitor gene, compare (a) the **average** of the two decoded profiles at $z_A$ and $z_B$, and (b) the decoded value at the **midpoint** $z(0.5)$. Why are they different? Which of the two would PCA give if the decoder were linear?
+
+## Explore {#explore}
+
+The demo has two tabs, both with **fixed, pre-trained** weights.
+
+**Single cells** is a small VAE trained on 1500 simulated cells × 36 genes: T cells, B cells, and a stem → progenitor → erythroid trajectory, with negative-binomial counts. Encoder and decoder each have one hidden layer of 32 units; the latent space has 2 dimensions; the likelihood is negative binomial with a learned dispersion per gene. The faint dots are the encoder's centres for the training cells. In **Generate**, the bars are the decoder's expected counts at $z$ and the dots and rows are 8 cells drawn from the same $z$. **Walk** decodes 7 points on the line from $z$ to $z_2$. **Encode a cell**: click a dot to see that cell's cloud and its reconstruction.
+
+**Digits (MNIST)** is a VAE with a 2D latent space trained on 60,000 handwritten digits. Draw a digit, press **Encode**, drag $z$, tick **decoded grid** or **walk**. (Data: the MNIST database of Y. LeCun, C. Cortes and C. J. C. Burges; the Keras documentation gives its licence as CC BY-SA 3.0.)
+
+```{=html}
+<link rel="stylesheet" href="../demos/dist/demo.css">
+<div data-demo="vaegen" data-tabs="cells digits"></div>
+<script src="../demos/dist/vaegen.js"></script>
+```
+
+**E1.** Single cells, **Generate**, preset **T centre**. Press **Sample again** a few times. What stays the same and what changes? Then set the dispersion slider to 0 (Poisson) and to 3. What happens to the 8 cells, and to the bars?
+
+**E2.** Choose **T–B midway**. Describe the decoded profile. Then switch to **Walk** and choose **T → B**, and after that **stem → erythroid**. Which walk changes gradually and which switches abruptly? Where are the training cells along each line?
+
+**E3.** Choose **far outside** (Generate). Which gene sets are high? Is there any training cell with that combination? What does this tell you about decoding a point far from the data?
+
+**E4.** **Encode a cell**: click a few cells of different types. How large are the clouds (the spread is printed in the title)? Are the black "decoded" lines close to the measured bars? Why are the 5 rows "from the cloud" so similar to each other?
+
+**E5.** Digits tab. Draw a **4** and press **Encode**. Where does it land, and what does the reconstruction look like? Try a few 4s of different shapes. Then try a 1 and a 0.
+
+**E6.** Press **walk 1 → 7**. Describe the strip of 7 decoded images. Then tick **decoded grid**: is there any region of the map that decodes to "no digit"?
+
+**E7.** Press **Sample from the cloud** after encoding a digit, and compare the spread with the cell clouds in E4. Then choose **far outside**. For images, does the variation between samples come mainly from $z$ or from the sampling step? And for counts?
+
+::: {.callout-note collapse="true" title="Solutions"}
+**E1.** The bars (expected counts at $z$) do not move; only the dots and the 8 rows change. The T-cell genes have means between about 5 and 15 and the dots spread over roughly 0–30, as the negative binomial predicts (for a gene with mean 12 and size 4.2, the variance is $12 + 12^2/4.2 \approx 46$, sd $\approx 7$). At dispersion 0 the cells are much more alike (Poisson, variance = mean); at 3 they spread far more and zeros become more common. The bars stay where they are: the slider changes only the sampling step, not the decoder.
+
+**E2.** Midway between the T and B centres, the T-cell and B-cell genes are both low (about 1.7 and 1.8 on average, against about 11 at either centre) and the housekeeping genes are unchanged: a profile that looks like neither type. In the T → B walk, the T genes go 10.6, 9.7, 7.5, then drop to 1.7 at the middle step, while the B genes jump from 1.8 to 6.0 to 11.3: an abrupt switch, because there are no training cells between the two clusters to tell the decoder what lies there. Along stem → erythroid the change is gradual (stem genes 9.0 → 0.9, erythroid 0.1 → 13.8) and the progenitor genes rise and fall in the middle (peak 6.8), because the line runs through the trajectory, where the training cells are.
+
+**E3.** At $z = (3.2, -3.2)$ the stem genes average about 14 and the progenitor genes about 23, both high at once. No training cell has stem genes above 10 together with progenitor genes above 15 (the nearest training cell centre is 2.3 latent units away). The decoder extrapolates a combination that does not occur in the data. Decoded profiles are only trustworthy where there were training cells.
+
+**E4.** The spreads in the title range from about 0.07 to 0.6 latent units (typical values 0.15–0.25), small compared with the distance between types. The black lines follow the measured bars for the high genes but are smoother: the measured counts include sampling noise that the reconstruction does not try to copy. Points inside a small cloud decode to nearly the same expected counts, because the decoder changes slowly over such short distances.
+
+**E5.** The answer depends on your drawing. A 4 usually lands in the crowded middle of the map, near the 9s (centres about $(0.6, 0.35)$ for 4 and $(0.9, 0.4)$ for 9), and its reconstruction often looks like a 4 or a 9. In two dimensions, 4 and 9 (and 3, 5, 8) overlap: a 15-nearest-neighbour vote in this latent space gets the right digit for only 72% of test images. A 1 lands to the right (centre about $(2.5, 0)$) and a 0 to the lower left (about $(-2.0, -1.2)$), far from the crowd, and both reconstruct well.
+
+**E6.** The strip morphs smoothly from a 1 through a 9-like shape to a 7: every step is a plausible digit-like image. The grid decodes every region of the map to something digit-like, but the regions between classes give blends (e.g. half 4, half 9), and the far edges repeat the outermost shapes, slightly blurred.
+
+**E7.** The digit clouds are tiny (spread about 0.06), so the 7 decoded samples look almost identical: for images, almost all variation comes from **where $z$ is**, and the decoder outputs one smooth picture. For counts, the cells generated from **one** $z$ already differ a lot, through the negative-binomial **sampling step** (E1). Far outside the data, the digit decoder still draws a digit-like stroke (it extrapolates the nearest shapes); as for the cells, nothing guarantees that such an image resembles real handwriting.
+:::
+
+## In R
+
+Base R only. We use a hand-written **decoder** with 2 latent coordinates and 8 genes: two stem genes that fade as $z_1$ increases, two progenitor genes that peak at $z_1 = 0$, two erythroid genes that switch on, a cell-cycle gene driven by $z_2$, and a housekeeping gene.
+
+### A hand-written decoder
+
+```r
+decoder <- function(z1, z2 = 0) {
+  c(stem1 = 20 / (1 + exp(4 * z1)),  stem2 = 12 / (1 + exp(4 * z1)),
+    prog1 = 15 * exp(-z1^2),         prog2 = 9 * exp(-z1^2),
+    ery1  = 20 / (1 + exp(-4 * z1)), ery2  = 12 / (1 + exp(-4 * z1)),
+    cyc   = 10 / (1 + exp(-3 * z2)), house = 8)
+}
+round(decoder(-1), 2)
+round(decoder(0, 1), 2)
+```
+
+### Simulate a small data set from it
+
+```r
+set.seed(1)
+n   <- 300
+z1  <- runif(n, -2, 2)          # position along the trajectory
+z2  <- rnorm(n)                 # a second, independent programme
+phi <- 0.2                      # NB dispersion: Var = mu + phi * mu^2
+mu  <- t(sapply(seq_len(n), function(i) decoder(z1[i], z2[i])))   # n x 8 expected counts
+X   <- matrix(rnbinom(length(mu), mu = mu, size = 1 / phi), nrow = n,
+              dimnames = dimnames(mu))
+dim(X)
+head(X, 3)
+Y <- log1p(X)                   # log-transformed counts, as in Log and pseudolog transforms
+```
+
+### PCA as an encoder and a decoder
+
+```r
+pc <- prcomp(Y)                 # centred, not scaled
+encode_pca <- function(Y, k) scale(Y, center = pc$center, scale = FALSE) %*% pc$rotation[, 1:k, drop = FALSE]
+decode_pca <- function(S, k) sweep(S %*% t(pc$rotation[, 1:k, drop = FALSE]), 2, pc$center, "+")
+S1 <- encode_pca(Y, 1)          # one number per cell
+round(head(S1, 3), 2)
+Yhat <- decode_pca(S1, 1)       # back to 8 genes
+round(rbind(original = Y[1, ], decoded = Yhat[1, ]), 2)
+```
+
+**R1.** What are the shapes of `S1` and `Yhat`? Which genes of cell 1 are reconstructed worst with one component?
+
+```r
+recon_error <- sapply(1:8, function(k) mean((Y - decode_pca(encode_pca(Y, k), k))^2))
+round(recon_error, 3)
+mean(scale(Y, scale = FALSE)^2)     # error with k = 0: every cell decoded as the average cell
+plot(1:8, recon_error, type = "b", pch = 19, xlab = "number of components k",
+     ylab = "mean squared error (log1p scale)", main = "PCA as an autoencoder")
+```
+
+**R2.** How does the reconstruction error fall with $k$? Why is it exactly 0 at $k = 8$?
+
+```r
+S2 <- encode_pca(Y, 2)
+plot(S2, col = hcl.colors(100, "viridis")[cut(z1, 100)], pch = 19,
+     xlab = "PC1 score", ylab = "PC2 score", main = "Colour = true z1")
+```
+
+**R3.** The data were made from essentially one coordinate along the trajectory ($z_1$), plus $z_2$ for one gene. What shape does the trajectory take in the PC1–PC2 plane? Why does a linear encoder need two axes for it, where the (curved) decoder used one?
+
+### One latent point, many cells
+
+```r
+z_one <- c(-1, 0)
+m <- decoder(z_one[1], z_one[2])
+set.seed(2)
+cells <- t(replicate(500, rnbinom(length(m), mu = m, size = 1 / phi)))
+colnames(cells) <- names(m)
+head(cells, 4)
+round(rbind(decoder_mean = m, sample_mean = colMeans(cells),
+            theory_var = m + phi * m^2, sample_var = apply(cells, 2, var)), 1)
+
+bp <- barplot(m, col = "grey85", ylim = c(0, max(cells[1:10, ])), las = 2,
+              ylab = "count", main = "One z, ten cells")
+for (i in 1:10) points(bp + runif(length(m), -0.25, 0.25), cells[i, ], pch = 19,
+                       col = adjustcolor(i, 0.7))
+```
+
+**R4.** The 500 cells all come from the same $z$. Do their sample means and variances agree with the decoder mean and $\mu + \phi\mu^2$? Look at the first 4 cells: would you have guessed they are in the same state?
+
+### A walk along the trajectory
+
+```r
+path <- seq(-2, 2, length.out = 9)
+M <- t(sapply(path, function(a) decoder(a, 0)))
+rownames(M) <- round(path, 1)
+round(M[, c("stem1", "prog1", "ery1")], 1)
+set.seed(3)
+one_cell <- matrix(rnbinom(length(M), mu = M, size = 1 / phi), nrow = nrow(M), dimnames = dimnames(M))
+one_cell[, c("stem1", "prog1", "ery1")]
+
+pal <- hcl.colors(30, "Blues", rev = TRUE)
+op <- par(mfrow = c(1, 2), mar = c(5, 4, 3, 1))
+image(1:8, seq_along(path), t(log1p(M)), zlim = c(0, log1p(40)), axes = FALSE, col = pal,
+      xlab = "", ylab = "z1 along the path", main = "decoded means")
+axis(1, 1:8, colnames(M), las = 2); axis(2, seq_along(path), round(path, 1), las = 1)
+image(1:8, seq_along(path), t(log1p(one_cell)), zlim = c(0, log1p(40)), axes = FALSE, col = pal,
+      xlab = "", ylab = "", main = "one sampled cell per step")
+axis(1, 1:8, colnames(M), las = 2)
+par(op)
+
+zA <- -1; zB <- 1
+round(rbind(average_of_profiles = (decoder(zA) + decoder(zB)) / 2,
+            decode_of_midpoint  = decoder((zA + zB) / 2)), 2)
+```
+
+**R5.** Describe the left heatmap from bottom to top. Why is the right heatmap noisier? Compare the last two printed rows with your answer to B9.
+
+## Hints
+
+::: {.callout-tip collapse="true" title="Hint 1 — encode and decode with one PC"}
+The score is a dot product: multiply entry by entry and add. Decoding multiplies the unit vector $\mathbf{u}$ by the score. The error is $\mathbf{x} - \hat{\mathbf{x}}$; its squared length is the sum of its squared entries.
+:::
+
+::: {.callout-tip collapse="true" title="Hint 2 — which cells are perfect?"}
+A cell is reconstructed perfectly if it already lies **on** the PC1 line, i.e. it is a multiple of $\mathbf{u}$. A cell **perpendicular** to $\mathbf{u}$ has score 0.
+:::
+
+::: {.callout-tip collapse="true" title="Hint 3 — negative binomial spread"}
+$\text{Var} = \mu + \phi\mu^2$. With $\mu = 10$ and $\phi = 0.2$, the second term is $0.2 \cdot 100$. The sd is the square root.
+:::
+
+::: {.callout-tip collapse="true" title="Hint 4 — midpoint"}
+Average the table entries at $z_1 = -1$ and $z_1 = 1$, then read the table at $z_1 = 0$. A linear decoder (like PCA's) maps the midpoint of two latent points to the midpoint of their profiles.
+:::
+
+::: {.callout-tip collapse="true" title="Hint 5 — R"}
+[`prcomp`](https://rdrr.io/r/stats/prcomp.html) returns the centre (`$center`) and the loadings (`$rotation`). `%*%` is matrix multiplication. [`rnbinom(n, mu = , size = 1/phi)`](https://rdrr.io/r/stats/NegBinomial.html) draws negative-binomial counts; `mu` can be a whole matrix. [`image`](https://rdrr.io/r/graphics/image.html) draws a heatmap; give both panels the same `zlim` so their colours are comparable.
+:::
+
+## Solutions
+
+::: {.callout-note collapse="true" title="Solution"}
+
+**B1.** Score $= 0.8 \cdot 3 + 0.6 \cdot 1 = 2.4 + 0.6 = 3.0$.
+
+**B2.** $\hat{\mathbf{x}} = 3.0 \cdot (0.8, 0.6) = (2.4,\ 1.8)$. Error $\mathbf{x} - \hat{\mathbf{x}} = (0.6,\ -0.8)$, squared length $0.36 + 0.64 = 1.0$.
+
+**B3.** $\mathbf{y}$: score $= 0.8 \cdot (-1.6) + 0.6 \cdot (-1.2) = -1.28 - 0.72 = -2.0$, decoded $-2.0 \cdot (0.8, 0.6) = (-1.6, -1.2) = \mathbf{y}$: error 0. $\mathbf{y}$ lies on the PC1 line, so nothing is lost. $\mathbf{w}$: score $= -0.48 + 0.48 = 0$, decoded $(0, 0)$: the average cell, error $0.36 + 0.64 = 1.0$. $\mathbf{w}$ is perpendicular to PC1, so its one number carries no information about it.
+
+**B4.** With both PCs, $\mathbf{x}$ has scores $3.0$ and $-0.6 \cdot 3 + 0.8 \cdot 1 = -1.0$, and decodes to $3.0\,(0.8, 0.6) - 1.0\,(-0.6, 0.8) = (2.4 + 0.6,\ 1.8 - 0.8) = (3, 1)$: error 0. With as many numbers in the bottleneck as genes, the "autoencoder" just rotates and rotates back. It loses nothing, but it also summarises nothing; the bottleneck has to be narrow to be useful.
+
+**B5.** $z_1 = -1$: stem gene high (19.64), progenitor moderate (5.52), erythroid almost off (0.36), so a stem-like cell. $z_1 = 1$: the mirror image, an erythroid-like cell. Between $z_1 = -0.5$ and $0.5$, both the stem gene ($17.62 \to 2.38$) and the erythroid gene ($2.38 \to 17.62$) change by 15.24, while the progenitor gene is 11.68 at both points (it peaks at 15 in between).
+
+**B6.** $\mu = 10$: $\text{Var} = 10 + 0.2 \cdot 10^2 = 30$, sd $= \sqrt{30} \approx 5.48$. Mean ± 2 sd is about $-1$ to $21$, so roughly 0 to 21. A Poisson would give variance 10 (sd 3.2), a much narrower spread.
+
+**B7.** Neither: both counts are well inside 0 to 21. Two cells from the **same** $z$ can easily differ this much through sampling noise alone. A single count says little about the state; the state shows in many genes together.
+
+**B8.** $z(t) = (1 - t)(-1, 0) + t\,(1, 0) = (2t - 1,\ 0)$: $t = 0, 0.25, 0.5, 0.75, 1$ give $z_1 = -1, -0.5, 0, 0.5, 1$ (with $z_2 = 0$).
+
+**B9.** (a) Average of the two profiles: $(5.52 + 5.52)/2 = 5.52$. (b) Decoded midpoint, $z_1 = 0$: $15$. They differ because the decoder is **curved**: the progenitor programme is switched on only between the two end states. A linear decoder (PCA) maps the latent midpoint exactly to the average profile, 5.52, and could not produce a transient peak along a straight line. (For the stem and erythroid genes, both give 10, by the symmetry of this decoder.)
+
+**R answers.**
+
+**R1.**
+```r
+round(decoder(-1), 2)
+# stem1 stem2 prog1 prog2  ery1  ery2   cyc house
+# 19.64 11.78  5.52  3.31  0.36  0.22  5.00  8.00
+round(decoder(0, 1), 2)
+# stem1 stem2 prog1 prog2  ery1  ery2   cyc house
+# 10.00  6.00 15.00  9.00 10.00  6.00  9.53  8.00
+dim(X)
+# [1] 300   8
+head(X, 3)
+#      stem1 stem2 prog1 prog2 ery1 ery2 cyc house
+# [1,]    23    14     8     7    0    0   9    14
+# [2,]    34    22    20     4    2    0   6     8
+# [3,]    14     0     5     3    1   12   1    13
+round(head(S1, 3), 2)
+#        PC1
+# [1,] -2.90
+# [2,] -2.68
+# [3,]  0.22
+round(rbind(original = Y[1, ], decoded = Yhat[1, ]), 2)
+#          stem1 stem2 prog1 prog2 ery1 ery2  cyc house
+# original  3.18  2.71  2.20  2.08  0.0 0.00 2.30  2.71
+# decoded   3.29  2.83  1.75  1.48  0.1 0.01 1.46  2.11
+```
+`S1` is $300 \times 1$ (one number per cell) and `Yhat` is $300 \times 8$ (back to all genes). For cell 1 the stem and erythroid genes are close; `cyc` (2.30 vs 1.46), `prog2` and `house` are off the most. PC1 follows the stem ↔ erythroid axis and knows nothing about the cell-cycle programme.
+
+**R2.**
+```r
+round(recon_error, 3)
+# [1] 0.480 0.277 0.169 0.128 0.090 0.055 0.024 0.000
+mean(scale(Y, scale = FALSE)^2)
+# [1] 1.108265
+```
+The error falls from 1.108 (every cell decoded as the average) to 0.480 with one component, 0.277 with two, and keeps falling. At $k = 8$ the bottleneck is as wide as the data: encoding is just a rotation and decoding rotates back exactly, so the error is 0 (B4).
+
+**R3.** The trajectory forms a **horseshoe** (a U shape) in the PC1–PC2 plane, coloured smoothly from one end to the other by $z_1$. PC1 orders the cells from stem to erythroid; PC2 is needed to hold the progenitor genes, which are high in the middle and low at both ends. A straight-line encoder cannot store "peaks in the middle" along one axis, so one true coordinate becomes a curve in two. The hand-written decoder maps one number $z_1$ to all genes at once, curve included.
+
+**R4.**
+```r
+head(cells, 4)
+#      stem1 stem2 prog1 prog2 ery1 ery2 cyc house
+# [1,]     7     6     7     5    0    0   9     6
+# [2,]    29    14     7     3    0    0  13    10
+# [3,]    25     5     2     3    0    0   9     5
+# [4,]    15     8     5     5    1    0   2     8
+round(rbind(decoder_mean = m, sample_mean = colMeans(cells),
+            theory_var = m + phi * m^2, sample_var = apply(cells, 2, var)), 1)
+#              stem1 stem2 prog1 prog2 ery1 ery2  cyc house
+# decoder_mean  19.6  11.8   5.5   3.3  0.4  0.2  5.0   8.0
+# sample_mean   19.6  11.5   5.5   3.3  0.4  0.2  5.3   7.7
+# theory_var    96.8  39.6  11.6   5.5  0.4  0.2 10.0  20.8
+# sample_var   103.8  35.0  11.8   5.3  0.4  0.2 10.9  19.3
+```
+Sample means and variances agree with the decoder mean and $\mu + \phi\mu^2$ within sampling error. The first four cells look quite different (stem1 is 7, 29, 25, 15), yet all come from the same $z$: their common state shows in the pattern (stem high, erythroid off), not in any single count.
+
+**R5.**
+```r
+round(M[, c("stem1", "prog1", "ery1")], 1)
+#      stem1 prog1 ery1
+# -2    20.0   0.3  0.0
+# -1.5  20.0   1.6  0.0
+# -1    19.6   5.5  0.4
+# -0.5  17.6  11.7  2.4
+# 0     10.0  15.0 10.0
+# 0.5    2.4  11.7 17.6
+# 1      0.4   5.5 19.6
+# 1.5    0.0   1.6 20.0
+# 2      0.0   0.3 20.0
+one_cell[, c("stem1", "prog1", "ery1")]
+#      stem1 prog1 ery1
+# -2       9     0    0
+# -1.5    17     1    0
+# -1      18     6    0
+# -0.5    19     1    6
+# 0        4    22    9
+# 0.5      1     5   20
+# 1        1     7   21
+# 1.5      0     0   17
+# 2        0     0    8
+round(rbind(average_of_profiles = (decoder(zA) + decoder(zB)) / 2,
+            decode_of_midpoint  = decoder((zA + zB) / 2)), 2)
+#                     stem1 stem2 prog1 prog2 ery1 ery2 cyc house
+# average_of_profiles    10     6  5.52  3.31   10    6   5     8
+# decode_of_midpoint     10     6 15.00  9.00   10    6   5     8
+```
+From bottom ($z_1 = -2$) to top ($z_1 = 2$) the stem genes fade, the progenitor genes light up in the middle rows and fade again, and the erythroid genes switch on; `cyc` and `house` are constant because $z_2 = 0$ throughout. The right panel shows one sampled cell per step: it follows the same pattern but with noise, e.g. stem1 is 9 at $z_1 = -2$ where the mean is 20, and prog1 is 1 at $z_1 = -0.5$ where the mean is 11.7. The last two rows reproduce B9: the average of the endpoint profiles has prog1 = 5.52, the decoded midpoint has 15.
+:::
+
+## Where this leads
+
+- **scVI and scvi-tools:** a trained VAE with a negative-binomial decoder for single-cell RNA-seq; its latent space replaces PCA before clustering and UMAP, and giving the decoder the batch label corrects batch effects (Lopez et al. 2018, *Nature Methods*).
+- **Multiome data integration:** totalVI (RNA + surface proteins) and MultiVI (RNA + chromatin) build one shared latent space with a decoder per modality, a nonlinear version of the joint latent space in that unit.
+- **Bayesian statistics:** the encoder's cloud is an approximate posterior for $z$ and the standard bell-shaped cloud is its prior; "variational inference" is a general way to approximate posteriors, used far beyond autoencoders.
+- **Other generative models:** diffusion models and other deep generative models also learn to produce new samples from noise; the "one input, many outputs" idea is the same.

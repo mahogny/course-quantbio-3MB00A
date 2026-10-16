@@ -1,0 +1,119 @@
+---
+title: "Quiz: variational autoencoders"
+format:
+  html:
+    toc: true
+    code-copy: true
+    code-overflow: wrap
+    highlight-style: github
+---
+
+Short conceptual questions on encoders, decoders and generating cells. Try each on paper first, then open the answer. An **encoder** maps a cell to a few latent coordinates $z$; a **decoder** maps $z$ back to expected expression; a **variational** autoencoder encodes each cell as a small cloud and decodes to a count distribution.
+
+---
+
+**Q1.** In one sentence each: what does the encoder do, what does the decoder do, and what is the autoencoder trained to achieve?
+
+::: {.callout-tip collapse="true" title="Hint"}
+Think of the hourglass: wide, narrow, wide.
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+The encoder compresses a cell's expression profile into a few numbers $z$ (its position in latent space). The decoder rebuilds the whole expression profile from $z$ alone. Both are trained together so that decode(encode(cell)) is as close as possible to the cell, for many cells at once.
+:::
+
+---
+
+**Q2.** Why must the bottleneck be narrow? What would an autoencoder with a 20,000-number bottleneck for 20,000 genes learn?
+
+::: {.callout-tip collapse="true" title="Hint"}
+What is the cheapest way to make the output equal the input if nothing forces a summary?
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+With a bottleneck as wide as the input it could simply pass the cell through unchanged (or rotate it and rotate it back, as PCA with all components does). The reconstruction would be perfect but $z$ would summarise nothing. A narrow bottleneck forces $z$ to keep only the main directions of variation: cell type, position along a trajectory, and so on.
+:::
+
+---
+
+**Q3.** PCA with one component, PC1 $= (0.6, 0.8)$, centred cell $\mathbf{x} = (1, 2)$. Encode, decode, and give the squared reconstruction error.
+
+::: {.callout-tip collapse="true" title="Hint"}
+Encode = dot product with PC1. Decode = score × PC1.
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+Score $= 0.6 \cdot 1 + 0.8 \cdot 2 = 2.2$. Decoded $= 2.2 \cdot (0.6, 0.8) = (1.32,\ 1.76)$. Error $(1 - 1.32,\ 2 - 1.76) = (-0.32,\ 0.24)$, squared length $0.1024 + 0.0576 = 0.16$.
+:::
+
+---
+
+**Q4.** What is the main difference between PCA and the encoder/decoder of a VAE, as maps?
+
+::: {.callout-tip collapse="true" title="Hint"}
+Straight or curved?
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+PCA's encoder and decoder are **linear**: a projection and a multiplication back along straight axes. A VAE uses neural networks, so both maps can be **curved** (nonlinear). A curved decoder can lay a bent trajectory along one latent direction, where PCA needs several components for it.
+:::
+
+---
+
+**Q5.** In a plain autoencoder each cell becomes one point. In a VAE each cell becomes a small cloud. Give two things this cloud buys you.
+
+::: {.callout-tip collapse="true" title="Hint"}
+What must the decoder do with random points from the cloud? What does a wide cloud say?
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+(1) Because the decoder is trained on random points from each cloud, and the clouds are kept close to a standard bell-shaped cloud, the latent space has few gaps: points near and between cells decode to sensible profiles, so you can pick a point and generate a cell. (2) The spread expresses **uncertainty** about where the cell belongs: a cell with few counts gets a wider cloud. (In Bayesian words, the cloud is an approximate posterior for $z$, and the standard cloud is the prior.)
+:::
+
+---
+
+**Q6.** A VAE decoder for counts gives, at one latent point, an expected count of $\mu = 20$ for a gene, with NB dispersion $\phi = 0.25$. You generate 1000 cells from this point. Roughly what mean, variance and sd do you expect for that gene? Would all 1000 cells have about 20 counts?
+
+::: {.callout-tip collapse="true" title="Hint"}
+$\text{Var} = \mu + \phi\mu^2$.
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+Mean about 20, variance $20 + 0.25 \cdot 400 = 120$, sd $\approx 11$. So the cells range widely, from a few counts to 40 or more, although they all come from the same latent point. That is the point of a generative model with a count distribution: one $z$ gives many different cells, as real cells in the same state do.
+:::
+
+---
+
+**Q7.** True or false: the point exactly halfway between two cells in latent space always decodes to the average of the two cells' expression profiles.
+
+::: {.callout-tip collapse="true" title="Hint"}
+That would be true for a linear decoder. Is the VAE decoder linear?
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+False. For a linear decoder (PCA) it is true. A VAE decoder is curved, so the midpoint can decode to something different: for example, a transient progenitor programme that is low at both ends of a trajectory but high in the middle.
+:::
+
+---
+
+**Q8.** A colleague picks a latent point far away from all training cells, decodes it, and reports "a new cell type predicted by the model". What is wrong with this?
+
+::: {.callout-tip collapse="true" title="Hint"}
+What did the decoder learn from, and where?
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+The decoder was only trained where there were cells. Far from the data it **extrapolates**: it always outputs some profile, but nothing makes that profile biology. Generated cells are only as good as the training data, and the latent axes have no fixed meaning. A claim of a new cell type needs real cells showing that profile, checked with marker genes or independent data.
+:::
+
+---
+
+**Q9.** In scVI, the batch label of each cell is given to the decoder. Why does this help to remove batch effects from the latent space?
+
+::: {.callout-tip collapse="true" title="Hint"}
+If the decoder already knows the batch, does $z$ still need to describe it?
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+The decoder can explain batch differences from the label it is given, so the latent $z$ does not need to store them. Cells of the same type from different batches then land in the same region of latent space, which is what is used for clustering and UMAP. Decoding a cell's $z$ with another batch label gives "this cell as if measured in that batch".
+:::

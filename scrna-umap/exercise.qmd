@@ -121,6 +121,69 @@ The gaps are not kept either. In 20-D the centre of B is 9.1 from A and D is 44.
 
 Further reading: Wattenberg, Viégas & Johnson, ["How to Use t-SNE Effectively"](https://distill.pub/2016/misread-tsne/) (Distill, 2016), shows the same effects for t-SNE, which also optimises each point's position directly. Google PAIR's ["Understanding UMAP"](https://pair-code.github.io/understanding-umap/) compares UMAP and t-SNE on toy data.
 
+### Explore: clustering the graph
+
+The same three toy datasets, now clustered with **Leiden** (or **Louvain**, for comparison). The clustering runs on the weighted kNN graph (the graph UMAP uses, as in scanpy). The picture is a UMAP layout, computed once per dataset and used only for drawing. Leiden looks for the partition with the highest **modularity** $Q$: more edge weight inside clusters than expected by chance, where the "expected" part is multiplied by the **resolution** $\gamma$. A larger $\gamma$ makes large clusters more costly, so you get more and smaller clusters.
+
+Controls: the dataset, Leiden or Louvain, the resolution $\gamma$ (log scale, 0.1 to 3), `n_neighbors` $k$ (rebuilds the graph), **show graph edges**, **New seed** (Leiden and Louvain visit the cells in random order) and **Reset**. **Next phase** runs the algorithm one phase at a time: *local move* (each cell joins the neighbouring cluster that raises $Q$ most), *refine* (Leiden only: each cluster is split into well-connected sub-clusters), *aggregate* (each sub-cluster becomes one node, drawn as a big circle, with edges as thick as their summed weight), and so on until nothing changes. On the right: the number of clusters, $Q$, the cluster sizes, whether each cluster is connected in the graph (a cluster in separate pieces is outlined), and for the datasets with true groups, a table of true group × cluster with the adjusted Rand index (ARI: 1 = the same grouping, about 0 = no better than random labels).
+
+```{=html}
+<link rel="stylesheet" href="../demos/dist/demo.css">
+<div data-demo="leiden" data-preset="clusters" data-k="15" data-gamma="1" data-algo="leiden" data-seed="1"></div>
+<script src="../demos/dist/leiden.js"></script>
+```
+
+**C1.** With **4 clusters** ($k = 15$, seed 1), drag $\gamma$ from 0.10 to 3.00. How many clusters do you get at $\gamma$ = 0.10, 1.00, 2.00 and 3.00, and what is the ARI? Which true group is split first, and which are never split? Why do you never get fewer than four clusters here (tick **show graph edges**)? At $\gamma = 1$, press **New seed** a few times.
+
+**C2.** Switch to **Branching path** ($k = 15$). How many clusters at $\gamma$ = 0.10, 1.00 and 3.00? Are the cluster boundaries at places where the path is thin or interrupted? Then keep $\gamma = 1$ and set $k$ to 5 and to 50. What does this say about clusters on a continuous differentiation path?
+
+**C3.** Choose **Pure noise** ($k = 15$). Note the number of clusters and $Q$ at $\gamma$ = 0.10, 0.50, 1.00 and 3.00. Compare $Q$ at $\gamma = 1$ with the two other datasets. Is a high modularity evidence of distinct cell types?
+
+**C4.** Choose **Branching path**, **Leiden** and press **Reset** ($\gamma = 1$, $k = 15$, seed 1). Press **Next phase** and note the readout after each of the first three steps (local move, refine, aggregate), and after the next local move. Then press **Finish**. Finally, choose **Pure noise**, **Louvain**, $k = 11$, $\gamma = 1.58$ and press **New seed** three times (seed 4). Is every cluster connected? Switch to **Leiden** with the same settings.
+
+::: {.callout-note collapse="true" title="Solutions"}
+
+**C1.** The numbers from the demo (Leiden, $k = 15$, seed 1):
+
+| $\gamma$ | Clusters | ARI | What happens |
+|---:|---:|---:|---|
+| 0.10 | 4 | 1.00 | exactly the four true groups (also up to $\gamma = 0.71$) |
+| 1.00 | 5 | 0.73 | A is split into 99 + 51 cells |
+| 2.00 | 9 | 0.47 | A is split into 6 clusters |
+| 3.00 | 20 | 0.22 | A into 13 clusters, C into 5 |
+
+A, the largest group, is split first: the "expected by chance" part of $Q$ grows with the square of a cluster's total edge weight, so the largest cluster is the first one where splitting pays off. B (30 cells) and D (40 cells) stay whole even at $\gamma = 3$. You never get fewer than four clusters because at $k = 15$ the graph has four separate pieces: no edge joins two different groups. Putting two pieces with no edges between them into one cluster adds nothing to the "inside" part of $Q$ and only increases the penalty, so $Q$ always drops. With a new seed at $\gamma = 1$, seeds 2, 3 and 4 give the four true groups ($Q = 0.643$) and seed 1 gives five ($Q = 0.648$): the two answers are almost equally good, and the random order decides. This is why the seed should be reported.
+
+**C2.** At $k = 15$: 4 clusters at $\gamma = 0.10$, 11 at $\gamma = 1.00$ and 19 at $\gamma = 3.00$. The path is one connected piece with about the same density everywhere, so the boundaries are not at natural gaps: Leiden cuts the path into segments of roughly equal size (at $\gamma = 1$: 17 to 35 cells each), and the cuts move when $\gamma$ changes. The ARI against stem / branch 1 / branch 2 is only 0.27 at $\gamma = 1$. At $\gamma = 1$, $k = 5$ gives 16 clusters and $k = 50$ gives 9: $k$ changes the graph, so it changes the clusters too. (With the edges shown, a few long edges cross the picture: they join cells that are neighbours in the graph but were drawn far apart by UMAP, which again shows that the layout is only a drawing.) On a continuum, clusters are an arbitrary discretisation, not separate cell types; trajectory methods are the better tool there.
+
+**C3.** At $k = 15$:
+
+| $\gamma$ | Clusters | $Q$ |
+|---:|---:|---:|
+| 0.10 | 1 | 0.900 |
+| 0.50 | 2 | 0.520 |
+| 1.00 | 9 | 0.396 |
+| 3.00 | 33 | 0.263 |
+
+Pure noise gives 9 "clusters" at $\gamma = 1$, all connected, and the bar strip looks like a real result. $Q$ cannot be compared across $\gamma$: with one single cluster $Q = 1 - \gamma$ by construction, which is why it is 0.900 at $\gamma = 0.1$. At $\gamma = 1$ the four clusters give $Q = 0.648$, noise $Q = 0.396$, and the branching path, which has no discrete groups at all, the highest value: $Q = 0.825$. So a high modularity is not evidence of distinct cell types; a clustering algorithm always returns clusters. Check them with marker genes and replicates.
+
+**C4.** Branching path, Leiden, $\gamma = 1$, $k = 15$, seed 1:
+
+| Step | Phase | Readout |
+|---:|---|---|
+| 0 | start | every cell is its own cluster |
+| 1 | local move | 370 moves, 22 clusters, $Q = 0.758$ |
+| 2 | refine | the 22 clusters split into 60 well-connected sub-clusters |
+| 3 | aggregate | 300 cells become 60 nodes (big circles), starting in the 22 clusters |
+| 4 | local move | 9 moves of whole nodes, 15 clusters, $Q = 0.809$ |
+
+**Finish** ends after 30 steps with 11 clusters and $Q = 0.825$, the same result as the live clustering. On the aggregated graph, local moving shifts whole sub-clusters at once, which raises $Q$ from 0.758 to 0.809 in 9 moves. After a full pass the algorithm starts again on the cells from the current clusters and stops when a pass changes nothing.
+
+Pure noise, Louvain, $k = 11$, $\gamma = 1.58$, seed 4 gives 17 clusters with $Q = 0.367$, and cluster 11 (17 cells) is **not connected**: it consists of a piece of 15 cells and a piece of 2 cells with no edge between them. Louvain moves cells one at a time and never checks whether the cluster they leave behind is still in one piece. Leiden with the same settings gives 17 clusters, all connected, with a slightly higher $Q = 0.369$. Its refinement step only lets a cluster grow from well-connected parts, which guarantees connected clusters. On these toy data such Louvain cases are rare (this was the only one we found for seeds 1 to 5, $k$ from 3 to 12 and a grid of $\gamma$ values on the three datasets), but Traag and colleagues found them in real networks too, which is one reason Leiden replaced Louvain as the default.
+:::
+
+Further reading: Traag, Waltman & van Eck, ["From Louvain to Leiden: guaranteeing well-connected communities"](https://doi.org/10.1038/s41598-019-41695-z) (Sci Rep 9:5233, 2019), introduces the Leiden algorithm and shows how Louvain can produce disconnected communities.
+
 ## In R
 
 Read the standard pipeline as a **recipe** (no packages are installed here — nothing runs), then reproduce the neighbour step yourself in base R.
@@ -280,3 +343,4 @@ Every cell's two neighbours are its own group-mates — identical to the hand an
 - **Cell-type annotation:** the anonymous clusters (0, 1, 2, …) become named cell types by checking **marker genes** — the biological validation that today's caveats keep pointing to.
 - **Cell-cycle analysis:** proliferating cells vary strongly along the cell cycle, which can dominate a UMAP and split a real cell type by phase. That unit returns to **PCA** to identify and regress out the cell-cycle signal — a direct reuse of the eigen-decomposition machinery.
 - **Trajectory / pseudotime methods** (beyond this course) build on the same kNN graph to order cells along differentiation paths, rather than cutting it into discrete clusters.
+- **Extra material: variational autoencoders** (a nonlinear, generative latent space): unlike UMAP, a VAE can also map a latent point back to a whole expression profile and generate new cells.

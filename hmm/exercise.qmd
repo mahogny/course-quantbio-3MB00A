@@ -114,6 +114,36 @@ Take the **shorter** observation $\mathbf{x}=(G, C)$ (length 2).
 (c) Add them up to get the likelihood $P(\mathbf{x}=(G,C))$. (This is what the
 **forward** algorithm computes, but for length 2 we can just enumerate.)
 
+## Explore {#explore}
+
+The demo below generates 120 bases from the model above (the **Lecture HMM** preset). The strip **true z** shows the hidden states (orange = $H$, grey = $L$), the tiles show the bases (dark = C or G). **Step** runs the generative story one choice at a time: first a state, then a base. **Hide states** greys out the true path. **Viterbi** adds the most likely path as a second strip, and **Posterior** draws $P(z_t = H \mid \mathbf{x})$ for every position, computed from the whole sequence by the forward–backward algorithm (the dashed line is 0.5). **Reveal truth** shows the true path again and the fraction of positions each method got right. Moving a slider re-simulates with the same random numbers, and decoding always uses the current (true) parameters.
+
+```{=html}
+<link rel="stylesheet" href="../demos/dist/demo.css">
+<div data-demo="hmmcpg" data-n="120" data-per-row="24" data-seed="8"></div>
+<script src="../demos/dist/hmmcpg.js"></script>
+```
+
+**E1.** With the Lecture HMM, press **Clear**, then **Step** six times, so that three states and three bases are shown. Write down the path $\mathbf{z}$ and the bases $\mathbf{x}$, and compute $P(\mathbf{x},\mathbf{z})$ by hand as in Problem 2. Check your answer against the readout. Press **Step** twice more: which two factors are added, and how does this compare with the path $(H,H,L)$ of Problem 2?
+
+**E2.** Press **Generate all**, tick **Hide states**, then press **Viterbi** and tick **Posterior**. Count the predicted islands (orange runs in the Viterbi strip; a run that continues on the next row counts once). Now press **Reveal truth**. How many islands are in the true path, and what fraction of positions do Viterbi and the posterior get right? Find the positions where the Viterbi strip and the posterior (above or below the dashed line) disagree. What is the true state there?
+
+**E3.** Set both stay probabilities, $A(H\to H)$ and $A(L\to L)$, to 0.95 and look at the true path, the Viterbi path and the accuracy. Then choose **Not sticky** ($A(H\to H)=0.55$, $A(L\to L)=0.5$). What happens to the islands and to the Viterbi path? What rule is Viterbi following for this model?
+
+**E4.** Choose **Low contrast** (GC content 0.55 in $H$ and 0.45 in $L$). What does Viterbi predict now, and how far does the posterior move from the dashed line? Then set both GC sliders to 0.50. Around which value does the posterior stay, and where does that value come from?
+
+::: {.callout-note collapse="true" title="Solutions"}
+**E1.** The path starts $\mathbf{z}=(H,H,H)$ with bases $\mathbf{x}=(G,G,C)$:
+$$P(\mathbf{x},\mathbf{z}) = \pi_H\,B_{H,G}\,A_{H,H}\,B_{H,G}\,A_{H,H}\,B_{H,C} = 0.5\times0.4\times0.8\times0.4\times0.8\times0.4 = 0.02048,$$
+shown as 0.0205. The fourth state is $L$ and it emits an `A`, which adds the factors $A_{H,L}=0.2$ and $B_{L,A}=0.3$: $0.02048\times0.2\times0.3 = 0.00123$. As in Problem 2, leaving $H$ costs a factor 0.2, and an `A` is three times more likely from $L$ than from $H$.
+
+**E2.** Viterbi predicts 5 islands; the true path has 14 runs of $H$, many of them short. Viterbi is right at 74% of the positions, the posterior at 81%. (For comparison: 68% of the positions are truly $H$, so "everything is $H$" would already score 68%.) The two disagree at 10 positions, in three short stretches (within bases 39–44, 71–74 and 111–114). At all of them Viterbi says $H$ while the posterior is below 0.5, and 9 of the 10 are truly $L$. Viterbi picks the single best *path*, and leaving and re-entering $H$ costs two small transition factors, so it bridges short A/T stretches inside an island. The posterior judges each position on its own.
+
+**E3.** With stay probabilities 0.95 the true path has 3 long islands (38, 24 and 21 bases); Viterbi finds 2 (77 and 20 bases) and gets 87% of the positions right (posterior 94%). With **Not sticky** the true path breaks into 29 short runs, and Viterbi into 27 short pieces; both Viterbi and the posterior get 75% right. Viterbi now simply calls every C or G as $H$ and every A or T as $L$: when the states hardly stick, the neighbours say almost nothing, so each base is judged alone. (Each setting draws its own path from the same random numbers, so the sequences differ a little. Averaged over 200 seeds, Viterbi gets about 72% right for the Lecture HMM, 85% with stay probabilities 0.95, and 71% for Not sticky.)
+
+**E4.** With low contrast Viterbi calls all 120 positions $H$, so its accuracy is just the fraction of $H$ positions, 68%. The posterior stays between 0.47 and 0.70: the bases carry little information. With both GC contents at 0.50 the two rows of $B$ are identical, the bases carry no information at all, and the posterior stays between 0.50 and 0.60. It starts at $\pi_H = 0.5$ and settles at 0.6, the long-run fraction of time the hidden chain spends in $H$: $A_{L,H}/(A_{H,L}+A_{L,H}) = 0.3/(0.2+0.3) = 0.6$, the stationary distribution of $A$ (Markov chains in R).
+:::
+
 ## In R
 
 Use R only to **verify** the by-hand numbers. We are not using the `HMM`
