@@ -1,11 +1,13 @@
 // Fourier image filter. A 256 x 256 micrograph, its centred log-magnitude spectrum,
-// and the image rebuilt from a masked spectrum. Masks: low-pass disc, high-pass,
-// band-pass ring, "keep the largest x%" (compression), and free painting on the
+// and the image rebuilt from a masked spectrum. Masks: a radial band min <= r <= max
+// (presets low-pass = min 0, high-pass = no max, band-pass = both; the centre coefficient
+// can be kept regardless), "keep the largest x%" (compression), and free painting on the
 // spectrum (erase/restore, mirrored so the result stays real). Optional stripe artefact.
 // The forward FFT is computed once (again only when the stripe is toggled); each change
 // of the mask runs one inverse FFT, at most once per animation frame.
 // Auto-mounts on <div data-demo="fourier2d">. Optional: data-mode="low|high|band|top|all",
-// data-r="20" (radius), data-stripe="1" (start with the stripe artefact).
+// data-min="10" and data-max="40" (radii; data-r="20" sets the one cutoff of low/high),
+// data-stripe="1" (start with the stripe artefact).
 import { htmlEl, slider, presets, checkbox, button, autoMount } from "../lib/ui";
 import { fft2d, makeMask, magnitudeOrder, reconstruct, rmse, stripe, Mode } from "./fft";
 // @ts-ignore -- esbuild inlines the image as a data URL
@@ -17,6 +19,8 @@ const CREDIT = "Image: transmission electron micrograph of a mesenchymal stem ce
 const KEEPS = [0.1, 0.2, 0.5, 1, 2, 3, 5, 10, 20, 30, 50, 100];   // % for compression
 const STRIPE = { kx: 16, ky: 10, amp: 0.15 };
 const BRUSH = 4;   // paint radius in frequency units
+const EDGE = Math.ceil(Math.SQRT2 * N / 2);   // 182: past the corner of the spectrum, i.e. no upper limit
+const RING = "#40d0ff";                       // colour of the cutoff circles
 
 const STYLE = `
 [data-demo="${NAME}"] { gap: 1em; flex-wrap: wrap; }
@@ -31,7 +35,8 @@ const STYLE = `
 [data-demo="${NAME}"] .f2-info .qb-readout { flex: 0 0 auto; }
 [data-demo="${NAME}"] .f2-info .qb-note { flex: 1 1 200px; }
 [data-demo="${NAME}"] .qb-panel { flex: 1 1 220px; max-width: 320px; gap: .45em; }
-[data-demo="${NAME}"] .qb-slider.off { opacity: .35; pointer-events: none; }
+[data-demo="${NAME}"] .qb-slider.off, [data-demo="${NAME}"] .qb-check.off { opacity: .35; pointer-events: none; }
+[data-demo="${NAME}"] .qb-slider.dim { opacity: .45; }
 [data-demo="${NAME}"] .f2-row { display: flex; gap: .35em; align-items: center; flex-wrap: wrap; }
 [data-demo="${NAME}"] .f2-credit { font-size: 13px; color: var(--qb-muted); }
 .reveal [data-demo="${NAME}"] { font-size: 20px; }
@@ -99,21 +104,45 @@ function mount(host: HTMLElement): void {
   htmlEl("div", "f2-credit", CREDIT, left);
   const panel = htmlEl("div", "qb-panel", "", host);
 
-  const mode0 = (host.dataset.mode ?? "low") as Mode;
+  // initial settings from data-*: the old low/high/band modes become a radial band
+  const m0 = host.dataset.mode ?? "low";
+  const r = Number(host.dataset.r ?? 20);
+  const init = {
+    mode: (m0 === "all" || m0 === "top" ? m0 : "radial") as Mode,
+    rMin: m0 === "high" || m0 === "band" ? r : 0,
+    rMax: m0 === "high" ? EDGE : m0 === "band" ? r + 12 : m0 === "low" ? r : 30,
+  };
+  if (host.dataset.min !== undefined) init.rMin = Number(host.dataset.min);
+  if (host.dataset.max !== undefined) init.rMax = Math.min(EDGE, Number(host.dataset.max));
   const st = {
-    mode: (["all", "low", "high", "band", "top"].includes(mode0) ? mode0 : "low") as Mode,
-    r: Number(host.dataset.r ?? 20), w: 12, keepIdx: 5, stripe: host.dataset.stripe === "1",
+    ...init, keepDC: true, keepIdx: 5, stripe: host.dataset.stripe === "1",
     brush: 0 as 0 | 1, edited: false,
   };
-  const r0 = st.r;
 
   // ---- controls ----
-  const modeLabels: [Mode, string][] = [["all", "no filter"], ["low", "low-pass"], ["high", "high-pass"],
-    ["band", "band-pass"], ["top", "keep largest"]];
-  const modeBtns = presets(panel, modeLabels.map(([m, label]) => ({ label, apply: () => { st.mode = m; rebuild(); } })));
-  const rS = slider(panel, "radius r", 0, 128, 1, st.r, v => { st.r = v; rebuild(); });
-  const wS = slider(panel, "ring width", 2, 60, 1, st.w, v => { st.w = v; rebuild(); });
-  const kS = slider(panel, "keep %", 0, KEEPS.length - 1, 1, st.keepIdx, v => { st.keepIdx = v; rebuild(); },
+  const modeBtns = presets(panel, [
+    { label: "no filter", apply: () => { st.mode = "all"; } },
+    { label: "low-pass", apply: () => {     // min = 0
+      st.mode = "radial"; st.rMax = st.rMax < EDGE ? st.rMax : st.rMin > 0 ? st.rMin : 30; st.rMin = 0;
+    } },
+    { label: "high-pass", apply: () => {    // max = no limit
+      st.mode = "radial"; st.rMin = st.rMin > 0 ? st.rMin : st.rMax < EDGE ? st.rMax : 10; st.rMax = EDGE;
+    } },
+    { label: "band-pass", apply: () => {    // both
+      st.mode = "radial";
+      if (st.rMin === 0) st.rMin = 10;
+      if (st.rMax === EDGE || st.rMax <= st.rMin) st.rMax = Math.min(EDGE - 1, st.rMin + 30);
+    } },
+    { label: "keep largest", apply: () => { st.mode = "top"; } },
+  ].map(it => ({ label: it.label, apply: () => { it.apply(); syncSliders(); rebuild(); } })));
+  const minS = slider(panel, "min radius", 0, EDGE, 1, st.rMin, v => {
+    st.mode = "radial"; st.rMin = v; if (st.rMax < v) { st.rMax = v; maxS.set(v); } rebuild();
+  });
+  const maxS = slider(panel, "max radius", 0, EDGE, 1, st.rMax, v => {
+    st.mode = "radial"; st.rMax = v; if (st.rMin > v) { st.rMin = v; minS.set(v); } rebuild();
+  }, v => v >= EDGE ? "∞" : String(v));
+  const dcBox = checkbox(panel, "keep average brightness (centre)", st.keepDC, on => { st.keepDC = on; rebuild(); });
+  const kS = slider(panel, "keep %", 0, KEEPS.length - 1, 1, st.keepIdx, v => { st.keepIdx = v; st.mode = "top"; rebuild(); },
     v => KEEPS[v] + "%");
   const stripeBox = checkbox(panel, "add stripe artefact", st.stripe, on => { st.stripe = on; forward(); rebuild(); });
   const brushRow = htmlEl("div", "f2-row", "", panel);
@@ -124,16 +153,24 @@ function mount(host: HTMLElement): void {
   ]);
   brushBtns[0].classList.add("active");
   button(brushRow, "reset", () => {
-    st.mode = mode0; st.r = r0; st.w = 12; st.keepIdx = 5; st.brush = 0;
-    rS.set(st.r); wS.set(st.w); kS.set(st.keepIdx);
+    Object.assign(st, init); st.keepDC = true; st.keepIdx = 5; st.brush = 0;
+    syncSliders(); dcBox.checked = true; kS.set(st.keepIdx);
     brushBtns.forEach((b, i) => b.classList.toggle("active", i === 0));
     if (st.stripe !== (host.dataset.stripe === "1")) {
       st.stripe = host.dataset.stripe === "1"; stripeBox.checked = st.stripe; forward();
     }
     rebuild();
   });
+  function syncSliders(): void { minS.set(st.rMin); maxS.set(st.rMax); }
+  /** Which preset button the current settings correspond to (-1: none). */
+  function activePreset(): number {
+    if (st.mode === "all") return 0;
+    if (st.mode === "top") return 4;
+    const lo = st.rMin === 0, hi = st.rMax >= EDGE;
+    return lo && hi ? -1 : lo ? 1 : hi ? 2 : 3;
+  }
   const ro = htmlEl("div", "qb-readout", "", info);
-  htmlEl("div", "qb-note", "Dark red = coefficients set to 0. Drag on the spectrum to erase or restore; the mirror point changes too, so the image stays real. The error is measured against the original without the stripe.", info);
+  htmlEl("div", "qb-note", "Dark red = coefficients set to 0. Blue circles: min radius (dashed) and max radius. Drag on the spectrum to erase or restore; the mirror point changes too, so the image stays real. The error is measured against the original without the stripe.", info);
 
   // ---- state ----
   let clean: Float64Array = new Float64Array(N * N);
@@ -167,8 +204,10 @@ function mount(host: HTMLElement): void {
 
   function rebuild(): void {
     st.edited = false;
-    mask = makeMask(N, st.mode, st.r, st.w, KEEPS[st.keepIdx] / 100, order);
-    modeBtns.forEach((b, i) => b.classList.toggle("active", modeLabels[i][0] === st.mode));
+    mask = makeMask(N, st.mode, st.rMin, st.rMax >= EDGE ? Infinity : st.rMax, st.keepDC,
+      KEEPS[st.keepIdx] / 100, order);
+    const a = activePreset();
+    modeBtns.forEach((b, i) => b.classList.toggle("active", i === a));
     schedule();
   }
 
@@ -180,9 +219,10 @@ function mount(host: HTMLElement): void {
   }
 
   function draw(): void {
-    rS.input.parentElement!.classList.toggle("off", !["low", "high", "band"].includes(st.mode));
-    wS.input.parentElement!.classList.toggle("off", st.mode !== "band");
-    kS.input.parentElement!.classList.toggle("off", st.mode !== "top");
+    // sliders of the other mode are dimmed but still usable: moving one switches mode
+    for (const sl of [minS, maxS]) sl.input.parentElement!.classList.toggle("dim", st.mode !== "radial");
+    dcBox.parentElement!.classList.toggle("off", st.mode !== "radial");
+    kS.input.parentElement!.classList.toggle("dim", st.mode !== "top");
     // spectrum, shifted so frequency 0 is in the middle; removed coefficients dim and red
     const ctx = cSpec.getContext("2d")!;
     const id = ctx.createImageData(N, N);
@@ -203,6 +243,15 @@ function mount(host: HTMLElement): void {
       }
     }
     ctx.putImageData(id, 0, 0);
+    if (st.mode === "radial") {   // the two cutoff circles (min dashed)
+      ctx.strokeStyle = RING; ctx.lineWidth = 2;
+      for (const [rad, dash] of [[st.rMin, [4, 3]], [st.rMax, []]] as [number, number[]][]) {
+        if (rad <= 0 || rad >= EDGE) continue;
+        ctx.setLineDash(dash);
+        ctx.beginPath(); ctx.arc(N / 2 + 0.5, N / 2 + 0.5, rad, 0, 2 * Math.PI); ctx.stroke();
+      }
+      ctx.setLineDash([]);
+    }
     if (st.stripe) {   // ring the stripe's two coefficients (one pixel each) while they are kept
       ctx.strokeStyle = "#ffd400"; ctx.lineWidth = 1.6;
       for (const sgn of [1, -1]) {

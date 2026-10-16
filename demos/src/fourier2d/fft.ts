@@ -58,33 +58,31 @@ export function fft2d(re: Float64Array, im: Float64Array, n: number, inverse = f
 /** Signed frequency of FFT index k (0..n-1): 0, 1, ..., n/2-1, -n/2, ..., -1. */
 export const freq = (k: number, n: number): number => (k < n / 2 ? k : k - n);
 
-export type Mode = "all" | "low" | "high" | "band" | "top";
+export type Mode = "all" | "radial" | "top";
 
 /**
  * Build a 0/1 mask over the FFT indices (row-major, unshifted).
- * low: keep radius <= r; high: keep radius > r; band: keep r <= radius <= r + w
- * (high and band always keep the centre coefficient, the average brightness);
+ * radial: keep the coefficients whose distance d from frequency 0 has rMin <= d <= rMax
+ * (rMin = 0 is a low-pass, rMax = Infinity a high-pass, both a band-pass); with keepDC
+ * the centre coefficient (the average brightness) is kept whatever rMin is.
  * top: keep the `keep` fraction of coefficients with the largest magnitude (`order`
- * lists indices from largest to smallest magnitude).
+ * lists indices from largest to smallest magnitude). all: keep everything.
  */
-export function makeMask(n: number, mode: Mode, r: number, w: number, keep: number,
-  order: Uint32Array | null): Uint8Array {
+export function makeMask(n: number, mode: Mode, rMin: number, rMax: number, keepDC: boolean,
+  keep: number, order: Uint32Array | null): Uint8Array {
   const m = new Uint8Array(n * n);
   if (mode === "top" && order) {
     const k = Math.max(1, Math.round(keep * n * n));
     for (let j = 0; j < k; j++) m[order[j]] = 1;
     return m;
   }
+  if (mode !== "radial") return m.fill(1);
   for (let row = 0; row < n; row++) {
     const fy = freq(row, n);
     for (let col = 0; col < n; col++) {
       const fx = freq(col, n);
       const d = Math.sqrt(fx * fx + fy * fy);
-      let on = 1;
-      if (mode === "low") on = d <= r ? 1 : 0;
-      else if (mode === "high") on = d > r || d === 0 ? 1 : 0;
-      else if (mode === "band") on = (d >= r && d <= r + w) || d === 0 ? 1 : 0;
-      m[row * n + col] = on;
+      m[row * n + col] = (d >= rMin && d <= rMax) || (keepDC && d === 0) ? 1 : 0;
     }
   }
   return m;

@@ -17,6 +17,7 @@ figs:
 	cd compensation && Rscript make-comp-figs.R
 	cd fourier && Rscript make-fourier-figs.R
 	cd scrna-log && Rscript make-log-figs.R
+	cd ctmc && Rscript make-ctmc-figs.R
 
 # Build the interactive demos (TypeScript, demos/src/) into demos/dist/.
 # One-time setup: npm i   (installs esbuild + typescript into node_modules/).
@@ -43,6 +44,6 @@ help:
 	@echo "  make preview   start a live-reload preview server"
 	@echo "  make demos     build the interactive demos into demos/dist/ (needs npm i once)"
 	@echo "  make typecheck type-check the demo TypeScript sources"
-	@echo "  make figs      re-generate the R-made figures (matrix-images, polar, compensation, fourier, scrna-log)"
+	@echo "  make figs      re-generate the R-made figures (matrix-images, polar, compensation, fourier, scrna-log, ctmc)"
 	@echo "  make gitadd    stage all source files in git"
 	@echo "  make clean     remove docs/ and .quarto/"

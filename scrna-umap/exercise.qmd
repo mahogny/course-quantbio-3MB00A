@@ -77,6 +77,50 @@ Use this toy dataset throughout. Six cells have already been reduced to their **
 
 **B6.** Conceptual — **resolution.** You cluster the same graph at resolution $0.2$, then at $0.8$, then at $2.0$. Order these three runs by the number of clusters they will produce (fewest to most), and explain the trend. Is there a "correct" number of clusters? What should you check a cluster against before believing it?
 
+## Explore {#explore}
+
+Do the by-hand part first. This demo runs a small but complete UMAP on toy data: 300 cells in 20 dimensions (think of them as 20 PCs). It builds the kNN graph with `n_neighbors` $= k$, gives each edge a weight, and then **moves the points**: every edge acts as a spring that pulls two neighbours together, and randomly chosen pairs of cells push each other apart. The step size shrinks until the layout stops at epoch 500. There is no formula from the 20 coordinates to $(x, y)$; each cell's position is optimised directly. The PCA panel on the left is the opposite: one fixed linear map, which would place a new cell without re-running anything.
+
+Controls: **Run** / **Pause**, **+10 epochs**, **Reset** (same start again), **New random start** (next seed), the `n_neighbors` and `min_dist` sliders (changing them rebuilds and restarts), the start layout (random scatter, or "spectral": eigenvectors of the graph, as in the eigen unit), and **show kNN springs**. Click a cell to mark its $k$ high-dimensional neighbours in both panels. Everything uses fixed seeds, so the numbers below are reproducible.
+
+```{=html}
+<link rel="stylesheet" href="../demos/dist/demo.css">
+<div data-demo="umaplive" data-preset="clusters" data-k="15" data-mindist="0.1" data-init="random" data-seed="1"></div>
+<script src="../demos/dist/umaplive.js"></script>
+```
+
+**E1.** With **4 clusters** and the default settings ($k = 15$, `min_dist` $= 0.1$, random start, seed 1), press Run and wait for epoch 500. Compare with the legend. Group D is the widest group in high-D: is it the largest island? Which island is largest? Group B sits next to A in high-D and D is far from everything: does the UMAP show that?
+
+**E2.** Switch to **Branching path** (coloured by pseudotime). Run it at $k = 15$. Then set `n_neighbors` to 5 and Run again, and then to 50. How does the picture change? Which setting would make you believe there are several separate cell populations?
+
+**E3.** Back on **4 clusters** at $k = 15$: run it, note where the islands are, then press **New random start** and run again. Is it the "same" map? What is the same and what is not? Does the spectral start fix this here?
+
+**E4.** Choose **Pure noise**. Run it at $k = 15$, then at $k = 3$, and try a new random start. What does UMAP draw? What do the PCA percentages say? What does this tell you about using a UMAP as evidence of structure?
+
+::: {.callout-note collapse="true" title="Solutions"}
+
+**E1.** No. The island sizes follow the **number of cells**, not their spread. Measured with the demo's code (seed 1, $k = 15$), the root-mean-square radius of each group is:
+
+| Group | Cells | Radius in 20-D | Radius in the UMAP |
+|---|---:|---:|---:|
+| A | 150 | 4.4 | 1.05 |
+| B | 30 | 1.4 | 0.32 |
+| C | 80 | 2.7 | 0.66 |
+| D | 40 | 6.3 | 0.41 |
+
+D is about 4.7 times wider than B in high-D but only about 1.3 times wider in the UMAP. The order of island sizes, A > C > D > B, is the order of cell counts. Each cell's distances are rescaled by its own $\rho_i$ and $\sigma_i$, so a tight group and a wide group look alike to the springs. The repulsion then gives every cell roughly the same room, so a group with more cells takes up more area.
+
+The gaps are not kept either. In 20-D the centre of B is 9.1 from A and D is 44.8 from A, about five times further. In the UMAP (seed 1) they come out at 12.5 and 14.4. At $k = 15$ no kNN edge links two different groups (the graph has four separate pieces), so only the repulsion acts between islands and their placement is arbitrary. The PCA panel, a linear map, does show D far away (but B overlaps A there, because the A–B difference is not in PC1 or PC2).
+
+**E2.** At $k = 15$ you see the curved path and its two branches, with the colours (pseudotime) changing smoothly along it, perhaps with a few small gaps. At $k = 5$ the same data break into separate pieces (9 pieces with seed 1, counting a gap of more than 1 UMAP unit as a break). Each cell then only feels its 5 closest neighbours, so small gaps in the sampling become cuts, and the pieces look like distinct clusters. At $k = 50$ the layout is one connected piece with the branch point clearly visible. The $k = 5$ picture is the misleading one: it suggests several populations where there is one continuous differentiation path. Small $k$ shows very local detail; large $k$ keeps more of the large-scale shape.
+
+**E3.** It is the same in the way that matters locally and different globally. With both seeds, the same four islands appear and each contains only its own group: 100% of each cell's 10 nearest 2D neighbours share its group. But the arrangement changes. With seed 1, B lies nearest A (12.5, versus 29.9 to C); with seed 2, B lies nearest C (9.1, versus 17.9 to A). Inside the islands, only about 40% of each cell's 10 nearest 2D neighbours are the same in the two runs. The spectral start does not fix this here, because the four groups are not connected in the graph at all, so the eigenvectors cannot say how they relate. This is why a paper should report the seed and the parameters, and why only the local grouping should be read off.
+
+**E4.** UMAP still draws something: at $k = 15$ a round, evenly filled disc, and at $k = 3$ a lumpier shape with small clumps and strands. None of it is real, because all 300 cells come from one round Gaussian blob. The texture also moves when you change the seed: for the noise data only 42% ($k = 15$) to 61% ($k = 3$) of each cell's 10 nearest 2D neighbours are the same between seed 1 and seed 2, against 88% for the branching path at $k = 15$. The PCA panel gives a hint: PC1 and PC2 explain only 8% and 7% of the variance, so no direction dominates. So a UMAP alone is not evidence of structure; check it against the PCA variance, marker genes and replicate samples.
+:::
+
+Further reading: Wattenberg, Viégas & Johnson, ["How to Use t-SNE Effectively"](https://distill.pub/2016/misread-tsne/) (Distill, 2016), shows the same effects for t-SNE, which also optimises each point's position directly. Google PAIR's ["Understanding UMAP"](https://pair-code.github.io/understanding-umap/) compares UMAP and t-SNE on toy data.
+
 ## In R
 
 Read the standard pipeline as a **recipe** (no packages are installed here — nothing runs), then reproduce the neighbour step yourself in base R.

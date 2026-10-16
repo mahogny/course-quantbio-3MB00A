@@ -1,0 +1,398 @@
+---
+title: "Exercise: continuous-time Markov chains"
+format:
+  html:
+    toc: true
+    code-copy: true
+    code-overflow: wrap
+    highlight-style: github
+---
+
+## Goal
+
+By the end of this exercise you should be able to, **by hand and in R**:
+
+- turn rates on a state diagram into the **rate matrix** $Q$ and check that its rows sum to 0,
+- compute **mean waiting times** $1/q_i$ and where a jump goes next ($q_{ij}/q_i$),
+- find the **stationary distribution** by balancing flows,
+- relate $Q$ to a step matrix through $P \approx I + Q\,\Delta t$,
+- **simulate** a chain with exponential waiting times (the Gillespie idea) in base R.
+
+Do the pen-and-paper parts first, then check them with the demo and in R.
+
+## Background
+
+**Conventions** (as in Markov chains): states in a fixed order, distributions are **row vectors**, and in a matrix **row = from, column = to**.
+
+| Quantity | Definition |
+|---|---|
+| Rate $q_{ij}$ ($i \ne j$) | expected number of $i \to j$ jumps per unit time, while in $i$ |
+| Total leaving rate | $q_i = \sum_{j \ne i} q_{ij}$ |
+| Rate matrix $Q$ | off-diagonal: $q_{ij}$; diagonal: $q_{ii} = -q_i$; **rows sum to 0** |
+| Time spent in $i$ | $\text{Exp}(q_i)$, mean $1/q_i$ (see the exponential distribution in Error models) |
+| Where to jump | to $j$ with probability $q_{ij}/q_i$ |
+| Change of a distribution | change per unit time $= \mathbf{x}(t)\,Q$ |
+| Stationary distribution | $\boldsymbol\pi Q = \mathbf{0}$, $\sum_k \pi_k = 1$; 2 states: flow balance $\pi_1 q_{12} = \pi_2 q_{21}$ |
+| 2-state relaxation | $x_1(t) = \pi_1 + (x_1(0) - \pi_1)\,e^{-(q_{12}+q_{21})t}$ |
+| Small time step | $P \approx I + Q\,\Delta t$ |
+
+A reminder on the exponential distribution: if $T \sim \text{Exp}(\lambda)$, then $P(T > s) = e^{-\lambda s}$ and the mean is $1/\lambda$.
+
+## By hand
+
+### Part A — a promoter switching ON and OFF
+
+A promoter switches **ON → OFF** at rate $a = 0.4$ per minute and **OFF → ON** at rate $b = 0.1$ per minute. Order the states as $(\text{ON}, \text{OFF})$.
+
+**B1.** What is the mean length of an ON period? Of an OFF period?
+
+**B2.** Write the rate matrix $Q$. Check that each row sums to 0.
+
+**B3.** Find the stationary distribution $\boldsymbol\pi = (\pi_{\text{ON}}, \pi_{\text{OFF}})$ by balancing the flow ON→OFF against the flow OFF→ON. Check your answer with the mean period lengths from B1.
+
+**B4.** What is the probability that a single ON period lasts longer than 5 minutes?
+
+**B5.** A population of cells starts with every promoter OFF: $\mathbf{x}(0) = (0, 1)$.
+(a) At $t = 0$, how fast does the fraction ON grow (change per minute)?
+(b) Use the relaxation formula to find $x_{\text{ON}}(2)$, the fraction ON after 2 minutes.
+(c) After how many minutes is the fraction ON half-way to $\pi_{\text{ON}}$?
+
+### Part B — building $Q$ from a diagram
+
+Three cell states, with rates **per day**:
+
+- stem → prog at $0.4$; prog → stem at $0.2$;
+- prog → diff at $0.2$; diff → prog at $0.1$;
+- no direct arrows between stem and diff.
+
+Order the states as $(\text{stem}, \text{prog}, \text{diff})$.
+
+**B6.** Write the $3 \times 3$ rate matrix $Q$ and check that every row sums to 0.
+
+**B7.** For each state, give the total leaving rate and the mean time spent there. A cell has just entered prog: what is the probability that its next jump is to diff? How do both answers change if the prog → diff rate were $0.6$ instead?
+
+**B8.** The states form a line, so at equilibrium the flow stem→prog must balance prog→stem, and prog→diff must balance diff→prog. Use these two balances and $\sum_k \pi_k = 1$ to find $\boldsymbol\pi$. Check that your $\boldsymbol\pi$ gives 0 in the **prog** column of $\boldsymbol\pi Q$.
+
+**B9.** Which of these are valid rate matrices? Say what is wrong with the others.
+$$
+\text{(i) } \begin{pmatrix} -2 & 2\\ 3 & -3 \end{pmatrix} \qquad
+\text{(ii) } \begin{pmatrix} -1 & 1\\ 2 & -1 \end{pmatrix} \qquad
+\text{(iii) } \begin{pmatrix} 0.5 & -0.5\\ -0.2 & 0.2 \end{pmatrix}
+$$
+
+### Part C — back to discrete time
+
+Use the promoter chain from Part A.
+
+**B10.** Build the step matrix $P = I + Q\,\Delta t$ for $\Delta t = 0.5$ minutes. Check that its rows sum to 1, and that your $\boldsymbol\pi$ from B3 satisfies $\boldsymbol\pi P = \boldsymbol\pi$.
+
+**B11.** Starting from $\mathbf{x}_0 = (0, 1)$, take one step with this $P$. Compare with the exact $x_{\text{ON}}(0.5)$ from the relaxation formula. Then try $\Delta t = 5$ minutes: what goes wrong with $I + Q\,\Delta t$?
+
+## Explore {#explore}
+
+The demo runs 200 walkers in **continuous time**. Each walker waits an exponential time (rate = total leaving rate of its state), then hops along one arrow. The arrows show **rates**, not probabilities. The bars compare the walker fractions with the exact $\mathbf{x}(t)$; the dashed lines are the stationary $\boldsymbol\pi$. With **follow one walker** ticked, the ringed walker's state is drawn over time below the diagram. **Edit rates** has one slider per arrow and shows each state's leaving rate and mean waiting time.
+
+```{=html}
+<link rel="stylesheet" href="../demos/dist/demo.css">
+<div data-demo="ctmcwalkers" data-q="0 0.4 0.1 0" data-states="ON OFF" data-label="Promoter (Part A)" data-unit="/min" data-start="1" data-speed="2" data-view="20" data-follow="1" data-presets="telegraph fast slow cell3 absorbing jc"></div>
+<script src="../demos/dist/ctmcwalkers.js"></script>
+```
+
+**E1.** With **Promoter (Part A)** and all walkers OFF, press **Run** and pause soon after $t = 2$ min. Compare the exact fraction ON with your answer to B5(b). Then let it run: where do the fractions settle? Compare with B3.
+
+**E2.** Watch the ringed walker's timeline for about 20 minutes. Roughly how long are its OFF and ON bars? Why do the bar lengths vary so much, even though the rates never change? (Open **Edit rates** to see the mean waiting times.)
+
+**E3.** Compare **Fast switching** and **Slow switching**. Both have the same dashed line. What is $\boldsymbol\pi$, and how fast does each chain approach it? Use the relaxation formula: how long until the gap to $\boldsymbol\pi$ is halved in each case? How do the timelines of the ringed walker differ?
+
+**E4.** Choose **Cell states** (the chain of Part B) and check $\boldsymbol\pi$ against B8. Then choose **Absorbing**. Where do all walkers end up, and why is $\boldsymbol\pi = (0, 0, 1)$ although live ⇄ sick has non-zero rates? If you like, try **Jukes–Cantor** (all 12 substitutions at rate $1/3$) and say what $\boldsymbol\pi$ is.
+
+::: {.callout-note collapse="true" title="Solutions"}
+**E1.** At $t = 2$ the exact fraction ON is about $0.126$, as in B5(b); the walker fraction is close but wobbles, because 200 walkers is a finite sample. The fractions settle at $(0.2, 0.8)$, the $\boldsymbol\pi$ of B3.
+
+**E2.** OFF bars are usually several minutes long (mean $1/0.1 = 10$ min), ON bars mostly short (mean $1/0.4 = 2.5$ min). Waiting times are exponential: short ones are the most common, but long ones happen too, so the bars range from seconds to well over the mean. The rate fixes only the *average* length.
+
+**E3.** Both have $\boldsymbol\pi = (1/3, 2/3)$, because the ratio of the rates is the same: fast $(a, b) = (2, 1)$, slow $(0.1, 0.05)$ per min. The gap to $\boldsymbol\pi$ shrinks as $e^{-(a+b)t}$: with $a + b = 3$ it halves every $\ln 2/3 \approx 0.23$ min, with $a + b = 0.15$ every $\ln 2/0.15 \approx 4.6$ min. The fast walker flickers with many short bars; the slow walker has a few very long bars.
+
+**E4.** Cell states: $\boldsymbol\pi \approx (0.143, 0.286, 0.571) = (1, 2, 4)/7$, as in B8. Absorbing: every walker ends in **dead**, because dead has no arrow out (its leaving rate is 0, so its waiting time is infinite). Walkers keep moving between live and sick only until they hit dead, so in the long run nobody is left there. Jukes–Cantor: by symmetry $\boldsymbol\pi = (1/4, 1/4, 1/4, 1/4)$.
+:::
+
+## In R
+
+Base R only. The first part simulates the promoter of Part A one jump at a time.
+
+### The rate matrix
+
+```r
+a <- 0.4    # rate ON -> OFF (per min)
+b <- 0.1    # rate OFF -> ON (per min)
+Q <- matrix(c(-a,  a,
+               b, -b), nrow = 2, byrow = TRUE,
+            dimnames = list(c("ON", "OFF"), c("ON", "OFF")))
+Q
+rowSums(Q)            # both 0
+```
+
+### Simulate one promoter (a Gillespie loop)
+
+```r
+simulate_telegraph <- function(a, b, tmax, start = "OFF") {
+  t <- 0
+  state <- start
+  times <- 0
+  states <- state
+  while (t < tmax) {
+    rate  <- if (state == "ON") a else b          # total leaving rate
+    t     <- t + rexp(1, rate)                    # how long? Exp(rate)
+    state <- if (state == "ON") "OFF" else "ON"   # where to? (only one choice)
+    times  <- c(times, t)
+    states <- c(states, state)
+  }
+  data.frame(time = times, state = states)
+}
+
+set.seed(1)
+tr <- simulate_telegraph(a, b, tmax = 10000)
+head(tr)
+nrow(tr) - 1                       # number of jumps
+```
+
+Each row is a jump: at `time` the promoter switched to `state`. (The last jump is past `tmax`; we cut it off below.)
+
+### Fraction of time ON
+
+```r
+dur   <- diff(tr$time)                       # length of each period
+st    <- tr$state[-nrow(tr)]                 # state during that period
+dur[length(dur)] <- 10000 - tr$time[nrow(tr) - 1]   # cut the last period at tmax
+mean(dur[st == "ON"])                        # mean ON period, compare 1/a = 2.5
+mean(dur[st == "OFF"])                       # mean OFF period, compare 1/b = 10
+frac_on <- sum(dur[st == "ON"]) / sum(dur)   # fraction of time ON
+frac_on
+b / (a + b)                                  # stationary pi_ON = 0.2
+```
+
+**R1.** Run the simulation. How close is the fraction of time ON to $b/(a+b)$? Are the mean ON and OFF periods close to $1/a$ and $1/b$ (B1)?
+
+**R2.** Plot the ON periods and compare with the exponential density:
+
+```r
+on <- dur[st == "ON"]
+hist(on, breaks = 40, freq = FALSE, main = "ON periods", xlab = "minutes")
+curve(dexp(x, rate = a), add = TRUE, col = "red", lwd = 2)
+mean(on > 5)          # compare exp(-a * 5), your answer to B4
+exp(-a * 5)
+```
+
+### Many promoters, and a small-$\Delta t$ approximation
+
+```r
+# 2000 promoters, all start OFF: which state at t = 2 minutes?
+set.seed(2)
+state_at <- function(tr, t) tr$state[findInterval(t, tr$time)]
+at2 <- replicate(2000, state_at(simulate_telegraph(a, b, tmax = 2), 2))
+mean(at2 == "ON")                     # simulated fraction ON at t = 2
+
+# exact: x_ON(t) = pi_ON + (x_ON(0) - pi_ON) * exp(-(a + b) t)
+x_on <- function(t) b / (a + b) * (1 - exp(-(a + b) * t))
+x_on(2)
+
+# discrete approximation: P = I + Q dt, then 2 / dt steps
+dt <- 0.1
+P  <- diag(2) + Q * dt         # small-step transition matrix
+P
+rowSums(P)                     # 1 1
+x <- c(ON = 0, OFF = 1)        # start all OFF
+for (k in 1:round(2 / dt)) x <- x %*% P   # 20 steps of 0.1 min = 2 min
+x
+```
+
+**R3.** Compare the three numbers for the fraction ON at $t = 2$: simulation, exact formula, and the step-matrix loop. Then repeat the loop for several step sizes:
+
+```r
+for (dt in c(1, 0.5, 0.1, 0.01)) {
+  P <- diag(2) + Q * dt
+  x <- c(0, 1)
+  for (k in 1:round(2 / dt)) x <- x %*% P
+  cat(sprintf("dt = %5.2f  x_ON(2) = %.4f   exact %.4f\n", dt, x[1], x_on(2)))
+}
+```
+
+How does the error change as $\Delta t$ gets smaller?
+
+### Three states: where to jump with `sample()`
+
+```r
+states <- c("stem", "prog", "diff")
+R <- matrix(c(0,   0.4, 0,
+              0.2, 0,   0.2,
+              0,   0.1, 0), nrow = 3, byrow = TRUE, dimnames = list(states, states))
+Q3 <- R
+diag(Q3) <- -rowSums(R)
+Q3
+rowSums(Q3)
+
+simulate_ctmc <- function(R, tmax, start) {
+  q <- rowSums(R)                       # total leaving rate of each state
+  t <- 0; s <- start
+  time_in <- setNames(numeric(nrow(R)), rownames(R))
+  while (TRUE) {
+    tau <- rexp(1, q[s])                # how long?
+    if (t + tau > tmax) { time_in[s] <- time_in[s] + (tmax - t); break }
+    time_in[s] <- time_in[s] + tau
+    t <- t + tau
+    s <- sample(colnames(R), 1, prob = R[s, ])   # where to? prob = rate / total
+  }
+  time_in / tmax                        # fraction of time in each state
+}
+
+set.seed(3)
+round(simulate_ctmc(R, tmax = 20000, start = "stem"), 3)
+round(c(1, 2, 4) / 7, 3)
+```
+
+**R4.** Compare the simulated fractions of time with your $\boldsymbol\pi$ from B8. Why is it enough to pass the *rates* `R[s, ]` to `sample()` as probabilities?
+
+## Hints
+
+::: {.callout-tip collapse="true" title="Hint 1 — mean waiting time"}
+The time in a state is exponential with the **total** leaving rate. The mean of $\text{Exp}(\lambda)$ is $1/\lambda$. With one arrow out, the total leaving rate is just that arrow's rate.
+:::
+
+::: {.callout-tip collapse="true" title="Hint 2 — building Q"}
+Fill in the off-diagonal entries from the arrows (row = from, column = to, 0 where there is no arrow). Then set each diagonal entry to **minus the sum** of the other entries in its row. In R: `diag(Q) <- -rowSums(R)` when `R` holds only the off-diagonal rates.
+:::
+
+::: {.callout-tip collapse="true" title="Hint 3 — flow balance"}
+The flow from $i$ to $j$ is (fraction in $i$) × (rate $i \to j$). At equilibrium, in a 2-state chain or a chain in a line, the flow across each arrow pair is the same in both directions. This gives ratios between the $\pi$'s; then scale them so they sum to 1.
+:::
+
+::: {.callout-tip collapse="true" title="Hint 4 — relaxation formula"}
+With $\mathbf{x}(0) = (0, 1)$ the formula becomes $x_{\text{ON}}(t) = \pi_{\text{ON}}(1 - e^{-(a+b)t})$. "Half-way" means $e^{-(a+b)t} = 1/2$, so $t = \ln 2 / (a+b)$.
+:::
+
+::: {.callout-tip collapse="true" title="Hint 5 — P = I + Q dt"}
+Multiply every entry of $Q$ by $\Delta t$, then add 1 on the diagonal. A valid $P$ has no negative entries; look at the diagonal when $\Delta t$ is large.
+:::
+
+::: {.callout-tip collapse="true" title="Hint 6 — R"}
+[`rexp(1, rate)`](https://rdrr.io/r/stats/Exponential.html) draws one exponential waiting time. [`sample(x, 1, prob = w)`](https://rdrr.io/r/base/sample.html) rescales the weights `w` so they sum to 1. [`findInterval`](https://rdrr.io/r/base/findInterval.html) finds which period a given time falls in. As in Markov chains, use `%*%` for vector × matrix, never `*`.
+:::
+
+## Solutions
+
+::: {.callout-note collapse="true" title="Solution"}
+
+**B1.** ON is left at rate $a = 0.4$ /min: mean ON period $1/0.4 = 2.5$ min. OFF is left at $b = 0.1$ /min: mean OFF period $1/0.1 = 10$ min.
+
+**B2.** $Q = \begin{pmatrix} -0.4 & 0.4\\ 0.1 & -0.1 \end{pmatrix}$. Rows: $-0.4 + 0.4 = 0$, $0.1 - 0.1 = 0$. ✓
+
+**B3.** Flow balance: $\pi_{\text{ON}} \cdot 0.4 = \pi_{\text{OFF}} \cdot 0.1$, so $\pi_{\text{OFF}} = 4\,\pi_{\text{ON}}$. With $\pi_{\text{ON}} + \pi_{\text{OFF}} = 1$: $5\,\pi_{\text{ON}} = 1$, so $\boldsymbol\pi = (0.2,\ 0.8)$. This is $(b, a)/(a+b) = (0.1, 0.4)/0.5$. Check: in the long run the time is split like the mean period lengths, $2.5/(2.5 + 10) = 0.2$. ✓
+
+**B4.** $P(T > 5) = e^{-0.4 \cdot 5} = e^{-2} \approx 0.135$.
+
+**B5.** (a) Change per minute in $x_{\text{ON}}$ $= -a\,x_{\text{ON}} + b\,x_{\text{OFF}} = -0.4 \cdot 0 + 0.1 \cdot 1 = 0.1$ per minute (the ON entry of $\mathbf{x}(0)\,Q$).
+(b) $a + b = 0.5$, so $x_{\text{ON}}(t) = 0.2\,(1 - e^{-0.5t})$ and $x_{\text{ON}}(2) = 0.2\,(1 - e^{-1}) \approx 0.2 \cdot 0.632 = 0.126$.
+(c) $e^{-0.5t} = 1/2$ gives $t = \ln 2 / 0.5 \approx 1.39$ min.
+
+**B6.**
+$$Q = \begin{pmatrix} -0.4 & 0.4 & 0\\ 0.2 & -0.4 & 0.2\\ 0 & 0.1 & -0.1 \end{pmatrix}, \qquad \text{rows: } 0,\ 0,\ 0. \ ✓$$
+
+**B7.** Leaving rates: stem $0.4$, prog $0.2 + 0.2 = 0.4$, diff $0.1$ per day. Mean times: stem $2.5$ days, prog $2.5$ days, diff $10$ days. From prog, the next jump goes to diff with probability $0.2/0.4 = 1/2$. With prog → diff at $0.6$: prog is left at $0.8$ per day (mean $1.25$ days), and the next jump goes to diff with probability $0.6/0.8 = 3/4$.
+
+**B8.** stem ⇄ prog: $0.4\,\pi_{\text{stem}} = 0.2\,\pi_{\text{prog}}$, so $\pi_{\text{prog}} = 2\,\pi_{\text{stem}}$. prog ⇄ diff: $0.2\,\pi_{\text{prog}} = 0.1\,\pi_{\text{diff}}$, so $\pi_{\text{diff}} = 2\,\pi_{\text{prog}} = 4\,\pi_{\text{stem}}$. Sum: $7\,\pi_{\text{stem}} = 1$, so
+$$\boldsymbol\pi = \tfrac17\,(1,\ 2,\ 4) \approx (0.143,\ 0.286,\ 0.571).$$
+Prog column of $\boldsymbol\pi Q$: $\tfrac17 \cdot 0.4 + \tfrac27 \cdot (-0.4) + \tfrac47 \cdot 0.1 = \tfrac17(0.4 - 0.8 + 0.4) = 0$. ✓
+
+**B9.** (i) Valid: off-diagonal entries $\ge 0$, rows sum to 0. Rates larger than 1 are fine. (ii) Not valid: row 2 sums to $2 - 1 = 1$, not 0. (iii) Not valid: off-diagonal entries are negative (a rate cannot be negative), and the diagonal is positive.
+
+**B10.** $Q\,\Delta t = \begin{pmatrix} -0.2 & 0.2\\ 0.05 & -0.05 \end{pmatrix}$, so $P = I + Q\,\Delta t = \begin{pmatrix} 0.8 & 0.2\\ 0.05 & 0.95 \end{pmatrix}$. Rows: $0.8 + 0.2 = 1$, $0.05 + 0.95 = 1$. ✓
+$\boldsymbol\pi P = (0.2 \cdot 0.8 + 0.8 \cdot 0.05,\ \ 0.2 \cdot 0.2 + 0.8 \cdot 0.95) = (0.16 + 0.04,\ 0.04 + 0.76) = (0.2,\ 0.8)$. ✓
+
+**B11.** $(0, 1)\,P = (0.05,\ 0.95)$, the OFF row of $P$. Exact: $x_{\text{ON}}(0.5) = 0.2\,(1 - e^{-0.25}) \approx 0.2 \cdot 0.221 = 0.044$. The step gives $0.05$: close, slightly too high. With $\Delta t = 5$: $I + 5Q = \begin{pmatrix} -1 & 2\\ 0.5 & 0.5 \end{pmatrix}$, which has a negative entry, so it is not a valid transition matrix. The approximation "probability ≈ rate × time" only holds when rate × time is small; here $0.4 \cdot 5 = 2$.
+
+**R answers.**
+
+**R1.**
+```r
+Q
+#       ON  OFF
+# ON  -0.4  0.4
+# OFF  0.1 -0.1
+rowSums(Q)
+#  ON OFF
+#   0   0
+head(tr)
+#        time state
+# 1  0.000000   OFF
+# 2  7.551818    ON
+# 3 10.505925   OFF
+# 4 11.962993    ON
+# 5 12.312481   OFF
+# 6 16.673167    ON
+nrow(tr) - 1
+# [1] 1571
+mean(dur[st == "ON"])
+# [1] 2.524951           # 1/a = 2.5
+mean(dur[st == "OFF"])
+# [1] 10.20091           # 1/b = 10
+frac_on
+# [1] 0.1982087          # b/(a+b) = 0.2
+```
+Over 10000 minutes there are about 1570 switches; the fraction of time ON is $0.198$, within about 1% of $\pi_{\text{ON}} = 0.2$. The mean periods match $1/a$ and $1/b$.
+
+**R2.** The histogram falls off like the red curve $0.4\,e^{-0.4t}$, with the tallest bar at the shortest durations.
+```r
+mean(on > 5)
+# [1] 0.1401274
+exp(-a * 5)
+# [1] 0.1353353          # B4
+```
+
+**R3.**
+```r
+mean(at2 == "ON")
+# [1] 0.1265             # 2000 simulated promoters
+x_on(2)
+# [1] 0.1264241          # exact, as in B5(b)
+P
+#       ON  OFF
+# ON  0.96 0.04
+# OFF 0.01 0.99
+x
+#             ON       OFF
+# [1,] 0.1283028 0.8716972   # dt = 0.1
+```
+and the loop over step sizes:
+```
+dt =  1.00  x_ON(2) = 0.1500   exact 0.1264
+dt =  0.50  x_ON(2) = 0.1367   exact 0.1264
+dt =  0.10  x_ON(2) = 0.1283   exact 0.1264
+dt =  0.01  x_ON(2) = 0.1266   exact 0.1264
+```
+The simulation agrees with the exact value up to random noise. The step-matrix result is too high for large $\Delta t$, and the error shrinks roughly in proportion to $\Delta t$ (about $0.002$ at $\Delta t = 0.1$, $0.0002$ at $\Delta t = 0.01$).
+
+**R4.**
+```r
+Q3
+#      stem prog diff
+# stem -0.4  0.4  0.0
+# prog  0.2 -0.4  0.2
+# diff  0.0  0.1 -0.1
+rowSums(Q3)
+# stem prog diff
+#    0    0    0
+round(simulate_ctmc(R, tmax = 20000, start = "stem"), 3)
+#  stem  prog  diff
+# 0.144 0.279 0.577
+round(c(1, 2, 4) / 7, 3)
+# [1] 0.143 0.286 0.571
+```
+The simulated fractions of time agree with $\boldsymbol\pi = (1, 2, 4)/7$ from B8 to within about $0.01$. `sample()` divides the weights by their sum, and the sum of row `s` of `R` is the leaving rate $q_s$, so the weights become exactly $q_{sj}/q_s$. The zero entries (including the diagonal) are never picked.
+:::
+
+## Where this leads
+
+- **Error models:** the exponential waiting times here are the gaps of a Poisson process, and the bursty telegraph model gives overdispersed, close to negative binomial, mRNA counts.
+- **Hidden Markov models:** a state whose waiting time is not exponential can be split into several hidden stages. The visible ON/OFF signal is then an emission of a hidden chain.
+- **Phylogenetics:** substitution models such as Jukes–Cantor are rate matrices $Q$ on $\{\mathtt{A}, \mathtt{C}, \mathtt{G}, \mathtt{T}\}$; tree-building software fits them to sequence alignments.
+- **Stochastic gene expression:** the Gillespie loop extends to any set of reactions (transcription, translation, degradation) and is the standard tool for simulating small numbers of molecules in single cells.

@@ -441,7 +441,7 @@ g \approx \text{2000 genes}
 <p>The idea (no formulas today):</p>
 <ul>
 <li>Assume the cells lie on a smooth low-dimensional <strong>manifold</strong> curled up inside gene space.</li>
-<li>Find 2D coordinates so that cells that are <strong>neighbours in the graph</strong> stay <strong>close</strong> in the plot, and non-neighbours are pushed apart.</li>
+<li>Find 2D coordinates so that cells that are <strong>neighbours in the graph</strong> stay <strong>close</strong> in the plot, and non-neighbours are pushed apart. There is <strong>no formula</strong> from genes to <span class="math inline">\((x, y)\)</span>: each cell’s position is optimised directly (springs between neighbours + repulsion).</li>
 <li>It is <strong>non-linear</strong>: it may <strong>stretch and bend</strong> the space differently in different regions to make local neighbourhoods fit on a flat page.</li>
 </ul>
 <p>The result: tight <strong>islands</strong> of similar cells, visibly separated — the canonical single-cell figure.</p>
@@ -449,6 +449,25 @@ g \approx \text{2000 genes}
 
 <img data-src="fig08-umap-unroll.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:70.0%"><aside class="notes">
 <p>Keep UMAP at the intuition level — the manifold assumption plus “preserve local neighbours, separate the rest.” Do not attempt the fuzzy-simplicial-set / cross-entropy math; it is beyond this course and not examined. The load-bearing word is non-linear: UMAP is allowed to warp the space region by region, unlike PCA’s single global rotation, and that warping is what produces clean separated islands. Mention t-SNE so students recognise it in papers, but frame both as visualization aids, not measurements. Set up the next slide: the price of that warping is that the axes and inter-island gaps carry no quantitative meaning.</p>
+<style type="text/css">
+        span.MJX_Assistive_MathML {
+          position:absolute!important;
+          clip: rect(1px, 1px, 1px, 1px);
+          padding: 1px 0 0 0!important;
+          border: 0!important;
+          height: 1px!important;
+          width: 1px!important;
+          overflow: hidden!important;
+          display:block!important;
+      }</style></aside>
+</section>
+<section id="try-it-watch-umap-lay-out-the-graph" class="slide level2">
+<h2>Try it: watch UMAP lay out the graph</h2>
+<link rel="stylesheet" href="../demos/dist/demo.css">
+<div data-demo="umaplive" data-preset="clusters" data-k="15" data-mindist="0.1" data-init="random" data-seed="1"></div>
+<script src="../demos/dist/umaplive.js"></script>
+<aside class="notes">
+<p>A live UMAP on toy data: 300 cells in 20 dimensions, standing in for 20 PCs. Left is PCA, PC1 against PC2: one fixed matrix, so any new cell could be projected the same way. Right is UMAP, which has no such formula: every cell’s (x, y) is a free parameter, moved step by step. It starts paused from a random scatter. Press Run: edges of the kNN graph act as springs pulling neighbours together, and random pairs push apart; the learning rate shrinks until it stops at epoch 500. Tick “show kNN springs” and press Reset, then Run again, so they can see the graph being pulled into shape. On the four-cluster data, compare with the legend: A and B are close in high-D and D is far away, and B is tight while D is wide. In the UMAP, B ends up about as far from A as D does, although D is five times further away in high-D; and island size follows the number of cells, not the spread (D, the widest group, comes out small). Press “New random start”: the same four islands, arranged differently. Switch to “Branching path” and drag n_neighbors from 15 down to 5: the continuous path breaks into separate pieces that look like clusters; at 50 it is one connected piece with a clear branch point. Then “Pure noise”: UMAP still draws a filled shape with some texture, so a UMAP alone cannot tell you there is structure. The “spectral” start uses eigenvectors of the graph (link back to the eigen unit); it gives a better start but the same caveats. Click any cell to mark its k high-D neighbours in both panels.</p>
 <style type="text/css">
         span.MJX_Assistive_MathML {
           position:absolute!important;

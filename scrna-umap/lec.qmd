@@ -174,7 +174,7 @@ Define the kNN graph concretely: pick k (default around 15), connect each cell t
 The idea (no formulas today):
 
 - Assume the cells lie on a smooth low-dimensional **manifold** curled up inside gene space.
-- Find 2D coordinates so that cells that are **neighbours in the graph** stay **close** in the plot, and non-neighbours are pushed apart.
+- Find 2D coordinates so that cells that are **neighbours in the graph** stay **close** in the plot, and non-neighbours are pushed apart. There is **no formula** from genes to $(x, y)$: each cell's position is optimised directly (springs between neighbours + repulsion).
 - It is **non-linear**: it may **stretch and bend** the space differently in different regions to make local neighbourhoods fit on a flat page.
 
 The result: tight **islands** of similar cells, visibly separated — the canonical single-cell figure.
@@ -185,6 +185,18 @@ The result: tight **islands** of similar cells, visibly separated — the canoni
 
 ::: notes
 Keep UMAP at the intuition level — the manifold assumption plus "preserve local neighbours, separate the rest." Do not attempt the fuzzy-simplicial-set / cross-entropy math; it is beyond this course and not examined. The load-bearing word is non-linear: UMAP is allowed to warp the space region by region, unlike PCA's single global rotation, and that warping is what produces clean separated islands. Mention t-SNE so students recognise it in papers, but frame both as visualization aids, not measurements. Set up the next slide: the price of that warping is that the axes and inter-island gaps carry no quantitative meaning.
+:::
+
+## Try it: watch UMAP lay out the graph
+
+```{=html}
+<link rel="stylesheet" href="../demos/dist/demo.css">
+<div data-demo="umaplive" data-preset="clusters" data-k="15" data-mindist="0.1" data-init="random" data-seed="1"></div>
+<script src="../demos/dist/umaplive.js"></script>
+```
+
+::: notes
+A live UMAP on toy data: 300 cells in 20 dimensions, standing in for 20 PCs. Left is PCA, PC1 against PC2: one fixed matrix, so any new cell could be projected the same way. Right is UMAP, which has no such formula: every cell's (x, y) is a free parameter, moved step by step. It starts paused from a random scatter. Press Run: edges of the kNN graph act as springs pulling neighbours together, and random pairs push apart; the learning rate shrinks until it stops at epoch 500. Tick "show kNN springs" and press Reset, then Run again, so they can see the graph being pulled into shape. On the four-cluster data, compare with the legend: A and B are close in high-D and D is far away, and B is tight while D is wide. In the UMAP, B ends up about as far from A as D does, although D is five times further away in high-D; and island size follows the number of cells, not the spread (D, the widest group, comes out small). Press "New random start": the same four islands, arranged differently. Switch to "Branching path" and drag n_neighbors from 15 down to 5: the continuous path breaks into separate pieces that look like clusters; at 50 it is one connected piece with a clear branch point. Then "Pure noise": UMAP still draws a filled shape with some texture, so a UMAP alone cannot tell you there is structure. The "spectral" start uses eigenvectors of the graph (link back to the eigen unit); it gives a better start but the same caveats. Click any cell to mark its k high-D neighbours in both panels.
 :::
 
 ## UMAP vs PCA: two different jobs {.smaller}

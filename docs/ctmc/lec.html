@@ -1,0 +1,1124 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<script src="../site_libs/clipboard/clipboard.min.js"></script>
+<script src="../site_libs/quarto-html/tabby.min.js"></script>
+<script src="../site_libs/quarto-html/popper.min.js"></script>
+<script src="../site_libs/quarto-html/tippy.umd.min.js"></script>
+<link href="../site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="../site_libs/quarto-html/light-border.css" rel="stylesheet">
+<link href="../site_libs/quarto-html/quarto-syntax-highlighting-662ae1889177880cb371f83234c0a158.css" rel="stylesheet" id="quarto-text-highlighting-styles"><meta charset="utf-8">
+  <meta name="generator" content="quarto-1.7.30">
+
+  <meta name="author" content="Quantitative biology and integrative omics">
+  <title>Quantitative biology and integrative omics – Continuous-time Markov chains</title>
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, minimal-ui">
+  <link rel="stylesheet" href="../site_libs/revealjs/dist/reset.css">
+  <link rel="stylesheet" href="../site_libs/revealjs/dist/reveal.css">
+  <style>
+    code{white-space: pre-wrap;}
+    span.smallcaps{font-variant: small-caps;}
+    div.columns{display: flex; gap: min(4vw, 1.5em);}
+    div.column{flex: auto; overflow-x: auto;}
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+    ul.task-list{list-style: none;}
+    ul.task-list li input[type="checkbox"] {
+      width: 0.8em;
+      margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+      vertical-align: middle;
+    }
+    /* CSS for syntax highlighting */
+    html { -webkit-text-size-adjust: 100%; }
+    pre > code.sourceCode { white-space: pre; position: relative; }
+    pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+    pre > code.sourceCode > span:empty { height: 1.2em; }
+    .sourceCode { overflow: visible; }
+    code.sourceCode > span { color: inherit; text-decoration: inherit; }
+    div.sourceCode { margin: 1em 0; }
+    pre.sourceCode { margin: 0; }
+    @media screen {
+    div.sourceCode { overflow: auto; }
+    }
+    @media print {
+    pre > code.sourceCode { white-space: pre-wrap; }
+    pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+    }
+    pre.numberSource code
+      { counter-reset: source-line 0; }
+    pre.numberSource code > span
+      { position: relative; left: -4em; counter-increment: source-line; }
+    pre.numberSource code > span > a:first-child::before
+      { content: counter(source-line);
+        position: relative; left: -1em; text-align: right; vertical-align: baseline;
+        border: none; display: inline-block;
+        -webkit-touch-callout: none; -webkit-user-select: none;
+        -khtml-user-select: none; -moz-user-select: none;
+        -ms-user-select: none; user-select: none;
+        padding: 0 4px; width: 4em;
+      }
+    pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+    div.sourceCode
+      { color: #24292e;  }
+    @media screen {
+    pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+    }
+    code span { color: #24292e; } /* Normal */
+    code span.al { color: #ff5555; font-weight: bold; } /* Alert */
+    code span.an { color: #6a737d; } /* Annotation */
+    code span.at { color: #d73a49; } /* Attribute */
+    code span.bn { color: #005cc5; } /* BaseN */
+    code span.bu { color: #d73a49; } /* BuiltIn */
+    code span.cf { color: #d73a49; } /* ControlFlow */
+    code span.ch { color: #032f62; } /* Char */
+    code span.cn { color: #005cc5; } /* Constant */
+    code span.co { color: #6a737d; } /* Comment */
+    code span.cv { color: #6a737d; } /* CommentVar */
+    code span.do { color: #6a737d; } /* Documentation */
+    code span.dt { color: #d73a49; } /* DataType */
+    code span.dv { color: #005cc5; } /* DecVal */
+    code span.er { color: #ff5555; text-decoration: underline; } /* Error */
+    code span.ex { color: #d73a49; font-weight: bold; } /* Extension */
+    code span.fl { color: #005cc5; } /* Float */
+    code span.fu { color: #6f42c1; } /* Function */
+    code span.im { color: #032f62; } /* Import */
+    code span.in { color: #6a737d; } /* Information */
+    code span.kw { color: #d73a49; } /* Keyword */
+    code span.op { color: #24292e; } /* Operator */
+    code span.ot { color: #6f42c1; } /* Other */
+    code span.pp { color: #d73a49; } /* Preprocessor */
+    code span.re { color: #6a737d; } /* RegionMarker */
+    code span.sc { color: #005cc5; } /* SpecialChar */
+    code span.ss { color: #032f62; } /* SpecialString */
+    code span.st { color: #032f62; } /* String */
+    code span.va { color: #e36209; } /* Variable */
+    code span.vs { color: #032f62; } /* VerbatimString */
+    code span.wa { color: #ff5555; } /* Warning */
+  </style>
+  <link rel="stylesheet" href="../site_libs/revealjs/dist/theme/quarto-bf56578b9c06c165c166475cd19dbcd1.css">
+  <link href="../site_libs/revealjs/plugin/quarto-line-highlight/line-highlight.css" rel="stylesheet">
+  <link href="../site_libs/revealjs/plugin/reveal-menu/menu.css" rel="stylesheet">
+  <link href="../site_libs/revealjs/plugin/reveal-menu/quarto-menu.css" rel="stylesheet">
+  <link href="../site_libs/revealjs/plugin/quarto-support/footer.css" rel="stylesheet">
+  <style type="text/css">
+    .reveal div.sourceCode {
+      margin: 0;
+      overflow: auto;
+    }
+    .reveal div.hanging-indent {
+      margin-left: 1em;
+      text-indent: -1em;
+    }
+    .reveal .slide:not(.center) {
+      height: 100%;
+    }
+    .reveal .slide.scrollable {
+      overflow-y: auto;
+    }
+    .reveal .footnotes {
+      height: 100%;
+      overflow-y: auto;
+    }
+    .reveal .slide .absolute {
+      position: absolute;
+      display: block;
+    }
+    .reveal .footnotes ol {
+      counter-reset: ol;
+      list-style-type: none; 
+      margin-left: 0;
+    }
+    .reveal .footnotes ol li:before {
+      counter-increment: ol;
+      content: counter(ol) ". "; 
+    }
+    .reveal .footnotes ol li > p:first-child {
+      display: inline-block;
+    }
+    .reveal .slide ul,
+    .reveal .slide ol {
+      margin-bottom: 0.5em;
+    }
+    .reveal .slide ul li,
+    .reveal .slide ol li {
+      margin-top: 0.4em;
+      margin-bottom: 0.2em;
+    }
+    .reveal .slide ul[role="tablist"] li {
+      margin-bottom: 0;
+    }
+    .reveal .slide ul li > *:first-child,
+    .reveal .slide ol li > *:first-child {
+      margin-block-start: 0;
+    }
+    .reveal .slide ul li > *:last-child,
+    .reveal .slide ol li > *:last-child {
+      margin-block-end: 0;
+    }
+    .reveal .slide .columns:nth-child(3) {
+      margin-block-start: 0.8em;
+    }
+    .reveal blockquote {
+      box-shadow: none;
+    }
+    .reveal .tippy-content>* {
+      margin-top: 0.2em;
+      margin-bottom: 0.7em;
+    }
+    .reveal .tippy-content>*:last-child {
+      margin-bottom: 0.2em;
+    }
+    .reveal .slide > img.stretch.quarto-figure-center,
+    .reveal .slide > img.r-stretch.quarto-figure-center {
+      display: block;
+      margin-left: auto;
+      margin-right: auto; 
+    }
+    .reveal .slide > img.stretch.quarto-figure-left,
+    .reveal .slide > img.r-stretch.quarto-figure-left  {
+      display: block;
+      margin-left: 0;
+      margin-right: auto; 
+    }
+    .reveal .slide > img.stretch.quarto-figure-right,
+    .reveal .slide > img.r-stretch.quarto-figure-right  {
+      display: block;
+      margin-left: auto;
+      margin-right: 0; 
+    }
+  </style>
+</head>
+<body class="quarto-light">
+  <div class="reveal">
+    <div class="slides">
+
+<section id="title-slide" class="quarto-title-block center">
+  <h1 class="title">Continuous-time Markov chains</h1>
+  <p class="subtitle">Extra material — Continuous-time Markov chains</p>
+
+<div class="quarto-title-authors">
+<div class="quarto-title-author">
+<div class="quarto-title-author-name">
+Quantitative biology and integrative omics 
+</div>
+</div>
+</div>
+
+</section>
+<section id="about-this-lecture" class="slide level2">
+<h2>About this lecture</h2>
+<p>In Markov chains, time moved in <strong>steps</strong>: <span class="math inline">\(\mathbf{x}_{t+1} = \mathbf{x}_t P\)</span>. Real cells do not wait for a clock tick. A promoter can switch on at 10:03:17, and an ion channel can open after 2.4 ms.</p>
+<p>This lecture builds the <strong>continuous-time</strong> version of the same idea:</p>
+<ul>
+<li><strong>Rates</strong> instead of per-step probabilities.</li>
+<li>The time spent in a state is <strong>exponential</strong> (from Error models).</li>
+<li>The <strong>rate matrix</strong> <span class="math inline">\(Q\)</span>, whose rows sum to <strong>0</strong>.</li>
+<li><strong>Simulating</strong> a chain: draw a waiting time, then pick a jump.</li>
+<li>The <strong>stationary distribution</strong> from <span class="math inline">\(\boldsymbol\pi Q = \mathbf{0}\)</span>, found by balancing flows.</li>
+<li>How <span class="math inline">\(Q\)</span> links back to the step matrix <span class="math inline">\(P\)</span>.</li>
+</ul>
+<aside class="notes">
+<p>This is extra material that builds directly on Markov chains and Markov chains in R, and borrows one result from Error models: waiting times between random events are exponential. Same notation as before: row vectors, rows are “from”, columns are “to”. The one genuinely new object is the rate matrix Q. Everything else is a translation of what students already know about P. Keep the maths at the level of “rate = expected number of events per unit time”.</p>
+<style type="text/css">
+        span.MJX_Assistive_MathML {
+          position:absolute!important;
+          clip: rect(1px, 1px, 1px, 1px);
+          padding: 1px 0 0 0!important;
+          border: 0!important;
+          height: 1px!important;
+          width: 1px!important;
+          overflow: hidden!important;
+          display:block!important;
+      }</style></aside>
+</section>
+<section id="biology-happens-in-continuous-time" class="slide level2 smaller">
+<h2>Biology happens in continuous time</h2>
+<p>Many biological switches flip at random moments, not on a schedule:</p>
+<ul>
+<li><strong>Gene promoter ON/OFF</strong> (the <em>telegraph model</em>): a promoter switches between an active and a silent state, and mRNA is made only while it is ON.</li>
+<li><strong>Ion channels</strong> open and close; the current through a single channel jumps between levels.</li>
+<li><strong>Cell states</strong> such as stem ↔︎ progenitor → differentiated, observed in time-lapse.</li>
+<li><strong>Mutations</strong>: a DNA site changes base now and then, over millions of years.</li>
+</ul>
+<p>One promoter, simulated over 40 minutes (numbers = how long each period lasted):</p>
+
+<img data-src="fig02-telegraph-trace.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:78.0%"><aside class="notes">
+<p>Start with pictures, not equations. The trace is one simulated promoter that switches ON to OFF at rate 0.5 per minute and OFF to ON at 0.25 per minute; these numbers are the running example of the whole lecture. Point out the two things a step-based chain cannot show: switches happen at arbitrary times, and the periods have very different lengths, some a few seconds, some 9 minutes. Asking “what is the probability of switching in the next step?” depends on how long a step is. We need a description that does not depend on a step size: rates.</p>
+<style type="text/css">
+        span.MJX_Assistive_MathML {
+          position:absolute!important;
+          clip: rect(1px, 1px, 1px, 1px);
+          padding: 1px 0 0 0!important;
+          border: 0!important;
+          height: 1px!important;
+          width: 1px!important;
+          overflow: hidden!important;
+          display:block!important;
+      }</style></aside>
+</section>
+<section id="from-per-step-probabilities-to-rates" class="slide level2 smaller">
+<h2>From per-step probabilities to rates</h2>
+<p>A <strong>rate</strong> is “expected number of events per unit of time”, for example <span class="math inline">\(0.5\)</span> per minute.</p>
+<table class="caption-top">
+<colgroup>
+<col style="width: 33%">
+<col style="width: 33%">
+<col style="width: 33%">
+</colgroup>
+<thead>
+<tr class="header">
+<th></th>
+<th>Discrete time (Markov chains)</th>
+<th>Continuous time (today)</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Time</td>
+<td>steps <span class="math inline">\(t = 0, 1, 2, \dots\)</span></td>
+<td>any time <span class="math inline">\(t \ge 0\)</span></td>
+</tr>
+<tr class="even">
+<td>Arrow <span class="math inline">\(i \to j\)</span> carries</td>
+<td>probability <span class="math inline">\(p_{ij}\)</span> per step</td>
+<td><strong>rate</strong> <span class="math inline">\(q_{ij}\)</span>, e.g.&nbsp;0.5 /min</td>
+</tr>
+<tr class="odd">
+<td>Staying put</td>
+<td>self-loop <span class="math inline">\(p_{ii}\)</span></td>
+<td>no self-loop: just “not jumped yet”</td>
+</tr>
+<tr class="even">
+<td>Collected in</td>
+<td><span class="math inline">\(P\)</span>, rows sum to <strong>1</strong></td>
+<td><span class="math inline">\(Q\)</span>, rows sum to <strong>0</strong></td>
+</tr>
+</tbody>
+</table>
+<p>For a <strong>short</strong> time <span class="math inline">\(\Delta t\)</span>, a rate turns into a small probability:</p>
+<p><span class="math display">\[P(\text{jump } i \to j \text{ within } \Delta t) \;\approx\; q_{ij}\,\Delta t .\]</span></p>
+<p>With <span class="math inline">\(q_{\text{ON}\to\text{OFF}} = 0.5\)</span> /min: in 6 seconds (<span class="math inline">\(\Delta t = 0.1\)</span> min) the chance to switch off is about <span class="math inline">\(0.05\)</span>.</p>
+<aside class="notes">
+<p>The table is the map for the whole lecture; come back to it at the end. The key sentence: a rate is not a probability. A rate can be larger than 1 (2 per minute is fine), and it has units. The approximation q times delta-t only holds for short intervals, where the product is small; for long intervals it would exceed 1. We will return to this approximation near the end, where it gives P ≈ I + QΔt. The “no self-loop” row often surprises students: in continuous time staying is not an event; it is simply time passing without a jump.</p>
+<style type="text/css">
+        span.MJX_Assistive_MathML {
+          position:absolute!important;
+          clip: rect(1px, 1px, 1px, 1px);
+          padding: 1px 0 0 0!important;
+          border: 0!important;
+          height: 1px!important;
+          width: 1px!important;
+          overflow: hidden!important;
+          display:block!important;
+      }</style></aside>
+</section>
+<section id="how-long-do-you-stay-exponential-waiting-times" class="slide level2 smaller">
+<h2>How long do you stay? Exponential waiting times</h2>
+<p>Let <span class="math inline">\(q_i\)</span> be the <strong>total rate of leaving</strong> state <span class="math inline">\(i\)</span> (the sum of the rates on all arrows out of <span class="math inline">\(i\)</span>). Then the time <span class="math inline">\(T\)</span> spent in <span class="math inline">\(i\)</span> before the next jump is <strong>exponential</strong> (see the exponential distribution in Error models):</p>
+<p><span class="math display">\[T \sim \text{Exp}(q_i), \qquad \text{mean time in } i = \frac{1}{q_i}.\]</span></p>
+<p>Promoter: ON is left at <span class="math inline">\(a = 0.5\)</span> /min, so an ON period lasts on average <span class="math inline">\(1/0.5 = 2\)</span> minutes.</p>
+<div class="columns">
+<div class="column" style="width:52%;">
+<ul>
+<li>Short periods are the most common; long ones are rare but do happen.</li>
+<li><strong>Memoryless</strong>: a promoter that has been ON for 5 minutes is no more likely to switch off in the next second than one that just switched on.</li>
+<li>Same maths as gaps between random events, for example <span class="math inline">\(P(T &gt; 4) = e^{-0.5\cdot 4} \approx 0.135\)</span>.</li>
+</ul>
+</div><div class="column" style="width:48%;">
+<p><img data-src="fig04-waiting-times.svg" style="width:100.0%"></p>
+</div></div>
+<aside class="notes">
+<p>Link to Error models: there, the gaps between events in a stream of random events at rate lambda were exponential with mean 1/lambda. Here the “event” is leaving the current state, and the rate is the total leaving rate q_i. The histogram shows 2000 simulated ON periods with the curve a·exp(−a·t) on top; the dashed line is the mean of 2 minutes. Memorylessness is what makes the chain Markov: the future depends on the current state only, not on how long you have been there. This is also the main assumption that can fail, which we come back to on the last slides.</p>
+<style type="text/css">
+        span.MJX_Assistive_MathML {
+          position:absolute!important;
+          clip: rect(1px, 1px, 1px, 1px);
+          padding: 1px 0 0 0!important;
+          border: 0!important;
+          height: 1px!important;
+          width: 1px!important;
+          overflow: hidden!important;
+          display:block!important;
+      }</style></aside>
+</section>
+<section id="where-to-jump-next-the-jump-chain" class="slide level2 smaller">
+<h2>Where to jump next: the jump chain</h2>
+<p>When a state has <strong>several</strong> arrows out, two questions are answered separately:</p>
+<ol type="1">
+<li><strong>When</strong> do you leave? After an <span class="math inline">\(\text{Exp}(q_i)\)</span> time, where <span class="math inline">\(q_i = \sum_{j \ne i} q_{ij}\)</span>.</li>
+<li><strong>Where</strong> do you go? To <span class="math inline">\(j\)</span> with probability <span class="math display">\[\frac{q_{ij}}{q_i} = \frac{\text{rate to } j}{\text{total leaving rate}}.\]</span></li>
+</ol>
+
+<img data-src="fig05-jump-chain.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:58.0%"><p>The list of states visited, ignoring the times, is an ordinary discrete Markov chain (the <strong>jump chain</strong>), with no self-loops.</p>
+<aside class="notes">
+<p>Example: a progenitor cell can go back to stem at 0.2 per day or forward to differentiated at 0.2 per day. It leaves at total rate 0.4 per day, so on average after 2.5 days, and then each direction is equally likely. If the rates were 0.1 and 0.3, it would still leave at 0.4 per day, but go forward 3 times out of 4. A useful picture: every arrow is its own exponential alarm clock; the first one to ring decides where you go. The fastest clock wins most often, in proportion to its rate. The jump chain connects to Markov chains: its rows sum to 1, but its diagonal is 0.</p>
+<style type="text/css">
+        span.MJX_Assistive_MathML {
+          position:absolute!important;
+          clip: rect(1px, 1px, 1px, 1px);
+          padding: 1px 0 0 0!important;
+          border: 0!important;
+          height: 1px!important;
+          width: 1px!important;
+          overflow: hidden!important;
+          display:block!important;
+      }</style></aside>
+</section>
+<section id="the-rate-matrix-q" class="slide level2 smaller">
+<h2>The rate matrix <span class="math inline">\(Q\)</span></h2>
+<p>Collect the rates in a matrix, in the same <strong>row = from, column = to</strong> convention as <span class="math inline">\(P\)</span>:</p>
+<ul>
+<li><strong>Off the diagonal:</strong> <span class="math inline">\(q_{ij}\)</span> = rate from <span class="math inline">\(i\)</span> to <span class="math inline">\(j\)</span> (zero if there is no arrow).</li>
+<li><strong>On the diagonal:</strong> <span class="math inline">\(q_{ii} = -q_i\)</span>, minus the total rate of leaving <span class="math inline">\(i\)</span>.</li>
+</ul>
+<p>So <strong>every row of <span class="math inline">\(Q\)</span> sums to 0</strong>. For 3 cell states (rates per day):</p>
+<p><span class="math display">\[
+Q = \begin{array}{c c}
+&amp; \begin{array}{ccc}\ \text{stem} &amp; \ \ \text{prog} &amp; \ \ \text{diff}\end{array}\\
+\begin{array}{c}\text{stem}\\ \text{prog}\\ \text{diff}\end{array} &amp;
+\left(\begin{array}{ccc}
+-0.4 &amp; 0.4 &amp; 0\\
+0.2 &amp; -0.4 &amp; 0.2\\
+0 &amp; 0.1 &amp; -0.1
+\end{array}\right)
+\end{array}
+\qquad \begin{array}{l} \leftarrow -0.4 + 0.4 + 0 = 0\\ \leftarrow 0.2 - 0.4 + 0.2 = 0\\ \leftarrow 0 + 0.1 - 0.1 = 0\end{array}
+\]</span></p>
+<table class="caption-top">
+<thead>
+<tr class="header">
+<th>Check for <span class="math inline">\(P\)</span> (discrete)</th>
+<th>Check for <span class="math inline">\(Q\)</span> (continuous)</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>entries between 0 and 1</td>
+<td>off-diagonal entries <span class="math inline">\(\ge 0\)</span> (any size)</td>
+</tr>
+<tr class="even">
+<td>rows sum to <strong>1</strong></td>
+<td>diagonal <span class="math inline">\(\le 0\)</span>, rows sum to <strong>0</strong></td>
+</tr>
+</tbody>
+</table>
+<aside class="notes">
+<p>This is the central object of the unit. Why the funny diagonal? Think of the fraction of cells in each state. Probability flows out of stem at rate 0.4 times the fraction in stem; that loss is the −0.4. Probability flows into prog from stem and from diff; those gains are the positive entries in the prog column. Gains and losses cancel overall, so the total stays 1; that is exactly what “rows sum to 0” guarantees. The checklist mirrors the one students used for P: a quick way to spot an invalid Q is a row that does not sum to 0 or a negative off-diagonal entry.</p>
+<style type="text/css">
+        span.MJX_Assistive_MathML {
+          position:absolute!important;
+          clip: rect(1px, 1px, 1px, 1px);
+          padding: 1px 0 0 0!important;
+          border: 0!important;
+          height: 1px!important;
+          width: 1px!important;
+          overflow: hidden!important;
+          display:block!important;
+      }</style></aside>
+</section>
+<section id="a-2-state-example-by-hand" class="slide level2 smaller">
+<h2>A 2-state example by hand</h2>
+<div class="columns">
+<div class="column" style="width:50%;">
+<p><img data-src="fig03-rate-diagram.svg" style="width:100.0%"></p>
+</div><div class="column" style="width:50%;">
+<p>States ordered <span class="math inline">\((\text{ON}, \text{OFF})\)</span>; <span class="math inline">\(a\)</span> = rate ON→OFF, <span class="math inline">\(b\)</span> = rate OFF→ON.</p>
+<p><span class="math display">\[Q = \begin{pmatrix} -a &amp; a\\ b &amp; -b \end{pmatrix} = \begin{pmatrix} -0.5 &amp; 0.5\\ 0.25 &amp; -0.25 \end{pmatrix}\]</span></p>
+<ul>
+<li>Rows: <span class="math inline">\(-0.5 + 0.5 = 0\)</span> ✓, <span class="math inline">\(\ 0.25 - 0.25 = 0\)</span> ✓</li>
+<li>Leaving rates: <span class="math inline">\(q_{\text{ON}} = 0.5\)</span>, <span class="math inline">\(q_{\text{OFF}} = 0.25\)</span> /min</li>
+<li>Mean times: ON <span class="math inline">\(1/0.5 = 2\)</span> min, OFF <span class="math inline">\(1/0.25 = 4\)</span> min</li>
+<li>With only one arrow out, the jump chain is “always switch”.</li>
+</ul>
+</div></div>
+<p>How does a population change? Like <span class="math inline">\(\mathbf{x}_{t+1} - \mathbf{x}_t = \mathbf{x}_t(P - I)\)</span> in discrete time, here <strong>change per minute</strong> <span class="math inline">\(= \mathbf{x}(t)\,Q\)</span>:</p>
+<p><span class="math display">\[\text{change in } x_{\text{ON}} \text{ per minute} = \underbrace{-a\,x_{\text{ON}}}_{\text{leaving ON}} + \underbrace{b\,x_{\text{OFF}}}_{\text{arriving from OFF}}.\]</span></p>
+<aside class="notes">
+<p>Work through this on the board. Read Q off the diagram row by row: the ON row has the ON→OFF rate in the OFF column, and minus that on the diagonal. Then the OFF row. Check both row sums. The bottom line is the only “differential equation” in the lecture, and we keep it in words: the fraction ON goes down because ON cells leave at rate a, and up because OFF cells arrive at rate b. In symbols dx/dt = xQ, but students do not need calculus here: “change per minute” is enough. If all start OFF, the fraction ON initially grows at 0.25 per minute.</p>
+<style type="text/css">
+        span.MJX_Assistive_MathML {
+          position:absolute!important;
+          clip: rect(1px, 1px, 1px, 1px);
+          padding: 1px 0 0 0!important;
+          border: 0!important;
+          height: 1px!important;
+          width: 1px!important;
+          overflow: hidden!important;
+          display:block!important;
+      }</style></aside>
+</section>
+<section id="simulating-a-chain-the-gillespie-idea" class="slide level2 smaller">
+<h2>Simulating a chain: the Gillespie idea</h2>
+<p>To simulate one cell, alternate <strong>how long</strong> and <strong>where to</strong>:</p>
+
+<img data-src="fig06-gillespie-loop.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:82.0%"><div class="sourceCode" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a aria-hidden="true" tabindex="-1"></a>a <span class="ot">&lt;-</span> <span class="fl">0.5</span>; b <span class="ot">&lt;-</span> <span class="fl">0.25</span>                      <span class="co"># rates per minute</span></span>
+<span id="cb1-2"><a aria-hidden="true" tabindex="-1"></a>t <span class="ot">&lt;-</span> <span class="dv">0</span>; state <span class="ot">&lt;-</span> <span class="st">"OFF"</span>; times <span class="ot">&lt;-</span> <span class="dv">0</span>; states <span class="ot">&lt;-</span> state</span>
+<span id="cb1-3"><a aria-hidden="true" tabindex="-1"></a><span class="cf">while</span> (t <span class="sc">&lt;</span> <span class="dv">60</span>) {</span>
+<span id="cb1-4"><a aria-hidden="true" tabindex="-1"></a>  rate  <span class="ot">&lt;-</span> <span class="cf">if</span> (state <span class="sc">==</span> <span class="st">"ON"</span>) a <span class="cf">else</span> b   <span class="co"># total leaving rate</span></span>
+<span id="cb1-5"><a aria-hidden="true" tabindex="-1"></a>  t     <span class="ot">&lt;-</span> t <span class="sc">+</span> <span class="fu">rexp</span>(<span class="dv">1</span>, rate)             <span class="co"># how long?  Exp(rate)</span></span>
+<span id="cb1-6"><a aria-hidden="true" tabindex="-1"></a>  state <span class="ot">&lt;-</span> <span class="cf">if</span> (state <span class="sc">==</span> <span class="st">"ON"</span>) <span class="st">"OFF"</span> <span class="cf">else</span> <span class="st">"ON"</span>   <span class="co"># where to? (only one choice here)</span></span>
+<span id="cb1-7"><a aria-hidden="true" tabindex="-1"></a>  times <span class="ot">&lt;-</span> <span class="fu">c</span>(times, t); states <span class="ot">&lt;-</span> <span class="fu">c</span>(states, state)</span>
+<span id="cb1-8"><a aria-hidden="true" tabindex="-1"></a>}</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>This is the <strong>Gillespie algorithm</strong> (Gillespie 1977), used for simulating chemical reactions in cells.</p>
+<aside class="notes">
+<p>The algorithm is exactly the two questions of the jump-chain slide put in a loop. With two states the “where to” is trivial; with more states it is a sample() with probabilities q_ij / q_i. No time step is needed and no approximation is made: each simulated path is an exact draw from the chain. That is why it is the standard tool for stochastic gene expression, where molecule numbers are small and randomness matters. The exercise asks students to write this loop and measure the fraction of time ON. Reference: D. T. Gillespie (1977), Exact stochastic simulation of coupled chemical reactions, Journal of Physical Chemistry 81(25), 2340–2361.</p>
+<style type="text/css">
+        span.MJX_Assistive_MathML {
+          position:absolute!important;
+          clip: rect(1px, 1px, 1px, 1px);
+          padding: 1px 0 0 0!important;
+          border: 0!important;
+          height: 1px!important;
+          width: 1px!important;
+          overflow: hidden!important;
+          display:block!important;
+      }</style></aside>
+</section>
+<section id="try-it-200-promoters-in-continuous-time" class="slide level2">
+<h2>Try it: 200 promoters in continuous time</h2>
+<link rel="stylesheet" href="../demos/dist/demo.css">
+<div data-demo="ctmcwalkers" data-q="0 0.5 0.25 0" data-states="ON OFF" data-label="Promoter ON/OFF" data-unit="/min" data-start="1" data-speed="1" data-view="10" data-follow="1" data-presets="fast slow cell3 absorbing"></div>
+<script src="../demos/dist/ctmcwalkers.js"></script>
+<aside class="notes">
+<p>200 promoters, all starting OFF. Press Run. Unlike the discrete demo, there is no Step button: each walker jumps at its own random moment, so they leave one by one while the clock runs. The arrows show rates, not probabilities, and there are no self-loops. The ringed walker’s timeline below the diagram is the most important picture: bars of random length, mostly short, a few long. These are exponential waiting times, mean 4 min in OFF and 2 min in ON. The bars: walker fractions next to the exact x(t); the dashed line is π = (1/3, 2/3), which we derive on the next slide. “Fast switching” (rates ×4) and “Slow switching” (rates ÷5) have the same π but reach it at very different speeds, and the timeline of the ringed walker looks completely different. “Absorbing” has a dead state with no way out, so in the end every walker is dead. Speed changes only how fast the clock runs on screen, not the chain.</p>
+<style type="text/css">
+        span.MJX_Assistive_MathML {
+          position:absolute!important;
+          clip: rect(1px, 1px, 1px, 1px);
+          padding: 1px 0 0 0!important;
+          border: 0!important;
+          height: 1px!important;
+          width: 1px!important;
+          overflow: hidden!important;
+          display:block!important;
+      }</style></aside>
+</section>
+<section id="stationary-distribution-balance-the-flows" class="slide level2 smaller">
+<h2>Stationary distribution: balance the flows</h2>
+<p>The distribution stops changing when the change per unit time is zero:</p>
+<p><span class="math display">\[\boldsymbol\pi Q = \mathbf{0}, \qquad \textstyle\sum_k \pi_k = 1 \qquad \text{(compare } \boldsymbol\pi P = \boldsymbol\pi \text{ in discrete time).}\]</span></p>
+<div class="columns">
+<div class="column" style="width:50%;">
+<p><img data-src="fig07-flow-balance.svg" style="width:100.0%"></p>
+</div><div class="column" style="width:50%;">
+<p>For 2 states this is <strong>flow in = flow out</strong>:</p>
+<p><span class="math display">\[\pi_{\text{ON}}\, a = \pi_{\text{OFF}}\, b .\]</span></p>
+<p>Add <span class="math inline">\(\pi_{\text{ON}} + \pi_{\text{OFF}} = 1\)</span>:</p>
+<p><span class="math display">\[\boldsymbol\pi = \frac{(b,\ a)}{a+b}.\]</span></p>
+<p>Promoter: <span class="math inline">\(\boldsymbol\pi = (0.25, 0.5)/0.75 = (1/3,\ 2/3)\)</span>. ON one third of the time.</p>
+</div></div>
+<p>Same answer from the waiting times: mean ON 2 min, mean OFF 4 min, so ON a fraction <span class="math inline">\(2/(2+4) = 1/3\)</span> of the time.</p>
+<aside class="notes">
+<p>Flow balance is the intuitive route and avoids any matrix algebra. Picture many cells. Cells leave ON at rate a each, so the flow ON→OFF is π_ON times a cells per minute. The flow OFF→ON is π_OFF times b. At equilibrium these must be equal, otherwise one state would keep filling up. Writing out πQ = 0 gives exactly this equation twice (the two equations are the same, as in Markov chains in R), so we need the sum-to-1 constraint as well. The check with mean waiting times is a nice second view: in the long run the time is split in proportion to the mean lengths of the periods. For more than 2 states, πQ = 0 is a set of linear equations solved like any other; for a chain in a line (stem ↔︎ prog ↔︎ diff) balancing each pair of neighbours still works.</p>
+<style type="text/css">
+        span.MJX_Assistive_MathML {
+          position:absolute!important;
+          clip: rect(1px, 1px, 1px, 1px);
+          padding: 1px 0 0 0!important;
+          border: 0!important;
+          height: 1px!important;
+          width: 1px!important;
+          overflow: hidden!important;
+          display:block!important;
+      }</style></aside>
+</section>
+<section id="relaxation-how-fast-is-equilibrium-reached" class="slide level2 smaller">
+<h2>Relaxation: how fast is equilibrium reached?</h2>
+<p>For 2 states, the distance to <span class="math inline">\(\boldsymbol\pi\)</span> shrinks exponentially, with rate <span class="math inline">\(a + b\)</span>:</p>
+<p><span class="math display">\[x_{\text{ON}}(t) = \pi_{\text{ON}} + \big(x_{\text{ON}}(0) - \pi_{\text{ON}}\big)\, e^{-(a+b)t}.\]</span></p>
+
+<img data-src="fig08-relaxation.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:62.0%"><p>Promoter: <span class="math inline">\(a + b = 0.75\)</span> /min, so the gap halves every <span class="math inline">\(\ln 2 / 0.75 \approx 0.9\)</span> min. Both rates speed this up, even though only their <strong>ratio</strong> sets <span class="math inline">\(\boldsymbol\pi\)</span>.</p>
+<aside class="notes">
+<p>We state this result without derivation; it is the continuous-time version of “the distance to π shrinks by the same factor every step”. Check two values: at t = 0 the formula gives x(0); for large t the exponential vanishes and we are left with π. The thin line is 200 simulated walkers starting all OFF: it follows the exact curve with random wobble. Key message: the ratio a:b decides where the chain ends up, the sum a+b decides how fast it gets there. That is why “Fast switching” and “Slow switching” in the demo have the same dashed line but very different curves. For larger chains there are several such rates (they are eigenvalues of Q), and the slowest one dominates.</p>
+<style type="text/css">
+        span.MJX_Assistive_MathML {
+          position:absolute!important;
+          clip: rect(1px, 1px, 1px, 1px);
+          padding: 1px 0 0 0!important;
+          border: 0!important;
+          height: 1px!important;
+          width: 1px!important;
+          overflow: hidden!important;
+          display:block!important;
+      }</style></aside>
+</section>
+<section id="back-to-discrete-time-p-approx-i-qdelta-t" class="slide level2 smaller">
+<h2>Back to discrete time: <span class="math inline">\(P \approx I + Q\,\Delta t\)</span></h2>
+<p>Look at the chain only every <span class="math inline">\(\Delta t\)</span> minutes. For small <span class="math inline">\(\Delta t\)</span>, using <span class="math inline">\(q_{ij}\Delta t\)</span> for the chance of a jump:</p>
+<p><span class="math display">\[P \approx I + Q\,\Delta t, \qquad \Delta t = 0.25:\quad P = \begin{pmatrix} 1 - 0.125 &amp; 0.125\\ 0.0625 &amp; 1 - 0.0625 \end{pmatrix} = \begin{pmatrix} 0.875 &amp; 0.125\\ 0.0625 &amp; 0.9375 \end{pmatrix}.\]</span></p>
+<div class="columns">
+<div class="column" style="width:48%;">
+<ul>
+<li>Rows of <span class="math inline">\(P\)</span> sum to 1, because rows of <span class="math inline">\(Q\)</span> sum to 0.</li>
+<li>Same <span class="math inline">\(\boldsymbol\pi\)</span>: <span class="math inline">\(\boldsymbol\pi P = \boldsymbol\pi + \Delta t\,\boldsymbol\pi Q = \boldsymbol\pi\)</span>.</li>
+<li>Small <span class="math inline">\(\Delta t\)</span> follows the exact curve; large <span class="math inline">\(\Delta t\)</span> does not.</li>
+<li><em>Aside:</em> the exact step matrix is <span class="math inline">\(P(t) = e^{Qt}\)</span>, the “matrix exponential” (<code>expm</code> package). Not needed here.</li>
+</ul>
+</div><div class="column" style="width:52%;">
+<p><img data-src="fig09-small-dt.svg" style="width:100.0%"></p>
+</div></div>
+<aside class="notes">
+<p>This slide ties the two halves of the Markov material together. The step matrix of Markov chains is what you get when you watch a continuous chain through a stroboscope. The approximation P ≈ I + QΔt is the matrix version of “probability ≈ rate × time”. Two quick checks students can do: the rows sum to 1, and π is unchanged. The figure shows the price of a coarse step: with Δt = 1 min the steps overshoot early on (0.31 instead of 0.26 at 2 minutes), with Δt = 0.25 they are close. If Δt is so large that a diagonal entry of I + QΔt becomes negative, it is not a valid P at all. The exact P(t) = exp(Qt) is mentioned only so students recognise it in the literature; nothing in the course uses it.</p>
+<style type="text/css">
+        span.MJX_Assistive_MathML {
+          position:absolute!important;
+          clip: rect(1px, 1px, 1px, 1px);
+          padding: 1px 0 0 0!important;
+          border: 0!important;
+          height: 1px!important;
+          width: 1px!important;
+          overflow: hidden!important;
+          display:block!important;
+      }</style></aside>
+</section>
+<section id="where-this-shows-up-transcriptional-bursting" class="slide level2 smaller">
+<h2>Where this shows up: transcriptional bursting</h2>
+<p>Add mRNA to the telegraph model: while ON, mRNA is made at rate <span class="math inline">\(s\)</span>; each mRNA is degraded at rate <span class="math inline">\(g\)</span>. It is still a continuous-time Markov chain, now with many states (promoter, number of mRNA), simulated with Gillespie.</p>
+
+<img data-src="fig10-bursting.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:82.0%"><p>Short, rare ON periods give <strong>bursts</strong>. Across 2000 simulated cells: mean <span class="math inline">\(4.5\)</span> mRNA, variance <span class="math inline">\(39\)</span>, and <span class="math inline">\(31\%\)</span> zeros where a Poisson with that mean would give <span class="math inline">\(1\%\)</span>. These are the <strong>overdispersed</strong> counts of Error models; with bursty promoters, counts are close to <strong>negative binomial</strong>.</p>
+<aside class="notes">
+<p>Parameters for the figure: OFF to ON at 0.05 per minute, ON to OFF at 0.5 per minute, 5 mRNA per minute while ON, mRNA lifetime 10 minutes. The left panel is one cell: the count jumps up during each short ON period (the blue ticks) and decays in between. The right panel is a snapshot of 2000 independent cells. Compared with a Poisson of the same mean (open circles), there are far more zeros and a long right tail. This is one mechanistic explanation for overdispersion in single-cell counts and links the negative binomial of Error models to a physical model; other sources of cell-to-cell variation add to it. The telegraph model goes back to Peccoud &amp; Ycart (1995, Theoretical Population Biology 48: 222–234); transcriptional bursts were counted molecule by molecule in mammalian cells by Raj et al.&nbsp;(2006, PLoS Biology 4: e309).</p>
+<style type="text/css">
+        span.MJX_Assistive_MathML {
+          position:absolute!important;
+          clip: rect(1px, 1px, 1px, 1px);
+          padding: 1px 0 0 0!important;
+          border: 0!important;
+          height: 1px!important;
+          width: 1px!important;
+          overflow: hidden!important;
+          display:block!important;
+      }</style></aside>
+</section>
+<section id="where-this-shows-up-dna-substitution-models" class="slide level2 smaller">
+<h2>Where this shows up: DNA substitution models</h2>
+<p>At one DNA site, bases change by mutation over long times: a 4-state chain on <span class="math inline">\(\{\mathtt{A},\mathtt{C},\mathtt{G},\mathtt{T}\}\)</span>.</p>
+<p>The simplest model, <strong>Jukes–Cantor</strong>: every change happens at the same rate <span class="math inline">\(\alpha\)</span>.</p>
+<p><span class="math display">\[Q = \begin{pmatrix} -3\alpha &amp; \alpha &amp; \alpha &amp; \alpha\\ \alpha &amp; -3\alpha &amp; \alpha &amp; \alpha\\ \alpha &amp; \alpha &amp; -3\alpha &amp; \alpha\\ \alpha &amp; \alpha &amp; \alpha &amp; -3\alpha \end{pmatrix}, \qquad \boldsymbol\pi = \left(\tfrac14, \tfrac14, \tfrac14, \tfrac14\right).\]</span></p>
+<ul>
+<li>With <span class="math inline">\(3\alpha = 1\)</span>, time is measured in expected substitutions per site, and the chance that a site still shows its original base after time <span class="math inline">\(t\)</span> is <span class="math inline">\(\tfrac14 + \tfrac34 e^{-4t/3}\)</span>.</li>
+<li>So two sequences can never differ at more than about <span class="math inline">\(3/4\)</span> of their sites: changes on top of changes are hidden. Distances between species are corrected for this.</li>
+<li>Richer models give transitions and transversions different rates, or unequal base frequencies. Phylogenetics software fits such <span class="math inline">\(Q\)</span> matrices.</li>
+</ul>
+<aside class="notes">
+<p>This is the second big application, kept brief. Each site of an alignment is one walker; the tree tells you how long each walker had to change. Jukes and Cantor (1969) is the classical starting point. The formula 1/4 + 3/4 e^{−4t/3} is the relaxation formula of two slides ago for this chain; we only state it. The saturation at 3/4 is why the raw fraction of differing sites underestimates evolutionary distance for distantly related sequences. The demo has a Jukes–Cantor preset in the exercise page. Models such as Kimura’s two-parameter model, HKY and GTR are the same idea with more rates.</p>
+<style type="text/css">
+        span.MJX_Assistive_MathML {
+          position:absolute!important;
+          clip: rect(1px, 1px, 1px, 1px);
+          padding: 1px 0 0 0!important;
+          border: 0!important;
+          height: 1px!important;
+          width: 1px!important;
+          overflow: hidden!important;
+          display:block!important;
+      }</style></aside>
+</section>
+<section id="assumptions-and-when-they-break" class="slide level2 smaller">
+<h2>Assumptions, and when they break</h2>
+<table class="caption-top">
+<colgroup>
+<col style="width: 33%">
+<col style="width: 33%">
+<col style="width: 33%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Assumption</th>
+<th>What it means</th>
+<th>When it breaks</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><strong>Memoryless</strong></td>
+<td>waiting times are exponential; time already spent does not matter</td>
+<td>a cell-cycle phase has a minimum length; a promoter has a refractory period after switching off</td>
+</tr>
+<tr class="even">
+<td><strong>Constant rates</strong></td>
+<td><span class="math inline">\(q_{ij}\)</span> do not change over time</td>
+<td>circadian rhythms, a drug added at a fixed time, cells that age</td>
+</tr>
+<tr class="odd">
+<td><strong>Few, well-defined states</strong></td>
+<td>the state says everything about the future</td>
+<td>a “state” hides sub-states (chromatin, signalling)</td>
+</tr>
+<tr class="even">
+<td><strong>Independent walkers</strong></td>
+<td>cells do not influence each other</td>
+<td>quorum sensing, competition for resources</td>
+</tr>
+</tbody>
+</table>
+<p>A common fix for non-exponential times: split one visible state into several hidden <strong>stages</strong> in a row. The total time then has a peak instead of a maximum at zero, while the chain stays Markov on the larger state space.</p>
+<aside class="notes">
+<p>Be honest: the exponential waiting time is a strong assumption. A quick test on data is the histogram of dwell times: exponential means the most common dwell time is very short. Many biological dwell times instead have a clear peak; an OFF state with a refractory period is a known example for some genes. The stage trick connects back to Hidden Markov models: the observed ON/OFF is then a function of a hidden chain. Time-varying rates are fine to simulate (the Gillespie loop must then be adapted) but the simple formulas for π and relaxation no longer hold.</p>
+<style type="text/css">
+        span.MJX_Assistive_MathML {
+          position:absolute!important;
+          clip: rect(1px, 1px, 1px, 1px);
+          padding: 1px 0 0 0!important;
+          border: 0!important;
+          height: 1px!important;
+          width: 1px!important;
+          overflow: hidden!important;
+          display:block!important;
+      }</style></aside>
+</section>
+<section id="summary" class="slide level2 smaller">
+<h2>Summary</h2>
+<table class="caption-top">
+<colgroup>
+<col style="width: 33%">
+<col style="width: 33%">
+<col style="width: 33%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Concept</th>
+<th>Discrete time</th>
+<th>Continuous time</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Arrow <span class="math inline">\(i \to j\)</span></td>
+<td>probability <span class="math inline">\(p_{ij}\)</span></td>
+<td>rate <span class="math inline">\(q_{ij}\)</span> (per time unit)</td>
+</tr>
+<tr class="even">
+<td>Matrix</td>
+<td><span class="math inline">\(P\)</span>, rows sum to 1</td>
+<td><span class="math inline">\(Q\)</span>, <span class="math inline">\(q_{ii} = -q_i\)</span>, rows sum to <strong>0</strong></td>
+</tr>
+<tr class="odd">
+<td>Time in state <span class="math inline">\(i\)</span></td>
+<td>geometric (in steps)</td>
+<td><strong>exponential</strong>, mean <span class="math inline">\(1/q_i\)</span></td>
+</tr>
+<tr class="even">
+<td>Next state</td>
+<td>row <span class="math inline">\(i\)</span> of <span class="math inline">\(P\)</span></td>
+<td><span class="math inline">\(j\)</span> with probability <span class="math inline">\(q_{ij}/q_i\)</span></td>
+</tr>
+<tr class="odd">
+<td>Evolution</td>
+<td><span class="math inline">\(\mathbf{x}_{t+1} = \mathbf{x}_t P\)</span></td>
+<td>change per time <span class="math inline">\(= \mathbf{x}(t)\,Q\)</span></td>
+</tr>
+<tr class="even">
+<td>Stationary</td>
+<td><span class="math inline">\(\boldsymbol\pi P = \boldsymbol\pi\)</span></td>
+<td><span class="math inline">\(\boldsymbol\pi Q = \mathbf{0}\)</span>; 2 states: <span class="math inline">\((b, a)/(a+b)\)</span></td>
+</tr>
+<tr class="odd">
+<td>Link</td>
+<td><span class="math inline">\(P \approx I + Q\,\Delta t\)</span> for small <span class="math inline">\(\Delta t\)</span></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>Simulate with Gillespie: <strong>how long</strong> (exponential), then <strong>where to</strong> (rate / total rate).</p>
+<aside class="notes">
+<p>Return to the table from the start of the lecture. Every row of the discrete-time story has a continuous-time partner. The things to remember: rates are not probabilities; the time in a state is exponential with mean one over the total leaving rate; Q has rows summing to zero; the stationary distribution balances flows; and for small time steps P is approximately I + QΔt. The exercise practises all of these by hand, with the demo, and in base R with a Gillespie loop.</p>
+<style type="text/css">
+        span.MJX_Assistive_MathML {
+          position:absolute!important;
+          clip: rect(1px, 1px, 1px, 1px);
+          padding: 1px 0 0 0!important;
+          border: 0!important;
+          height: 1px!important;
+          width: 1px!important;
+          overflow: hidden!important;
+          display:block!important;
+      }</style></aside>
+
+
+</section>
+    </div>
+  <div class="quarto-auto-generated-content" style="display: none;">
+<div class="footer footer-default">
+
+</div>
+</div></div>
+
+  <script>window.backupDefine = window.define; window.define = undefined;</script>
+  <script src="../site_libs/revealjs/dist/reveal.js"></script>
+  <!-- reveal.js plugins -->
+  <script src="../site_libs/revealjs/plugin/quarto-line-highlight/line-highlight.js"></script>
+  <script src="../site_libs/revealjs/plugin/pdf-export/pdfexport.js"></script>
+  <script src="../site_libs/revealjs/plugin/reveal-menu/menu.js"></script>
+  <script src="../site_libs/revealjs/plugin/reveal-menu/quarto-menu.js"></script>
+  <script src="../site_libs/revealjs/plugin/quarto-support/support.js"></script>
+  
+
+  <script src="../site_libs/revealjs/plugin/notes/notes.js"></script>
+  <script src="../site_libs/revealjs/plugin/search/search.js"></script>
+  <script src="../site_libs/revealjs/plugin/zoom/zoom.js"></script>
+  <script src="../site_libs/revealjs/plugin/math/math.js"></script>
+  <script>window.define = window.backupDefine; window.backupDefine = undefined;</script>
+
+  <script>
+
+      // Full list of configuration options available at:
+      // https://revealjs.com/config/
+      Reveal.initialize({
+'controlsAuto': true,
+'previewLinksAuto': false,
+'pdfSeparateFragments': false,
+'autoAnimateEasing': "ease",
+'autoAnimateDuration': 1,
+'autoAnimateUnmatched': true,
+'jumpToSlide': true,
+'menu': {"side":"left","useTextContentForMissingTitles":true,"markers":false,"loadIcons":false,"custom":[{"title":"Tools","icon":"<i class=\"fas fa-gear\"></i>","content":"<ul class=\"slide-menu-items\">\n<li class=\"slide-tool-item active\" data-item=\"0\"><a href=\"#\" onclick=\"RevealMenuToolHandlers.fullscreen(event)\"><kbd>f</kbd> Fullscreen</a></li>\n<li class=\"slide-tool-item\" data-item=\"1\"><a href=\"#\" onclick=\"RevealMenuToolHandlers.speakerMode(event)\"><kbd>s</kbd> Speaker View</a></li>\n<li class=\"slide-tool-item\" data-item=\"2\"><a href=\"#\" onclick=\"RevealMenuToolHandlers.overview(event)\"><kbd>o</kbd> Slide Overview</a></li>\n<li class=\"slide-tool-item\" data-item=\"3\"><a href=\"#\" onclick=\"RevealMenuToolHandlers.togglePdfExport(event)\"><kbd>e</kbd> PDF Export Mode</a></li>\n<li class=\"slide-tool-item\" data-item=\"4\"><a href=\"#\" onclick=\"RevealMenuToolHandlers.toggleScrollView(event)\"><kbd>r</kbd> Scroll View Mode</a></li>\n<li class=\"slide-tool-item\" data-item=\"5\"><a href=\"#\" onclick=\"RevealMenuToolHandlers.keyboardHelp(event)\"><kbd>?</kbd> Keyboard Help</a></li>\n</ul>"}],"openButton":true},
+'smaller': false,
+ 
+        // Display controls in the bottom right corner
+        controls: false,
+
+        // Help the user learn the controls by providing hints, for example by
+        // bouncing the down arrow when they first encounter a vertical slide
+        controlsTutorial: false,
+
+        // Determines where controls appear, "edges" or "bottom-right"
+        controlsLayout: 'edges',
+
+        // Visibility rule for backwards navigation arrows; "faded", "hidden"
+        // or "visible"
+        controlsBackArrows: 'faded',
+
+        // Display a presentation progress bar
+        progress: true,
+
+        // Display the page number of the current slide
+        slideNumber: 'c/t',
+
+        // 'all', 'print', or 'speaker'
+        showSlideNumber: 'all',
+
+        // Add the current slide number to the URL hash so that reloading the
+        // page/copying the URL will return you to the same slide
+        hash: true,
+
+        // Start with 1 for the hash rather than 0
+        hashOneBasedIndex: false,
+
+        // Flags if we should monitor the hash and change slides accordingly
+        respondToHashChanges: true,
+
+        // Push each slide change to the browser history
+        history: false,
+
+        // Enable keyboard shortcuts for navigation
+        keyboard: true,
+
+        // Enable the slide overview mode
+        overview: true,
+
+        // Disables the default reveal.js slide layout (scaling and centering)
+        // so that you can use custom CSS layout
+        disableLayout: false,
+
+        // Vertical centering of slides
+        center: false,
+
+        // Enables touch navigation on devices with touch input
+        touch: true,
+
+        // Loop the presentation
+        loop: false,
+
+        // Change the presentation direction to be RTL
+        rtl: false,
+
+        // see https://revealjs.com/vertical-slides/#navigation-mode
+        navigationMode: 'linear',
+
+        // Randomizes the order of slides each time the presentation loads
+        shuffle: false,
+
+        // Turns fragments on and off globally
+        fragments: true,
+
+        // Flags whether to include the current fragment in the URL,
+        // so that reloading brings you to the same fragment position
+        fragmentInURL: false,
+
+        // Flags if the presentation is running in an embedded mode,
+        // i.e. contained within a limited portion of the screen
+        embedded: false,
+
+        // Flags if we should show a help overlay when the questionmark
+        // key is pressed
+        help: true,
+
+        // Flags if it should be possible to pause the presentation (blackout)
+        pause: true,
+
+        // Flags if speaker notes should be visible to all viewers
+        showNotes: false,
+
+        // Global override for autoplaying embedded media (null/true/false)
+        autoPlayMedia: null,
+
+        // Global override for preloading lazy-loaded iframes (null/true/false)
+        preloadIframes: null,
+
+        // Number of milliseconds between automatically proceeding to the
+        // next slide, disabled when set to 0, this value can be overwritten
+        // by using a data-autoslide attribute on your slides
+        autoSlide: 0,
+
+        // Stop auto-sliding after user input
+        autoSlideStoppable: true,
+
+        // Use this method for navigation when auto-sliding
+        autoSlideMethod: null,
+
+        // Specify the average time in seconds that you think you will spend
+        // presenting each slide. This is used to show a pacing timer in the
+        // speaker view
+        defaultTiming: null,
+
+        // Enable slide navigation via mouse wheel
+        mouseWheel: false,
+
+        // The display mode that will be used to show slides
+        display: 'block',
+
+        // Hide cursor if inactive
+        hideInactiveCursor: true,
+
+        // Time before the cursor is hidden (in ms)
+        hideCursorTime: 5000,
+
+        // Opens links in an iframe preview overlay
+        previewLinks: false,
+
+        // Transition style (none/fade/slide/convex/concave/zoom)
+        transition: 'none',
+
+        // Transition speed (default/fast/slow)
+        transitionSpeed: 'default',
+
+        // Transition style for full page slide backgrounds
+        // (none/fade/slide/convex/concave/zoom)
+        backgroundTransition: 'none',
+
+        // Number of slides away from the current that are visible
+        viewDistance: 3,
+
+        // Number of slides away from the current that are visible on mobile
+        // devices. It is advisable to set this to a lower number than
+        // viewDistance in order to save resources.
+        mobileViewDistance: 2,
+
+        // The "normal" size of the presentation, aspect ratio will be preserved
+        // when the presentation is scaled to fit different resolutions. Can be
+        // specified using percentage units.
+        width: 1280,
+
+        height: 720,
+
+        // Factor of the display size that should remain empty around the content
+        margin: 0.1,
+
+        math: {
+          mathjax: 'https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.9/MathJax.js',
+          config: 'TeX-AMS_HTML-full',
+          tex2jax: {
+            inlineMath: [['\\(','\\)']],
+            displayMath: [['\\[','\\]']],
+            balanceBraces: true,
+            processEscapes: false,
+            processRefs: true,
+            processEnvironments: true,
+            preview: 'TeX',
+            skipTags: ['script','noscript','style','textarea','pre','code'],
+            ignoreClass: 'tex2jax_ignore',
+            processClass: 'tex2jax_process'
+          },
+        },
+
+        // reveal.js plugins
+        plugins: [QuartoLineHighlight, PdfExport, RevealMenu, QuartoSupport,
+
+          RevealMath,
+          RevealNotes,
+          RevealSearch,
+          RevealZoom
+        ]
+      });
+    </script>
+    <script id="quarto-html-after-body" type="application/javascript">
+      window.document.addEventListener("DOMContentLoaded", function (event) {
+        const tabsets =  window.document.querySelectorAll(".panel-tabset-tabby")
+        tabsets.forEach(function(tabset) {
+          const tabby = new Tabby('#' + tabset.id);
+        });
+        const isCodeAnnotation = (el) => {
+          for (const clz of el.classList) {
+            if (clz.startsWith('code-annotation-')) {                     
+              return true;
+            }
+          }
+          return false;
+        }
+        const onCopySuccess = function(e) {
+          // button target
+          const button = e.trigger;
+          // don't keep focus
+          button.blur();
+          // flash "checked"
+          button.classList.add('code-copy-button-checked');
+          var currentTitle = button.getAttribute("title");
+          button.setAttribute("title", "Copied!");
+          let tooltip;
+          if (window.bootstrap) {
+            button.setAttribute("data-bs-toggle", "tooltip");
+            button.setAttribute("data-bs-placement", "left");
+            button.setAttribute("data-bs-title", "Copied!");
+            tooltip = new bootstrap.Tooltip(button, 
+              { trigger: "manual", 
+                customClass: "code-copy-button-tooltip",
+                offset: [0, -8]});
+            tooltip.show();    
+          }
+          setTimeout(function() {
+            if (tooltip) {
+              tooltip.hide();
+              button.removeAttribute("data-bs-title");
+              button.removeAttribute("data-bs-toggle");
+              button.removeAttribute("data-bs-placement");
+            }
+            button.setAttribute("title", currentTitle);
+            button.classList.remove('code-copy-button-checked');
+          }, 1000);
+          // clear code selection
+          e.clearSelection();
+        }
+        const getTextToCopy = function(trigger) {
+            const codeEl = trigger.previousElementSibling.cloneNode(true);
+            for (const childEl of codeEl.children) {
+              if (isCodeAnnotation(childEl)) {
+                childEl.remove();
+              }
+            }
+            return codeEl.innerText;
+        }
+        const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+          text: getTextToCopy
+        });
+        clipboard.on('success', onCopySuccess);
+        if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+          const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+            text: getTextToCopy,
+            container: window.document.getElementById('quarto-embedded-source-code-modal')
+          });
+          clipboardModal.on('success', onCopySuccess);
+        }
+          var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+          var mailtoRegex = new RegExp(/^mailto:/);
+            var filterRegex = new RegExp('/' + window.location.host + '/');
+          var isInternal = (href) => {
+              return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+          }
+          // Inspect non-navigation links and adorn them if external
+         var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+          for (var i=0; i<links.length; i++) {
+            const link = links[i];
+            if (!isInternal(link.href)) {
+              // undo the damage that might have been done by quarto-nav.js in the case of
+              // links that we want to consider external
+              if (link.dataset.originalHref !== undefined) {
+                link.href = link.dataset.originalHref;
+              }
+            }
+          }
+        function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+          const config = {
+            allowHTML: true,
+            maxWidth: 500,
+            delay: 100,
+            arrow: false,
+            appendTo: function(el) {
+                return el.closest('section.slide') || el.parentElement;
+            },
+            interactive: true,
+            interactiveBorder: 10,
+            theme: 'light-border',
+            placement: 'bottom-start',
+          };
+          if (contentFn) {
+            config.content = contentFn;
+          }
+          if (onTriggerFn) {
+            config.onTrigger = onTriggerFn;
+          }
+          if (onUntriggerFn) {
+            config.onUntrigger = onUntriggerFn;
+          }
+            config['offset'] = [0,0];
+            config['maxWidth'] = 700;
+          window.tippy(el, config); 
+        }
+        const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+        for (var i=0; i<noterefs.length; i++) {
+          const ref = noterefs[i];
+          tippyHover(ref, function() {
+            // use id or data attribute instead here
+            let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+            try { href = new URL(href).hash; } catch {}
+            const id = href.replace(/^#\/?/, "");
+            const note = window.document.getElementById(id);
+            if (note) {
+              return note.innerHTML;
+            } else {
+              return "";
+            }
+          });
+        }
+        const findCites = (el) => {
+          const parentEl = el.parentElement;
+          if (parentEl) {
+            const cites = parentEl.dataset.cites;
+            if (cites) {
+              return {
+                el,
+                cites: cites.split(' ')
+              };
+            } else {
+              return findCites(el.parentElement)
+            }
+          } else {
+            return undefined;
+          }
+        };
+        var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+        for (var i=0; i<bibliorefs.length; i++) {
+          const ref = bibliorefs[i];
+          const citeInfo = findCites(ref);
+          if (citeInfo) {
+            tippyHover(citeInfo.el, function() {
+              var popup = window.document.createElement('div');
+              citeInfo.cites.forEach(function(cite) {
+                var citeDiv = window.document.createElement('div');
+                citeDiv.classList.add('hanging-indent');
+                citeDiv.classList.add('csl-entry');
+                var biblioDiv = window.document.getElementById('ref-' + cite);
+                if (biblioDiv) {
+                  citeDiv.innerHTML = biblioDiv.innerHTML;
+                }
+                popup.appendChild(citeDiv);
+              });
+              return popup.innerHTML;
+            });
+          }
+        }
+      });
+      </script>
+    
+
+</body></html>

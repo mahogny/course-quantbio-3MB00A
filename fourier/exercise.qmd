@@ -58,33 +58,62 @@ Two families of use:
 
 **B8. (compression)** An image's Fourier coefficients are dominated by a handful of large low-frequency values; the rest are tiny. Explain the compression recipe in three steps, and state the analogy to truncating a PCA. Why is this **lossy**, and what artefact appears if you keep too few coefficients?
 
-## Explore: filter an image {#explore}
+## Explore: build a wave {#explore}
 
-The demo below is the lecture's micrograph (a 256 × 256 crop). Left: the image; middle: its 2D spectrum, log of the magnitude, with frequency 0 in the centre; right: the image rebuilt from the coefficients you keep. Removed coefficients are shown dark red. The readout gives the share of coefficients kept, the share of the image's variation they carry, and the RMS error of the rebuilt image (pixel values run from 0 to 1).
+The demo below adds up five waves, $a_f \sin(2\pi f\,t)$ for $f = 1, \dots, 5$ cycles per window, over one window $0 \le t \le 1$. Each slider sets one amplitude $a_f$ and has the same colour as its thin line in the plot; the bold black line is the sum. (A sine is a cosine with phase $\varphi = -\pi/2$.) The bar chart shows the **amplitude spectrum** $|a_f|$: the amount of each frequency, which is what the Fourier transform of the black curve gives back.
 
 ```{=html}
 <link rel="stylesheet" href="../demos/dist/demo.css">
-<div data-demo="fourier2d" data-mode="low" data-r="30"></div>
+<div data-demo="fourierwave" data-a="1 0 0 0 0"></div>
+<script src="../demos/dist/fourierwave.js"></script>
+```
+
+**W1.** Choose **pure tone**. How many cycles does the sum complete in the window, and what does the spectrum look like? Now set that slider to −1. What changes in the plot, and what changes in the spectrum? Which of the three sinusoid parameters (frequency, amplitude, phase) did the sign change?
+
+**W2.** Start from **all zero**, set $a_1 = 1$, then add $a_3 \approx 0.33$ and finally $a_5 = 0.2$ (or press **square**). Describe how the shape of the sum changes at each step. Roughly what height do the flat parts reach? Which frequencies would you have to add to make the edges steeper still?
+
+**W3.** Press **sawtooth** and compare its spectrum with the one for **square**. Then change the signs of $a_2$ and $a_4$ to $+1/2$ and $+1/4$. What happens to the signal, and to the spectrum? (Compare with B4.) Finally, change only $a_3$ to $-1/3$. Does the signal still have the same shape? What information does the amplitude spectrum leave out?
+
+::: {.callout-note collapse="true" title="Solutions"}
+
+**W1.** The pure tone is $\sin(2\pi\cdot 2\cdot t)$: two cycles in the window, and a single bar at $f = 2$ of height 1. With amplitude −1 the wave is flipped upside down, which is the same as sliding it half a cycle along: the **phase** changed by $\pi$. Frequency and the height $|a|$ are the same, so the amplitude spectrum does not change.
+
+**W2.** $a_1$ alone is one smooth swell. Adding the third harmonic flattens the tops and steepens the sides; adding the fifth flattens them further, with small ripples on the plateaus. The flat parts sit near $\pm\pi/4 \approx \pm 0.79$ (that is the limit of $\sin x + \tfrac13\sin 3x + \tfrac15\sin 5x + \dots$; with three terms the plateaus wiggle around this value). Steeper edges need **higher** odd harmonics: $f = 7, 9, 11, \dots$ with amplitudes $1/7, 1/9, \dots$. Sharp edges live at high frequencies.
+
+**W3.** The square wave uses only the odd frequencies; the sawtooth uses all five, with heights $1, 1/2, 1/3, 1/4, 1/5$. Flipping the signs of $a_2$ and $a_4$ gives the same sawtooth, moved by half a window: shifting $t$ by $1/2$ multiplies $\sin(2\pi f t)$ by $(-1)^f$, so it flips exactly the even frequencies. The spectrum is unchanged, as in B4: a time shift changes the phases, not the amplitudes. Flipping only $a_3$ is not a shift: the signal gets a clearly different shape, yet the bars are still the same. The amplitude spectrum leaves out the **phase** of each wave (here only its sign), so different signals can share the same amplitude spectrum. The full Fourier transform keeps the phase too, which is why the signal can be rebuilt from it.
+:::
+
+## Explore: filter an image {#explore-filter}
+
+The demo below is the lecture's micrograph (a 256 × 256 crop). Left: the image; middle: its 2D spectrum, log of the magnitude, with frequency 0 in the centre; right: the image rebuilt from the coefficients you keep. Removed coefficients are shown dark red. The radial filters keep the coefficients whose distance $r$ from the centre lies between a **min radius** and a **max radius** (the two blue circles; ∞ means no upper limit). The buttons are presets: **low-pass** sets min = 0, **high-pass** sets max = ∞, **band-pass** uses both. The box "keep average brightness (centre)" keeps the centre coefficient whatever the min radius is. The readout gives the share of coefficients kept, the share of the image's variation they carry, and the RMS error of the rebuilt image (pixel values run from 0 to 1).
+
+```{=html}
+<link rel="stylesheet" href="../demos/dist/demo.css">
+<div data-demo="fourier2d" data-mode="low" data-max="30"></div>
 <script src="../demos/dist/fourier2d.js"></script>
 ```
 
-**E1.** Choose **low-pass** and set the radius to 5, 30 and 90. For each, note the percentage of coefficients kept and the percentage of the variation kept. What does that tell you about where the image's content sits in the spectrum?
+**E1.** Choose **low-pass** (min radius 0) and set the max radius to 5, 30 and 90. For each, note the percentage of coefficients kept and the percentage of the variation kept. What does that tell you about where the image's content sits in the spectrum?
 
-**E2.** Choose **keep largest** at 3%. Then go back to **low-pass** and find the radius that also keeps about 3% of the coefficients. Which of the two has the smaller error? Look at where the kept coefficients lie in the spectrum in "keep largest" mode: why are the two results so similar?
+**E2.** Choose **keep largest** at 3%. Then go back to **low-pass** and find the max radius that also keeps about 3% of the coefficients. Which of the two has the smaller error? Look at where the kept coefficients lie in the spectrum in "keep largest" mode: why are the two results so similar?
 
-**E3.** Choose **high-pass** with radius 10. What is left of the cell? Why is the picture grey rather than black, although most of the low frequencies are gone?
+**E3.** Choose **high-pass** (max radius ∞) with min radius 10. What is left of the cell? Why is the picture grey rather than black, although most of the low frequencies are gone? Untick **keep average brightness (centre)** to check your answer.
 
-**E4.** Tick **add stripe artefact** and choose **no filter**: note the error. The stripe adds two bright coefficients to the spectrum, marked with yellow rings. Erase them by dragging over them. What happens to the error? Why are there **two** dots for one stripe? Then try removing the stripe with a **low-pass** filter instead, at radius 15. Which approach is better here?
+**E4.** Tick **add stripe artefact** and choose **no filter**: note the error. The stripe adds two bright coefficients to the spectrum, marked with yellow rings. Erase them by dragging over them. What happens to the error? Why are there **two** dots for one stripe? Then try removing the stripe with a **low-pass** filter instead, at max radius 15. Which approach is better here?
+
+**E5.** Go back to **low-pass** with max radius 30, then raise the **min radius** from 0 to 5, so that only a ring between the two circles is kept. How many coefficients does that remove, and how much of the variation? What disappears from the image, and what is left? Compare with E1.
 
 ::: {.callout-note collapse="true" title="Solutions"}
 
 **E1.** Radius 5 keeps 0.12% of the coefficients but already 53% of the variation; radius 30 keeps 4.3% of the coefficients and 81% of the variation; radius 90 keeps 39% and 96%. A tiny disc of low frequencies carries most of the variation: the broad light and dark regions. The many high-frequency coefficients each carry little; together they make the fine detail (and the grain). This is why a frequency basis compresses natural images well.
 
-**E2.** Keep largest 3%: 81% of the variation, RMS error 0.100. Low-pass with radius 25 also keeps 3.0% of the coefficients: 78% of the variation, error 0.109. Keeping the largest coefficients is slightly better, because it picks the coefficients that matter for *this* image, while the disc is fixed in advance. They are similar because most of the largest coefficients are low frequencies anyway: in "keep largest" mode the kept coefficients crowd around the centre, with a scatter of single ones further out.
+**E2.** Keep largest 3%: 81% of the variation, RMS error 0.100. Low-pass with max radius 25 also keeps 3.0% of the coefficients: 78% of the variation, error 0.109. Keeping the largest coefficients is slightly better, because it picks the coefficients that matter for *this* image, while the disc is fixed in advance. They are similar because most of the largest coefficients are low frequencies anyway: in "keep largest" mode the kept coefficients crowd around the centre, with a scatter of single ones further out.
 
-**E3.** Only edges and fine texture remain: the outline of the nucleus, the membranes, the grain inside the cell. Large uniform regions all become the same grey, because their brightness is low-frequency content. The picture stays grey because the centre coefficient (frequency 0, the average brightness of the whole image) is always kept; without it the values would vary around 0 and the image would be mostly black.
+**E3.** Only edges and fine texture remain: the outline of the nucleus, the membranes, the grain inside the cell. Large uniform regions all become the same grey, because their brightness is low-frequency content. The picture stays grey because the centre coefficient (frequency 0, the average brightness of the whole image) is kept by the "keep average brightness" box, even though it lies inside the min radius. Untick the box and the average of the rebuilt image drops from 0.66 to 0: the values vary around 0, the negative half is shown as black (about half the pixels), and the RMS error jumps from 0.18 to 0.69.
 
-**E4.** With the stripe and no filter the error is 0.106 (the stripe itself). The stripe is a single 2D wave, so it adds a single bright pair of coefficients, about 19 units from the centre (16 across, 10 down, and its mirror image). Erasing them brings the error down to about 0.02; zeroing exactly the two coefficients would give 0.002, the brush also removes a few of the cell's own coefficients around them. There are two dots because a real-valued wave is the sum of a frequency and its mirror image ($+k$ and $-k$), the same mirror symmetry as in the 1D spectrum in R (R2 below). A low-pass filter at radius 15 also removes the stripe, but it removes the cell's detail too: the error is 0.127, *worse* than leaving the stripe in. A notch removes exactly what you want to remove; a low-pass removes everything above a frequency.
+**E4.** With the stripe and no filter the error is 0.106 (the stripe itself). The stripe is a single 2D wave, so it adds a single bright pair of coefficients, about 19 units from the centre (16 across, 10 down, and its mirror image). Erasing them brings the error down to about 0.02; zeroing exactly the two coefficients would give 0.002, the brush also removes a few of the cell's own coefficients around them. There are two dots because a real-valued wave is the sum of a frequency and its mirror image ($+k$ and $-k$), the same mirror symmetry as in the 1D spectrum in R (R2 below). A low-pass filter at max radius 15 also removes the stripe, but it removes the cell's detail too: the error is 0.127, *worse* than leaving the stripe in. A notch removes exactly what you want to remove; a low-pass removes everything above a frequency.
+
+**E5.** Raising the min radius from 0 to 5 removes very few coefficients: the kept share drops from 4.3% to 4.2% (only 68 of the 65 536 coefficients lie inside radius 5, not counting the centre, which is kept). But the variation kept drops from 81% to 29%, and the RMS error rises from 0.10 to 0.19. As in E1, the few lowest frequencies carry about half of the variation: they are the broad shading, such as the dark nucleus against the lighter cytoplasm. Without them the nucleus becomes the same mid grey as its surroundings, and what is left is structure of intermediate size: the outline of the nucleus, membranes and small organelles, but neither the overall shading (below the min radius) nor the fine grain (above the max radius). A band-pass picks out structures of one size range.
 :::
 
 ## In R

@@ -19,6 +19,10 @@ Mark an item complete only after a reviewer has checked every executable chunk f
 - [x] `chemometrics-2/exercise.qmd`
 - [x] `chemometrics-2/lec.qmd`
 - [x] `covariates/exercise.qmd`
+- [ ] `ctmc/exercise.qmd` — added 2026-10-16; needs audit (R chunks run with `Rscript --vanilla`; outputs pasted into the solutions)
+- [ ] `ctmc/lec.qmd` — added 2026-10-16; needs audit
+- [ ] `ctmc/quiz.qmd` — added 2026-10-16; needs audit
+- [ ] `ctmc/make-ctmc-figs.R` — added 2026-10-16; needs audit
 - [x] `covariates/lec.qmd`
 - [x] `crossval/exercise.qmd`
 - [x] `crossval/lec.qmd`
@@ -125,3 +129,5 @@ Each demo was checked by its author (node tests of the maths, scripted clicks in
 - [ ] `demos/src/leakage/` — crossval
 - [ ] `demos/src/penaltygeom/` — ridge-lasso-enet, penalty-bayes-link, penalized-case
 - [ ] `demos/src/pseudocount/` — scrna-log
+- [ ] `demos/src/ctmcwalkers/` — ctmc (added 2026-10-16; needs audit; imports `stationary` from `demos/src/markov/chain.ts`)
+- [ ] `demos/src/umaplive/` — scrna-umap (added 2026-10-16; needs audit; simplified UMAP in `umap.ts`: exact kNN, rho/sigma search, fuzzy union, a/b fit, SGD with negative sampling, power-iteration spectral init)
