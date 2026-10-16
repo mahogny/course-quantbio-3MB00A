@@ -101,7 +101,8 @@ function mount(host: HTMLElement): void {
   let hist: { walk: number[]; exact: number[] }[] = [];
   let pi: number[] | null = null;
   let timer: number | null = null;
-  let anim: { from: Pt[]; fromK: Int32Array; ctrl: (Pt | null)[]; to: Pt[]; t0: number } | null = null;
+  // stay[w] >= 0: the walker stays in that state and rides round its self-loop.
+  let anim: { from: Pt[]; fromK: Int32Array; ctrl: (Pt | null)[]; stay: Int32Array; to: Pt[]; t0: number } | null = null;
 
   // ---- DOM skeleton ----
   const main = htmlEl("div", "qbm-main", "", host);
@@ -145,6 +146,7 @@ function mount(host: HTMLElement): void {
 
   // per-chain geometry
   let arcCtrl: Pt[][] = [];
+  let loopPts: Pt[][] = [];   // per state: self-loop cubic [start, c1, c2, end]
   let arrowEls: { path: SVGPathElement; label: SVGTextElement }[][] = [];
 
   function slotPos(k: number, s: number): Pt {
@@ -155,7 +157,7 @@ function mount(host: HTMLElement): void {
 
   function buildDiagram(): void {
     gArrows.replaceChildren(); gNodes.replaceChildren(); gLabels.replaceChildren();
-    arcCtrl = []; arrowEls = [];
+    arcCtrl = []; arrowEls = []; loopPts = [];
     const { R, centers } = L;
     for (let i = 0; i < n; i++) {
       arcCtrl.push([]); arrowEls.push([]);
@@ -171,6 +173,7 @@ function mount(host: HTMLElement): void {
           d = `M${s} C${c1} ${c2} ${e}`;
           [lx, ly] = q(R + 74, 0);
           ctrl = p(phi, R + 30);
+          loopPts[i] = [s, c1, c2, e];
         } else {
           const [xj, yj] = centers[j];
           const len = Math.hypot(xj - xi, yj - yi);
@@ -296,6 +299,7 @@ function mount(host: HTMLElement): void {
     const nxt = new Int32Array(NW);
     for (let w = 0; w < NW; w++) nxt[w] = sampleRow(P[cur[w]], rand.unif());
     const from: Pt[] = [], to: Pt[] = [], ctrl: (Pt | null)[] = [], fromK = cur.slice();
+    const stay = new Int32Array(NW).fill(-1);
     for (let w = 0; w < NW; w++) {
       from.push(slotPos(cur[w], slot[w]));
       if (nxt[w] !== cur[w]) occ[cur[w]][slot[w]] = 0;   // leavers free their slot first
@@ -307,13 +311,13 @@ function mount(host: HTMLElement): void {
         while (occ[j][s]) s++;
         occ[j][s] = 1; slot[w] = s;
         ctrl.push(arcCtrl[i][j]);
-      } else ctrl.push(null);
+      } else { ctrl.push(null); stay[w] = i; }
       cur[w] = j;
       to.push(slotPos(j, slot[w]));
     }
     const prev = hist[hist.length - 1].exact;
     hist.push({ walk: fractions(), exact: stepDist(prev, P) });
-    anim = { from, fromK, ctrl, to, t0: performance.now() };
+    anim = { from, fromK, ctrl, stay, to, t0: performance.now() };
     requestAnimationFrame(frame);
     drawCharts();
   }
@@ -325,7 +329,8 @@ function mount(host: HTMLElement): void {
     for (let w = 0; w < NW; w++) {
       const [ax, ay] = anim.from[w], [bx, by] = anim.to[w], c = anim.ctrl[w];
       let x: number, y: number;
-      if (c) {
+      if (anim.stay[w] >= 0) [x, y] = loopRide(anim.from[w], anim.stay[w], e);
+      else if (c) {
         x = (1 - e) * (1 - e) * ax + 2 * (1 - e) * e * c[0] + e * e * bx;
         y = (1 - e) * (1 - e) * ay + 2 * (1 - e) * e * c[1] + e * e * by;
       } else { x = ax + (bx - ax) * e; y = ay + (by - ay) * e; }
@@ -333,6 +338,20 @@ function mount(host: HTMLElement): void {
     }
     if (u < 1) requestAnimationFrame(frame);
     else anim = null;
+  }
+  // A staying walker leaves its slot, follows the self-loop arrow out and back in,
+  // and returns to the same slot, so "stay" (A→A) is visible as a hop too. Each
+  // walker keeps a scaled-down copy of its slot offset, so the stayers travel round
+  // the loop as a small cloud instead of one stacked dot.
+  function loopRide(home: Pt, k: number, e: number): Pt {
+    const [s, c1, c2, en] = loopPts[k], [cx, cy] = L.centers[k];
+    const ox = (home[0] - cx) * 0.3, oy = (home[1] - cy) * 0.3;
+    const lerp = (a: Pt, b: Pt, t: number): Pt => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t];
+    if (e < 0.2) return lerp(home, [s[0] + ox, s[1] + oy], e / 0.2);
+    if (e > 0.8) return lerp([en[0] + ox, en[1] + oy], home, (e - 0.8) / 0.2);
+    const t = (e - 0.2) / 0.6, m = 1 - t;
+    return [m * m * m * s[0] + 3 * m * m * t * c1[0] + 3 * m * t * t * c2[0] + t * t * t * en[0] + ox,
+            m * m * m * s[1] + 3 * m * m * t * c1[1] + 3 * m * t * t * c2[1] + t * t * t * en[1] + oy];
   }
   function finishAnim(): void { anim = null; placeDots(); }
 

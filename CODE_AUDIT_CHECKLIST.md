@@ -101,7 +101,27 @@ Mark an item complete only after a reviewer has checked every executable chunk f
 
 ## Build and presentation code
 
-- [ ] `Makefile` — `figs` target added 2026-10-14, needs re-audit
-- [x] `_quarto.yml`
-- [x] `styles.css`
+- [ ] `Makefile` — `figs` target added 2026-10-14; `demos`/`typecheck` targets added 2026-10-16; needs re-audit
+- [ ] `_quarto.yml` — 2026-10-16: demos/dist resources, "Interactive demo" sidebar entries; needs re-audit
+- [ ] `styles.css` — 2026-10-16: orange colour for demo sidebar links; needs re-audit
 - [x] `theme.scss`
+
+## Interactive demos (TypeScript, added 2026-10-16)
+
+Each demo was checked by its author (node tests of the maths, scripted clicks in headless Chrome, slide screenshots), but none has been independently reviewed. Real mouse/touch dragging is untested for all of them. The demos are embedded in a "Try it" slide and/or an "Explore" section of the exercise page; those .qmd sections also need review.
+
+- [ ] `demos/build.sh`, `demos/tsconfig.json`, `demos/demo.css`, `demos/src/lib/ui.ts`
+- [ ] `demos/src/matrix2x2/` — matrix-transforms, matrix-images, eigen
+- [ ] `demos/src/dotproduct/` — vectors-projection
+- [ ] `demos/src/compensation/` — compensation
+- [ ] `demos/src/markov/` — markov, markov-r (self-loop animation added 2026-10-16)
+- [ ] `demos/src/pca2d/` — pca, pca-scree
+- [ ] `demos/src/fourier2d/` — fourier
+- [ ] `demos/src/polar/` — polar
+- [ ] `demos/src/betabinom/` — bayes-intro
+- [ ] `demos/src/mcmc/` — rstan-intro
+- [ ] `demos/src/nbdisp/` — error-models, bayes-case
+- [ ] `demos/src/shrinkage/` — hierarchical, bayes-case
+- [ ] `demos/src/leakage/` — crossval
+- [ ] `demos/src/penaltygeom/` — ridge-lasso-enet, penalty-bayes-link, penalized-case
+- [ ] `demos/src/pseudocount/` — scrna-log
