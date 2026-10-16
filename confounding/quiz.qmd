@@ -1,0 +1,157 @@
+---
+title: "Quiz: confounding & Simpson's paradox"
+format:
+  html:
+    toc: true
+    code-copy: true
+    code-overflow: wrap
+    highlight-style: github
+---
+
+Short questions on adjustment, confounding, Simpson's paradox, design and interactions. Try each on paper first, then open the answer. Most are in the style of the on-campus exam (no computer).
+
+---
+
+**Q1.** In one sentence, what is a **confounder**? Give one example from an RNA-seq experiment.
+
+::: {.callout-tip collapse="true" title="Hint"}
+Think of the two arrows coming out of it.
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+A confounder is a variable that affects **both** the predictor of interest (e.g. who got the treatment) **and** the outcome, and is not itself caused by the predictor. Example: sequencing **batch** when most controls were sequenced in one batch and most treated samples in another, and the batches read at different levels (others: age, sex, BMI if they differ between groups).
+:::
+
+---
+
+**Q2.** Expression of one gene in 8 mice, drug vs control. Females have a baseline of 30, males of 10, and within each sex the drug adds 4:
+
+| | F | M |
+|---|---|---|
+| ctrl  | 3 mice, expr 30 | 1 mouse, expr 10 |
+| treat | 1 mouse, expr 34 | 3 mice, expr 14 |
+
+(a) Compute the unadjusted difference of group means, treat − ctrl.
+(b) What would `lm(expr ~ treatment + sex)` give for `treatmenttreat` and for `sexM`?
+(c) Is this Simpson's paradox? Why?
+
+::: {.callout-tip collapse="true" title="Hint"}
+Group mean = sum of the four values / 4. For (b), compare mice of the same sex.
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+(a) ctrl: $(30+30+30+10)/4 = 100/4 = 25$. treat: $(34+14+14+14)/4 = 76/4 = 19$. Difference $= -6$.
+(b) `treatmenttreat` $= +4$ ($34-30$ and $14-10$), `sexM` $= -20$ ($10 - 30$).
+(c) Yes: the unadjusted effect ($-6$) and the within-sex effect ($+4$) have **opposite signs**. Sex confounds the comparison, because the treated group is mostly male and males have much lower expression. Check: $4 + (-20)\times(3/4 - 1/4) = 4 - 10 = -6$.
+:::
+
+---
+
+**Q3.** In an additive model the adjusted treatment effect is $3$ and the batch-B effect is $8$. Three quarters of the treated samples but only one quarter of the controls were sequenced in batch B. What is the **unadjusted** difference of group means?
+
+::: {.callout-tip collapse="true" title="Hint"}
+Unadjusted $=$ effect $+$ (batch effect) × (share in B among treated − share in B among controls).
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+$3 + 8\times(3/4 - 1/4) = 3 + 8\times\tfrac12 = 3 + 4 = 7$. The unadjusted comparison overstates the effect by 4, because the treated samples are over-represented in the higher-reading batch.
+:::
+
+---
+
+**Q4.** For each treatment × batch count table, say whether the design is **balanced**, **partially confounded** or **perfectly confounded**, and whether `lm(expr ~ treatment + batch)` can estimate the treatment effect.
+
+(a)
+
+| | A | B |
+|---|:--:|:--:|
+| ctrl  | 3 | 3 |
+| treat | 3 | 3 |
+
+(b)
+
+| | A | B |
+|---|:--:|:--:|
+| ctrl  | 6 | 0 |
+| treat | 0 | 6 |
+
+(c)
+
+| | A | B |
+|---|:--:|:--:|
+| ctrl  | 5 | 1 |
+| treat | 2 | 4 |
+
+::: {.callout-tip collapse="true" title="Hint"}
+Look for empty cells. With every control in A and every treated sample in B, which two columns of $X$ are identical?
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+(a) **Balanced** — the adjusted and unadjusted estimates agree; adjusting for batch only removes noise.
+(b) **Perfectly confounded** — the `treatmenttreat` and `batchB` columns of $X$ are identical, $X$ is not of full column rank, and there are infinitely many solutions. `lm` prints `NA` for `batchB`; the treatment effect **cannot** be estimated. Only a new, balanced design fixes it.
+(c) **Partially confounded** — every cell has samples, so the columns differ and $\boldsymbol\beta$ is unique. The unadjusted estimate is biased, but `lm(expr ~ treatment + batch)` gives the within-batch treatment effect.
+:::
+
+---
+
+**Q5.** In the canonical Simpson example, `lm(expr ~ treatment)` gives `treatmenttreat` $= -3$ and `lm(expr ~ treatment + batch)` gives $+2$. A student says: "The first model is wrong." Do you agree? Explain in two sentences.
+
+::: {.callout-tip collapse="true" title="Hint"}
+What question does each coefficient answer?
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+Not quite: $-3$ is the correct difference between the treated and control samples **as they were collected**, so the arithmetic is right. But it answers a different question — it mixes the drug effect with the accident that most controls were in the higher-reading batch — whereas $+2$ answers "within the same batch, what does the drug do?", which is what we mean by the drug effect.
+:::
+
+---
+
+**Q6.** For `expr ~ treatment * sex` (references `ctrl`, `F`) you fit $\beta_0 = 8$, $\beta_1 = -1$ (`treatmenttreat`), $\beta_2 = 2$ (`sexM`), $\beta_3 = 4$ (`treatmenttreat:sexM`).
+(a) What is the treatment effect in females, and in males?
+(b) What is the predicted mean for treated males?
+
+::: {.callout-tip collapse="true" title="Hint"}
+$\beta_1$ is the effect in the reference sex; add $\beta_3$ for the other sex. A treated male has all three dummies equal to 1.
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+(a) Females: $\beta_1 = -1$ (the drug slightly lowers expression). Males: $\beta_1 + \beta_3 = -1 + 4 = 3$ (it raises it). The effect differs, even in sign, between the sexes — an interaction.
+(b) $\beta_0 + \beta_1 + \beta_2 + \beta_3 = 8 - 1 + 2 + 4 = 13$.
+:::
+
+---
+
+**Q7.** In the canonical Simpson example the drug effect is $+2$ in batch A and $+2$ in batch B. Is batch a **confounder**, an **effect modifier** (interaction), both, or neither?
+
+::: {.callout-tip collapse="true" title="Hint"}
+Does adding batch change the estimate? Is the effect different between batches?
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+A **confounder** only. Adding batch changes the treatment estimate ($-3 \to +2$), so it confounds; but the treatment effect is the same in both batches, so there is no interaction ($\beta_3$ for `treatment:batch` would be 0).
+:::
+
+---
+
+**Q8.** A study asks whether a drug changes the expression of a gene in tumours. Which of these would you **not** adjust for, and why?
+(a) patient age at diagnosis; (b) sequencing batch; (c) tumour size measured after 4 weeks of treatment; (d) both body weight **and** BMI.
+
+::: {.callout-tip collapse="true" title="Hint"}
+Was it fixed before the drug? Could the drug have changed it? Do two of them carry the same information?
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+Adjust for (a) and (b). Do **not** adjust for (c): tumour size after treatment is changed by the drug (a mediator or consequence; if the gene also affects tumour growth, a collider), so adjusting removes part of the effect or creates bias. For (d), use **one** of the two: weight and BMI are strongly **collinear**, so with both in the model their individual coefficients become unstable even though the predictions are fine.
+:::
+
+---
+
+**Q9.** Your design is perfectly balanced (each batch has the same number of controls and treated samples). Is it then pointless to put `batch` in the model?
+
+::: {.callout-tip collapse="true" title="Hint"}
+Balance removes bias. What else does a batch effect do to the residuals?
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+No. With balance, adding batch does not change the treatment estimate (the bias is zero), but a batch effect left in the residuals inflates the noise. Adjusting for batch removes that variation, so the treatment effect is estimated more **precisely** (smaller standard error) — at the cost of one column per extra batch level.
+:::

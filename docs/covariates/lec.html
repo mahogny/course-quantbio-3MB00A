@@ -10,7 +10,7 @@
   <meta name="generator" content="quarto-1.7.30">
 
   <meta name="author" content="Quantitative biology and integrative omics">
-  <title>Quantitative biology and integrative omics – Handling covariates</title>
+  <title>Quantitative biology and integrative omics – Design matrices for covariates</title>
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, minimal-ui">
@@ -193,8 +193,8 @@
     <div class="slides">
 
 <section id="title-slide" class="quarto-title-block center">
-  <h1 class="title">Handling covariates</h1>
-  <p class="subtitle">Bayesian statistics — Handling covariates</p>
+  <h1 class="title">Design matrices for covariates</h1>
+  <p class="subtitle">Linear models — Design matrices for covariates</p>
 
 <div class="quarto-title-authors">
 <div class="quarto-title-author">
@@ -207,29 +207,16 @@ Quantitative biology and integrative omics
 </section>
 <section id="about-this-lecture" class="slide level2">
 <h2>About this lecture</h2>
-<p>Real experiments are never clean. Your samples differ in <strong>age</strong>, <strong>sex</strong>, <strong>BMI</strong>, <strong>batch</strong>, and <strong>treatment</strong> all at once. Today we learn how to put those extra variables — <strong>covariates</strong> — into a model, so the effect you care about is not corrupted by the ones you don’t.</p>
+<p>Real experiments are never clean. Your samples differ in <strong>treatment</strong>, but also in <strong>sex</strong>, <strong>age</strong>, <strong>BMI</strong>, <strong>sequencing batch</strong> and <strong>time point</strong>. Today: how all of these become columns of one matrix, the <strong>design matrix</strong> <span class="math inline">\(X\)</span>.</p>
 <ul>
-<li>What a <strong>covariate</strong> is, and the difference between a variable of <strong>interest</strong> and a <strong>nuisance</strong> variable.</li>
-<li>How a <strong>model formula</strong> (<code>y ~ treatment + age</code>) becomes a <strong>design matrix</strong> <span class="math inline">\(X\)</span> — the bridge back to Matrices as transformations.</li>
-<li><strong>Continuous</strong> vs <strong>categorical</strong> predictors, and what each <strong>coefficient</strong> means.</li>
-<li><strong>Confounding</strong>: why leaving a covariate out can flip your conclusion, and how <strong>adjustment</strong> fixes it.</li>
-<li><strong>Interactions</strong>: when a treatment works differently in different groups.</li>
+<li>What a <strong>covariate</strong> is: variable of <strong>interest</strong> vs <strong>nuisance</strong> variable.</li>
+<li>How a <strong>model formula</strong> (<code>y ~ treatment + age</code>) becomes <span class="math inline">\(X\)</span>, and how <span class="math inline">\(X\boldsymbol\beta\)</span> gives each sample’s <strong>predicted mean</strong>.</li>
+<li><strong>Continuous</strong> (age, BMI) and <strong>categorical</strong> (sex, treatment, batch, time) predictors, and what each <strong>coefficient</strong> means.</li>
+<li>Building <span class="math inline">\(X\)</span> by hand for the <strong>common cases</strong>, including an <strong>interaction</strong> column.</li>
+<li><strong>Existence of solutions</strong>: when does <span class="math inline">\(\boldsymbol\beta\)</span> have a unique answer, and what to do when it does not.</li>
 </ul>
-<div class="callout callout-warning callout-titled callout-style-default">
-<div class="callout-body">
-<div class="callout-title">
-<div class="callout-icon-container">
-<i class="callout-icon"></i>
-</div>
-<p><strong>Provisional block</strong></p>
-</div>
-<div class="callout-content">
-<p>This <em>Bayesian statistics</em> block is <strong>provisional</strong> and may move to a later statistics / machine-learning course. The ideas here (design matrices, adjustment, interactions) are core to <strong>any</strong> linear model — Bayesian or frequentist — so they are worth your time regardless of where the block finally lands.</p>
-</div>
-</div>
-</div>
 <aside class="notes">
-<p>The single message of today: an effect estimate is only meaningful relative to what you did and did not account for. “Treatment raised expression by 2 units” is incomplete — raised it compared to what, holding what fixed? Covariates are how we make that precise. Emphasise that although this sits in the Bayesian block, everything today is identical machinery in a plain lm(); the Bayesian layer (priors on the coefficients) comes at the very end. Tell them the design-matrix idea is the same X they met in Matrices as transformations and in the linear-systems units — a formula is just a recipe for building X.</p>
+<p>This deck is about one object: the design matrix. Everything students will later do in DESeq2 or limma starts with a design formula, and the formula is nothing more than a recipe for X. The skills to leave with are all by hand: build X for a small experiment, multiply X by beta to get predicted group means, read a coefficient as “difference from the reference” or “slope per unit”, and spot when the columns of X are dependent so that beta has no unique answer. What it means to “adjust” for a covariate, confounding and Simpson’s paradox come in the next deck, Confounding &amp; Simpson’s paradox. The R side (model.matrix, DESeq2, limma) is in Design matrices in R.</p>
 <style type="text/css">
         span.MJX_Assistive_MathML {
           position:absolute!important;
@@ -242,18 +229,77 @@ Quantitative biology and integrative omics
           display:block!important;
       }</style></aside>
 </section>
-<section id="a-biology-picture-first" class="slide level2 smaller">
-<h2>A biology picture first</h2>
-<p>You run an RNA-seq experiment: <strong>treated</strong> vs <strong>control</strong> mice, measuring one gene. Treated mice show <strong>higher</strong> expression. Success?</p>
+<section id="one-gene-a-whole-sample-sheet" class="slide level2 smaller">
+<h2>One gene, a whole sample sheet</h2>
+<p>A typical bulk RNA-seq sample sheet. We measure one gene’s expression <span class="math inline">\(y\)</span> in each sample:</p>
+<table class="caption-top">
+<thead>
+<tr class="header">
+<th>sample</th>
+<th>treatment</th>
+<th>sex</th>
+<th>age</th>
+<th>BMI</th>
+<th>batch</th>
+<th>time</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>1</td>
+<td>ctrl</td>
+<td>F</td>
+<td>34</td>
+<td>22</td>
+<td>A</td>
+<td>0h</td>
+</tr>
+<tr class="even">
+<td>2</td>
+<td>treat</td>
+<td>M</td>
+<td>51</td>
+<td>27</td>
+<td>A</td>
+<td>6h</td>
+</tr>
+<tr class="odd">
+<td>3</td>
+<td>ctrl</td>
+<td>M</td>
+<td>45</td>
+<td>31</td>
+<td>B</td>
+<td>24h</td>
+</tr>
+<tr class="even">
+<td>4</td>
+<td>treat</td>
+<td>F</td>
+<td>29</td>
+<td>24</td>
+<td>B</td>
+<td>6h</td>
+</tr>
+<tr class="odd">
+<td>…</td>
+<td>…</td>
+<td>…</td>
+<td>…</td>
+<td>…</td>
+<td>…</td>
+<td>…</td>
+</tr>
+</tbody>
+</table>
 <ul>
-<li>But the treated mice were, by accident, mostly <strong>old</strong>, and the controls mostly <strong>young</strong>.</li>
-<li>This gene also rises naturally with <strong>age</strong>.</li>
-<li>So is the difference due to the <strong>treatment</strong>, or due to <strong>age</strong>?</li>
+<li><strong>treatment</strong> is what we want to study.</li>
+<li><strong>sex, age, BMI, batch</strong> also move expression, so we want them in the model too.</li>
+<li>Some columns are <strong>numbers</strong> (age, BMI), some are <strong>labels</strong> (sex, batch). <strong>time</strong> can be either.</li>
 </ul>
-<p>With the data as-is you <strong>cannot tell</strong> — treatment and age are tangled. The whole point of covariates is to <strong>untangle</strong> them: estimate the treatment effect <em>as if the two groups had the same age distribution</em>.</p>
-
-<img data-src="fig02-treatment-age-tangle.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:80.0%"><aside class="notes">
-<p>This is the confounding story that motivates everything. Keep it concrete: one gene, two groups, an accidental age imbalance. The naive comparison (mean treated minus mean control) mixes a treatment effect with an age effect because age differs between the groups. Do not yet say the word confounder or draw the DAG — just plant the tangle and the promise that a model with age in it can separate the two contributions. We return to this exact example on the confounding slide.</p>
+<p>The question for today: <em>how does this table become a matrix that a linear model can use?</em></p>
+<aside class="notes">
+<p>Start from something they have all seen: a sample sheet with metadata columns. Every column on the right is a possible covariate. Point out the two kinds: numeric (age, BMI) and categorical (treatment, sex, batch). Time is the interesting in-between case we come back to. The rest of the deck turns this table into X, one column type at a time.</p>
 <style type="text/css">
         span.MJX_Assistive_MathML {
           position:absolute!important;
@@ -291,18 +337,83 @@ Quantitative biology and integrative omics
 </section>
 <section id="the-model-formula" class="slide level2 smaller">
 <h2>The model formula</h2>
-<p>R (and Bayesian tools built on the same syntax) describes a model with a <strong>formula</strong>: outcome on the left, predictors on the right.</p>
+<p>R describes a model with a <strong>formula</strong>: outcome on the left, predictors on the right.</p>
 <div class="sourceCode" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a aria-hidden="true" tabindex="-1"></a><span class="co"># outcome ~ predictor(s)</span></span>
 <span id="cb1-2"><a aria-hidden="true" tabindex="-1"></a>expr <span class="sc">~</span> treatment                 <span class="co"># effect of treatment only</span></span>
-<span id="cb1-3"><a aria-hidden="true" tabindex="-1"></a>expr <span class="sc">~</span> treatment <span class="sc">+</span> age           <span class="co"># treatment, adjusting for age</span></span>
-<span id="cb1-4"><a aria-hidden="true" tabindex="-1"></a>expr <span class="sc">~</span> treatment <span class="sc">+</span> age <span class="sc">+</span> sex     <span class="co"># adjust for age and sex</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb1-3"><a aria-hidden="true" tabindex="-1"></a>expr <span class="sc">~</span> treatment <span class="sc">+</span> age           <span class="co"># treatment, and age</span></span>
+<span id="cb1-4"><a aria-hidden="true" tabindex="-1"></a>expr <span class="sc">~</span> treatment <span class="sc">+</span> age <span class="sc">+</span> sex     <span class="co"># treatment, age and sex</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>Behind every formula sits a <strong>linear predictor</strong> — a weighted sum of the predictors:</p>
 <p><span class="math display">\[
 \hat{y}_i = \beta_0 + \beta_1 x_{i1} + \beta_2 x_{i2} + \dots
 \]</span></p>
 <p>Each <span class="math inline">\(\beta\)</span> is a <strong>coefficient</strong>: how much <span class="math inline">\(\hat y\)</span> changes per unit of that predictor, holding the others fixed. Fitting the model = finding the <span class="math inline">\(\beta\)</span>’s.</p>
+<p>With one predictor this is the line <span class="math inline">\(y = a + bx\)</span> from Fitting equations: <span class="math inline">\(\beta_0\)</span> is <span class="math inline">\(a\)</span> (the intercept) and <span class="math inline">\(\beta_1\)</span> is <span class="math inline">\(b\)</span> (the slope). We switch to numbered <span class="math inline">\(\beta\)</span>’s because there can now be many predictors, and R names the coefficients the same way.</p>
 <aside class="notes">
-<p>Formulas are the interface students will actually type, so anchor here. The <code>+</code> means “also include this term”, not arithmetic addition of the columns. Read each example aloud in words. The linear predictor is the same beta-dot-x you have seen throughout the course; a formula is a compact way to specify it. Note that lm(), glm(), and the Bayesian packages rstanarm/brms all accept this identical syntax — learn it once. Defer the meaning of “holding the others fixed” to the adjustment slide, but flag it now.</p>
+<p>Formulas are the interface students will actually type, so anchor here. The <code>+</code> means “also include this term”, not arithmetic addition of the columns. Read each example aloud in words. The linear predictor is the same beta-dot-x you have seen throughout the course; a formula is a compact way to specify it. lm(), DESeq2 and limma all take this same syntax — learn it once. “Holding the others fixed” is unpacked properly in the Confounding deck; flag it now.</p>
+<style type="text/css">
+        span.MJX_Assistive_MathML {
+          position:absolute!important;
+          clip: rect(1px, 1px, 1px, 1px);
+          padding: 1px 0 0 0!important;
+          border: 0!important;
+          height: 1px!important;
+          width: 1px!important;
+          overflow: hidden!important;
+          display:block!important;
+      }</style></aside>
+</section>
+<section id="from-formula-to-design-matrix-x" class="slide level2 smaller">
+<h2>From formula to design matrix <span class="math inline">\(X\)</span></h2>
+<p>A formula is a <strong>recipe for building a matrix</strong>. The outcome is <span class="math inline">\(\mathbf{y}\)</span>; the predictors become the columns of the <strong>design matrix</strong> <span class="math inline">\(X\)</span>:</p>
+<p><span class="math display">\[
+\mathbf{y} = X\boldsymbol{\beta} + \boldsymbol{\varepsilon}.
+\]</span></p>
+<p>One <strong>row per sample</strong>, one <strong>column per coefficient</strong>. Here, <code>expr ~ treatment + age</code> for four mice:</p>
+
+<img data-src="fig07-design-matrix-yXbeta.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:62.0%"><p>Column 1 is all 1’s (the intercept), column 2 is the 0/1 treatment dummy, column 3 is age. <strong>This is the same <span class="math inline">\(X\)</span></strong> as in Matrices as transformations and Linear systems in R — the covariates just decide its columns.</p>
+<aside class="notes">
+<p>This is the conceptual keystone. Fitting a model with covariates is solving y = X beta for beta, the same X they built when we did linear systems. The number of rows is the number of samples; the number of columns is the number of coefficients, p.&nbsp;Stress that choosing covariates literally means choosing columns of X. Least squares on top is unchanged; covariates are entirely about how X is constructed. In R, model.matrix(~ treatment + age) prints exactly this table; we confirm it in the exercise.</p>
+<style type="text/css">
+        span.MJX_Assistive_MathML {
+          position:absolute!important;
+          clip: rect(1px, 1px, 1px, 1px);
+          padding: 1px 0 0 0!important;
+          border: 0!important;
+          height: 1px!important;
+          width: 1px!important;
+          overflow: hidden!important;
+          display:block!important;
+      }</style></aside>
+</section>
+<section id="xboldsymbolbeta-each-samples-predicted-mean" class="slide level2 smaller">
+<h2><span class="math inline">\(X\boldsymbol\beta\)</span> = each sample’s predicted mean</h2>
+<p>Given coefficients <span class="math inline">\(\boldsymbol\beta\)</span>, the <strong>fitted values</strong> are a matrix times a vector — one row at a time, as in the matrix × vector drills:</p>
+<p><span class="math display">\[
+X\boldsymbol\beta =
+\begin{pmatrix}
+1 &amp; 0 &amp; 30\\
+1 &amp; 1 &amp; 40\\
+1 &amp; 0 &amp; 20\\
+1 &amp; 1 &amp; 50
+\end{pmatrix}
+\begin{pmatrix} 2 \\ 3 \\ 0.1 \end{pmatrix}
+=
+\begin{pmatrix}
+2 + 0 + 3\\
+2 + 3 + 4\\
+2 + 0 + 2\\
+2 + 3 + 5
+\end{pmatrix}
+=
+\begin{pmatrix} 5 \\ 9 \\ 4 \\ 10 \end{pmatrix}.
+\]</span></p>
+<ul>
+<li>Row <span class="math inline">\(i\)</span> of <span class="math inline">\(X\)</span> <strong>is</strong> sample <span class="math inline">\(i\)</span>’s description; row <span class="math inline">\(i\)</span> of <span class="math inline">\(X\boldsymbol\beta\)</span> is its <strong>predicted expression</strong> <span class="math inline">\(\hat y_i\)</span>.</li>
+<li>Samples with <strong>identical rows</strong> get <strong>identical predictions</strong> — this is why, with only factors, <span class="math inline">\(X\boldsymbol\beta\)</span> gives one <strong>predicted mean per group</strong>.</li>
+<li>The leftover <span class="math inline">\(y_i - \hat y_i\)</span> is the residual <span class="math inline">\(\varepsilon_i\)</span>.</li>
+</ul>
+<aside class="notes">
+<p>This is the second by-hand skill: multiply X by beta. Each row is a dot product, exactly the matrix-times-vector warm-up. Read row 2 aloud: intercept 2, plus 3 because it is treated, plus 0.1 times 40 years. The point about identical rows is the bridge to the factor-only designs on the next slides: if X only has dummy columns, all samples in a group share a row, so X beta is a list of group means. Exam questions will hand them X (or the sample sheet) and beta and ask for a predicted value or a group mean.</p>
 <style type="text/css">
         span.MJX_Assistive_MathML {
           position:absolute!important;
@@ -318,16 +429,17 @@ Quantitative biology and integrative omics
 <section id="continuous-predictors-age-bmi" class="slide level2 smaller">
 <h2>Continuous predictors: age, BMI</h2>
 <p>A <strong>continuous</strong> covariate enters as a single column of numbers. Its coefficient is a <strong>slope</strong>.</p>
-<div class="sourceCode" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a aria-hidden="true" tabindex="-1"></a>expr <span class="sc">~</span> age            <span class="co">#  y_hat = b0 + b1 * age</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a aria-hidden="true" tabindex="-1"></a>expr <span class="sc">~</span> age            <span class="co">#  y_hat = b0 + b1 * age</span></span>
+<span id="cb2-2"><a aria-hidden="true" tabindex="-1"></a>expr <span class="sc">~</span> bmi            <span class="co">#  y_hat = b0 + b1 * bmi</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <ul>
-<li><span class="math inline">\(\beta_1\)</span> = the change in expression for <strong>each additional year</strong> of age.</li>
-<li><span class="math inline">\(\beta_0\)</span> (intercept) = predicted expression at <strong>age 0</strong> — often meaningless, so we frequently <strong>centre</strong> the predictor.</li>
+<li><span class="math inline">\(\beta_1\)</span> = change in expression for <strong>each additional unit</strong> (one year; one BMI unit). With <span class="math inline">\(\beta_\text{bmi} = 0.5\)</span>, a patient with BMI 30 is predicted <span class="math inline">\(0.5 \times 8 = 4\)</span> units above one with BMI 22.</li>
+<li><span class="math inline">\(\beta_0\)</span> (intercept) = predicted expression at <strong>age 0</strong> or <strong>BMI 0</strong> — meaningless, so we often <strong>centre</strong> the predictor:</li>
 </ul>
 <div class="sourceCode" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a aria-hidden="true" tabindex="-1"></a>expr <span class="sc">~</span> <span class="fu">I</span>(age <span class="sc">-</span> <span class="fu">mean</span>(age))   <span class="co"># now the intercept = expression at the MEAN age</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<p>Centring doesn’t change the slope; it just makes the intercept interpretable and helps the fit behave.</p>
+<p>Centring doesn’t change the slope; it just makes the intercept interpretable.</p>
 
-<img data-src="fig05-continuous-slope-centering.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:65.0%"><aside class="notes">
-<p>Continuous predictors are the easy case: one column, one slope, ordinary “rise over run”. The interpretation trap is the intercept — age 0 (a newborn, or worse, extrapolated nonsense) is rarely of interest, and for something like BMI, BMI 0 is impossible. Centring moves the intercept to the mean, which is both interpretable and numerically nicer. Mention that in Bayesian models centring/scaling predictors also makes default priors sensible, which we hit at the end. Do not overteach I(); just show it means “compute this expression as a literal predictor”.</p>
+<img data-src="fig05-continuous-slope-centering.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:52.0%"><aside class="notes">
+<p>Continuous predictors are the easy case: one column, one slope, ordinary rise over run, exactly the b in y = a + bx. The interpretation trap is the intercept — age 0 is a newborn and BMI 0 is impossible. Centring moves the intercept to the mean, which is both interpretable and numerically nicer. Centring subtracts the same number from every entry of the column; the slope does not change, only beta_0 does. Do not overteach I(); just show it means “compute this expression as a literal predictor”.</p>
 <style type="text/css">
         span.MJX_Assistive_MathML {
           position:absolute!important;
@@ -352,8 +464,8 @@ Quantitative biology and integrative omics
 </ul>
 <p>By default R picks the reference level <strong>alphabetically</strong> (<code>F</code> before <code>M</code>, <code>ctrl</code> before <code>treat</code>). Set it deliberately with <code>relevel()</code>.</p>
 
-<img data-src="fig06-factor-to-dummy.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:70.0%"><aside class="notes">
-<p>This is where most confusion lives. A factor with k levels becomes k-1 dummy columns plus the intercept; you never get a column for the reference level because it is the baseline the others are measured against. The coefficient sexM is not “the effect of being male in absolute terms” — it is the difference from the reference (female). The alphabetical default silently makes “ctrl” the reference for treatment, which is usually what you want, but warn them to check: if levels were “drug” and “placebo”, placebo would NOT be the reference. relevel() or factor(levels=…) fixes it. This dummy-coding scheme is exactly the contrast matrix, next.</p>
+<img data-src="fig06-factor-to-dummy.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:62.0%"><aside class="notes">
+<p>This is where most confusion lives. A factor with k levels becomes k-1 dummy columns plus the intercept; you never get a column for the reference level because it is the baseline the others are measured against. The coefficient sexM is not “the effect of being male in absolute terms” — it is the difference from the reference (female). The alphabetical default silently makes “ctrl” the reference for treatment, which is usually what you want, but warn them to check: if levels were “drug” and “placebo”, placebo would NOT be the reference. relevel() or factor(levels=…) fixes it. Why no column for F as well? That is the dummy-variable trap, later today.</p>
 <style type="text/css">
         span.MJX_Assistive_MathML {
           position:absolute!important;
@@ -366,162 +478,17 @@ Quantitative biology and integrative omics
           display:block!important;
       }</style></aside>
 </section>
-<section id="from-formula-to-design-matrix-x" class="slide level2 smaller">
-<h2>From formula to design matrix <span class="math inline">\(X\)</span></h2>
-<p>A formula is a <strong>recipe for building a matrix</strong>. The outcome is <span class="math inline">\(\mathbf{y}\)</span>; the predictors become the columns of the <strong>design matrix</strong> <span class="math inline">\(X\)</span>, and the model is</p>
+<section id="one-factor-coefficients-are-group-means" class="slide level2 smaller">
+<h2>One factor: coefficients are group means</h2>
+<p><code>expr ~ treatment</code> with 2 controls and 2 treated mice. Only <strong>two distinct rows</strong> exist:</p>
 <p><span class="math display">\[
-\mathbf{y} = X\boldsymbol{\beta} + \boldsymbol{\varepsilon}.
+X = \begin{pmatrix} 1 &amp; 0\\ 1 &amp; 1\\ 1 &amp; 0\\ 1 &amp; 1 \end{pmatrix}
+\quad
+\begin{array}{l} \leftarrow \text{ctrl} \\ \leftarrow \text{treat} \\ \leftarrow \text{ctrl} \\ \leftarrow \text{treat} \end{array}
+\qquad
+\text{ctrl: } \hat y = \beta_0, \qquad \text{treat: } \hat y = \beta_0 + \beta_1 .
 \]</span></p>
-<p><code>model.matrix()</code> shows you exactly what R built:</p>
-<div class="sourceCode" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a aria-hidden="true" tabindex="-1"></a><span class="fu">model.matrix</span>(<span class="sc">~</span> treatment <span class="sc">+</span> age)</span>
-<span id="cb5-2"><a aria-hidden="true" tabindex="-1"></a><span class="co">#   (Intercept) treatmenttreat age</span></span>
-<span id="cb5-3"><a aria-hidden="true" tabindex="-1"></a><span class="co"># 1           1              0  10</span></span>
-<span id="cb5-4"><a aria-hidden="true" tabindex="-1"></a><span class="co"># 2           1              1  40</span></span>
-<span id="cb5-5"><a aria-hidden="true" tabindex="-1"></a><span class="co"># 3           1              0  22</span></span>
-<span id="cb5-6"><a aria-hidden="true" tabindex="-1"></a><span class="co"># 4           1              1  35</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<p>Column 1 is all 1’s (the intercept), column 2 is the 0/1 treatment dummy, column 3 is age. <strong>This is the same <span class="math inline">\(X\)</span></strong> from Matrices as transformations and the linear-systems units — the covariates just decide its columns.</p>
-<!-- FIGURE: a small table y = X beta, colouring the intercept column, the dummy column, and the continuous column differently -->
-<aside class="notes">
-<p>This is the conceptual keystone and the tie-back the brief asks for. Everything abstract collapses here: fitting a model with covariates is solving y = X beta for beta, the same X they built columns for when we did linear systems and transformations. model.matrix() is the reveal — run it (statically here) so they SEE the intercept column of ones, the dummy column, and the raw continuous column side by side. Stress that choosing covariates literally means choosing columns of X. The least-squares / posterior machinery on top is unchanged; covariates are entirely about how X is constructed.</p>
-<style type="text/css">
-        span.MJX_Assistive_MathML {
-          position:absolute!important;
-          clip: rect(1px, 1px, 1px, 1px);
-          padding: 1px 0 0 0!important;
-          border: 0!important;
-          height: 1px!important;
-          width: 1px!important;
-          overflow: hidden!important;
-          display:block!important;
-      }</style></aside>
-</section>
-<section id="contrasts-what-the-coefficients-mean" class="slide level2 smaller">
-<h2>Contrasts: what the coefficients mean</h2>
-<p>The <strong>coding scheme</strong> for a factor is called its <strong>contrasts</strong> — it decides what each dummy column, and therefore each coefficient, <em>compares</em>.</p>
-<p>Default <strong>treatment contrasts</strong> (<code>contr.treatment</code>) answer: <em>“each level vs the reference.”</em></p>
-<div class="sourceCode" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a aria-hidden="true" tabindex="-1"></a><span class="fu">contrasts</span>(treatment)</span>
-<span id="cb6-2"><a aria-hidden="true" tabindex="-1"></a><span class="co">#       treat</span></span>
-<span id="cb6-3"><a aria-hidden="true" tabindex="-1"></a><span class="co"># ctrl      0</span></span>
-<span id="cb6-4"><a aria-hidden="true" tabindex="-1"></a><span class="co"># treat     1</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<p>So in <code>expr ~ treatment</code>:</p>
-<ul>
-<li><strong>Intercept</strong> = mean expression in the reference group (<code>ctrl</code>).</li>
-<li><strong><code>treatmenttreat</code></strong> = mean(<code>treat</code>) − mean(<code>ctrl</code>), the quantity you care about.</li>
-</ul>
-<p>Other schemes exist (sum-to-zero <code>contr.sum</code>, etc.); they change what the numbers <em>mean</em>, not the model’s fit or predictions.</p>
-<aside class="notes">
-<p>Contrasts are the same design/contrast-matrix idea used throughout omics differential-expression tools (limma, DESeq2 all revolve around a design and a contrast). Keep it light: the default treatment coding gives “difference from reference”, which is what people usually want and matches the categorical-predictor slide. The key insight is that the coefficient’s meaning is a CHOICE encoded in the contrast matrix, not a fact of nature — change the coding and the same data yields differently-defined coefficients with identical predictions. Don’t derive contr.sum; just name that alternatives exist so they aren’t thrown when they meet them.</p>
-<style type="text/css">
-        span.MJX_Assistive_MathML {
-          position:absolute!important;
-          clip: rect(1px, 1px, 1px, 1px);
-          padding: 1px 0 0 0!important;
-          border: 0!important;
-          height: 1px!important;
-          width: 1px!important;
-          overflow: hidden!important;
-          display:block!important;
-      }</style></aside>
-</section>
-<section id="adjustment-adding-a-covariate" class="slide level2 smaller">
-<h2>Adjustment: adding a covariate</h2>
-<p>Return to the tangled experiment. Fit treatment <strong>alone</strong>, then <strong>adjusting for age</strong>:</p>
-<div class="sourceCode" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a aria-hidden="true" tabindex="-1"></a><span class="fu">lm</span>(expr <span class="sc">~</span> treatment)          <span class="co"># unadjusted: treatment effect mixes in age</span></span>
-<span id="cb7-2"><a aria-hidden="true" tabindex="-1"></a><span class="fu">lm</span>(expr <span class="sc">~</span> treatment <span class="sc">+</span> age)    <span class="co"># adjusted:  treatment effect "holding age fixed"</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<p>Adding <code>+ age</code> gives age its own column in <span class="math inline">\(X\)</span> and its own coefficient. The treatment coefficient now answers a <strong>different, cleaner question</strong>:</p>
-<blockquote>
-<p>How much does treatment change expression <strong>among animals of the same age</strong>?</p>
-</blockquote>
-<p>The model splits the observed variation into an age part and a treatment part, instead of blaming it all on treatment.</p>
-<aside class="notes">
-<p>This is the operational heart. Emphasise that the unadjusted and adjusted treatment coefficients answer genuinely different questions, and only the second controls for age. “Holding age fixed” / “among animals of the same age” is the phrase to drill. Geometrically (optional): adjustment projects out the age direction before measuring the treatment effect — connects to projection/orthogonality from the vectors unit, but keep it a one-liner. The next slide shows how dramatic the difference can be.</p>
-<style type="text/css">
-        span.MJX_Assistive_MathML {
-          position:absolute!important;
-          clip: rect(1px, 1px, 1px, 1px);
-          padding: 1px 0 0 0!important;
-          border: 0!important;
-          height: 1px!important;
-          width: 1px!important;
-          overflow: hidden!important;
-          display:block!important;
-      }</style></aside>
-</section>
-<section id="confounding-why-it-matters" class="slide level2 smaller">
-<h2>Confounding: why it matters</h2>
-<p>A <strong>confounder</strong> is a variable that influences <strong>both</strong> the predictor of interest <strong>and</strong> the outcome. Ignore it and the effect you report is <strong>biased</strong>.</p>
-
-<img data-src="fig10-confounder-dag.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:70.0%"><p>In the extreme, adjusting can <strong>reverse</strong> an apparent effect (<strong>Simpson’s paradox</strong>): a treatment that looks <em>harmful</em> overall can be <em>helpful</em> within every age group, once age is accounted for.</p>
-<ul>
-<li><strong>Rule of thumb:</strong> adjust for variables that plausibly affect the outcome and differ between your groups (age, sex, batch, RIN, sequencing depth).</li>
-<li><strong>Not</strong> everything, though — see the pitfalls slide (adjusting for the <em>wrong</em> variable can <em>add</em> bias).</li>
-</ul>
-<aside class="notes">
-<p>Define confounder precisely: associated with both exposure and outcome, and not on the causal path from exposure to outcome. The age-&gt;group and age-&gt;expression arrows are why the naive comparison fails. Mention Simpson’s paradox as the vivid extreme — the direction of an effect flips after adjustment — so they respect the stakes. Give the practical heuristic (adjust for plausible common causes that are imbalanced across groups) but immediately caveat that more covariates is not always better; colliders and over-adjustment come on the pitfalls slide. Batch, RIN, library size are the omics-flavoured confounders they will actually meet.</p>
-<style type="text/css">
-        span.MJX_Assistive_MathML {
-          position:absolute!important;
-          clip: rect(1px, 1px, 1px, 1px);
-          padding: 1px 0 0 0!important;
-          border: 0!important;
-          height: 1px!important;
-          width: 1px!important;
-          overflow: hidden!important;
-          display:block!important;
-      }</style></aside>
-</section>
-<section id="interpreting-adjusted-effects" class="slide level2 smaller">
-<h2>Interpreting adjusted effects</h2>
-<p>In <code>expr ~ treatment + age</code> with fitted coefficients</p>
-<p><span class="math display">\[
-\hat{y} = \underbrace{\beta_0}_{\text{ctrl, age }0} + \underbrace{\beta_1}_{\text{treat vs ctrl}}\cdot\text{treat} + \underbrace{\beta_2}_{\text{per year}}\cdot\text{age}
-\]</span></p>
-<ul>
-<li><span class="math inline">\(\beta_1\)</span> — treatment effect <strong>at any fixed age</strong> (the model assumes it’s the <strong>same</strong> at every age — that’s the <em>no-interaction</em> assumption).</li>
-<li><span class="math inline">\(\beta_2\)</span> — age effect <strong>within each treatment group</strong>.</li>
-</ul>
-<p>Every coefficient in a multi-predictor model is read <strong>“holding the other predictors constant.”</strong> That single phrase is the whole skill of interpreting adjusted models.</p>
-<aside class="notes">
-<p>Hammer the “holding the others constant” reading — it is THE exam-worthy sentence. Point out the hidden assumption in the additive model: beta_1 is a single treatment effect assumed identical across ages, and beta_2 a single age slope assumed identical across treatment groups. That assumption is exactly what interactions relax, which is the natural cue for the next slide. Make sure they can state, for a given fitted equation, what each beta means in words — that is what we assess.</p>
-<style type="text/css">
-        span.MJX_Assistive_MathML {
-          position:absolute!important;
-          clip: rect(1px, 1px, 1px, 1px);
-          padding: 1px 0 0 0!important;
-          border: 0!important;
-          height: 1px!important;
-          width: 1px!important;
-          overflow: hidden!important;
-          display:block!important;
-      }</style></aside>
-</section>
-<section id="interactions-effects-that-depend-on-group" class="slide level2 smaller">
-<h2>Interactions: effects that depend on group</h2>
-<p>Sometimes a treatment works <strong>differently</strong> in different subgroups — the treatment effect <strong>depends on</strong> sex. That is an <strong>interaction</strong>.</p>
-<div class="sourceCode" id="cb8"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a aria-hidden="true" tabindex="-1"></a>expr <span class="sc">~</span> treatment <span class="sc">+</span> sex             <span class="co"># additive: same treatment effect in both sexes</span></span>
-<span id="cb8-2"><a aria-hidden="true" tabindex="-1"></a>expr <span class="sc">~</span> treatment <span class="sc">*</span> sex             <span class="co"># interaction: treatment effect may differ by sex</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<p><code>treatment * sex</code> expands to <code>treatment + sex + treatment:sex</code>. The extra <code>treatment:sex</code> term lets the treatment effect be <strong>larger in one sex than the other</strong>.</p>
-
-<img data-src="fig12-interaction-parallel-vs-not.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:75.0%"><aside class="notes">
-<p>Interaction = the effect of one predictor changes with the level of another. The picture is two lines: parallel lines mean no interaction (the additive model is fine); non-parallel lines mean an interaction (the gap between treated and control differs by sex). The star syntax is a shorthand that automatically includes both main effects and the product term — a very common student mistake is to write only treatment:sex and forget the main effects. Biologically, sex-specific or genotype-specific drug responses are everywhere, so this is not an edge case.</p>
-<style type="text/css">
-        span.MJX_Assistive_MathML {
-          position:absolute!important;
-          clip: rect(1px, 1px, 1px, 1px);
-          padding: 1px 0 0 0!important;
-          border: 0!important;
-          height: 1px!important;
-          width: 1px!important;
-          overflow: hidden!important;
-          display:block!important;
-      }</style></aside>
-</section>
-<section id="reading-interaction-coefficients" class="slide level2 smaller">
-<h2>Reading interaction coefficients</h2>
-<p>For <code>expr ~ treatment * sex</code> with reference levels <code>ctrl</code> and <code>F</code>:</p>
-<p><span class="math display">\[
-\hat y = \beta_0 + \beta_1\,\text{treat} + \beta_2\,\text{M} + \beta_3\,(\text{treat}\times\text{M})
-\]</span></p>
+<p>If the control mean is 6 and the treated mean is 9, then <span class="math inline">\(\beta_0 = 6\)</span> and <span class="math inline">\(\beta_1 = 9 - 6 = 3\)</span>.</p>
 <table class="caption-top">
 <colgroup>
 <col style="width: 50%">
@@ -535,27 +502,18 @@ Quantitative biology and integrative omics
 </thead>
 <tbody>
 <tr class="odd">
-<td><span class="math inline">\(\beta_0\)</span></td>
-<td>mean of <code>ctrl</code>, <code>F</code> (both references)</td>
+<td><code>(Intercept)</code> <span class="math inline">\(\beta_0\)</span></td>
+<td>mean of the <strong>reference</strong> group (<code>ctrl</code>)</td>
 </tr>
 <tr class="even">
-<td><span class="math inline">\(\beta_1\)</span></td>
-<td>treatment effect <strong>in females</strong></td>
-</tr>
-<tr class="odd">
-<td><span class="math inline">\(\beta_2\)</span></td>
-<td>female → male difference <strong>in controls</strong></td>
-</tr>
-<tr class="even">
-<td><span class="math inline">\(\beta_3\)</span></td>
-<td><strong>extra</strong> treatment effect in males (how much the treatment effect <em>differs</em> between sexes)</td>
+<td><code>treatmenttreat</code> <span class="math inline">\(\beta_1\)</span></td>
+<td><strong>treat − ctrl</strong>, the difference you care about</td>
 </tr>
 </tbody>
 </table>
-<p>Treatment effect in males <span class="math inline">\(= \beta_1 + \beta_3\)</span>. If <span class="math inline">\(\beta_3 = 0\)</span>, the effect is the same in both sexes and you’re back to the additive model.</p>
-
-<img data-src="fig13-interaction-coefficients-annotated.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:65.0%"><aside class="notes">
-<p>This table is the deliverable of the interaction pair. The trap: beta_1 is NOT “the treatment effect” — it is the treatment effect in the reference sex only. beta_3 is a difference-in-differences: how much the treatment effect changes when you switch sex. To get the male treatment effect you add beta_1 + beta_3. Testing beta_3 = 0 is the formal test of “does the treatment act differently by sex”. Have them practise reading each row aloud. This is directly examinable and directly what they will do with real differential-expression designs.</p>
+<p>This coding scheme is called the factor’s <strong>contrasts</strong>; <code>contrasts(treatment)</code> prints the 0/1 table. Other schemes (e.g.&nbsp;<code>contr.sum</code>) change what the coefficients <em>mean</em>, never the fitted values.</p>
+<aside class="notes">
+<p>The cleanest case and the template for everything else: with one factor, the least-squares fit just reproduces the group means, and the coefficients are the reference mean and the difference. Students should be able to go both ways — from beta to group means, and from group means to beta. Contrasts get exactly one sentence: the default treatment contrasts give “difference from reference”; other codings exist and give the same predictions with differently defined coefficients. Do not derive contr.sum.</p>
 <style type="text/css">
         span.MJX_Assistive_MathML {
           position:absolute!important;
@@ -568,43 +526,561 @@ Quantitative biology and integrative omics
           display:block!important;
       }</style></aside>
 </section>
-<section id="covariates-in-a-bayesian-model" class="slide level2 smaller">
-<h2>Covariates in a Bayesian model</h2>
-<p>The design matrix <span class="math inline">\(X\)</span> is <strong>identical</strong> in a Bayesian fit. What changes is that we place <strong>priors</strong> on the coefficients and get a <strong>posterior distribution</strong> for each, rather than a single point estimate.</p>
-<div class="sourceCode" id="cb9"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a aria-hidden="true" tabindex="-1"></a><span class="co"># same formula, Bayesian engine (rstanarm / brms, built on Stan)</span></span>
-<span id="cb9-2"><a aria-hidden="true" tabindex="-1"></a>rstanarm<span class="sc">::</span><span class="fu">stan_glm</span>(expr <span class="sc">~</span> treatment <span class="sc">+</span> age, <span class="at">data =</span> d,</span>
-<span id="cb9-3"><a aria-hidden="true" tabindex="-1"></a>                   <span class="at">prior =</span> rstanarm<span class="sc">::</span><span class="fu">normal</span>(<span class="dv">0</span>, <span class="dv">5</span>)) <span class="co"># weakly informative betas</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<section id="factor-continuous-sex-and-bmi" class="slide level2 smaller">
+<h2>Factor + continuous: sex and BMI</h2>
+<p><code>expr ~ sex + bmi</code>: one dummy column, one number column.</p>
+<table class="caption-top" style="width:100%;">
+<colgroup>
+<col style="width: 11%">
+<col style="width: 11%">
+<col style="width: 11%">
+<col style="width: 11%">
+<col style="width: 11%">
+<col style="width: 11%">
+<col style="width: 11%">
+<col style="width: 11%">
+<col style="width: 11%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>sample</th>
+<th>sex</th>
+<th>BMI</th>
+<th></th>
+<th>(Intercept)</th>
+<th>sexM</th>
+<th>bmi</th>
+<th></th>
+<th><span class="math inline">\(\hat y\)</span> for <span class="math inline">\(\boldsymbol\beta = (1,\ 2,\ 0.5)\)</span></th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>1</td>
+<td>F</td>
+<td>22</td>
+<td></td>
+<td>1</td>
+<td>0</td>
+<td>22</td>
+<td></td>
+<td><span class="math inline">\(1 + 0 + 11 = 12\)</span></td>
+</tr>
+<tr class="even">
+<td>2</td>
+<td>M</td>
+<td>24</td>
+<td></td>
+<td>1</td>
+<td>1</td>
+<td>24</td>
+<td></td>
+<td><span class="math inline">\(1 + 2 + 12 = 15\)</span></td>
+</tr>
+<tr class="odd">
+<td>3</td>
+<td>F</td>
+<td>30</td>
+<td></td>
+<td>1</td>
+<td>0</td>
+<td>30</td>
+<td></td>
+<td><span class="math inline">\(1 + 0 + 15 = 16\)</span></td>
+</tr>
+<tr class="even">
+<td>4</td>
+<td>M</td>
+<td>28</td>
+<td></td>
+<td>1</td>
+<td>1</td>
+<td>28</td>
+<td></td>
+<td><span class="math inline">\(1 + 2 + 14 = 17\)</span></td>
+</tr>
+</tbody>
+</table>
 <ul>
-<li>The linear predictor <span class="math inline">\(\beta_0 + \beta_1 x_1 + \dots\)</span> and the design matrix are <strong>unchanged</strong>.</li>
-<li>Each <span class="math inline">\(\beta\)</span> now has a <strong>posterior</strong> — a full distribution, so “adjusted treatment effect” comes with an honest credible interval.</li>
-<li>For <strong>count</strong> outcomes you swap the error model (Poisson/negative binomial via a log link) — see the error-models unit — but the covariates still enter through <span class="math inline">\(X\boldsymbol\beta\)</span>.</li>
-</ul>
-
-<img data-src="fig14-prior-posterior-coefficients.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:60.0%"><aside class="notes">
-<p>Bring it home to the block. The covariate machinery is completely orthogonal to the frequentist/Bayesian choice: same formula, same X, same “holding others constant” interpretation. The Bayesian additions are priors on the betas (weakly informative normals are a fine default, especially after centring/scaling predictors) and a posterior per coefficient instead of a point estimate plus a CI. Connect to the neighbouring units: the error-models unit supplies the Poisson/NB likelihood for counts, where covariates sit inside a log link (log mu = X beta); the hierarchical-models unit will let coefficients vary across biological/technical replicates. Keep the Stan code illustrative, not something they run today.</p>
-<style type="text/css">
-        span.MJX_Assistive_MathML {
-          position:absolute!important;
-          clip: rect(1px, 1px, 1px, 1px);
-          padding: 1px 0 0 0!important;
-          border: 0!important;
-          height: 1px!important;
-          width: 1px!important;
-          overflow: hidden!important;
-          display:block!important;
-      }</style></aside>
-</section>
-<section id="pitfalls" class="slide level2 smaller">
-<h2>Pitfalls</h2>
-<ul>
-<li><strong>Collinearity</strong> — two covariates that move together (e.g.&nbsp;weight and BMI) make their individual coefficients unstable and hard to interpret. The <em>combined</em> prediction is fine; the split between them is not.</li>
-<li><strong>Over-adjustment / colliders</strong> — adjusting for a variable that is a <em>consequence</em> of the treatment (or a common effect of treatment and outcome) can <strong>create</strong> bias, not remove it. More covariates is <strong>not</strong> always better.</li>
-<li><strong>Categorical with many levels</strong> — a factor with <span class="math inline">\(k\)</span> levels costs <span class="math inline">\(k-1\)</span> columns; with small <span class="math inline">\(n\)</span> you run out of data.</li>
-<li><strong>Wrong reference level</strong> — check <code>levels()</code>; a silently-wrong baseline flips the sign of your comparison’s meaning.</li>
-<li><strong>Extrapolating the intercept</strong> — “expression at age 0”; centre instead.</li>
+<li><code>bmi</code> <span class="math inline">\(= 0.5\)</span>: expression rises 0.5 per BMI unit, <strong>the same slope in both sexes</strong>.</li>
+<li><code>sexM</code> <span class="math inline">\(= 2\)</span>: males are 2 units above females <strong>of the same BMI</strong>.</li>
+<li><code>(Intercept)</code> <span class="math inline">\(= 1\)</span>: a female with BMI 0 — not meaningful (centre BMI to fix it).</li>
 </ul>
 <aside class="notes">
-<p>A short defensive-driving tour. Collinearity: the model can’t tell apart two predictors that carry the same information, so their individual betas seesaw — mention this connects to identifiability, which the penalized-linear-models block addresses with regularization. Colliders/over-adjustment is the subtle one: adjusting is not free, and conditioning on a downstream variable opens a spurious path — so the rule is not “adjust for everything” but “adjust for confounders”. Many-level factors eat degrees of freedom. Reference-level and intercept traps recap earlier slides. Keep each to a sentence; this is a checklist to revisit, not new theory.</p>
+<p>Now mix the two column types. The design matrix is just the dummy and the raw BMI side by side. Work row 2 aloud. Interpretation: one slope shared by both sexes, and a vertical gap of 2 between the female line and the male line — two parallel lines. The phrase “of the same BMI” is what adjustment means; the Confounding deck explains why that can differ from the raw male-minus-female difference. Here we only need to read the numbers.</p>
+<style type="text/css">
+        span.MJX_Assistive_MathML {
+          position:absolute!important;
+          clip: rect(1px, 1px, 1px, 1px);
+          padding: 1px 0 0 0!important;
+          border: 0!important;
+          height: 1px!important;
+          width: 1px!important;
+          overflow: hidden!important;
+          display:block!important;
+      }</style></aside>
+</section>
+<section id="two-factors-treatment-and-sex" class="slide level2 smaller">
+<h2>Two factors: treatment and sex</h2>
+<p><code>expr ~ treatment + sex</code>: the intercept plus <strong>one dummy per factor</strong>. Four groups, four distinct rows:</p>
+<table class="caption-top">
+<colgroup>
+<col style="width: 20%">
+<col style="width: 20%">
+<col style="width: 20%">
+<col style="width: 20%">
+<col style="width: 20%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>group</th>
+<th>(Intercept)</th>
+<th>treatmenttreat</th>
+<th>sexM</th>
+<th><span class="math inline">\(\hat y\)</span> for <span class="math inline">\(\boldsymbol\beta = (5,\ 2,\ 1)\)</span></th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>F, ctrl</td>
+<td>1</td>
+<td>0</td>
+<td>0</td>
+<td><span class="math inline">\(5\)</span></td>
+</tr>
+<tr class="even">
+<td>F, treat</td>
+<td>1</td>
+<td>1</td>
+<td>0</td>
+<td><span class="math inline">\(5 + 2 = 7\)</span></td>
+</tr>
+<tr class="odd">
+<td>M, ctrl</td>
+<td>1</td>
+<td>0</td>
+<td>1</td>
+<td><span class="math inline">\(5 + 1 = 6\)</span></td>
+</tr>
+<tr class="even">
+<td>M, treat</td>
+<td>1</td>
+<td>1</td>
+<td>1</td>
+<td><span class="math inline">\(5 + 2 + 1 = 8\)</span></td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li>The <strong>reference group</strong> is the one with all dummies 0: female controls, <span class="math inline">\(\hat y = \beta_0\)</span>.</li>
+<li><code>treatmenttreat</code> <span class="math inline">\(= 2\)</span> is the treat − ctrl difference <strong>in both sexes</strong> (<span class="math inline">\(7-5 = 8-6 = 2\)</span>).</li>
+<li>4 groups but only 3 coefficients: this <strong>additive</strong> model forces the treatment effect to be the same for F and M.</li>
+</ul>
+<p>The same pattern works for <code>~ batch + treatment</code> (sequencing batch A/B as the second factor).</p>
+<aside class="notes">
+<p>Two factors: still one column per non-reference level, nothing new to learn. The key observation is the count: four groups, three numbers, so the model cannot describe every possible set of four group means. It imposes “same treatment effect in each sex”. If you want the treatment effect to differ, you need one more column: the interaction, in two slides. Treatment plus batch is the most common design in omics and builds X the same way.</p>
+<style type="text/css">
+        span.MJX_Assistive_MathML {
+          position:absolute!important;
+          clip: rect(1px, 1px, 1px, 1px);
+          padding: 1px 0 0 0!important;
+          border: 0!important;
+          height: 1px!important;
+          width: 1px!important;
+          overflow: hidden!important;
+          display:block!important;
+      }</style></aside>
+</section>
+<section id="a-factor-with-three-levels-batch-a-b-c" class="slide level2 smaller">
+<h2>A factor with three levels: batch A / B / C</h2>
+<p>A factor with <span class="math inline">\(k\)</span> levels gives <span class="math inline">\(k - 1\)</span> dummy columns. Batch A is the reference:</p>
+<table class="caption-top">
+<colgroup>
+<col style="width: 20%">
+<col style="width: 20%">
+<col style="width: 20%">
+<col style="width: 20%">
+<col style="width: 20%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>batch</th>
+<th>(Intercept)</th>
+<th>batchB</th>
+<th>batchC</th>
+<th><span class="math inline">\(\hat y\)</span> for <span class="math inline">\(\boldsymbol\beta = (10,\ 2,\ -3)\)</span></th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>A</td>
+<td>1</td>
+<td>0</td>
+<td>0</td>
+<td><span class="math inline">\(10\)</span></td>
+</tr>
+<tr class="even">
+<td>B</td>
+<td>1</td>
+<td>1</td>
+<td>0</td>
+<td><span class="math inline">\(10 + 2 = 12\)</span></td>
+</tr>
+<tr class="odd">
+<td>C</td>
+<td>1</td>
+<td>0</td>
+<td>1</td>
+<td><span class="math inline">\(10 - 3 = 7\)</span></td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li><code>batchB</code> = B − A, <code>batchC</code> = C − A. Both compare <strong>to the reference</strong>, not to each other.</li>
+<li>C − B is not a coefficient, but it is easy: <span class="math inline">\(\beta_\text{C} - \beta_\text{B} = -3 - 2 = -5\)</span>.</li>
+<li>Backwards works too: batch means 10, 12, 7 <span class="math inline">\(\Rightarrow\)</span> <span class="math inline">\(\boldsymbol\beta = (10,\ 12-10,\ 7-10) = (10,\ 2,\ -3)\)</span>.</li>
+</ul>
+<aside class="notes">
+<p>Three levels, two dummies. The typical student slip is to read batchC as “C compared to B” — it is always compared to the reference. Comparisons between two non-reference levels are differences of coefficients. Going from group means to beta and back is a reliable exam item, and it is just X beta on three distinct rows.</p>
+<style type="text/css">
+        span.MJX_Assistive_MathML {
+          position:absolute!important;
+          clip: rect(1px, 1px, 1px, 1px);
+          padding: 1px 0 0 0!important;
+          border: 0!important;
+          height: 1px!important;
+          width: 1px!important;
+          overflow: hidden!important;
+          display:block!important;
+      }</style></aside>
+</section>
+<section id="time-points-as-a-factor-watch-the-level-order" class="slide level2 smaller">
+<h2>Time points as a factor: watch the level order</h2>
+<p>Samples at <strong>0 h, 6 h and 24 h</strong> after treatment. As a factor, time gives two dummies, <code>time6h</code> and <code>time24h</code>, with <strong>0 h</strong> as the reference.</p>
+<p>But R sorts levels <strong>alphabetically, as text</strong>:</p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a aria-hidden="true" tabindex="-1"></a><span class="fu">levels</span>(<span class="fu">factor</span>(<span class="fu">c</span>(<span class="st">"0h"</span>, <span class="st">"6h"</span>, <span class="st">"24h"</span>)))</span>
+<span id="cb5-2"><a aria-hidden="true" tabindex="-1"></a><span class="co"># [1] "0h"  "24h" "6h"</span></span>
+<span id="cb5-3"><a aria-hidden="true" tabindex="-1"></a><span class="fu">levels</span>(<span class="fu">factor</span>(<span class="fu">c</span>(<span class="st">"6h"</span>, <span class="st">"24h"</span>, <span class="st">"48h"</span>)))</span>
+<span id="cb5-4"><a aria-hidden="true" tabindex="-1"></a><span class="co"># [1] "24h" "48h" "6h"       # reference would be 24h!</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>Always give the order yourself:</p>
+<div class="sourceCode" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a aria-hidden="true" tabindex="-1"></a>time <span class="ot">&lt;-</span> <span class="fu">factor</span>(time, <span class="at">levels =</span> <span class="fu">c</span>(<span class="st">"0h"</span>, <span class="st">"6h"</span>, <span class="st">"24h"</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>Then the columns are <code>time6h</code> (6 h − 0 h) and <code>time24h</code> (24 h − 0 h), and 0 h is the baseline.</p>
+<aside class="notes">
+<p>A practical trap that bites in every time-course experiment. “24h” sorts before “6h” because the character “2” comes before “6”. With 0h present the reference happens to stay 0h, but the columns come out in a confusing order; with no 0h the reference silently becomes the wrong time point. The fix is one line: set levels explicitly. Same for doses like “10mg” and “5mg”.</p>
+<style type="text/css">
+        span.MJX_Assistive_MathML {
+          position:absolute!important;
+          clip: rect(1px, 1px, 1px, 1px);
+          padding: 1px 0 0 0!important;
+          border: 0!important;
+          height: 1px!important;
+          width: 1px!important;
+          overflow: hidden!important;
+          display:block!important;
+      }</style></aside>
+</section>
+<section id="time-as-a-factor-or-as-a-number" class="slide level2 smaller">
+<h2>Time as a factor, or as a number?</h2>
+
+<img data-src="fig15-time-factor-vs-slope.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:72.0%"><ul>
+<li><strong>Factor</strong> <code>~ time</code>: 3 columns, one mean per time point (4, 10, 7). Any shape — expression can <strong>rise then fall</strong>.</li>
+<li><strong>Number</strong> <code>~ hours</code>: 2 columns (intercept, slope). Forces a <strong>straight line</strong>, which misses the peak at 6 h.</li>
+<li>Rule of thumb: few time points and an unknown shape → <strong>factor</strong>; many time points and a steady trend (or age, BMI) → <strong>number</strong>.</li>
+</ul>
+<aside class="notes">
+<p>The same covariate can be coded two ways, and the choice changes X. As a factor it costs one column per extra time point but makes no assumption about shape. As a number it costs one column but assumes a constant rate of change per hour. In the figure the truth rises and falls, so the slope model averages it away. For age and BMI, a slope is usually the sensible choice; for 3 to 4 time points after a stimulus, a factor usually is.</p>
+<style type="text/css">
+        span.MJX_Assistive_MathML {
+          position:absolute!important;
+          clip: rect(1px, 1px, 1px, 1px);
+          padding: 1px 0 0 0!important;
+          border: 0!important;
+          height: 1px!important;
+          width: 1px!important;
+          overflow: hidden!important;
+          display:block!important;
+      }</style></aside>
+</section>
+<section id="an-interaction-column-product-of-dummies" class="slide level2 smaller">
+<h2>An interaction column: product of dummies</h2>
+<p><code>expr ~ treatment * sex</code> expands to <code>treatment + sex + treatment:sex</code>. The new column is the <strong>product</strong> of the two dummies — it is 1 only for treated males:</p>
+<table class="caption-top" style="width:100%;">
+<colgroup>
+<col style="width: 16%">
+<col style="width: 16%">
+<col style="width: 16%">
+<col style="width: 16%">
+<col style="width: 16%">
+<col style="width: 16%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>group</th>
+<th>(Intercept)</th>
+<th>treatmenttreat</th>
+<th>sexM</th>
+<th>treatmenttreat:sexM</th>
+<th><span class="math inline">\(\hat y\)</span> for <span class="math inline">\(\boldsymbol\beta = (5,\ 2,\ 1,\ 3)\)</span></th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>F, ctrl</td>
+<td>1</td>
+<td>0</td>
+<td>0</td>
+<td><span class="math inline">\(0 \times 0 = 0\)</span></td>
+<td><span class="math inline">\(5\)</span></td>
+</tr>
+<tr class="even">
+<td>F, treat</td>
+<td>1</td>
+<td>1</td>
+<td>0</td>
+<td><span class="math inline">\(1 \times 0 = 0\)</span></td>
+<td><span class="math inline">\(5 + 2 = 7\)</span></td>
+</tr>
+<tr class="odd">
+<td>M, ctrl</td>
+<td>1</td>
+<td>0</td>
+<td>1</td>
+<td><span class="math inline">\(0 \times 1 = 0\)</span></td>
+<td><span class="math inline">\(5 + 1 = 6\)</span></td>
+</tr>
+<tr class="even">
+<td>M, treat</td>
+<td>1</td>
+<td>1</td>
+<td>1</td>
+<td><span class="math inline">\(1 \times 1 = 1\)</span></td>
+<td><span class="math inline">\(5 + 2 + 1 + 3 = 11\)</span></td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li>Now 4 groups and 4 coefficients: each group can have its <strong>own mean</strong>.</li>
+<li>Treatment effect in females <span class="math inline">\(7 - 5 = 2\)</span>; in males <span class="math inline">\(11 - 6 = 5\)</span>. The interaction coefficient <span class="math inline">\(3\)</span> is the <strong>difference</strong> between the two.</li>
+</ul>
+<p>Interpreting interactions in depth is in <em>Confounding &amp; Simpson’s paradox</em>.</p>
+<aside class="notes">
+<p>Mechanically, an interaction is one more column of X, built by multiplying two dummy columns entry by entry. Have them fill in the product column themselves. With the interaction the model has as many coefficients as groups, so it reproduces the four group means exactly. Reading beta_1, beta_3 and beta_1 + beta_3 as effects in each sex is covered in the next deck; here the skill is to build the column and compute X beta. A common slip is writing only treatment:sex and forgetting the main effects; the star does it for you.</p>
+<style type="text/css">
+        span.MJX_Assistive_MathML {
+          position:absolute!important;
+          clip: rect(1px, 1px, 1px, 1px);
+          padding: 1px 0 0 0!important;
+          border: 0!important;
+          height: 1px!important;
+          width: 1px!important;
+          overflow: hidden!important;
+          display:block!important;
+      }</style></aside>
+</section>
+<section id="recipe-building-x-by-hand" class="slide level2 smaller">
+<h2>Recipe: building <span class="math inline">\(X\)</span> by hand</h2>
+<ol type="1">
+<li><strong>Intercept</strong>: a column of 1’s.</li>
+<li><strong>Each number</strong> (age, BMI, hours): its raw values, one column.</li>
+<li><strong>Each factor</strong> with <span class="math inline">\(k\)</span> levels: <span class="math inline">\(k - 1\)</span> dummy columns, one per non-reference level (1 if the sample has that level, else 0).</li>
+<li><strong>Each interaction</strong> <code>a:b</code>: multiply the columns of <code>a</code> and <code>b</code> entry by entry.</li>
+</ol>
+<p>Counting columns <span class="math inline">\(p\)</span> for <code>~ sex + batch + age + treatment</code> with batch A/B/C:</p>
+<p><span class="math display">\[
+p = \underbrace{1}_{\text{intercept}} + \underbrace{1}_{\text{sexM}} + \underbrace{2}_{\text{batchB, batchC}} + \underbrace{1}_{\text{age}} + \underbrace{1}_{\text{treatmenttreat}} = 6 .
+\]</span></p>
+<p>A treated male aged 40 in batch C has the row <span class="math inline">\((1,\ 1,\ 0,\ 1,\ 40,\ 1)\)</span>.</p>
+<aside class="notes">
+<p>This is the checklist to memorise, and the exact procedure for the exam. Counting columns matters because the number of columns p has to be compared with the number of samples n, and because each column costs data. Writing the row for one described sample is a quick exam item: walk through the columns in order. Remind them that the column order follows the formula order.</p>
+<style type="text/css">
+        span.MJX_Assistive_MathML {
+          position:absolute!important;
+          clip: rect(1px, 1px, 1px, 1px);
+          padding: 1px 0 0 0!important;
+          border: 0!important;
+          height: 1px!important;
+          width: 1px!important;
+          overflow: hidden!important;
+          display:block!important;
+      }</style></aside>
+</section>
+<section id="does-boldsymbolbeta-have-a-unique-answer" class="slide level2 smaller">
+<h2>Does <span class="math inline">\(\boldsymbol\beta\)</span> have a unique answer?</h2>
+<p>Fitting = solving <span class="math inline">\(\mathbf y \approx X\boldsymbol\beta\)</span> for <span class="math inline">\(\boldsymbol\beta\)</span> — a linear system, so the trichotomy from <strong>Linear systems in R</strong> applies: <strong>one</strong>, <strong>none</strong>, or <strong>infinitely many</strong>.</p>
+<ul>
+<li>With real, noisy data no <span class="math inline">\(\boldsymbol\beta\)</span> fits exactly (Case 2: more samples than columns), so we take the <strong>least-squares</strong> best fit, as <code>lm</code> does.</li>
+<li>That best fit is <strong>unique</strong> exactly when the columns of <span class="math inline">\(X\)</span> are <strong>linearly independent</strong>: no column is a sum or multiple of others (full column rank, <code>qr(X)$rank</code> <span class="math inline">\(= p\)</span>).</li>
+<li>This needs at least as many samples as columns: <span class="math inline">\(n \ge p\)</span>.</li>
+</ul>
+<p>If some columns are dependent, we are in <strong>Case 3</strong>: <strong>infinitely many</strong> <span class="math inline">\(\boldsymbol\beta\)</span> give the <strong>same</strong> fitted values <span class="math inline">\(X\boldsymbol\beta\)</span>. The predictions are fine; the <strong>split</strong> between coefficients is not determined.</p>
+<aside class="notes">
+<p>This is the link back to Linear systems in R: rank, singular systems, zero/one/infinitely many solutions. The new twist is that we use least squares, so “no exact solution” is normal and harmless. What matters is whether the best fit is unique, and that is decided by the columns of X alone, before any data are measured. Stress the last sentence: dependent columns do not break the predictions, they make individual coefficients meaningless, and the coefficients are what we want to report.</p>
+<style type="text/css">
+        span.MJX_Assistive_MathML {
+          position:absolute!important;
+          clip: rect(1px, 1px, 1px, 1px);
+          padding: 1px 0 0 0!important;
+          border: 0!important;
+          height: 1px!important;
+          width: 1px!important;
+          overflow: hidden!important;
+          display:block!important;
+      }</style></aside>
+</section>
+<section id="three-ways-to-get-dependent-columns" class="slide level2 smaller">
+<h2>Three ways to get dependent columns</h2>
+
+<img data-src="fig16-dependent-columns.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:88.0%"><ul>
+<li><strong>Dummy-variable trap</strong>: a column for every level <em>and</em> an intercept. <code>sexF + sexM</code> equals the intercept column.</li>
+<li><strong>Batch = treatment</strong>: every control in batch A, every treated sample in batch B. Two identical columns.</li>
+<li><strong>Empty cell</strong>: an interaction, but no treated males. The product column is all zeros.</li>
+</ul>
+<aside class="notes">
+<p>Three patterns cover almost every real case. The dummy trap is why R drops the reference level: k levels plus an intercept would be k + 1 columns carrying only k pieces of information. The batch case is the one that ruins real experiments: if batch and treatment are identical, no software can tell a batch effect from a drug effect. The empty cell is subtle: the interaction asks “how does the treatment effect differ in males?”, but there is no treated male to answer it, so the column carries nothing. To spot a dependence, look for a column equal to another column, a sum of others, or all zeros.</p>
+<style type="text/css">
+        span.MJX_Assistive_MathML {
+          position:absolute!important;
+          clip: rect(1px, 1px, 1px, 1px);
+          padding: 1px 0 0 0!important;
+          border: 0!important;
+          height: 1px!important;
+          width: 1px!important;
+          overflow: hidden!important;
+          display:block!important;
+      }</style></aside>
+</section>
+<section id="why-infinitely-many-batch-treatment" class="slide level2 smaller">
+<h2>Why “infinitely many”: batch = treatment</h2>
+<p>Controls all in batch A (mean 10), treated all in batch B (mean 14). Columns: (Intercept), <code>batchB</code>, <code>treatmenttreat</code> — the last two are <strong>identical</strong>.</p>
+<p>Every group mean only involves <span class="math inline">\(\beta_\text{batchB} + \beta_\text{treat}\)</span>:</p>
+<p><span class="math display">\[
+\text{A, ctrl: } \beta_0 = 10, \qquad \text{B, treat: } \beta_0 + \beta_\text{batchB} + \beta_\text{treat} = 14 .
+\]</span></p>
+<table class="caption-top">
+<colgroup>
+<col style="width: 25%">
+<col style="width: 25%">
+<col style="width: 25%">
+<col style="width: 25%">
+</colgroup>
+<thead>
+<tr class="header">
+<th><span class="math inline">\(\beta_0\)</span></th>
+<th><span class="math inline">\(\beta_\text{batchB}\)</span></th>
+<th><span class="math inline">\(\beta_\text{treat}\)</span></th>
+<th>fitted A, B</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>10</td>
+<td>4</td>
+<td>0</td>
+<td>10, 14</td>
+</tr>
+<tr class="even">
+<td>10</td>
+<td>0</td>
+<td>4</td>
+<td>10, 14</td>
+</tr>
+<tr class="odd">
+<td>10</td>
+<td>2</td>
+<td>2</td>
+<td>10, 14</td>
+</tr>
+<tr class="even">
+<td>10</td>
+<td>−6</td>
+<td>10</td>
+<td>10, 14</td>
+</tr>
+</tbody>
+</table>
+<p>Same fit every time. “All batch”, “all drug”, or anything in between — the data <strong>cannot</strong> decide.</p>
+<aside class="notes">
+<p>Make the abstract statement concrete. Two equations, three unknowns: a whole line of solutions, just as in Case 3 of Linear systems in R. Ask the room for another row of the table. The biological message is the important one: the difference of 4 between the groups is real, but whether it is caused by the drug or by the sequencing run is not identifiable from these data, by any method. The same thing happens for the dummy trap: means F 6, M 9 fit with (6, 0, 3), (9, -3, 0), (0, 6, 9) and so on.</p>
+<style type="text/css">
+        span.MJX_Assistive_MathML {
+          position:absolute!important;
+          clip: rect(1px, 1px, 1px, 1px);
+          padding: 1px 0 0 0!important;
+          border: 0!important;
+          height: 1px!important;
+          width: 1px!important;
+          overflow: hidden!important;
+          display:block!important;
+      }</style></aside>
+</section>
+<section id="fix-it-in-the-design-not-the-analysis" class="slide level2 smaller">
+<h2>Fix it in the design, not the analysis</h2>
+
+<img data-src="fig17-batch-design-balance.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:76.0%"><ul>
+<li><strong>Perfectly confounded</strong>: dependent columns, no unique <span class="math inline">\(\boldsymbol\beta\)</span>. No analysis can rescue it.</li>
+<li><strong>Partly confounded</strong>: columns independent, <span class="math inline">\(\boldsymbol\beta\)</span> unique — but the unadjusted comparison can mislead. That is the topic of <em>Confounding &amp; Simpson’s paradox</em>.</li>
+<li><strong>Balanced</strong>: every batch contains both treatments. Plan this <strong>before</strong> sequencing.</li>
+</ul>
+<p>What to change when <span class="math inline">\(\boldsymbol\beta\)</span> is not unique:</p>
+<ul>
+<li>dummy trap → <strong>drop a column</strong> (keep <span class="math inline">\(k - 1\)</span> dummies);</li>
+<li>empty cell → <strong>drop the interaction</strong>, or collect the missing group;</li>
+<li>batch = treatment → <strong>redesign</strong>: spread each condition over every batch.</li>
+</ul>
+<aside class="notes">
+<p>Two kinds of fixes. Some dependencies are a coding mistake and are fixed by removing a column — R already does this for the dummy trap. Others are a design mistake and cannot be fixed afterwards: if all treated samples went into one sequencing run, the experiment has to be redone with a balanced layout. The partly confounded middle panel uses the same counts as the Simpson’s paradox example in the next deck, which is the cue to go there.</p>
+<style type="text/css">
+        span.MJX_Assistive_MathML {
+          position:absolute!important;
+          clip: rect(1px, 1px, 1px, 1px);
+          padding: 1px 0 0 0!important;
+          border: 0!important;
+          height: 1px!important;
+          width: 1px!important;
+          overflow: hidden!important;
+          display:block!important;
+      }</style></aside>
+</section>
+<section id="more-columns-than-samples-p-n" class="slide level2 smaller">
+<h2>More columns than samples: <span class="math inline">\(p &gt; n\)</span></h2>
+<p><span class="math inline">\(X\)</span> has <span class="math inline">\(n\)</span> rows. With <span class="math inline">\(n\)</span> rows, at most <span class="math inline">\(n\)</span> columns can be independent, so if <span class="math inline">\(p &gt; n\)</span> the columns <strong>must</strong> be dependent.</p>
+<ul>
+<li>4 mice, <code>~ treatment + sex + batch + age + bmi</code> (batch A/B) → <span class="math inline">\(p = 6 &gt; n = 4\)</span> → no unique <span class="math inline">\(\boldsymbol\beta\)</span>.</li>
+<li>Every factor level costs a column: a 10-level batch factor alone needs 9 dummies.</li>
+<li><span class="math inline">\(p = n\)</span> (with independent columns) fits every sample <strong>exactly</strong>: no residuals left, nothing to estimate the noise from.</li>
+</ul>
+<p>Rule: count <span class="math inline">\(p\)</span> before you collect data, and keep <span class="math inline">\(n\)</span> well above it. When you really have more predictors than samples (thousands of genes as predictors), you need a different tool: <strong>Penalized linear models</strong>.</p>
+<aside class="notes">
+<p>The fourth way to lose uniqueness, and the quickest to check: count columns, count samples. With n = p the fit is perfect but useless for inference, because nothing is left over to estimate the noise. Many-level factors eat columns fast. The forward link is to the penalized block, where ridge and lasso give a unique answer even when p &gt; n by adding a penalty.</p>
+<style type="text/css">
+        span.MJX_Assistive_MathML {
+          position:absolute!important;
+          clip: rect(1px, 1px, 1px, 1px);
+          padding: 1px 0 0 0!important;
+          border: 0!important;
+          height: 1px!important;
+          width: 1px!important;
+          overflow: hidden!important;
+          display:block!important;
+      }</style></aside>
+</section>
+<section id="what-r-tells-you" class="slide level2 smaller">
+<h2>What R tells you</h2>
+<div class="sourceCode" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a aria-hidden="true" tabindex="-1"></a>batch     <span class="ot">&lt;-</span> <span class="fu">factor</span>(<span class="fu">rep</span>(<span class="fu">c</span>(<span class="st">"A"</span>, <span class="st">"B"</span>), <span class="at">each =</span> <span class="dv">4</span>))</span>
+<span id="cb7-2"><a aria-hidden="true" tabindex="-1"></a>treatment <span class="ot">&lt;-</span> <span class="fu">factor</span>(<span class="fu">rep</span>(<span class="fu">c</span>(<span class="st">"ctrl"</span>, <span class="st">"treat"</span>), <span class="at">each =</span> <span class="dv">4</span>))  <span class="co"># same split as batch!</span></span>
+<span id="cb7-3"><a aria-hidden="true" tabindex="-1"></a>y <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="dv">10</span>, <span class="dv">11</span>, <span class="dv">9</span>, <span class="dv">10</span>, <span class="dv">14</span>, <span class="dv">13</span>, <span class="dv">15</span>, <span class="dv">14</span>)</span>
+<span id="cb7-4"><a aria-hidden="true" tabindex="-1"></a>X <span class="ot">&lt;-</span> <span class="fu">model.matrix</span>(<span class="sc">~</span> batch <span class="sc">+</span> treatment)</span>
+<span id="cb7-5"><a aria-hidden="true" tabindex="-1"></a><span class="fu">qr</span>(X)<span class="sc">$</span>rank          <span class="co"># 2, but ncol(X) is 3  -&gt; dependent columns</span></span>
+<span id="cb7-6"><a aria-hidden="true" tabindex="-1"></a><span class="fu">coef</span>(<span class="fu">lm</span>(y <span class="sc">~</span> batch <span class="sc">+</span> treatment))</span>
+<span id="cb7-7"><a aria-hidden="true" tabindex="-1"></a><span class="co">#   (Intercept)         batchB treatmenttreat</span></span>
+<span id="cb7-8"><a aria-hidden="true" tabindex="-1"></a><span class="co">#            10              4             NA</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<ul>
+<li><code>lm</code> keeps the first column of a dependent set and reports <strong><code>NA</code></strong> for the rest. The <code>4</code> is <em>not</em> a batch effect — it is batch and treatment together.</li>
+<li><strong>DESeq2</strong> refuses outright: <em>“the model matrix is not full rank, so the model cannot be fit as specified.”</em></li>
+</ul>
+<p>More in <em>Design matrices in R: DESeq2 &amp; limma</em>.</p>
+<aside class="notes">
+<p>Show what the problem looks like in practice. lm does not error; it silently drops the redundant column and prints NA, and the remaining coefficient absorbs both effects. That is easy to misread, so an NA coefficient should always prompt a look at the design. DESeq2 checks the rank up front and stops with the “not full rank” error. The rank check qr(X)$rank is the same one from Linear systems in R. The full DESeq2 workflow is in the R deck.</p>
 <style type="text/css">
         span.MJX_Assistive_MathML {
           position:absolute!important;
@@ -636,42 +1112,42 @@ Quantitative biology and integrative omics
 <td>any extra predictor; interest <strong>or</strong> nuisance — same machinery</td>
 </tr>
 <tr class="even">
-<td>Formula</td>
-<td><code>y ~ a + b</code> builds the design matrix <span class="math inline">\(X\)</span>; model is <span class="math inline">\(y = X\beta + \varepsilon\)</span></td>
+<td>Formula → <span class="math inline">\(X\)</span></td>
+<td>one row per sample, one column per coefficient; <span class="math inline">\(\mathbf y = X\boldsymbol\beta + \boldsymbol\varepsilon\)</span></td>
 </tr>
 <tr class="odd">
-<td>Continuous predictor</td>
-<td>one column; coefficient = <strong>slope</strong> (per unit)</td>
+<td><span class="math inline">\(X\boldsymbol\beta\)</span></td>
+<td>each sample’s <strong>predicted mean</strong>; identical rows → one mean per group</td>
 </tr>
 <tr class="even">
-<td>Categorical predictor</td>
-<td>factor → <span class="math inline">\(k-1\)</span> <strong>dummy</strong> columns; coefficient = <strong>difference from reference</strong></td>
+<td>Continuous (age, BMI)</td>
+<td>one column; coefficient = <strong>slope</strong> per unit; centre for a useful intercept</td>
 </tr>
 <tr class="odd">
-<td>Contrasts</td>
-<td>the coding scheme; decides what each coefficient <strong>compares</strong></td>
+<td>Factor, <span class="math inline">\(k\)</span> levels</td>
+<td><span class="math inline">\(k - 1\)</span> dummies; coefficient = <strong>difference from the reference</strong></td>
 </tr>
 <tr class="even">
-<td>Adjustment</td>
-<td><code>+ covariate</code> → effect “<strong>holding the others constant</strong>”</td>
+<td>Time</td>
+<td>factor (any shape) or number (one slope); set the level order yourself</td>
 </tr>
 <tr class="odd">
-<td>Confounding</td>
-<td>a common cause of predictor &amp; outcome; ignoring it <strong>biases</strong> the effect</td>
-</tr>
-<tr class="even">
 <td>Interaction</td>
-<td><code>a * b</code> → effect of <code>a</code> <strong>depends on</strong> <code>b</code>; product term <span class="math inline">\(\beta\)</span></td>
+<td>product of dummy columns; lets each group have its own mean</td>
+</tr>
+<tr class="even">
+<td>Unique <span class="math inline">\(\boldsymbol\beta\)</span></td>
+<td>iff columns of <span class="math inline">\(X\)</span> are <strong>linearly independent</strong> (needs <span class="math inline">\(n \ge p\)</span>)</td>
 </tr>
 <tr class="odd">
-<td>Bayesian</td>
-<td>same <span class="math inline">\(X\)</span>, plus <strong>priors</strong> on <span class="math inline">\(\beta\)</span> and a <strong>posterior</strong> per coefficient</td>
+<td>Not unique</td>
+<td>dummy trap, batch = treatment, empty cell, <span class="math inline">\(p &gt; n\)</span> → drop a column or <strong>fix the design</strong></td>
 </tr>
 </tbody>
 </table>
-<p><strong>Next:</strong> the error-models unit (Poisson/NB likelihoods for counts) and hierarchical models (covariates that vary across biological vs technical replicates).</p>
+<p><strong>Next:</strong> <em>Confounding &amp; Simpson’s paradox</em> — what “holding the others constant” buys you; then <em>Design matrices in R</em> (DESeq2, limma).</p>
 <aside class="notes">
-<p>The summary is the revision sheet. Drill the pipeline once more: a formula builds X, continuous predictors give slopes, factors give differences-from-reference via dummy columns, adding a covariate changes the question the coefficient answers to “holding others constant”, confounders must be adjusted for, interactions let effects depend on subgroup, and the Bayesian layer only adds priors and posteriors on the same betas. Point forward to error models (counts) and hierarchical models (replicate structure) as the natural continuations in this block. Remind them the exam wants them to READ a fitted equation and say what each coefficient means.</p>
+<p>The summary is the revision sheet. The exam wants four things: build X for a described experiment, compute X beta for a sample or group, say what a coefficient means, and decide whether beta is unique — and if not, why and what to change. Point forward to the confounding deck for adjustment and interactions, and to the R deck for doing all this on real RNA-seq and metabolomics data.</p>
 <style type="text/css">
         span.MJX_Assistive_MathML {
           position:absolute!important;

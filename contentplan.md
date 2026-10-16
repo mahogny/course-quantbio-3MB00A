@@ -73,8 +73,18 @@ most time.
 - Introduction to R-STAN
 - Fitting of equations
 - Error models: the exponential and Poisson distributions
-- Handling common covariates: age, sex, BMI, treatments
 - Hierarchical models: what are biological and technical replicates?
+
+## Linear models with covariates · *Core · own block*
+
+Not provisional: design matrices are core to any linear model (frequentist,
+Bayesian, penalized) and to every differential-expression tool.
+
+- Design matrices for common covariates: age, sex, BMI, batch, time, treatment;
+  when the coefficients have a unique solution
+- Confounding and Simpson's paradox; adjustment, interactions, balanced designs
+- In R: `model.matrix`, DESeq2 on bulk RNA-seq counts (limma on metabolomics
+  as extra material)
 
 ## Week 4 — Penalized linear models · *Moderate · ~5 days*
 

@@ -46,16 +46,23 @@ const readEq = (s: string | undefined, fb: number[]): Eq => {
   return v.length >= 3 ? { a: v[0], b: v[1], c: v[2] } : { a: fb[0], b: fb[1], c: fb[2] };
 };
 
-/** "2x₁ + 1x₂ = 8", coefficients always written out, as on the slides. */
-function eqText(e: Eq): string {
+/** "2x + 1y = 8", coefficients always written out, as on the slides. */
+function eqText(e: Eq, v1: string, v2: string): string {
   const b = e.b < 0 ? ` − ${fmt(-e.b)}` : ` + ${fmt(e.b)}`;
-  return `${fmt(e.a)}x₁${b}x₂ = ${fmt(e.c)}`;
+  return `${fmt(e.a)}${v1}${b}${v2} = ${fmt(e.c)}`;
 }
 
 const RANGE = { ab: [-4, 4, 0.1], c: [-12, 12, 0.5] } as const;
 
 function mount(host: HTMLElement): void {
   injectStyle();
+  // Variable names: x and y by default (course notation); e.g. data-vars="x₁ x₂" overrides.
+  const [V1, V2] = (host.dataset.vars ?? "x y").trim().split(/\s+/);
+  // Coefficient names: ax + by = c, dx + ey = f by default (data-coef="abcdef");
+  // data-coef="sub" gives a₁ b₁ c₁ / a₂ b₂ c₂.
+  const letters = (host.dataset.coef ?? "abcdef") !== "sub";
+  const cname = (i: 0 | 1, k: "a" | "b" | "c"): string =>
+    letters ? "abcdef"[3 * i + "abc".indexOf(k)] : k + SUB[i];
   const init: [Eq, Eq] = [readEq(host.dataset.eq1, [2, 1, 8]), readEq(host.dataset.eq2, [1, 3, 9])];
   const eqs: [Eq, Eq] = [{ ...init[0] }, { ...init[1] }];
   const anchors: (P2 | null)[] = [null, null];
@@ -77,8 +84,8 @@ function mount(host: HTMLElement): void {
       svgEl("text", { x: sx(0) - 6, y: sy(i) + 6, "text-anchor": "end", "font-size": 18, fill: "#666" }, grid).textContent = fmt(i);
     }
   }
-  svgEl("text", { x: sx(HI) - 4, y: sy(0) - 8, "text-anchor": "end", "font-size": 20, "font-style": "italic" }, grid).textContent = "x₁";
-  svgEl("text", { x: sx(0) + 8, y: sy(HI) + 20, "font-size": 20, "font-style": "italic" }, grid).textContent = "x₂";
+  svgEl("text", { x: sx(HI) - 4, y: sy(0) - 8, "text-anchor": "end", "font-size": 20, "font-style": "italic" }, grid).textContent = V1;
+  svgEl("text", { x: sx(0) + 8, y: sy(HI) + 20, "font-size": 20, "font-style": "italic" }, grid).textContent = V2;
 
   const clipId = `${NAME}-clip-${++uid}`;
   const cp = svgEl("clipPath", { id: clipId }, svgEl("defs", {}, svg));
@@ -147,7 +154,7 @@ function mount(host: HTMLElement): void {
     const f2 = (v: number) => fmt(v, 2);
     const mk = (k: "a" | "b" | "c") => {
       const [lo, hi, st] = k === "c" ? RANGE.c : RANGE.ab;
-      return slider(box, k + SUB[i], lo, hi, st, eqs[i][k], v => {
+      return slider(box, cname(i, k), lo, hi, st, eqs[i][k], v => {
         setEq(i, { ...eqs[i], [k]: v }, false);
       }, f2);
     };
@@ -158,7 +165,8 @@ function mount(host: HTMLElement): void {
   const sTitle = htmlEl("div", "tl-title", "", status);
   const sWhy = htmlEl("div", "tl-why", "", status);
   const ro = htmlEl("div", "qb-readout", "", panel);
-  htmlEl("div", "qb-note", "Drag ○ to shift a line (changes c), ● to turn it (changes a, b). Both snap to nice values.", panel);
+  htmlEl("div", "qb-note", letters ? "Drag ○ to shift a line (changes c or f), ● to turn it (changes a, b or d, e). Both snap to nice values."
+    : "Drag ○ to shift a line (changes c), ● to turn it (changes a, b). Both snap to nice values.", panel);
 
   function setBoth(e1: number[], e2: number[]): void {
     eqs[0] = { a: e1[0], b: e1[1], c: e1[2] }; eqs[1] = { a: e2[0], b: e2[1], c: e2[2] };
@@ -301,7 +309,7 @@ function mount(host: HTMLElement): void {
     }
     [msg, msg2].forEach((t, j) => { t.textContent = notes[j]?.[0] ?? ""; t.setAttribute("fill", notes[j]?.[1] ?? "#000"); });
 
-    for (const i of [0, 1]) eqTxt[i].textContent = eqText(eqs[i]);
+    for (const i of [0, 1]) eqTxt[i].textContent = eqText(eqs[i], V1, V2);
     statusText(res);
   }
 
@@ -310,10 +318,10 @@ function mount(host: HTMLElement): void {
     status.style.borderColor = col;
     sTitle.style.color = col;
     const e1 = eqs[0], e2 = eqs[1];
-    const xn = (j: 0 | 1) => "x" + SUB[j];
+    const xn = (j: 0 | 1) => (j === 0 ? V1 : V2);
     if (res.kind === "unique") {
       const x = res.x!;
-      sTitle.textContent = `Unique solution (x₁, x₂) = (${fmt(x[0], 2)}, ${fmt(x[1], 2)})`;
+      sTitle.textContent = `Unique solution (${V1}, ${V2}) = (${fmt(x[0], 2)}, ${fmt(x[1], 2)})`;
       // how far the crossing moves when c2 changes by one slider step
       const y = classify(e1, { ...e2, c: e2.c + RANGE.c[2] }).x!;
       const mv = Math.hypot(y[0] - x[0], y[1] - x[1]);
@@ -321,18 +329,18 @@ function mount(host: HTMLElement): void {
       sWhy.innerHTML = (ang < 10
         ? `<b>Almost parallel</b> (angle ${fmt(ang, 1)}°): the crossing point is very sensitive and jumps far away.`
         : `The lines cross at exactly one point (angle ${fmt(ang, 0)}°).`)
-        + `<br>Changing c₂ by 0.5 moves the crossing by ${fmt(mv, 2)}.`;
+        + `<br>Changing ${cname(1, "c")} by 0.5 moves the crossing by ${fmt(mv, 2)}.`;
     } else if (res.kind === "none") {
       sTitle.textContent = "No solution";
       if (res.why === "impossible") {
         const k = res.zeroRow!;
-        sWhy.innerHTML = `R${k + 1} has no x₁ and no x₂: it reads 0 = ${fmt(eqs[k].c)}, which is never true.`;
+        sWhy.innerHTML = `R${k + 1} has no ${V1} and no ${V2}: it reads 0 = ${fmt(eqs[k].c)}, which is never true.`;
       } else if (Math.abs(e1.b) > 1e-12) {
-        sWhy.innerHTML = `Parallel lines: the same slope −a/b = ${fmt(-e1.a / e1.b, 2)}, but they cross the x₂-axis at `
+        sWhy.innerHTML = `Parallel lines: the same slope −a/b = ${fmt(-e1.a / e1.b, 2)}, but they cross the ${V2}-axis at `
           + `<span class="c0">${fmt(e1.c / e1.b, 2)}</span> and <span class="c1">${fmt(e2.c / e2.b, 2)}</span>. They never meet.`;
       } else {
-        sWhy.innerHTML = `Parallel vertical lines: <span class="c0">x₁ = ${fmt(e1.c / e1.a, 2)}</span> and `
-          + `<span class="c1">x₁ = ${fmt(e2.c / e2.a, 2)}</span>. They never meet.`;
+        sWhy.innerHTML = `Parallel vertical lines: <span class="c0">${V1} = ${fmt(e1.c / e1.a, 2)}</span> and `
+          + `<span class="c1">${V1} = ${fmt(e2.c / e2.a, 2)}</span>. They never meet.`;
       }
     } else {
       sTitle.textContent = "Infinitely many solutions";
@@ -342,7 +350,7 @@ function mount(host: HTMLElement): void {
           + `every point on the line is a solution.`;
       } else if (res.why === "noconstraint") {
         const k = res.zeroRow!;
-        sWhy.innerHTML = `R${k + 1} reads 0 = 0: true for every (x₁, x₂), so it adds nothing. `
+        sWhy.innerHTML = `R${k + 1} reads 0 = 0: true for every (${V1}, ${V2}), so it adds nothing. `
           + `Every point on line R${2 - k} is a solution.`;
       } else {
         sWhy.innerHTML = "Both equations read 0 = 0: every point of the plane is a solution.";
@@ -355,22 +363,22 @@ function mount(host: HTMLElement): void {
     const e1 = eqs[0];
     if (res.zeroRow !== null) {
       const k = res.zeroRow;
-      return `R${k + 1}: 0x₁ + 0x₂ = ${fmt(eqs[k].c)}  (no unknowns left)\n`
+      return `R${k + 1}: 0${V1} + 0${V2} = ${fmt(eqs[k].c)}  (no unknowns left)\n`
         + (Math.abs(eqs[k].c) < 1e-12 ? "0 = 0 is always true." : `0 = ${fmt(eqs[k].c)} is impossible.`);
     }
     const p = res.pivot!, q: 0 | 1 = p === 0 ? 1 : 0, m = res.m!, red = res.red!;
-    const xp = "x" + SUB[p], xq = "x" + SUB[q];
+    const xp = p === 0 ? V1 : V2, xq = q === 0 ? V1 : V2;
     const lines: string[] = [];
-    if (p === 1) lines.push(`R1 has no x₁, so use R1 to eliminate x₂.`);
+    if (p === 1) lines.push(`R1 has no ${V1}, so use R1 to eliminate ${V2}.`);
     const op = Math.abs(m) < 1e-12 ? null
       : `R2 ${m > 0 ? "−" : "+"} ${Math.abs(m - 1) < 1e-12 || Math.abs(m + 1) < 1e-12 ? "" : (Math.abs(m - Math.round(m)) < 1e-9 ? `${fmt(Math.abs(m))}·` : `(${fmtFrac(Math.abs(m))})·`)}R1`;
-    const row = `${fmt(red.a)}x₁ ${red.b < 0 ? "−" : "+"} ${fmt(Math.abs(red.b))}x₂ = ${fmt(red.c)}`;
+    const row = `${fmt(red.a)}${V1} ${red.b < 0 ? "−" : "+"} ${fmt(Math.abs(red.b))}${V2} = ${fmt(red.c)}`;
     lines.push(op ? `${op}:  <b>${row}</b>` : `R2 has no ${xp} already:  <b>${row}</b>`);
     if (res.kind === "unique") {
       const L = p === 0 ? red.b : red.a, x = res.x!;
       lines.push(`${xq} = ${fmt(red.c)} / ${fmt(L)} = ${fmt(x[q], 3)};  back into R1: ${xp} = ${fmt(x[p], 3)}`);
     } else if (res.kind === "none") {
-      lines.push(`0 = ${fmt(red.c)} is impossible: no (x₁, x₂) works.`);
+      lines.push(`0 = ${fmt(red.c)} is impossible: no (${V1}, ${V2}) works.`);
     } else {
       lines.push(`0 = 0 is always true: ${xq} is free, ${xp} = (${fmt(e1.c)} − ${fmt(p === 0 ? e1.b : e1.a)}·${xq}) / ${fmt(p === 0 ? e1.a : e1.b)}.`);
     }

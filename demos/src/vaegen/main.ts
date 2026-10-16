@@ -146,7 +146,7 @@ function mountCells(pane: HTMLElement, seed0: number): void {
   const cloudDots = svgEl("g", {}, lp.over);
   const selRing = svgEl("circle", { r: 6, fill: "none", stroke: "#000", "stroke-width": 2.5 }, lp.over);
   const h1 = lp.handle("#fff", "#111", 11, "z");
-  const h2 = lp.handle("#fff", "#c4621a", 9, "z₂");
+  const h2 = lp.handle("#fff", "#c4621a", 9, "z′");
 
   // ---- right: decoded output ----
   const right = htmlEl("div", "vg-right", "", pane);
@@ -171,7 +171,7 @@ function mountCells(pane: HTMLElement, seed0: number): void {
   htmlEl("span", "vg-lab", "Mode:", modeRow);
   const modeBtns = presets(modeRow, [
     { label: "Generate", apply: () => setMode("gen") },
-    { label: "Walk z → z₂", apply: () => setMode("walk") },
+    { label: "Walk z → z′", apply: () => setMode("walk") },
     { label: "Encode a cell", apply: () => setMode("enc") },
   ]);
   modeBtns[0].classList.add("active");
@@ -286,10 +286,10 @@ function mountCells(pane: HTMLElement, seed0: number): void {
       const zs = Array.from({ length: WALK_STEPS }, (_, s) => lerp(zz, z2, s / (WALK_STEPS - 1)));
       zs.forEach(p => svgEl("circle", { cx: lp.sx(p[0]), cy: lp.sy(p[1]), r: 4.5, fill: "#333" }, walkDots));
       const means = zs.map(p => decode(w, p));
-      title.textContent = `Walk from z ${fmt(zz)} to z₂ ${fmt(z2)}`;
+      title.textContent = `Walk from z ${fmt(zz)} to z′ ${fmt(z2)}`;
       aLab.textContent = "expected"; bLab.textContent = "sampled";
       axis(false);
-      const lab = zs.map((_, s) => (s === 0 ? "z" : s === WALK_STEPS - 1 ? "z₂" : ""));
+      const lab = zs.map((_, s) => (s === 0 ? "z" : s === WALK_STEPS - 1 ? "z′" : ""));
       heatRows(top, means, BY0 + 2, 18, lab);
       heatRows(bot, means.map(m => sample(m, r)), HY0, 18, lab);
       note.textContent = `${WALK_STEPS} equally spaced points on the dashed line, decoded. Dark = high count.`;
@@ -366,7 +366,7 @@ function mountDigits(pane: HTMLElement, seed0: number): void {
   const codeMark = svgEl("path", { d: "M-8,-8L8,8M-8,8L8,-8", stroke: "#c4621a", "stroke-width": 3.5 }, lp.over);
   const cloudDots = svgEl("g", {}, lp.over);
   const h1 = lp.handle("#fff", "#111", 11, "z");
-  const h2 = lp.handle("#fff", "#c4621a", 9, "z₂");
+  const h2 = lp.handle("#fff", "#c4621a", 9, "z′");
 
   // ---- right ----
   const right = htmlEl("div", "vg-right", "", pane);
@@ -394,7 +394,7 @@ function mountDigits(pane: HTMLElement, seed0: number): void {
     if (!code) { note.textContent = "Draw a digit and press Encode first."; return; }
     seed++; strip = "cloud"; walk = false; walkBox.checked = false; draw();
   });
-  const walkBox = checkbox(r1, "walk z → z₂", false, v => { walk = v; strip = v ? "walk" : "none"; draw(); });
+  const walkBox = checkbox(r1, "walk z → z′", false, v => { walk = v; strip = v ? "walk" : "none"; draw(); });
   const r2 = htmlEl("div", "vg-row", "", right);
   htmlEl("span", "vg-lab", "Presets:", r2);
   presets(r2, [
@@ -484,7 +484,7 @@ function mountDigits(pane: HTMLElement, seed0: number): void {
     if (strip === "walk" && walk) {
       zs = Array.from({ length: WALK_STEPS }, (_, s) => lerp(z, z2, s / (WALK_STEPS - 1)));
       zs.forEach(p => svgEl("circle", { cx: lp.sx(p[0]), cy: lp.sy(p[1]), r: 4.5, fill: "#333" }, walkDots));
-      stripLab.textContent = `Walk: ${WALK_STEPS} points from z ${fmt(z)} to z₂ ${fmt(z2)}, decoded`;
+      stripLab.textContent = `Walk: ${WALK_STEPS} points from z ${fmt(z)} to z′ ${fmt(z2)}, decoded`;
     } else if (strip === "cloud" && code) {
       const r = rng(seed), c = code;
       zs = Array.from({ length: WALK_STEPS }, () => [c.mu[0] + c.sd[0] * r.norm(), c.mu[1] + c.sd[1] * r.norm()] as V2);

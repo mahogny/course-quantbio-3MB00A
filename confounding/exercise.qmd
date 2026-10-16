@@ -1,0 +1,371 @@
+---
+title: "Exercise: confounding & Simpson's paradox"
+format:
+  html:
+    toc: true
+    code-copy: true
+    code-overflow: wrap
+    highlight-style: github
+---
+
+## Goal
+
+By the end of this exercise you should be able to:
+
+- compute an **unadjusted** and an **adjusted** treatment effect **by hand** from a small table, and explain why they differ (**Simpson's paradox**),
+- split an unadjusted difference into **effect + bias**, with bias = (confounder effect) × (imbalance),
+- say what question each model answers: `expr ~ treatment` versus `expr ~ treatment + batch`,
+- recognise **perfect confounding** from a table or a design matrix, and fix it with a **balanced, randomised design**,
+- read **interaction** coefficients ($\beta_1$, $\beta_3$, $\beta_1 + \beta_3$),
+- choose which covariates to adjust for, and which **not** to (mediators, colliders, collinear pairs).
+
+The by-hand part is the examined skill; the R part confirms your numbers. You should already know how to build a design matrix and read a main-effect coefficient ([Design matrices for covariates](../covariates/exercise.qmd)).
+
+## Background
+
+**Adjustment.** Adding a covariate `z` to a formula gives it its own column in $X$. Every other coefficient is then read **"holding $z$ constant"**: in `expr ~ treatment + batch`, `treatmenttreat` is the drug effect **within a batch**.
+
+**Confounder.** A variable that affects **both** the predictor of interest and the outcome (and is not itself caused by the predictor). Leaving it out biases the coefficient of interest.
+
+**Effect + bias.** In an additive model with a two-level confounder $z$ (with effect $\gamma$ on the outcome):
+
+$$
+\underbrace{\bar y_\text{treat} - \bar y_\text{ctrl}}_{\text{unadjusted}} \;=\; \underbrace{\beta_\text{treat}}_{\text{adjusted}} \;+\; \gamma \times \big(\text{share of treat with } z{=}1 \;-\; \text{share of ctrl with } z{=}1\big).
+$$
+
+The bias vanishes if the confounder has no effect ($\gamma = 0$) **or** is **balanced** between the groups.
+
+**Simpson's paradox.** When the bias is larger than the effect and of opposite sign, the unadjusted and adjusted answers have **opposite signs**. Both are correct arithmetic; they answer different questions.
+
+**Perfect confounding.** If the predictor of interest and a covariate carry identical information (every control in batch A, every treated sample in batch B), their columns in $X$ are identical, $X$ is not of full column rank, and $\boldsymbol\beta$ has **infinitely many** solutions ([Solving systems in R](../solving-systems-r/lec.qmd)). No analysis fixes this; only the **design** can.
+
+**Interaction.** In `expr ~ treatment * sex` (references `ctrl`, `F`): $\beta_1$ = treatment effect in females, $\beta_3$ = extra treatment effect in males, so the male effect is $\beta_1 + \beta_3$.
+
+## By hand
+
+**B1. (Simpson's paradox, batch)** One gene, 8 samples, two sequencing batches:
+
+| sample | treatment | batch | expr |
+|:--:|:--:|:--:|:--:|
+| 1 | ctrl  | A | 10 |
+| 2 | ctrl  | B | 20 |
+| 3 | ctrl  | B | 20 |
+| 4 | ctrl  | B | 20 |
+| 5 | treat | A | 12 |
+| 6 | treat | A | 12 |
+| 7 | treat | A | 12 |
+| 8 | treat | B | 22 |
+
+(a) Compute the mean expression in each treatment group, ignoring batch, and the unadjusted difference treat − ctrl. This is what `lm(expr ~ treatment)` reports as `treatmenttreat`.
+(b) Compute treat − ctrl **within** batch A and **within** batch B.
+(c) `lm(expr ~ treatment + batch)` fits $\hat y = \beta_0 + \beta_1\,\text{treat} + \beta_2\,\text{B}$ exactly to these data. Find $\beta_0$, $\beta_1$ (`treatmenttreat`) and $\beta_2$ (`batchB`), and check that $X\boldsymbol\beta$ reproduces all four treatment–batch cells.
+(d) Show that the unadjusted difference from (a) equals $\beta_1 + \beta_2 \times (\text{share of treat in B} - \text{share of ctrl in B})$.
+(e) In one sentence each: what question does the unadjusted number answer, and what question does the adjusted one answer? Which would you report as "the drug effect"?
+
+**B2. (Simpson's paradox, disease severity)** A blood biomarker (lower is better) in 8 patients. Doctors tended to give the new drug to the **sickest** patients. Severity was recorded **at enrolment, before** treatment.
+
+| patient | treatment | severity | biomarker |
+|:--:|:--:|:--:|:--:|
+| 1 | ctrl  | mild   | 20 |
+| 2 | ctrl  | mild   | 20 |
+| 3 | ctrl  | mild   | 20 |
+| 4 | ctrl  | severe | 40 |
+| 5 | treat | mild   | 16 |
+| 6 | treat | severe | 36 |
+| 7 | treat | severe | 36 |
+| 8 | treat | severe | 36 |
+
+(a) Compute the unadjusted group means and the difference treat − ctrl. Does the drug look helpful or harmful?
+(b) Compute treat − ctrl within mild and within severe patients.
+(c) Give the coefficients of `lm(biomarker ~ treatment + severity)`: `(Intercept)`, `treatmenttreat`, `severitysevere`.
+(d) Check your answers with the effect + bias formula.
+(e) Why does it matter that severity was measured *before* treatment? What would change if it had been measured *after* four weeks of treatment?
+
+**B3. (a continuous Simpson's paradox)** Expression and BMI in six people:
+
+| sex | F | F | F | M | M | M |
+|---|:--:|:--:|:--:|:--:|:--:|:--:|
+| BMI  | 20 | 22 | 24 | 28 | 30 | 32 |
+| expr | 20 | 22 | 24 |  8 | 10 | 12 |
+
+(a) Sketch the six points. Without computing it, is the slope of `lm(expr ~ bmi)` positive or negative?
+(b) Within each sex, by how much does expression change per BMI unit?
+(c) `lm(expr ~ bmi + sex)` fits two parallel lines exactly. Give the coefficients `bmi` and `sexM`, and say in words what `sexM` means.
+(d) Which variable is the confounder here, and through which two arrows does it act?
+
+**B4. (confounding reasoning)** In a study, treated animals were mostly old and controls mostly young, and expression rises with age. The unadjusted model `expr ~ treatment` gives a large positive `treatmenttreat`. After fitting `expr ~ treatment + age`, the `treatmenttreat` coefficient **shrinks toward 0**.
+(a) Explain, in terms of confounding, why it shrank.
+(b) Which of the two estimates is the honest treatment effect, and why?
+(c) Would adding age have changed the estimate if the two groups had had the same age distribution? Explain with the effect + bias formula.
+
+**B5. (perfect confounding)** A core facility sequenced all 4 controls in run A and all 4 treated samples in run B. Every control has expression 10 and every treated sample 22.
+(a) Write the treatment × run count table.
+(b) Write the design matrix $X$ for `expr ~ treatment + run` (columns `(Intercept)`, `treatmenttreat`, `runB`). What do you notice about two of its columns?
+(c) The data only determine one combination of $\beta_1$ (`treatmenttreat`) and $\beta_2$ (`runB`). Which? Give two different pairs $(\beta_1, \beta_2)$ that fit the data equally well.
+(d) What does `lm` print for `runB`, and what does it then report as `treatmenttreat`? Is that a drug effect?
+
+**B6. (design)** You have 8 mice: 4 control and 4 treated, and within each group 2 females and 2 males. The sequencer takes **4 samples per run**, and you need **2 runs**.
+(a) Assign the 8 mice to the two runs so that neither treatment nor sex is confounded with run. Write your answer as a table.
+(b) With your design, what is the share of treated mice in run B, and of control mice? What does the effect + bias formula then say about the bias from a run effect?
+(c) Your colleague suggests "controls on Monday, treated on Tuesday, it's easier". What goes wrong, and can you fix it at the analysis stage?
+(d) Why should you also randomise *which* control goes into which run, and the order of samples within a run?
+
+**B7. (interaction)** For `expr ~ treatment * sex` with references `ctrl` and `F`, you fit:
+$$\beta_0 = 5,\quad \beta_1\,(\text{treatmenttreat}) = 2,\quad \beta_2\,(\text{sexM}) = 1,\quad \beta_3\,(\text{treatmenttreat:sexM}) = 3.$$
+(a) What is the treatment effect in **females**?
+(b) What is the treatment effect in **males**?
+(c) What is the predicted mean for **treated males**?
+(d) What does $\beta_3 = 3$ mean in words? What would $\beta_3 = 0$ imply?
+
+**B8. (which covariates?)** An observational study asks: *does drug D change the expression of an inflammation gene in blood?* You have one RNA-seq sample per patient, 40 patients, and these candidate covariates:
+
+1. age at enrolment;
+2. sex;
+3. BMI at enrolment;
+4. body weight at enrolment;
+5. sequencing batch (drug patients were mostly sequenced in batch 2);
+6. a side-effect score at week 4 (the drug causes the symptoms, and so does strong inflammation);
+7. patient ID.
+
+For each, say **adjust** or **do not adjust**, with a one-line reason. Which one is a **collider**?
+
+## In R
+
+Use R to **confirm** the by-hand answers. All outputs shown in the solutions are real.
+
+### Enter a small table and look at it
+
+```r
+d <- data.frame(
+  treatment = factor(c("ctrl","ctrl","ctrl","ctrl","treat","treat","treat","treat")),
+  batch     = factor(c("A",   "B",   "B",   "B",   "A",    "A",    "A",    "B")),
+  expr      = c(10, 20, 20, 20, 12, 12, 12, 22)
+)
+table(d$treatment, d$batch)                          # counts per cell
+tapply(d$expr, d$treatment, mean)                    # group means, batch ignored
+tapply(d$expr, list(d$treatment, d$batch), mean)     # cell means
+```
+
+### Fit with and without the covariate
+
+```r
+coef(lm(expr ~ treatment, data = d))
+coef(lm(expr ~ treatment + batch, data = d))
+```
+
+### Tasks
+
+**R1.** Enter the B1 table as above. Confirm the counts table, the group means, the unadjusted `treatmenttreat` from (a), and all three coefficients from (c). Use `fitted()` on the adjusted fit to confirm $X\boldsymbol\beta$.
+
+**R2.** Enter the B2 table (call the columns `treatment`, `severity`, `biomarker`) and confirm your unadjusted and adjusted coefficients.
+
+**R3.** Enter the B3 data and fit `expr ~ bmi` and `expr ~ bmi + sex`. Confirm the sign of the pooled slope and the coefficients from (c). Wrap the coefficients in `round(..., 2)`.
+
+**R4.** Enter the B5 design (all controls in run A at 10, all treated in run B at 22). Fit `expr ~ treatment + run`, and compare `ncol(X)` with `qr(X)$rank` for `X <- model.matrix(~ treatment + run, data = p)`.
+
+**R5.** Build a **balanced** version of B1: in each batch two controls and two treated, with expression 10, 10, 12, 12 in batch A and 20, 20, 22, 22 in batch B. Fit both models and confirm that the treatment coefficient no longer depends on whether batch is in the model.
+
+## Hints
+
+::: {.callout-tip collapse="true" title="Hint 1 — unadjusted vs within-group differences (B1, B2)"}
+The unadjusted difference is just mean(treat) − mean(ctrl) over all samples. The within-group difference compares only samples in the same batch (or same severity). In `lm`, the unadjusted one is `treatmenttreat` from [`lm`](https://rdrr.io/r/stats/lm.html)`(expr ~ treatment)`; the adjusted one from `lm(expr ~ treatment + batch)`. Background: [Simpson's paradox](https://en.wikipedia.org/wiki/Simpson%27s_paradox).
+:::
+
+::: {.callout-tip collapse="true" title="Hint 2 — finding β from cell means (B1c, B2c, B3c)"}
+With dummy coding, $\beta_0$ is the mean of the cell where every dummy is 0 (ctrl, batch A). Each further coefficient is how much one dummy moves the prediction. Read $\beta_1$ from treat vs ctrl in the same batch, $\beta_2$ from batch B vs batch A in the same treatment group. Then check all four cells: $\beta_0$, $\beta_0+\beta_1$, $\beta_0+\beta_2$, $\beta_0+\beta_1+\beta_2$.
+:::
+
+::: {.callout-tip collapse="true" title="Hint 3 — effect + bias (B1d, B2d, B4c, B6b)"}
+Write each group mean as a weighted average of its two batches, with weights = share of that group in each batch. Subtract. The batch effect appears multiplied by the **difference in shares**. If the shares are equal (balanced design), that term is zero. Background: [confounding](https://en.wikipedia.org/wiki/Confounding).
+:::
+
+::: {.callout-tip collapse="true" title="Hint 4 — perfect confounding (B5)"}
+Two identical columns in $X$ mean the model cannot tell the two coefficients apart: only their **sum** matters for every prediction. This is the "infinitely many solutions" case. In R, [`qr`](https://rdrr.io/r/base/qr.html)`(X)$rank` smaller than `ncol(X)` reveals it, and [`lm`](https://rdrr.io/r/stats/lm.html) prints `NA` for the redundant column.
+:::
+
+::: {.callout-tip collapse="true" title="Hint 5 — a balanced design (B6)"}
+Think of the four kinds of mouse: ctrl-F, ctrl-M, treat-F, treat-M. You have two of each. How can each run get the same mix? See also [blocking](https://en.wikipedia.org/wiki/Blocking_(statistics)) and [randomisation](https://en.wikipedia.org/wiki/Randomized_experiment).
+:::
+
+::: {.callout-tip collapse="true" title="Hint 6 — interaction coefficients (B7)"}
+Under treatment coding the main effect $\beta_1$ is the treatment effect **in the reference sex (F)**; $\beta_3$ is the **extra** treatment effect in males, so the male effect is $\beta_1 + \beta_3$. For a predicted mean, set the dummies: a treated male has treat = 1, M = 1, treat×M = 1.
+:::
+
+::: {.callout-tip collapse="true" title="Hint 7 — what not to adjust for (B8)"}
+Ask of each variable: (1) could it affect the outcome? (2) is it unequal between drug and no-drug patients? (3) was it fixed **before** the drug, or could the drug (or the outcome) have changed it? A variable caused by both the drug and the outcome is a [collider](https://en.wikipedia.org/wiki/Collider_(statistics)). Two variables that carry almost the same information are [collinear](https://en.wikipedia.org/wiki/Multicollinearity).
+:::
+
+::: {.callout-tip collapse="true" title="Hint 8 — R helpers"}
+[`table`](https://rdrr.io/r/base/table.html) counts combinations, [`tapply`](https://rdrr.io/r/base/tapply.html) computes a mean per group, [`fitted`](https://rdrr.io/r/stats/fitted.values.html) gives $X\hat{\boldsymbol\beta}$, and [`model.matrix`](https://rdrr.io/r/stats/model.matrix.html) shows $X$.
+:::
+
+## Solutions
+
+::: {.callout-note collapse="true" title="Solution"}
+
+**B1.**
+(a) $\bar y_\text{ctrl} = (10+20+20+20)/4 = 70/4 = 17.5$; $\bar y_\text{treat} = (12+12+12+22)/4 = 58/4 = 14.5$. Unadjusted difference $= 14.5 - 17.5 = -3$.
+(b) Batch A: $12 - 10 = +2$. Batch B: $22 - 20 = +2$.
+(c) $\beta_0$ = ctrl in batch A $= 10$. $\beta_1$ = treat − ctrl within a batch $= 2$. $\beta_2$ = batch B − batch A within a treatment group $= 20 - 10 = 10$. Check: ctrl-A $= 10$, treat-A $= 10 + 2 = 12$, ctrl-B $= 10 + 10 = 20$, treat-B $= 10 + 2 + 10 = 22$. All four match the data.
+(d) Share of treat in B $= 1/4$, share of ctrl in B $= 3/4$. So $\beta_1 + \beta_2(1/4 - 3/4) = 2 + 10\cdot(-1/2) = 2 - 5 = -3$. ✓
+(e) Unadjusted: how do the treated samples *in this dataset* compare with the controls *in this dataset* — which mixes the drug with the fact that most controls happened to be in the high batch. Adjusted: within the same batch, how much does the drug change expression. Report the adjusted **+2** as the drug effect; the batch assignment is a lab accident, not biology.
+
+**B2.**
+(a) $\bar y_\text{ctrl} = (20+20+20+40)/4 = 25$; $\bar y_\text{treat} = (16+36+36+36)/4 = 31$. Difference $= +6$: the drug looks **harmful** (it seems to raise a bad biomarker).
+(b) Mild: $16 - 20 = -4$. Severe: $36 - 40 = -4$. The drug **lowers** the biomarker by 4 in both groups.
+(c) `(Intercept)` $= 20$ (ctrl, mild), `treatmenttreat` $= -4$, `severitysevere` $= 40 - 20 = 20$.
+(d) Share of treat that is severe $= 3/4$, share of ctrl $= 1/4$: $-4 + 20\cdot(3/4 - 1/4) = -4 + 10 = 6$. ✓
+(e) Severity measured before treatment cannot have been changed by the drug, so it is a genuine **confounder** (it drove both who got the drug and the biomarker level) and adjusting is right. If it had been measured after four weeks, the drug could already have made patients less severe: severity would then be partly a **mediator** (or consequence) of treatment, and adjusting for it would remove part of the drug effect you want to estimate.
+
+**B3.**
+(a) Negative: the females (low BMI) have high expression and the males (high BMI) low expression, so a single line through all six points slopes down. (R: $-1.14$.)
+(b) $+1$ per BMI unit in both sexes (e.g. F: $(24-20)/(24-20) = 1$; M: $(12-8)/(32-28) = 1$).
+(c) `bmi` $= 1$, `sexM` $= -20$: at the **same BMI**, a male has expression 20 lower than a female (F line: expr = BMI; M line: expr = BMI − 20).
+(d) **Sex**: sex → BMI (males heavier) and sex → expression (males lower). The pooled slope mostly reflects the F/M difference, not the effect of BMI.
+
+**B4.**
+(a) Age is a **confounder**: it differs between the groups (treated older) **and** affects the outcome (expression rises with age). In `expr ~ treatment` the treatment coefficient absorbs the treatment effect **plus** the age-driven difference between the groups. Adding `+ age` gives age its own coefficient, so that part is removed and the treatment coefficient shrinks.
+(b) The **adjusted** estimate: it compares animals **of the same age**. The unadjusted one is treatment effect + (age slope × age difference between groups).
+(c) No. With equal age distributions the "imbalance" factor is 0, so the bias term is 0 and the unadjusted and adjusted estimates agree (adjusting would only reduce the noise).
+
+**B5.**
+(a)
+
+| | run A | run B |
+|---|:--:|:--:|
+| ctrl  | 4 | 0 |
+| treat | 0 | 4 |
+
+(b)
+$$
+X = \begin{pmatrix}
+1 & 0 & 0\\ 1 & 0 & 0\\ 1 & 0 & 0\\ 1 & 0 & 0\\
+1 & 1 & 1\\ 1 & 1 & 1\\ 1 & 1 & 1\\ 1 & 1 & 1
+\end{pmatrix}
+$$
+Columns 2 (`treatmenttreat`) and 3 (`runB`) are **identical**. $X$ has 3 columns but rank 2.
+(c) Controls give $\beta_0 = 10$; treated give $\beta_0 + \beta_1 + \beta_2 = 22$, so only $\beta_1 + \beta_2 = 12$ is determined. E.g. $(\beta_1, \beta_2) = (12, 0)$, $(2, 10)$, or $(0, 12)$ — all fit perfectly. Infinitely many solutions.
+(d) `lm` prints `NA` for `runB` (it drops the redundant column) and reports `treatmenttreat` $= 12$. That is drug + run effect lumped together, **not** a drug effect; the data cannot separate them.
+
+**B6.**
+(a) There are two mice of each kind (ctrl-F, ctrl-M, treat-F, treat-M); put one of each kind in each run:
+
+| | run A | run B |
+|---|---|---|
+| ctrl-F  | 1 | 1 |
+| ctrl-M  | 1 | 1 |
+| treat-F | 1 | 1 |
+| treat-M | 1 | 1 |
+
+So each run has 2 controls + 2 treated, and 2 F + 2 M.
+(b) Share of treated in run B $= 2/4 = 1/2$; share of controls in run B $= 1/2$. Difference $= 0$, so bias $= (\text{run effect}) \times 0 = 0$: whatever the run effect, it cannot leak into the treatment estimate.
+(c) Day is then **perfectly confounded** with treatment: the treatment and day columns of $X$ are identical, and a day effect (reagents, temperature, operator) cannot be separated from the drug effect. It **cannot** be fixed at the analysis stage — the information is not in the data. The experiment has to be redesigned (or rerun balanced).
+(d) Balancing handles the factors you thought of (treatment, sex). Randomising the remaining choices (which control in which run, position in the run, lane) prevents **unknown** factors — cage, extraction order, time of day — from lining up with treatment by accident.
+
+**B7.**
+(a) $\beta_1 = 2$.
+(b) $\beta_1 + \beta_3 = 2 + 3 = 5$.
+(c) $\beta_0 + \beta_1 + \beta_2 + \beta_3 = 5 + 2 + 1 + 3 = 11$.
+(d) $\beta_3 = 3$: the treatment raises expression 3 units **more** in males than in females (a difference of treatment effects). $\beta_3 = 0$ would mean the same treatment effect in both sexes — parallel lines, and the additive model `expr ~ treatment + sex` would suffice.
+
+**B8.**
+
+1. **Age — adjust.** Affects expression and may differ between drug and no-drug patients; fixed before treatment.
+2. **Sex — adjust.** Same reasoning; costs one column.
+3. **BMI — adjust** (inflammation rises with BMI; measured at enrolment) …
+4. **… weight — do not add as well.** Weight and BMI are strongly **collinear**; keep one (BMI), otherwise their two coefficients become unstable.
+5. **Batch — adjust.** A technical effect on expression and unbalanced (drug patients mostly batch 2): a classic confounder.
+6. **Side-effect score at week 4 — do not adjust.** It is caused by **both** the drug and the outcome (inflammation): a **collider**. Adjusting for it creates a spurious association between drug and expression. It is also measured after treatment.
+7. **Patient ID — do not adjust.** There is one sample per patient, so a 40-level factor would add 39 columns: with the intercept that is as many columns as samples, a perfect fit with no information left for the treatment effect. (Patient ID matters only with repeated samples per patient — see Hierarchical models.)
+
+So: `expr ~ drug + age + sex + bmi + batch`.
+
+**R1–R5.**
+
+```r
+# R1
+table(d$treatment, d$batch)
+#         A B
+#   ctrl  1 3
+#   treat 3 1
+tapply(d$expr, d$treatment, mean)
+#  ctrl treat
+#  17.5  14.5
+tapply(d$expr, list(d$treatment, d$batch), mean)
+#        A  B
+# ctrl  10 20
+# treat 12 22
+coef(lm(expr ~ treatment, data = d))
+#    (Intercept) treatmenttreat
+#           17.5           -3.0
+fit <- lm(expr ~ treatment + batch, data = d)
+coef(fit)
+#    (Intercept) treatmenttreat         batchB
+#             10              2             10
+fitted(fit)
+#  1  2  3  4  5  6  7  8
+# 10 20 20 20 12 12 12 22
+
+# R2
+v <- data.frame(
+  treatment = factor(rep(c("ctrl","treat"), each = 4)),
+  severity  = factor(c("mild","mild","mild","severe","mild","severe","severe","severe")),
+  biomarker = c(20, 20, 20, 40, 16, 36, 36, 36)
+)
+tapply(v$biomarker, v$treatment, mean)
+#  ctrl treat
+#    25    31
+coef(lm(biomarker ~ treatment, data = v))
+#    (Intercept) treatmenttreat
+#             25              6
+coef(lm(biomarker ~ treatment + severity, data = v))
+#    (Intercept) treatmenttreat severitysevere
+#             20             -4             20
+
+# R3
+s <- data.frame(sex  = factor(rep(c("F","M"), each = 3)),
+                bmi  = c(20, 22, 24, 28, 30, 32),
+                expr = c(20, 22, 24,  8, 10, 12))
+round(coef(lm(expr ~ bmi, data = s)), 2)
+# (Intercept)         bmi
+#       45.71       -1.14
+round(coef(lm(expr ~ bmi + sex, data = s)), 2)
+# (Intercept)         bmi        sexM
+#           0           1         -20
+
+# R4
+p <- data.frame(treatment = factor(rep(c("ctrl","treat"), each = 4)),
+                run       = factor(rep(c("A","B"), each = 4)),
+                expr      = c(10, 10, 10, 10, 22, 22, 22, 22))
+coef(lm(expr ~ treatment + run, data = p))
+#    (Intercept) treatmenttreat           runB
+#             10             12             NA
+X <- model.matrix(~ treatment + run, data = p)
+ncol(X)       # 3
+qr(X)$rank    # 2  -> not full column rank
+
+# R5
+b <- data.frame(treatment = factor(rep(c("ctrl","ctrl","treat","treat"), 2)),
+                batch     = factor(rep(c("A","B"), each = 4)),
+                expr      = c(10, 10, 12, 12, 20, 20, 22, 22))
+table(b$treatment, b$batch)
+#         A B
+#   ctrl  2 2
+#   treat 2 2
+coef(lm(expr ~ treatment, data = b))
+#    (Intercept) treatmenttreat
+#             15              2
+coef(lm(expr ~ treatment + batch, data = b))
+#    (Intercept) treatmenttreat         batchB
+#             10              2             10
+```
+
+In R3 the exact intercept of the adjusted fit is a floating-point zero (about $-5\times10^{-14}$); `round()` shows it as 0.
+:::
+
+## Where this leads
+
+- **Design matrices in R: DESeq2 & limma:** the same `~ batch + treatment` designs on real RNA-seq counts and mass-spec data, including the "model matrix is not full rank" error for a confounded design ([next unit](../covariates-r/exercise.qmd)).
+- **Hierarchical models:** when you have several samples per patient or per mouse, "patient" becomes a grouping factor with its own variance instead of 39 dummy columns.
+- **Penalized linear models:** many or collinear covariates (like weight and BMI) make plain least squares unstable; ridge and lasso shrink the coefficients to tame it.
+- **Causal inference** (beyond this course) formalises confounders, mediators and colliders with causal diagrams; today's rule of thumb — adjust for common causes measured before treatment — is its everyday version.

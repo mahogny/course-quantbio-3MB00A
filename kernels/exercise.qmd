@@ -1,0 +1,362 @@
+---
+title: "Exercise: image filters with 3×3 kernels"
+format:
+  html:
+    toc: true
+    code-copy: true
+    code-overflow: wrap
+    highlight-style: github
+---
+
+## Goal
+
+By the end of this exercise you should be able to, **by hand and in R**:
+
+- compute an output pixel as the **weighted sum** of its 3 × 3 neighbourhood,
+- predict what a kernel does from its weights, using the **sum of the weights** (1 or 0),
+- design a simple **edge detector** for a given direction,
+- explain what happens at the **border** of an image,
+- write a 3 × 3 filter in base R and use it to **blur before finding edges** in a noisy image.
+
+Do the pen-and-paper parts first, then check them with the demo and in R.
+
+## Background
+
+| Idea | What it means |
+|---|---|
+| Image | a matrix of grey levels, one number per pixel (in the demo 0 = black, 255 = white) |
+| Kernel | a 3 × 3 grid of weights, written row by row, e.g. 1 2 1 / 2 4 2 / 1 2 1 |
+| Filtering | put the kernel on top of the image, centred on one pixel; multiply each pixel by the weight on top of it; add the nine products. Repeat for every pixel. |
+| Divide by the sum | blur kernels are divided by the sum of their weights (9 for the box, 16 for the Gaussian) |
+| Sum of weights = 1 | a flat region keeps its brightness (blurs, sharpen, emboss) |
+| Sum of weights = 0 | a flat region gives 0: the kernel only responds to change (edges) |
+| Border | outside the image, either use zeros or copy the nearest edge pixel |
+
+The kernels used below:
+
+| Name | Weights (row by row) | Sum |
+|---|---|---|
+| box blur | 1 1 1 / 1 1 1 / 1 1 1, then ÷ 9 | 1 |
+| Gaussian blur | 1 2 1 / 2 4 2 / 1 2 1, then ÷ 16 | 1 |
+| sharpen | 0 −1 0 / −1 5 −1 / 0 −1 0 | 1 |
+| Laplacian | 0 1 0 / 1 −4 1 / 0 1 0 | 0 |
+| Sobel x (vertical edges) | −1 0 1 / −2 0 2 / −1 0 1 | 0 |
+| Sobel y (horizontal edges) | −1 −2 −1 / 0 0 0 / 1 2 1 | 0 |
+
+We do **not** flip the kernel before sliding it (strictly, this is called correlation). For symmetric kernels such as the blurs, it makes no difference.
+
+## By hand
+
+### Part A — one pixel at a time
+
+A small 5 × 5 image: dark on the left (2), bright on the right (8), with one noisy pixel (11) in row 2, column 2.
+
+$$
+\begin{array}{c|ccccc}
+ & \text{col 1} & \text{col 2} & \text{col 3} & \text{col 4} & \text{col 5}\\ \hline
+\text{row 1} & 2 & 2 & 2 & 8 & 8\\
+\text{row 2} & 2 & \mathbf{11} & 2 & 8 & 8\\
+\text{row 3} & 2 & 2 & 2 & 8 & 8\\
+\text{row 4} & 2 & 2 & 2 & 8 & 8\\
+\text{row 5} & 2 & 2 & 2 & 8 & 8
+\end{array}
+$$
+
+All pixels asked for in B1–B5 have their whole 3 × 3 neighbourhood inside the image, so the border does not matter yet.
+
+**B1.** Apply the **box blur** to row 3, columns 2, 3 and 4. Then to the noisy pixel itself (row 2, column 2). What happened to the noisy pixel, and to the step from 2 to 8?
+
+**B2.** Apply the **Gaussian blur** to the noisy pixel (row 2, column 2) and to row 3, column 3. Which of the two blurs removes more of the noisy pixel?
+
+**B3.** Apply **sharpen** to row 3, columns 2, 3 and 4, and to the noisy pixel. Which outputs fall outside the input range 2 to 8? Describe what sharpening does on each side of the step.
+
+**B4.** Apply the **Laplacian** to row 3, columns 2, 3 and 4, and to the noisy pixel. Which pixel gives the largest response (in size)? What does that tell you about edge kernels and noise?
+
+**B5.** Apply **Sobel x** to row 4, columns 3 and 4, and to row 3, columns 3 and 4. Is the answer positive or negative, and why? Why is the result at row 3, column 3 different from row 4, column 3?
+
+### Part B — reading a kernel from its weights
+
+**B6.** For each kernel, find the sum of the weights and predict what it does to an image, without computing anything else.
+
+$$
+\text{(a) } \begin{bmatrix} 1 & 1 & 1\\ 1 & 1 & 1\\ 1 & 1 & 1 \end{bmatrix} \text{ (no division)} \qquad
+\text{(b) } \begin{bmatrix} 0 & 0 & 0\\ 0 & 2 & 0\\ 0 & 0 & 0 \end{bmatrix} \qquad
+\text{(c) } \begin{bmatrix} 1 & 0 & -1\\ 2 & 0 & -2\\ 1 & 0 & -1 \end{bmatrix}
+$$
+$$
+\text{(d) } \begin{bmatrix} 0 & 0 & 0\\ 0 & 0 & 1\\ 0 & 0 & 0 \end{bmatrix} \qquad
+\text{(e) } \begin{bmatrix} -1 & -1 & -1\\ -1 & 8 & -1\\ -1 & -1 & -1 \end{bmatrix} \qquad
+\text{(f) } \begin{bmatrix} 1 & 2 & 1\\ 0 & 0 & 0\\ -1 & -2 & -1 \end{bmatrix}
+$$
+
+**B7.** Design the **simplest** kernel you can that detects **vertical** edges and gives a **positive** number where the image gets brighter to the right. (Hint: use only the middle row.) Apply it to row 4 of the image in Part A (columns 2, 3, 4), and to row 2, column 3. Compare the last answer with Sobel x at the same pixel (Sobel x there gives 6). Why do the Sobel kernels use all three rows?
+
+**B8.** Now a pixel on the border: row 5, column 1 (bottom left). Apply the **box blur** with (a) **zeros** outside the image, and (b) **copy the edge** (every missing pixel takes the value of the nearest pixel inside). The image is flat (all 2) around this corner: which border rule gives the more sensible answer?
+
+## Explore {#explore}
+
+The demo shows the input image, the editable kernel and the output, side by side. Type a weight (press Enter afterwards) or use − and +. **Divide by the sum** divides the weighted sum by the sum of the weights. **Apply ×** repeats the kernel. A click on either image selects a pixel; the grey box then shows its 3 × 3 neighbourhood, the weights, the products and the sum. **Show the output** chooses how numbers become grey levels: *as is* (below 0 is black, above 255 is white), *|value|* (the size, stretched so the largest is white) or *0 = grey* (negative darker, positive brighter). **Blur input first** applies the Gaussian twice before your kernel.
+
+```{=html}
+<link rel="stylesheet" href="../demos/dist/demo.css">
+<div data-demo="kernel3x3" data-image="cell" data-preset="gauss"></div>
+<script src="../demos/dist/kernel3x3.js"></script>
+```
+
+**E1.** With the **cell** and **Gaussian**, read the selected pixel (row 129, column 129) in the grey box. Check one row of products by hand, and check that the sum divided by 16 gives the output. Then choose **box blur** and raise **apply ×** to 5. What happens to the fine texture of the nucleus, and to the dark nuclear envelope?
+
+**E2.** With **box blur**, untick **divide by the sum**. What happens to the output, and why? Read the range in the last line of the grey box. Then tick it again and set the centre weight to 0: what is the sum now, and does the blur still keep the brightness?
+
+**E3.** Choose the **test pattern**, then **Sobel x** and **Sobel y**. Which of the thin lines light up in each? On the bright disk, which side is bright and which is dark with Sobel x (0 = grey)? Then switch to **|value|**: what changes?
+
+**E4.** Set **noise** to 30 and choose the **Laplacian**. Can you still see the outlines? Tick **blur input first**. What changes, and what happens to the 1-pixel lines and the checkerboard? Repeat with **Sobel x**.
+
+**E5.** Choose **shift** and set **apply ×** to 5. Which way does the image move, and by how much? Then choose **box blur**, apply × 5, and switch between **copy edge** and **zeros**: look at the border of the output.
+
+::: {.callout-note collapse="true" title="Solutions"}
+**E1.** The products in the grey box are each pixel times the weight on top of it, for example the middle row 99 × 2 = 198, 116 × 4 = 464, 127 × 2 = 254. The nine products add up to 1759, and 1759 ÷ 16 = 109.94, shown as grey level 110. With the box blur applied 5 times, the grainy texture inside the nucleus is smoothed into a soft grey; the nuclear envelope survives as a broad, faint dark band. Fine detail is lost first, large structures last.
+
+**E2.** Without dividing, every output pixel is the plain **sum** of 9 pixels, about 9 times too bright: almost everything is white. The grey box shows the whole output ranging from 44 to 2295, 9 times the blurred range 4.9 to 255. With the centre weight set to 0, the sum is 8 and the output is divided by 8: it is still an average (of the 8 neighbours), so a flat region keeps its brightness.
+
+**E3.** Sobel x lights up the **vertical** lines and the left and right sides of the disk and letters; Sobel y lights up the **horizontal** lines and the top and bottom sides. With 0 = grey and Sobel x, the left side of the bright disk is bright (the image gets brighter to the right there) and the right side is dark (it gets darker). With |value|, both sides look bright: the sign, that is the direction of the change, is lost, and only the strength remains.
+
+**E4.** At noise 30, the Laplacian output is dominated by speckle; the outlines are hard to see. With the input blurred first, the speckle is much weaker and the outlines of the disk, the letters and the square appear clearly; the output range shrinks from about ±600 to below ±100, because most of that range was noise. The price: the 1-pixel lines become faint and the checkerboard loses contrast, because blurring removes fine detail along with the noise. Sobel x behaves the same way but less extremely, since it already averages over three rows.
+
+**E5.** The shift kernel copies each pixel's **left** neighbour, so the image moves to the **right**, one pixel per pass, so 5 pixels in total. A thin strip on the left edge repeats the edge pixels (copy edge) or turns black (zeros). With the box blur ×5 and zeros outside, a dark frame a few pixels wide appears around the output, because the missing pixels count as black. Copy edge has no such frame.
+:::
+
+## In R
+
+Base R only. The function `filter3()` does exactly the by-hand calculation: pad the image, then for every pixel multiply its 3 × 3 neighbourhood by the kernel entry by entry and add up.
+
+### A filter function, checked on Part A
+
+```r
+filter3 <- function(img, k) {
+  nr <- nrow(img); nc <- ncol(img)
+  p <- img[c(1, 1:nr, nr), c(1, 1:nc, nc)]          # copy the edge pixels outward
+  out <- matrix(0, nr, nc)
+  for (i in 1:nr) for (j in 1:nc)
+    out[i, j] <- sum(k * p[i:(i + 2), j:(j + 2)])    # weights x neighbourhood, added up
+  out
+}
+K <- function(...) matrix(c(...), 3, 3, byrow = TRUE)   # type a kernel row by row
+box     <- K(1, 1, 1,  1, 1, 1,  1, 1, 1) / 9
+gauss   <- K(1, 2, 1,  2, 4, 2,  1, 2, 1) / 16
+sharpen <- K(0, -1, 0,  -1, 5, -1,  0, -1, 0)
+laplace <- K(0, 1, 0,  1, -4, 1,  0, 1, 0)
+sobelx  <- K(-1, 0, 1,  -2, 0, 2,  -1, 0, 1)
+sobely  <- K(-1, -2, -1,  0, 0, 0,  1, 2, 1)
+
+E <- matrix(c(2,  2, 2, 8, 8,
+              2, 11, 2, 8, 8,
+              2,  2, 2, 8, 8,
+              2,  2, 2, 8, 8,
+              2,  2, 2, 8, 8), 5, byrow = TRUE)
+filter3(E, box)[3, ]
+round(filter3(E, gauss), 2)
+filter3(E, sharpen)
+filter3(E, laplace)
+filter3(E, sobelx)
+```
+
+**R1.** Check your answers to B1–B5 against these matrices. Why does `p` have two more rows and columns than `img`? Why does the code use `k * p[...]` and not `k %*% p[...]`?
+
+### A synthetic noisy cell
+
+```r
+m  <- 128
+d1 <- outer(1:m, 1:m, function(i, j) sqrt((i - 64)^2 + (j - 64)^2))   # distance to the cell centre
+d2 <- outer(1:m, 1:m, function(i, j) sqrt((i - 58)^2 + (j - 70)^2))   # distance to the nucleus centre
+cell <- ifelse(d1 < 45, 180, 60)       # bright cell on a dark background
+cell[d2 < 18] <- 110                   # a darker nucleus
+set.seed(7)
+noisy <- cell + matrix(rnorm(m * m, 0, 30), m)
+
+show <- function(img, main = "") {
+  image(t(img[nrow(img):1, ]), col = gray.colors(256, start = 0, end = 1),
+        asp = 1, axes = FALSE, main = main)
+}
+par(mfrow = c(2, 3), mar = c(1, 1, 2, 1))
+show(cell, "clean")
+show(noisy, "noisy")
+```
+
+`image()` draws column 1 of a matrix at the bottom, so the helper flips and transposes it to show row 1 at the top, as in an image viewer. It also stretches the colours from the smallest to the largest value, so negative numbers are fine.
+
+**R2.** What do `d1` and `d2` contain? Change the `180` and the `110` and look at the result.
+
+### Blur, then threshold
+
+```r
+blur1 <- filter3(noisy, gauss)
+blur2 <- filter3(blur1, gauss)
+show(blur2, "Gaussian x 2")
+bg <- d1 > 52 & d1 < 60                # a background ring, away from the edges
+c(noisy = sd(noisy[bg]), blur1 = sd(blur1[bg]), blur2 = sd(blur2[bg]))
+truth <- d1 < 45                       # the true cell mask
+c(noisy = mean((noisy > 85) != truth),
+  blur1 = mean((blur1 > 85) != truth),
+  blur2 = mean((blur2 > 85) != truth))
+```
+
+**R3.** How much does one Gaussian pass reduce the noise (the standard deviation in the background ring)? And two passes? A simple **segmentation** marks every pixel brighter than 85 as "cell": what fraction of pixels is wrong before and after blurring?
+
+### Edges: directly or after blurring
+
+```r
+edges <- function(img) sqrt(filter3(img, sobelx)^2 + filter3(img, sobely)^2)
+e_raw  <- edges(noisy)
+e_blur <- edges(blur2)
+show(e_raw, "edges only")
+show(e_blur, "Gaussian x 2, then edges")
+ring <- abs(d1 - 45) < 1.5             # pixels on the cell outline
+c(raw  = mean(e_raw[ring])  / mean(e_raw[bg]),
+  blur = mean(e_blur[ring]) / mean(e_blur[bg]))
+```
+
+**R4.** The ratio compares the mean edge strength on the cell outline with the mean in the background. Which is better, edges only or blur first? Look at the two edge pictures: what is the price of blurring?
+
+### How much blur?
+
+```r
+x <- noisy
+for (passes in 0:6) {
+  e <- edges(x)
+  cat(sprintf("%d passes: outline / background = %4.1f\n", passes, mean(e[ring]) / mean(e[bg])))
+  x <- filter3(x, gauss)
+}
+show(edges(x), "Gaussian x 7, then edges")
+```
+
+**R5.** Does more blur keep helping? Look at the last picture: what has happened to the width of the outlines, and to the leftover noise?
+
+## Hints
+
+::: {.callout-tip collapse="true" title="Hint 1 — one output pixel"}
+Write down the 3 × 3 neighbourhood of the pixel (the pixel itself in the middle). Put the kernel on top. Multiply each pair of numbers in the same position, add the nine products, and divide by 9 or 16 for the blurs. Zero weights can be skipped.
+:::
+
+::: {.callout-tip collapse="true" title="Hint 2 — the sum of the weights"}
+On a flat region every pixel has the same value $v$, so the output is $v$ times the sum of the weights. Sum 1: $v$ is kept. Sum 0: the output is 0. Sum 2: twice as bright. A kernel with sum 0 and positive weights on one side and negative weights on the other compares the two sides.
+:::
+
+::: {.callout-tip collapse="true" title="Hint 3 — Sobel and direction"}
+Sobel x is (right column) minus (left column), with the middle row counted twice. "Brighter to the right" gives a positive number. Swapping the sign of every weight swaps the sign of the answer. A vertical edge is a change from left to right.
+:::
+
+::: {.callout-tip collapse="true" title="Hint 4 — borders"}
+For the bottom-left pixel, the neighbourhood includes row 6 and column 0, which do not exist. With zeros, those five positions count as 0. With copy edge, a missing pixel takes the value of the nearest pixel inside the image.
+:::
+
+::: {.callout-tip collapse="true" title="Hint 5 — R"}
+`k * p[i:(i + 2), j:(j + 2)]` multiplies two 3 × 3 matrices **entry by entry**; [`sum()`](https://rdrr.io/r/base/sum.html) adds the nine products. `%*%` would be a matrix product, which is something else. [`outer(1:m, 1:m, f)`](https://rdrr.io/r/base/outer.html) builds an m × m matrix whose entry `[i, j]` is `f(i, j)`. In [`image()`](https://rdrr.io/r/graphics/image.html), column 1 of the matrix is drawn at the bottom.
+:::
+
+## Solutions
+
+::: {.callout-note collapse="true" title="Solution"}
+
+**B1.** Row 3, column 2: the neighbourhood is 2 11 2 / 2 2 2 / 2 2 2, sum 27, so $27/9 = 3$. Column 3: 11 2 8 / 2 2 8 / 2 2 8, sum 45, so $45/9 = 5$. Column 4: 2 8 8 three times, sum 54, so $54/9 = 6$. The noisy pixel: 2 2 2 / 2 11 2 / 2 2 2, sum 27, so **3**. The noise is spread over its neighbours: 11 becomes 3, but the pixels around it rise from 2 to about 3. The sharp step 2 → 8 becomes a ramp (3, 5, 6, then 8).
+
+**B2.** Noisy pixel: the eight neighbours are all 2, with total weight $16 - 4 = 12$, so $2 \cdot 12 + 11 \cdot 4 = 68$ and $68/16 = 4.25$. Row 3, column 3: $11 \cdot 1 + 2 \cdot 2 + 8 \cdot 1 + 2 \cdot 2 + 2 \cdot 4 + 8 \cdot 2 + 2 \cdot 1 + 2 \cdot 2 + 8 \cdot 1 = 65$, and $65/16 \approx 4.06$. The **box blur** removes more of the noisy pixel (3 instead of 4.25), because the Gaussian gives the centre a weight of 4/16 = 1/4 instead of 1/9. The Gaussian is gentler.
+
+**B3.** Sharpen = 5 × centre minus the four direct neighbours. Row 3: column 2: $5 \cdot 2 - (11 + 2 + 2 + 2) = -7$; column 3: $10 - (2 + 2 + 8 + 2) = -4$; column 4: $40 - (8 + 2 + 8 + 8) = 14$. Noisy pixel: $55 - 8 = 47$. All four are outside 2 to 8. On the dark side of the step the pixel next to it is pushed **darker** (−4), on the bright side **brighter** (14): the step gets a dark and a bright rim and looks crisper. The noisy pixel is made much worse (47).
+
+**B4.** Laplacian = the four direct neighbours minus 4 × centre. Row 3: column 2: $11 + 2 + 2 + 2 - 8 = 9$; column 3: $2 + 2 + 8 + 2 - 8 = 6$; column 4: $8 + 2 + 8 + 8 - 32 = -6$. Noisy pixel: $2 + 2 + 2 + 2 - 44 = -36$. The **noisy pixel** gives by far the largest response, 6 times the edge. Edge kernels look for pixels that differ from their neighbours, and a noise pixel is exactly that: they amplify noise.
+
+**B5.** Row 4, column 3: right column minus left column, $(8 - 2) + 2 \cdot (8 - 2) + (8 - 2) = 24$. Row 4, column 4: $(8 - 2) \cdot 4 = 24$ as well. Row 3, column 4: 24. Row 3, column 3: $(8 - 11) + 2 \cdot (8 - 2) + (8 - 2) = -3 + 12 + 6 = 15$. All positive, because the image gets brighter to the right. At row 3, column 3 the noisy pixel sits in the top-left corner of the neighbourhood with weight −1, so it lowers the result from 24 to 15.
+
+**B6.**
+(a) Sum 9: a box blur that is **9 times too bright**; most of the image saturates to white. Divide by 9 to fix it.
+(b) Sum 2: every pixel doubled, the image is **twice as bright** (no blur, no shift).
+(c) Sum 0: an edge detector for **vertical** edges, Sobel x with the opposite sign: **negative** where the image gets brighter to the right.
+(d) Sum 1: a **shift**. Each output pixel copies its **right** neighbour, so the image moves one pixel to the **left**.
+(e) Sum 0: an edge and spot detector in **all directions**, like the Laplacian but using all 8 neighbours and with the opposite sign (centre minus neighbours): a bright spot gives a large positive number.
+(f) Sum 0: a **horizontal** edge detector, Sobel y with the opposite sign: positive where the image gets darker going down.
+
+**B7.** For example $\begin{bmatrix} 0 & 0 & 0\\ -1 & 0 & 1\\ 0 & 0 & 0 \end{bmatrix}$ (right neighbour minus left neighbour). Sum 0, positive when brighter to the right. Row 4: column 2: $2 - 2 = 0$; column 3: $8 - 2 = 6$; column 4: $8 - 2 = 6$. Row 2, column 3: $8 - 11 = -3$: the noisy pixel makes this kernel give the **wrong sign** at an edge. Sobel x gives 6 there, still positive, because it also uses rows 1 and 3 (and counts the middle row twice), which averages out a single noisy pixel. Using three rows is a small built-in blur **along** the edge.
+
+**B8.** The neighbourhood of row 5, column 1 is rows 4–6 and columns 0–2. (a) With zeros: 0 2 2 / 0 2 2 / 0 0 0, sum 8, so $8/9 \approx 0.89$: the corner gets **darker**, although the image is flat there. (b) With copy edge: all nine values are 2, so the output is $18/9 = 2$, the correct flat value. Copying the edge is more sensible here.
+
+**R answers.**
+
+**R1.**
+```r
+filter3(E, box)[3, ]
+# [1] 3 3 5 6 8
+round(filter3(E, gauss), 2)
+#      [,1] [,2] [,3] [,4] [,5]
+# [1,] 2.56 3.12 4.06  6.5    8
+# [2,] 3.12 4.25 4.62  6.5    8
+# [3,] 2.56 3.12 4.06  6.5    8
+# [4,] 2.00 2.00 3.50  6.5    8
+# [5,] 2.00 2.00 3.50  6.5    8
+filter3(E, sharpen)
+#      [,1] [,2] [,3] [,4] [,5]
+# [1,]    2   -7   -4   14    8
+# [2,]   -7   47  -13   14    8
+# [3,]    2   -7   -4   14    8
+# [4,]    2    2   -4   14    8
+# [5,]    2    2   -4   14    8
+filter3(E, laplace)
+#      [,1] [,2] [,3] [,4] [,5]
+# [1,]    0    9    6   -6    0
+# [2,]    9  -36   15   -6    0
+# [3,]    0    9    6   -6    0
+# [4,]    0    0    6   -6    0
+# [5,]    0    0    6   -6    0
+filter3(E, sobelx)
+#      [,1] [,2] [,3] [,4] [,5]
+# [1,]    9    0   15   24    0
+# [2,]   18    0    6   24    0
+# [3,]    9    0   15   24    0
+# [4,]    0    0   24   24    0
+# [5,]    0    0   24   24    0
+```
+All by-hand values match (row 3 of the box blur: 3, 5, 6 in columns 2–4; the Gaussian 4.25 and 4.06; sharpen −7, −4, 14 and 47; Laplacian 9, 6, −6 and −36; Sobel x 15 and 24). The border pixels use copy edge. `p` is the image with one extra row and column on every side (the edge pixels copied), so that every pixel, including the corners, has a full 3 × 3 neighbourhood, `p[i:(i + 2), j:(j + 2)]`. `k * p[...]` multiplies entry by entry, which is the weighted sum we want; `%*%` would compute a matrix product, a different 3 × 3 matrix.
+
+**R2.** `d1[i, j]` is the distance from pixel `[i, j]` to the centre of the cell at (64, 64), and `d2` the distance to the nucleus centre at (58, 70). So `d1 < 45` is a disk of radius 45 (the cell) and `d2 < 18` a smaller disk (the nucleus). Grey levels: background 60, cell 180, nucleus 110; the noise has standard deviation 30.
+
+**R3.**
+```r
+c(noisy = sd(noisy[bg]), blur1 = sd(blur1[bg]), blur2 = sd(blur2[bg]))
+#    noisy    blur1    blur2
+# 30.11365 11.99496  8.86021
+c(noisy = mean((noisy > 85) != truth),
+  blur1 = mean((blur1 > 85) != truth),
+  blur2 = mean((blur2 > 85) != truth))
+#      noisy      blur1      blur2
+# 0.13830566 0.02087402 0.01641846
+```
+One Gaussian pass reduces the background noise from 30 to 12, two passes to 8.9. The threshold mask is wrong for 13.8% of the pixels on the noisy image, but only 2.1% after one pass and 1.6% after two: blurring before thresholding gives a much cleaner segmentation. The remaining errors are mainly along the outline.
+
+**R4.**
+```r
+c(raw  = mean(e_raw[ring])  / mean(e_raw[bg]),
+  blur = mean(e_blur[ring]) / mean(e_blur[bg]))
+#      raw     blur
+# 2.821053 5.925313
+```
+With edges only, the outline is 2.8 times stronger than the background; after two Gaussian passes, 5.9 times: blur first, then find edges. The price: the edges in the blurred version are wider and smoother, so the exact position of the outline is less sharp, and fine structures would fade.
+
+**R5.**
+```
+0 passes: outline / background =  2.8
+1 passes: outline / background =  4.5
+2 passes: outline / background =  5.9
+3 passes: outline / background =  7.2
+4 passes: outline / background =  8.3
+5 passes: outline / background =  9.4
+6 passes: outline / background = 10.3
+```
+The ratio keeps rising, but each extra pass helps less (from +1.7 for the first pass to +0.9 for the sixth). After 7 passes both outlines stand out well, but as broad rings several pixels wide, so the exact position of the edge is less precise, and the leftover noise forms larger blobs. Here the objects are large and far apart, so this does little harm; with small objects, or two objects close together, too much blur would merge them. The best amount of blur depends on the size of what you want to find.
+:::
+
+## Where this leads
+
+- **Fourier transform & basis functions:** a blur is a low-pass filter, an edge kernel a high-pass filter. Convolution in image space is multiplication in frequency space, which is how very large blurs are done in practice.
+- **Image analysis software** (Fiji/ImageJ, CellProfiler, scikit-image): Gaussian blur, Sobel and Laplacian (of Gaussian) filters are standard menu items and pipeline steps, usually with larger kernels than 3 × 3.
+- **Segmentation:** blur, threshold, then clean up the mask; or find edges and grow regions from them (watershed).
+- **Convolutional neural networks:** every layer slides many small kernels over the image, and training learns their weights. Cell-segmentation networks such as U-Net are built from stacked 3 × 3 kernels.
+- A textbook for further reading: R. C. Gonzalez and R. E. Woods, *Digital Image Processing* (Pearson), the chapter on spatial filtering.

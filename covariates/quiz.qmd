@@ -1,0 +1,124 @@
+---
+title: "Quiz: design matrices for covariates"
+format:
+  html:
+    toc: true
+    code-copy: true
+    code-overflow: wrap
+    highlight-style: github
+---
+
+Short questions to test your understanding of design matrices: building $X$ from a formula, computing $X\boldsymbol\beta$, reading coefficients, and deciding whether $\boldsymbol\beta$ has a unique solution. Try each on paper first, then open the answer. Most are in the style of the on-campus exam (no computer).
+
+---
+
+**Q1.** A study of one gene uses the formula `expr ~ sex + batch + bmi`, where sex is F/M and the sequencing batch has levels A, B, C. How many columns does the design matrix $X$ have? Name them.
+
+::: {.callout-tip collapse="true" title="Hint"}
+Intercept: 1 column. Factor with $k$ levels: $k - 1$ columns. Number: 1 column.
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+$1 + 1 + 2 + 1 = 5$ columns: `(Intercept)`, `sexM`, `batchB`, `batchC`, `bmi`. F and A are the reference levels and get no column of their own.
+:::
+
+---
+
+**Q2.** For the model in Q1 the fitted coefficients are $\boldsymbol\beta = (3,\ 1,\ 2,\ -1,\ 0.5)$, in the column order above. Write the row of $X$ for a **man with BMI 24, sequenced in batch C**, and compute his predicted expression.
+
+::: {.callout-tip collapse="true" title="Hint"}
+Walk through the columns in order: 1, then the sex dummy, then the two batch dummies, then the BMI value. Then take the dot product with $\boldsymbol\beta$.
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+Row: $(1,\ 1,\ 0,\ 1,\ 24)$. Prediction: $3 \cdot 1 + 1 \cdot 1 + 2 \cdot 0 + (-1) \cdot 1 + 0.5 \cdot 24 = 3 + 1 + 0 - 1 + 12 = 15$.
+:::
+
+---
+
+**Q3.** In the same model, say in one sentence each what `batchC` $= -1$ and `bmi` $= 0.5$ mean.
+
+::: {.callout-tip collapse="true" title="Hint"}
+A dummy's coefficient compares with the reference level. A number's coefficient is a slope.
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+`batchC` $= -1$: samples from batch C are predicted 1 unit **lower than batch A** (the reference), for the same sex and BMI. `bmi` $= 0.5$: each extra BMI unit raises the predicted expression by 0.5, for the same sex and batch.
+:::
+
+---
+
+**Q4.** An experiment measures one gene at three time points after stimulation. The model `expr ~ time` (time a factor with reference 0 h) gives `(Intercept)` $= 6$, `time6h` $= 4$, `time24h` $= -2$. What are the predicted means at 0 h, 6 h and 24 h? Could a model with time as a number (`expr ~ hours`) give the same three means?
+
+::: {.callout-tip collapse="true" title="Hint"}
+Each time point's mean is the intercept plus its own dummy's coefficient. A number column means a straight line.
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+0 h: $6$; 6 h: $6 + 4 = 10$; 24 h: $6 - 2 = 4$. No: a straight line in hours cannot go up from 0 h to 6 h and then down from 6 h to 24 h. The factor coding allows any shape; the numeric coding forces one slope.
+:::
+
+---
+
+**Q5.** Write the interaction column `treatmenttreat:sexM` for the four groups F/ctrl, F/treat, M/ctrl, M/treat. With $\boldsymbol\beta = (2,\ 3,\ 1,\ 2)$ for (`(Intercept)`, `treatmenttreat`, `sexM`, `treatmenttreat:sexM`), what is the predicted mean of treated males?
+
+::: {.callout-tip collapse="true" title="Hint"}
+The interaction column is the product of the two dummy columns.
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+The column is $(0,\ 0,\ 0,\ 1)$: it is 1 only when both dummies are 1 (treated males). Treated males: row $(1,\ 1,\ 1,\ 1)$, so $\hat y = 2 + 3 + 1 + 2 = 8$.
+:::
+
+---
+
+**Q6.** Why does R give a factor with two levels (F, M) only **one** dummy column, `sexM`, and not a column for each level?
+
+::: {.callout-tip collapse="true" title="Hint"}
+Add the two columns `sexF` and `sexM` together. What do you get?
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+Because `sexF + sexM` would equal the intercept column (every sample is F or M). The columns would be linearly dependent, and infinitely many $\boldsymbol\beta$ would give the same fit (the **dummy-variable trap**). Dropping the reference level's column keeps the columns independent, so $\boldsymbol\beta$ is unique.
+:::
+
+---
+
+**Q7.** A lab sequenced all 4 control samples in batch A and all 4 treated samples in batch B, and fits `expr ~ batch + treatment`.
+(a) Does $\boldsymbol\beta$ have a unique solution? Point to the problem in $X$.
+(b) What does R's `lm()` report, and what does DESeq2 do?
+(c) What should the lab have done?
+
+::: {.callout-tip collapse="true" title="Hint"}
+Write the columns `batchB` and `treatmenttreat` side by side.
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+(a) No. The columns `batchB` and `treatmenttreat` are identical (both are 0 for samples 1–4 and 1 for samples 5–8), so only their sum is determined: infinitely many $\boldsymbol\beta$ fit equally well, and the batch effect cannot be told apart from the treatment effect.
+(b) `lm()` reports `NA` for `treatmenttreat` (the `batchB` coefficient then carries batch and treatment together). DESeq2 stops with the error "the model matrix is not full rank".
+(c) Spread both conditions over both batches (e.g. 2 control + 2 treated in each). This is a **design** problem; it cannot be fixed in the analysis.
+:::
+
+---
+
+**Q8.** A pilot study has 5 patients. The analyst proposes `expr ~ treatment + sex + age + bmi + batch` with batch A/B/C. Is $\boldsymbol\beta$ unique? Give a reason in one sentence.
+
+::: {.callout-tip collapse="true" title="Hint"}
+Count the columns and compare with the number of samples.
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+No: $X$ has $1 + 1 + 1 + 1 + 1 + 2 = 7$ columns but only 5 rows, and with 5 rows at most 5 columns can be linearly independent ($p > n$). Use fewer covariates or more patients.
+:::
+
+---
+
+**Q9.** In `expr ~ treatment * sex` the samples are: F/ctrl, F/ctrl, F/treat, F/treat, M/ctrl, M/ctrl. Is $\boldsymbol\beta$ unique? If not, what are two ways to fix it?
+
+::: {.callout-tip collapse="true" title="Hint"}
+Fill in the interaction column for each sample.
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+No. There are no treated males, so the `treatmenttreat:sexM` column is all zeros, and its coefficient can take any value without changing the fit (an **empty cell**). Fixes: drop the interaction (`expr ~ treatment + sex`, which is unique here), or collect treated males so that every combination is observed.
+:::

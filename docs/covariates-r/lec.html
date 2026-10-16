@@ -1,0 +1,1214 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<script src="../site_libs/clipboard/clipboard.min.js"></script>
+<script src="../site_libs/quarto-html/tabby.min.js"></script>
+<script src="../site_libs/quarto-html/popper.min.js"></script>
+<script src="../site_libs/quarto-html/tippy.umd.min.js"></script>
+<link href="../site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="../site_libs/quarto-html/light-border.css" rel="stylesheet">
+<link href="../site_libs/quarto-html/quarto-syntax-highlighting-662ae1889177880cb371f83234c0a158.css" rel="stylesheet" id="quarto-text-highlighting-styles"><meta charset="utf-8">
+  <meta name="generator" content="quarto-1.7.30">
+
+  <meta name="author" content="Quantitative biology and integrative omics">
+  <title>Quantitative biology and integrative omics – Design matrices in R: DESeq2 &amp; limma</title>
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, minimal-ui">
+  <link rel="stylesheet" href="../site_libs/revealjs/dist/reset.css">
+  <link rel="stylesheet" href="../site_libs/revealjs/dist/reveal.css">
+  <style>
+    code{white-space: pre-wrap;}
+    span.smallcaps{font-variant: small-caps;}
+    div.columns{display: flex; gap: min(4vw, 1.5em);}
+    div.column{flex: auto; overflow-x: auto;}
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+    ul.task-list{list-style: none;}
+    ul.task-list li input[type="checkbox"] {
+      width: 0.8em;
+      margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+      vertical-align: middle;
+    }
+    /* CSS for syntax highlighting */
+    html { -webkit-text-size-adjust: 100%; }
+    pre > code.sourceCode { white-space: pre; position: relative; }
+    pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+    pre > code.sourceCode > span:empty { height: 1.2em; }
+    .sourceCode { overflow: visible; }
+    code.sourceCode > span { color: inherit; text-decoration: inherit; }
+    div.sourceCode { margin: 1em 0; }
+    pre.sourceCode { margin: 0; }
+    @media screen {
+    div.sourceCode { overflow: auto; }
+    }
+    @media print {
+    pre > code.sourceCode { white-space: pre-wrap; }
+    pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+    }
+    pre.numberSource code
+      { counter-reset: source-line 0; }
+    pre.numberSource code > span
+      { position: relative; left: -4em; counter-increment: source-line; }
+    pre.numberSource code > span > a:first-child::before
+      { content: counter(source-line);
+        position: relative; left: -1em; text-align: right; vertical-align: baseline;
+        border: none; display: inline-block;
+        -webkit-touch-callout: none; -webkit-user-select: none;
+        -khtml-user-select: none; -moz-user-select: none;
+        -ms-user-select: none; user-select: none;
+        padding: 0 4px; width: 4em;
+      }
+    pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+    div.sourceCode
+      { color: #24292e;  }
+    @media screen {
+    pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+    }
+    code span { color: #24292e; } /* Normal */
+    code span.al { color: #ff5555; font-weight: bold; } /* Alert */
+    code span.an { color: #6a737d; } /* Annotation */
+    code span.at { color: #d73a49; } /* Attribute */
+    code span.bn { color: #005cc5; } /* BaseN */
+    code span.bu { color: #d73a49; } /* BuiltIn */
+    code span.cf { color: #d73a49; } /* ControlFlow */
+    code span.ch { color: #032f62; } /* Char */
+    code span.cn { color: #005cc5; } /* Constant */
+    code span.co { color: #6a737d; } /* Comment */
+    code span.cv { color: #6a737d; } /* CommentVar */
+    code span.do { color: #6a737d; } /* Documentation */
+    code span.dt { color: #d73a49; } /* DataType */
+    code span.dv { color: #005cc5; } /* DecVal */
+    code span.er { color: #ff5555; text-decoration: underline; } /* Error */
+    code span.ex { color: #d73a49; font-weight: bold; } /* Extension */
+    code span.fl { color: #005cc5; } /* Float */
+    code span.fu { color: #6f42c1; } /* Function */
+    code span.im { color: #032f62; } /* Import */
+    code span.in { color: #6a737d; } /* Information */
+    code span.kw { color: #d73a49; } /* Keyword */
+    code span.op { color: #24292e; } /* Operator */
+    code span.ot { color: #6f42c1; } /* Other */
+    code span.pp { color: #d73a49; } /* Preprocessor */
+    code span.re { color: #6a737d; } /* RegionMarker */
+    code span.sc { color: #005cc5; } /* SpecialChar */
+    code span.ss { color: #032f62; } /* SpecialString */
+    code span.st { color: #032f62; } /* String */
+    code span.va { color: #e36209; } /* Variable */
+    code span.vs { color: #032f62; } /* VerbatimString */
+    code span.wa { color: #ff5555; } /* Warning */
+  </style>
+  <link rel="stylesheet" href="../site_libs/revealjs/dist/theme/quarto-bf56578b9c06c165c166475cd19dbcd1.css">
+  <link href="../site_libs/revealjs/plugin/quarto-line-highlight/line-highlight.css" rel="stylesheet">
+  <link href="../site_libs/revealjs/plugin/reveal-menu/menu.css" rel="stylesheet">
+  <link href="../site_libs/revealjs/plugin/reveal-menu/quarto-menu.css" rel="stylesheet">
+  <link href="../site_libs/revealjs/plugin/quarto-support/footer.css" rel="stylesheet">
+  <style type="text/css">
+    .reveal div.sourceCode {
+      margin: 0;
+      overflow: auto;
+    }
+    .reveal div.hanging-indent {
+      margin-left: 1em;
+      text-indent: -1em;
+    }
+    .reveal .slide:not(.center) {
+      height: 100%;
+    }
+    .reveal .slide.scrollable {
+      overflow-y: auto;
+    }
+    .reveal .footnotes {
+      height: 100%;
+      overflow-y: auto;
+    }
+    .reveal .slide .absolute {
+      position: absolute;
+      display: block;
+    }
+    .reveal .footnotes ol {
+      counter-reset: ol;
+      list-style-type: none; 
+      margin-left: 0;
+    }
+    .reveal .footnotes ol li:before {
+      counter-increment: ol;
+      content: counter(ol) ". "; 
+    }
+    .reveal .footnotes ol li > p:first-child {
+      display: inline-block;
+    }
+    .reveal .slide ul,
+    .reveal .slide ol {
+      margin-bottom: 0.5em;
+    }
+    .reveal .slide ul li,
+    .reveal .slide ol li {
+      margin-top: 0.4em;
+      margin-bottom: 0.2em;
+    }
+    .reveal .slide ul[role="tablist"] li {
+      margin-bottom: 0;
+    }
+    .reveal .slide ul li > *:first-child,
+    .reveal .slide ol li > *:first-child {
+      margin-block-start: 0;
+    }
+    .reveal .slide ul li > *:last-child,
+    .reveal .slide ol li > *:last-child {
+      margin-block-end: 0;
+    }
+    .reveal .slide .columns:nth-child(3) {
+      margin-block-start: 0.8em;
+    }
+    .reveal blockquote {
+      box-shadow: none;
+    }
+    .reveal .tippy-content>* {
+      margin-top: 0.2em;
+      margin-bottom: 0.7em;
+    }
+    .reveal .tippy-content>*:last-child {
+      margin-bottom: 0.2em;
+    }
+    .reveal .slide > img.stretch.quarto-figure-center,
+    .reveal .slide > img.r-stretch.quarto-figure-center {
+      display: block;
+      margin-left: auto;
+      margin-right: auto; 
+    }
+    .reveal .slide > img.stretch.quarto-figure-left,
+    .reveal .slide > img.r-stretch.quarto-figure-left  {
+      display: block;
+      margin-left: 0;
+      margin-right: auto; 
+    }
+    .reveal .slide > img.stretch.quarto-figure-right,
+    .reveal .slide > img.r-stretch.quarto-figure-right  {
+      display: block;
+      margin-left: auto;
+      margin-right: 0; 
+    }
+  </style>
+</head>
+<body class="quarto-light">
+  <div class="reveal">
+    <div class="slides">
+
+<section id="title-slide" class="quarto-title-block center">
+  <h1 class="title">Design matrices in R: DESeq2 &amp; limma</h1>
+  <p class="subtitle">Linear models — Design matrices in R</p>
+
+<div class="quarto-title-authors">
+<div class="quarto-title-author">
+<div class="quarto-title-author-name">
+Quantitative biology and integrative omics 
+</div>
+</div>
+</div>
+
+</section>
+<section id="about-this-lecture" class="slide level2">
+<h2>About this lecture</h2>
+<p>In <em>Design matrices for covariates</em> you built <span class="math inline">\(X\)</span> by hand, and in <em>Confounding &amp; Simpson’s paradox</em> you saw why the columns you put in decide the answer. Today R builds <span class="math inline">\(X\)</span> for us, and we hand the same <span class="math inline">\(X\)</span> to the tools used for real omics data. You will be able to:</p>
+<ul>
+<li>Turn a formula into <span class="math inline">\(X\)</span> with <a href="https://rdrr.io/r/stats/model.matrix.html"><code>model.matrix</code></a>, and control the reference level with <a href="https://rdrr.io/r/stats/relevel.html"><code>relevel</code></a> and <a href="https://rdrr.io/r/base/factor.html"><code>factor</code></a>.</li>
+<li><strong>Check the rank</strong> of <span class="math inline">\(X\)</span> before fitting, and recognise the <code>NA</code> that <a href="https://rdrr.io/r/stats/lm.html"><code>lm</code></a> returns for a column it cannot estimate.</li>
+<li>Run <strong>DESeq2</strong> on a bulk RNA-seq count matrix with <code>design = ~ batch + sex + treatment</code>, and read log2 fold changes and adjusted p-values.</li>
+<li>Recognise the “model matrix is not full rank” error, and know that only the <strong>experiment</strong> can fix it.</li>
+<li>(Extra material) Do the same with <strong>limma</strong> for log2 intensities from mass spectrometry.</li>
+</ul>
+<aside class="notes">
+<p>This is the R day for the covariates section. Nothing conceptually new: the design matrix, the dummy columns, the reference level and the rank condition are all from the two previous units. What is new is the tooling. First base R (model.matrix, lm), then DESeq2 for counts. limma is extra material at the end, but it is the same idea and many students will meet it for proteomics and metabolomics. Keep it practical: the students should leave knowing how to write the design, how to check it, and which coefficient to ask for.</p>
+<style type="text/css">
+        span.MJX_Assistive_MathML {
+          position:absolute!important;
+          clip: rect(1px, 1px, 1px, 1px);
+          padding: 1px 0 0 0!important;
+          border: 0!important;
+          height: 1px!important;
+          width: 1px!important;
+          overflow: hidden!important;
+          display:block!important;
+      }</style></aside>
+</section>
+<section id="recap-a-formula-is-a-recipe-for-x" class="slide level2 smaller">
+<h2>Recap: a formula is a recipe for <span class="math inline">\(X\)</span></h2>
+<p><span class="math display">\[
+\mathbf{y} = X\boldsymbol\beta + \boldsymbol\varepsilon
+\]</span></p>
+<ul>
+<li>One <strong>row</strong> of <span class="math inline">\(X\)</span> per sample, one <strong>column</strong> per coefficient.</li>
+<li><code>(Intercept)</code> is a column of 1s; it holds <span class="math inline">\(\beta_0\)</span>, the mean of the <strong>reference</strong> group.</li>
+<li>A factor with <span class="math inline">\(k\)</span> levels gives <span class="math inline">\(k-1\)</span> dummy columns: “difference from the reference”.</li>
+<li>A continuous covariate (age, BMI) gives one column of numbers: a slope.</li>
+<li><span class="math inline">\(\boldsymbol\beta\)</span> is unique only if the columns of <span class="math inline">\(X\)</span> are <strong>linearly independent</strong> (full column rank).</li>
+</ul>
+<p>In R you never type <span class="math inline">\(X\)</span> yourself. You write the formula and R builds <span class="math inline">\(X\)</span>, with the same rules you used by hand.</p>
+<aside class="notes">
+<p>One slide of recap so that the code that follows has something to hang on. The last bullet is the existence-of-solutions result from Design matrices for covariates and ties back to the zero, one or infinitely many solutions of Linear systems in R. Today we will see what each tool does when that condition fails.</p>
+<style type="text/css">
+        span.MJX_Assistive_MathML {
+          position:absolute!important;
+          clip: rect(1px, 1px, 1px, 1px);
+          padding: 1px 0 0 0!important;
+          border: 0!important;
+          height: 1px!important;
+          width: 1px!important;
+          overflow: hidden!important;
+          display:block!important;
+      }</style></aside>
+</section>
+<section id="model.matrix-builds-x" class="slide level2 smaller">
+<h2><code>model.matrix()</code> builds <span class="math inline">\(X\)</span></h2>
+<div class="sourceCode" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a aria-hidden="true" tabindex="-1"></a>d <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(</span>
+<span id="cb1-2"><a aria-hidden="true" tabindex="-1"></a>  <span class="at">treatment =</span> <span class="fu">c</span>(<span class="st">"ctrl"</span>, <span class="st">"ctrl"</span>, <span class="st">"ctrl"</span>, <span class="st">"treat"</span>, <span class="st">"treat"</span>, <span class="st">"treat"</span>),</span>
+<span id="cb1-3"><a aria-hidden="true" tabindex="-1"></a>  <span class="at">sex       =</span> <span class="fu">c</span>(<span class="st">"F"</span>, <span class="st">"M"</span>, <span class="st">"F"</span>, <span class="st">"M"</span>, <span class="st">"F"</span>, <span class="st">"M"</span>),</span>
+<span id="cb1-4"><a aria-hidden="true" tabindex="-1"></a>  <span class="at">bmi       =</span> <span class="fu">c</span>(<span class="dv">22</span>, <span class="dv">25</span>, <span class="dv">28</span>, <span class="dv">24</span>, <span class="dv">27</span>, <span class="dv">30</span>))</span>
+<span id="cb1-5"><a aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-6"><a aria-hidden="true" tabindex="-1"></a><span class="fu">model.matrix</span>(<span class="sc">~</span> treatment <span class="sc">+</span> sex, <span class="at">data =</span> d)</span>
+<span id="cb1-7"><a aria-hidden="true" tabindex="-1"></a><span class="co">#   (Intercept) treatmenttreat sexM</span></span>
+<span id="cb1-8"><a aria-hidden="true" tabindex="-1"></a><span class="co"># 1           1              0    0</span></span>
+<span id="cb1-9"><a aria-hidden="true" tabindex="-1"></a><span class="co"># 2           1              0    1</span></span>
+<span id="cb1-10"><a aria-hidden="true" tabindex="-1"></a><span class="co"># 3           1              0    0</span></span>
+<span id="cb1-11"><a aria-hidden="true" tabindex="-1"></a><span class="co"># 4           1              1    1</span></span>
+<span id="cb1-12"><a aria-hidden="true" tabindex="-1"></a><span class="co"># 5           1              1    0</span></span>
+<span id="cb1-13"><a aria-hidden="true" tabindex="-1"></a><span class="co"># 6           1              1    1</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<ul>
+<li>Column names are the variable name glued to the level: <code>treatmenttreat</code>, <code>sexM</code>.</li>
+<li>The <strong>reference</strong> levels (<code>ctrl</code>, <code>F</code>) get no column: they are in the intercept.</li>
+<li>R also prints two <code>attr(...)</code> lines below the matrix; you can ignore them.</li>
+</ul>
+<aside class="notes">
+<p>model.matrix is exactly what lm, DESeq2 and limma call internally. Read the column names aloud, because students will need them later to pick coefficients: treatmenttreat is “treatment, level treat”. The reference is the alphabetically first level, ctrl and F here. Ask: which sample is the reference group? Sample 1 and 3 are ctrl and F, so their row is just 1, 0, 0 and their predicted mean is beta 0.</p>
+<style type="text/css">
+        span.MJX_Assistive_MathML {
+          position:absolute!important;
+          clip: rect(1px, 1px, 1px, 1px);
+          padding: 1px 0 0 0!important;
+          border: 0!important;
+          height: 1px!important;
+          width: 1px!important;
+          overflow: hidden!important;
+          display:block!important;
+      }</style></aside>
+</section>
+<section id="a-continuous-covariate-one-column-of-numbers" class="slide level2 smaller">
+<h2>A continuous covariate: one column of numbers</h2>
+<div class="sourceCode" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a aria-hidden="true" tabindex="-1"></a><span class="fu">model.matrix</span>(<span class="sc">~</span> treatment <span class="sc">+</span> bmi, <span class="at">data =</span> d)</span>
+<span id="cb2-2"><a aria-hidden="true" tabindex="-1"></a><span class="co">#   (Intercept) treatmenttreat bmi</span></span>
+<span id="cb2-3"><a aria-hidden="true" tabindex="-1"></a><span class="co"># 1           1              0  22</span></span>
+<span id="cb2-4"><a aria-hidden="true" tabindex="-1"></a><span class="co"># 2           1              0  25</span></span>
+<span id="cb2-5"><a aria-hidden="true" tabindex="-1"></a><span class="co"># 3           1              0  28</span></span>
+<span id="cb2-6"><a aria-hidden="true" tabindex="-1"></a><span class="co"># 4           1              1  24</span></span>
+<span id="cb2-7"><a aria-hidden="true" tabindex="-1"></a><span class="co"># 5           1              1  27</span></span>
+<span id="cb2-8"><a aria-hidden="true" tabindex="-1"></a><span class="co"># 6           1              1  30</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<ul>
+<li><code>bmi</code> is copied in as it is. Its coefficient is the change in <span class="math inline">\(y\)</span> <strong>per BMI unit</strong>, holding treatment fixed.</li>
+<li>The intercept is now “control at BMI 0”. To make it readable, centre: <code>~ treatment + I(bmi - mean(bmi))</code>. The slope does not change.</li>
+<li>Age works the same way.</li>
+</ul>
+<aside class="notes">
+<p>Continuous covariates are the easy case in R. Point at the BMI column: the numbers go straight in. Remind them of centring from Design matrices for covariates; in R the I() wrapper means “compute this and use it as a column”. In omics tools people often centre or scale continuous covariates before fitting, for the same readability reason.</p>
+<style type="text/css">
+        span.MJX_Assistive_MathML {
+          position:absolute!important;
+          clip: rect(1px, 1px, 1px, 1px);
+          padding: 1px 0 0 0!important;
+          border: 0!important;
+          height: 1px!important;
+          width: 1px!important;
+          overflow: hidden!important;
+          display:block!important;
+      }</style></aside>
+</section>
+<section id="choosing-the-reference-with-relevel" class="slide level2 smaller">
+<h2>Choosing the reference with <code>relevel()</code></h2>
+<p>R sorts the levels of a factor <strong>alphabetically</strong>, and the first one becomes the reference.</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a aria-hidden="true" tabindex="-1"></a>d<span class="sc">$</span>treatment <span class="ot">&lt;-</span> <span class="fu">factor</span>(d<span class="sc">$</span>treatment)</span>
+<span id="cb3-2"><a aria-hidden="true" tabindex="-1"></a><span class="fu">levels</span>(d<span class="sc">$</span>treatment)</span>
+<span id="cb3-3"><a aria-hidden="true" tabindex="-1"></a><span class="co"># [1] "ctrl"  "treat"          # ctrl is the reference: good</span></span>
+<span id="cb3-4"><a aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-5"><a aria-hidden="true" tabindex="-1"></a>d<span class="sc">$</span>treatment <span class="ot">&lt;-</span> <span class="fu">relevel</span>(d<span class="sc">$</span>treatment, <span class="at">ref =</span> <span class="st">"treat"</span>)</span>
+<span id="cb3-6"><a aria-hidden="true" tabindex="-1"></a><span class="fu">colnames</span>(<span class="fu">model.matrix</span>(<span class="sc">~</span> treatment, <span class="at">data =</span> d))</span>
+<span id="cb3-7"><a aria-hidden="true" tabindex="-1"></a><span class="co"># [1] "(Intercept)"   "treatmentctrl"   # now the column is "ctrl vs treat"</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<ul>
+<li>Changing the reference does <strong>not</strong> change the fit or the predictions. It changes what each coefficient <strong>means</strong>: the sign of the treatment effect flips.</li>
+<li>Real data often has levels like <code>trt</code> and <code>untrt</code>. Alphabetically <code>trt</code> comes first, so <code>untrt</code> vs <code>trt</code> is what you get unless you relevel.</li>
+</ul>
+<aside class="notes">
+<p>The relevel point matters most in practice. Many public datasets, including the airway dataset in the exercise, have treatment levels where the alphabetical first one is the treated group, so every fold change comes out with the wrong sign. Always check levels() before fitting. Rule: set the reference to the control or baseline condition.</p>
+<style type="text/css">
+        span.MJX_Assistive_MathML {
+          position:absolute!important;
+          clip: rect(1px, 1px, 1px, 1px);
+          padding: 1px 0 0 0!important;
+          border: 0!important;
+          height: 1px!important;
+          width: 1px!important;
+          overflow: hidden!important;
+          display:block!important;
+      }</style></aside>
+</section>
+<section id="the-time-trap-0-h-6-h-24-h" class="slide level2 smaller">
+<h2>The time trap: 0 h, 6 h, 24 h</h2>
+<div class="sourceCode" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a aria-hidden="true" tabindex="-1"></a>d<span class="sc">$</span>time <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">"0h"</span>, <span class="st">"6h"</span>, <span class="st">"24h"</span>, <span class="st">"0h"</span>, <span class="st">"6h"</span>, <span class="st">"24h"</span>)</span>
+<span id="cb4-2"><a aria-hidden="true" tabindex="-1"></a><span class="fu">colnames</span>(<span class="fu">model.matrix</span>(<span class="sc">~</span> time, <span class="at">data =</span> d))</span>
+<span id="cb4-3"><a aria-hidden="true" tabindex="-1"></a><span class="co"># [1] "(Intercept)" "time24h"     "time6h"      # alphabetical: "24h" &lt; "6h"</span></span>
+<span id="cb4-4"><a aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-5"><a aria-hidden="true" tabindex="-1"></a>d<span class="sc">$</span>time <span class="ot">&lt;-</span> <span class="fu">factor</span>(d<span class="sc">$</span>time, <span class="at">levels =</span> <span class="fu">c</span>(<span class="st">"0h"</span>, <span class="st">"6h"</span>, <span class="st">"24h"</span>))</span>
+<span id="cb4-6"><a aria-hidden="true" tabindex="-1"></a><span class="fu">colnames</span>(<span class="fu">model.matrix</span>(<span class="sc">~</span> time, <span class="at">data =</span> d))</span>
+<span id="cb4-7"><a aria-hidden="true" tabindex="-1"></a><span class="co"># [1] "(Intercept)" "time6h"      "time24h"     # the order you meant</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<ul>
+<li>Text is sorted character by character: <code>"2"</code> comes before <code>"6"</code>, so <code>24h</code> comes before <code>6h</code>.</li>
+<li>Here the reference <code>0h</code> happens to stay first, but the columns are in a confusing order. With <code>day3</code>, <code>day7</code>, <code>day14</code> the reference itself goes wrong: R picks <code>day14</code>.</li>
+<li>Fix: give the levels explicitly with <code>factor(x, levels = ...)</code>.</li>
+</ul>
+<aside class="notes">
+<p>This bites everyone once. R sorts strings as text, not as numbers. The output here is still a valid model, but plots and tables come out in the order 0, 24, 6, and it is easy to read the wrong column. Always set the levels by hand for anything ordered: time points, doses, stages. With day3, day7, day14 the levels sort as day14, day3, day7, so day14 silently becomes the reference and every coefficient is “compared with day 14”.</p>
+<style type="text/css">
+        span.MJX_Assistive_MathML {
+          position:absolute!important;
+          clip: rect(1px, 1px, 1px, 1px);
+          padding: 1px 0 0 0!important;
+          border: 0!important;
+          height: 1px!important;
+          width: 1px!important;
+          overflow: hidden!important;
+          display:block!important;
+      }</style></aside>
+</section>
+<section id="time-as-a-factor-or-as-a-number" class="slide level2 smaller">
+<h2>Time as a factor or as a number</h2>
+<div class="sourceCode" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a aria-hidden="true" tabindex="-1"></a>d<span class="sc">$</span>time_h <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="dv">6</span>, <span class="dv">24</span>, <span class="dv">0</span>, <span class="dv">6</span>, <span class="dv">24</span>)</span>
+<span id="cb5-2"><a aria-hidden="true" tabindex="-1"></a><span class="fu">colnames</span>(<span class="fu">model.matrix</span>(<span class="sc">~</span> time_h, <span class="at">data =</span> d))</span>
+<span id="cb5-3"><a aria-hidden="true" tabindex="-1"></a><span class="co"># [1] "(Intercept)" "time_h"        # one slope per hour</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<table class="caption-top">
+<colgroup>
+<col style="width: 33%">
+<col style="width: 33%">
+<col style="width: 33%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>formula</th>
+<th>columns for time</th>
+<th>what it assumes</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>~ time</code> (factor)</td>
+<td><code>time6h</code>, <code>time24h</code></td>
+<td>any shape: each time point has its own mean</td>
+</tr>
+<tr class="even">
+<td><code>~ time_h</code> (number)</td>
+<td><code>time_h</code></td>
+<td>a straight line in time</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li>The factor version costs one column more, but makes no assumption about the shape.</li>
+<li>With only a few time points, the factor version is the usual choice in omics.</li>
+</ul>
+<aside class="notes">
+<p>Same data, two designs. As a factor, time gets k minus 1 dummy columns and each time point is free. As a number, time is a single slope, which assumes the response grows linearly with hours: from 6 h to 24 h it would have to grow three times as much as from 0 h to 6 h. With three time points that is rarely what you believe, so the factor is the safer default. This matches the time slide in Design matrices for covariates.</p>
+<style type="text/css">
+        span.MJX_Assistive_MathML {
+          position:absolute!important;
+          clip: rect(1px, 1px, 1px, 1px);
+          padding: 1px 0 0 0!important;
+          border: 0!important;
+          height: 1px!important;
+          width: 1px!important;
+          overflow: hidden!important;
+          display:block!important;
+      }</style></aside>
+</section>
+<section id="check-the-rank-before-you-fit" class="slide level2 smaller">
+<h2>Check the rank before you fit</h2>
+<p>Now suppose all controls were sequenced in batch A and all treated samples in batch B.</p>
+<div class="sourceCode" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a aria-hidden="true" tabindex="-1"></a>d<span class="sc">$</span>batch <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">"A"</span>, <span class="st">"A"</span>, <span class="st">"A"</span>, <span class="st">"B"</span>, <span class="st">"B"</span>, <span class="st">"B"</span>)</span>
+<span id="cb6-2"><a aria-hidden="true" tabindex="-1"></a>X <span class="ot">&lt;-</span> <span class="fu">model.matrix</span>(<span class="sc">~</span> batch <span class="sc">+</span> treatment, <span class="at">data =</span> d)</span>
+<span id="cb6-3"><a aria-hidden="true" tabindex="-1"></a>X[, ]</span>
+<span id="cb6-4"><a aria-hidden="true" tabindex="-1"></a><span class="co">#   (Intercept) batchB treatmenttreat</span></span>
+<span id="cb6-5"><a aria-hidden="true" tabindex="-1"></a><span class="co"># 1           1      0              0</span></span>
+<span id="cb6-6"><a aria-hidden="true" tabindex="-1"></a><span class="co"># 2           1      0              0</span></span>
+<span id="cb6-7"><a aria-hidden="true" tabindex="-1"></a><span class="co"># 3           1      0              0</span></span>
+<span id="cb6-8"><a aria-hidden="true" tabindex="-1"></a><span class="co"># 4           1      1              1</span></span>
+<span id="cb6-9"><a aria-hidden="true" tabindex="-1"></a><span class="co"># 5           1      1              1</span></span>
+<span id="cb6-10"><a aria-hidden="true" tabindex="-1"></a><span class="co"># 6           1      1              1</span></span>
+<span id="cb6-11"><a aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-12"><a aria-hidden="true" tabindex="-1"></a><span class="fu">ncol</span>(X)          <span class="co"># 3 coefficients to estimate</span></span>
+<span id="cb6-13"><a aria-hidden="true" tabindex="-1"></a><span class="fu">qr</span>(X)<span class="sc">$</span>rank       <span class="co"># 2  -&gt; only 2 independent columns: no unique solution</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<ul>
+<li><code>batchB</code> and <code>treatmenttreat</code> are <strong>identical</strong> columns: perfect confounding.</li>
+<li><a href="https://rdrr.io/r/base/qr.html"><code>qr</code></a><code>(X)$rank</code> <span class="math inline">\(&lt;\)</span> <code>ncol(X)</code> means infinitely many <span class="math inline">\(\boldsymbol\beta\)</span> fit equally well, as in <em>Linear systems in R</em>.</li>
+</ul>
+<aside class="notes">
+<p>This is the rank check from Linear systems in R applied to a design matrix. The rule to remember: rank equal to the number of columns means a unique beta, rank smaller means infinitely many. Here batch and treatment carry exactly the same information, so any split of the difference between the two coefficients fits equally well. X[, ] just prints the matrix without the attr lines.</p>
+<style type="text/css">
+        span.MJX_Assistive_MathML {
+          position:absolute!important;
+          clip: rect(1px, 1px, 1px, 1px);
+          padding: 1px 0 0 0!important;
+          border: 0!important;
+          height: 1px!important;
+          width: 1px!important;
+          overflow: hidden!important;
+          display:block!important;
+      }</style></aside>
+</section>
+<section id="what-lm-does-with-an-aliased-column" class="slide level2 smaller">
+<h2>What <code>lm</code> does with an aliased column</h2>
+<div class="sourceCode" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a aria-hidden="true" tabindex="-1"></a>d<span class="sc">$</span>y <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="dv">10</span>, <span class="dv">11</span>, <span class="dv">12</span>, <span class="dv">14</span>, <span class="dv">15</span>, <span class="dv">16</span>)</span>
+<span id="cb7-2"><a aria-hidden="true" tabindex="-1"></a><span class="fu">coef</span>(<span class="fu">lm</span>(y <span class="sc">~</span> batch <span class="sc">+</span> treatment, <span class="at">data =</span> d))</span>
+<span id="cb7-3"><a aria-hidden="true" tabindex="-1"></a><span class="co">#  (Intercept)         batchB treatmenttreat</span></span>
+<span id="cb7-4"><a aria-hidden="true" tabindex="-1"></a><span class="co">#           11              4             NA</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<ul>
+<li><code>lm</code> does not stop. It keeps the columns in order, and the first one that is a combination of the earlier ones gets <code>NA</code> (“aliased”).</li>
+<li>The 4 is <strong>batch and treatment together</strong>. Swap the order (<code>~ treatment + batch</code>) and the 4 moves to <code>treatmenttreat</code>.</li>
+<li>An <code>NA</code> coefficient is a warning sign: your design cannot separate these effects.</li>
+</ul>
+<aside class="notes">
+<p>lm is forgiving: it drops the redundant column and carries on. Students must not read the 4 as a batch effect. It is the combined difference between the two groups, and we cannot say how much is batch and how much is treatment. Show that changing the order of the formula moves the NA, which proves that the split is arbitrary. DESeq2, on the next slides, refuses outright instead.</p>
+<style type="text/css">
+        span.MJX_Assistive_MathML {
+          position:absolute!important;
+          clip: rect(1px, 1px, 1px, 1px);
+          padding: 1px 0 0 0!important;
+          border: 0!important;
+          height: 1px!important;
+          width: 1px!important;
+          overflow: hidden!important;
+          display:block!important;
+      }</style></aside>
+</section>
+<section id="one-gene-with-lm-the-simpson-example" class="slide level2 smaller">
+<h2>One gene with <code>lm</code>: the Simpson example</h2>
+<p>The batch example from <em>Confounding &amp; Simpson’s paradox</em>: drug vs control in two batches, with the drug mostly in batch A.</p>
+<div class="sourceCode" id="cb8"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a aria-hidden="true" tabindex="-1"></a>g <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(</span>
+<span id="cb8-2"><a aria-hidden="true" tabindex="-1"></a>  <span class="at">batch     =</span> <span class="fu">c</span>(<span class="st">"A"</span>, <span class="st">"A"</span>, <span class="st">"A"</span>, <span class="st">"A"</span>, <span class="st">"B"</span>, <span class="st">"B"</span>, <span class="st">"B"</span>, <span class="st">"B"</span>),</span>
+<span id="cb8-3"><a aria-hidden="true" tabindex="-1"></a>  <span class="at">treatment =</span> <span class="fu">c</span>(<span class="st">"ctrl"</span>, <span class="st">"treat"</span>, <span class="st">"treat"</span>, <span class="st">"treat"</span>, <span class="st">"ctrl"</span>, <span class="st">"ctrl"</span>, <span class="st">"ctrl"</span>, <span class="st">"treat"</span>),</span>
+<span id="cb8-4"><a aria-hidden="true" tabindex="-1"></a>  <span class="at">expr      =</span> <span class="fu">c</span>(<span class="dv">10</span>, <span class="dv">12</span>, <span class="dv">12</span>, <span class="dv">12</span>, <span class="dv">20</span>, <span class="dv">20</span>, <span class="dv">20</span>, <span class="dv">22</span>))</span>
+<span id="cb8-5"><a aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-6"><a aria-hidden="true" tabindex="-1"></a><span class="fu">coef</span>(<span class="fu">lm</span>(expr <span class="sc">~</span> treatment, <span class="at">data =</span> g))</span>
+<span id="cb8-7"><a aria-hidden="true" tabindex="-1"></a><span class="co">#    (Intercept) treatmenttreat</span></span>
+<span id="cb8-8"><a aria-hidden="true" tabindex="-1"></a><span class="co">#           17.5           -3.0           # drug looks harmful</span></span>
+<span id="cb8-9"><a aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-10"><a aria-hidden="true" tabindex="-1"></a><span class="fu">coef</span>(<span class="fu">lm</span>(expr <span class="sc">~</span> batch <span class="sc">+</span> treatment, <span class="at">data =</span> g))</span>
+<span id="cb8-11"><a aria-hidden="true" tabindex="-1"></a><span class="co">#    (Intercept)         batchB treatmenttreat</span></span>
+<span id="cb8-12"><a aria-hidden="true" tabindex="-1"></a><span class="co">#             10             10              2     # +2 within each batch</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<ul>
+<li>Adding the <code>batchB</code> column turns <span class="math inline">\(-3\)</span> into <span class="math inline">\(+2\)</span>. The rank is 3 = number of columns, so <span class="math inline">\(\boldsymbol\beta\)</span> is unique: batch is <strong>partly</strong> confounded, not perfectly.</li>
+<li>Check one prediction: treated in batch B <span class="math inline">\(= 10 + 10 + 2 = 22\)</span>. ✓</li>
+</ul>
+<aside class="notes">
+<p>These are exactly the numbers students computed by hand in the confounding unit, so they can check that R agrees. The data fit the adjusted model exactly, which is why the coefficients are round numbers. The important contrast with the previous slide: here every batch contains both conditions, so the design matrix has full rank and adjustment works. Next: do this for 20 000 genes at once.</p>
+<style type="text/css">
+        span.MJX_Assistive_MathML {
+          position:absolute!important;
+          clip: rect(1px, 1px, 1px, 1px);
+          padding: 1px 0 0 0!important;
+          border: 0!important;
+          height: 1px!important;
+          width: 1px!important;
+          overflow: hidden!important;
+          display:block!important;
+      }</style></aside>
+</section>
+<section id="from-one-gene-to-20-000-deseq2" class="slide level2 smaller">
+<h2>From one gene to 20 000: DESeq2</h2>
+
+<img data-src="fig01-one-design-many-genes.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:95.0%"><ul>
+<li>An RNA-seq experiment gives a <strong>count matrix</strong>: one row per gene, one column per sample.</li>
+<li><a href="https://bioconductor.org/packages/release/bioc/vignettes/DESeq2/inst/doc/DESeq2.html">DESeq2</a> fits every gene with the <strong>same design matrix</strong> <span class="math inline">\(X\)</span>, with a negative-binomial error model for the counts (see <em>Error models</em>).</li>
+<li>It reports each coefficient as a <strong>log2 fold change</strong> (LFC): LFC 1 = doubled, LFC <span class="math inline">\(-1\)</span> = halved, LFC 0 = no change.</li>
+</ul>
+<aside class="notes">
+<p>The key picture of the day. The samples are the same for every gene, so the design matrix is the same; only y changes from row to row. DESeq2 is in effect 20 000 regressions with one shared X. The negative binomial is the error model from the Error models unit; we do not go into how the counts are linked to X beyond saying that coefficients come out as log2 fold changes. DESeq2 also borrows information about the dispersion across genes, which is why it works with few replicates.</p>
+<style type="text/css">
+        span.MJX_Assistive_MathML {
+          position:absolute!important;
+          clip: rect(1px, 1px, 1px, 1px);
+          padding: 1px 0 0 0!important;
+          border: 0!important;
+          height: 1px!important;
+          width: 1px!important;
+          overflow: hidden!important;
+          display:block!important;
+      }</style></aside>
+</section>
+<section id="the-inputs-counts-sample-table-design" class="slide level2 smaller">
+<h2>The inputs: counts + sample table + design</h2>
+<div class="sourceCode" id="cb9"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(DESeq2)</span>
+<span id="cb9-2"><a aria-hidden="true" tabindex="-1"></a><span class="co"># counts : genes x samples matrix of integers (2000 x 12)</span></span>
+<span id="cb9-3"><a aria-hidden="true" tabindex="-1"></a><span class="co"># samples: one row per sample, same order as the columns of counts</span></span>
+<span id="cb9-4"><a aria-hidden="true" tabindex="-1"></a><span class="fu">head</span>(samples, <span class="dv">3</span>)</span>
+<span id="cb9-5"><a aria-hidden="true" tabindex="-1"></a><span class="co">#    batch sex treatment</span></span>
+<span id="cb9-6"><a aria-hidden="true" tabindex="-1"></a><span class="co"># s1     A   F      ctrl</span></span>
+<span id="cb9-7"><a aria-hidden="true" tabindex="-1"></a><span class="co"># s2     A   M     treat</span></span>
+<span id="cb9-8"><a aria-hidden="true" tabindex="-1"></a><span class="co"># s3     A   F     treat</span></span>
+<span id="cb9-9"><a aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-10"><a aria-hidden="true" tabindex="-1"></a>dds <span class="ot">&lt;-</span> <span class="fu">DESeqDataSetFromMatrix</span>(<span class="at">countData =</span> counts,</span>
+<span id="cb9-11"><a aria-hidden="true" tabindex="-1"></a>                              <span class="at">colData   =</span> samples,</span>
+<span id="cb9-12"><a aria-hidden="true" tabindex="-1"></a>                              <span class="at">design    =</span> <span class="sc">~</span> batch <span class="sc">+</span> sex <span class="sc">+</span> treatment)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<ul>
+<li><code>colData</code> is the sample table; the design formula refers to its columns.</li>
+<li>By convention the <strong>variable of interest goes last</strong>; nuisance covariates (batch, sex, age) go before it.</li>
+<li>The order does not change the fit, but <code>results(dds)</code> without arguments reports the <strong>last</strong> variable.</li>
+</ul>
+
+<img data-src="fig02-deseq2-pipeline.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:80.0%"><aside class="notes">
+<p>The three ingredients. The rows of colData must match the columns of the count matrix; DESeq2 checks that the names agree. The convention to put the variable of interest last is only a convention for the fit, but it matters for the default results() call, which reports the last variable. If you wrote ~ treatment + batch, results(dds) would silently give you the batch effect. The figure shows the flow and where the rank check happens.</p>
+<style type="text/css">
+        span.MJX_Assistive_MathML {
+          position:absolute!important;
+          clip: rect(1px, 1px, 1px, 1px);
+          padding: 1px 0 0 0!important;
+          border: 0!important;
+          height: 1px!important;
+          width: 1px!important;
+          overflow: hidden!important;
+          display:block!important;
+      }</style></aside>
+</section>
+<section id="deseq-and-resultsnames" class="slide level2 smaller">
+<h2><code>DESeq()</code> and <code>resultsNames()</code></h2>
+<div class="sourceCode" id="cb10"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a aria-hidden="true" tabindex="-1"></a>dds <span class="ot">&lt;-</span> <span class="fu">DESeq</span>(dds)          <span class="co"># normalises, estimates dispersions, fits every gene</span></span>
+<span id="cb10-2"><a aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-3"><a aria-hidden="true" tabindex="-1"></a><span class="fu">resultsNames</span>(dds)</span>
+<span id="cb10-4"><a aria-hidden="true" tabindex="-1"></a><span class="co"># [1] "Intercept"               "batch_B_vs_A"</span></span>
+<span id="cb10-5"><a aria-hidden="true" tabindex="-1"></a><span class="co"># [3] "sex_M_vs_F"              "treatment_treat_vs_ctrl"</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<ul>
+<li>One name per column of <span class="math inline">\(X\)</span>. DESeq2 writes <code>treatmenttreat</code> as <code>treatment_treat_vs_ctrl</code>: “treat compared with the reference ctrl”.</li>
+<li>A factor with three levels, e.g.&nbsp;batch A/B/C, gives <code>batch_B_vs_A</code> and <code>batch_C_vs_A</code>.</li>
+</ul>
+<div class="sourceCode" id="cb11"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a aria-hidden="true" tabindex="-1"></a>res <span class="ot">&lt;-</span> <span class="fu">results</span>(dds, <span class="at">name =</span> <span class="st">"treatment_treat_vs_ctrl"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<ul>
+<li>Always ask for the coefficient <strong>by name</strong>. Then the answer does not depend on the order of the formula.</li>
+</ul>
+<aside class="notes">
+<p>DESeq does the work: size factors for library size, a dispersion per gene shared across genes, then the fit. resultsNames is the list of coefficients you can ask for, and it is just the column names of X in DESeq2’s spelling. Insist on name = … in results, which makes the script robust to someone reordering the formula.</p>
+<style type="text/css">
+        span.MJX_Assistive_MathML {
+          position:absolute!important;
+          clip: rect(1px, 1px, 1px, 1px);
+          padding: 1px 0 0 0!important;
+          border: 0!important;
+          height: 1px!important;
+          width: 1px!important;
+          overflow: hidden!important;
+          display:block!important;
+      }</style></aside>
+</section>
+<section id="reading-the-results-table" class="slide level2 smaller">
+<h2>Reading the results table</h2>
+<div class="sourceCode" id="cb12"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb12-1"><a aria-hidden="true" tabindex="-1"></a><span class="fu">head</span>(res[<span class="fu">order</span>(res<span class="sc">$</span>padj), ], <span class="dv">4</span>)</span>
+<span id="cb12-2"><a aria-hidden="true" tabindex="-1"></a><span class="co">#       baseMean log2FoldChange  lfcSE  stat   pvalue     padj</span></span>
+<span id="cb12-3"><a aria-hidden="true" tabindex="-1"></a><span class="co"># g5      1975.7           2.27   0.24  9.36  8.1e-21  1.6e-17</span></span>
+<span id="cb12-4"><a aria-hidden="true" tabindex="-1"></a><span class="co"># g144     891.0           1.97   0.24  8.37  5.6e-17  5.5e-14</span></span>
+<span id="cb12-5"><a aria-hidden="true" tabindex="-1"></a><span class="co"># g17      816.8           2.02   0.26  7.67  1.7e-14  1.1e-11</span></span>
+<span id="cb12-6"><a aria-hidden="true" tabindex="-1"></a><span class="co"># g130     336.3          -2.00   0.28 -7.16  8.2e-13  4.0e-10</span></span>
+<span id="cb12-7"><a aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-8"><a aria-hidden="true" tabindex="-1"></a><span class="fu">sum</span>(res<span class="sc">$</span>padj <span class="sc">&lt;</span> <span class="fl">0.05</span>, <span class="at">na.rm =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb12-9"><a aria-hidden="true" tabindex="-1"></a><span class="co"># [1] 195</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<table class="caption-top">
+<colgroup>
+<col style="width: 50%">
+<col style="width: 50%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>column</th>
+<th>meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>log2FoldChange</code></td>
+<td>the treatment coefficient: treat vs ctrl, holding batch and sex fixed</td>
+</tr>
+<tr class="even">
+<td><code>lfcSE</code></td>
+<td>its standard error</td>
+</tr>
+<tr class="odd">
+<td><code>padj</code></td>
+<td>p-value adjusted for testing 2000 genes: among genes called at <code>padj &lt; 0.05</code>, about 5% are expected to be false</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li>g130: LFC <span class="math inline">\(-2\)</span>, so about <strong>four times lower</strong> in treated samples (<span class="math inline">\(2^{-2} = 1/4\)</span>).</li>
+<li><code>padj</code> is <code>NA</code> for genes with very low counts, which DESeq2 leaves out before adjusting (use <code>na.rm = TRUE</code> when counting).</li>
+</ul>
+<aside class="notes">
+<p>Read one row aloud. g5 has an LFC of about 2.3, about five times higher with treatment, and a tiny padj. Explain padj in one sentence: with 2000 tests, raw p-values below 0.05 would give about 100 false hits by chance alone, so DESeq2 adjusts them (Benjamini–Hochberg) so that the cut-off controls the fraction of false calls instead. This is the dataset from the exercise, where we know the truth: 200 genes were simulated as differentially expressed.</p>
+<style type="text/css">
+        span.MJX_Assistive_MathML {
+          position:absolute!important;
+          clip: rect(1px, 1px, 1px, 1px);
+          padding: 1px 0 0 0!important;
+          border: 0!important;
+          height: 1px!important;
+          width: 1px!important;
+          overflow: hidden!important;
+          display:block!important;
+      }</style></aside>
+</section>
+<section id="why-the-design-matters-one-gene" class="slide level2 smaller">
+<h2>Why the design matters: one gene</h2>
+<p>In this experiment the treatment is <strong>unbalanced</strong> across batches: batch A has 1 control and 5 treated, batch B has 5 controls and 1 treated. Gene g138 is truly up (LFC 1.5) and is also higher in batch B.</p>
+<div class="sourceCode" id="cb13"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a aria-hidden="true" tabindex="-1"></a><span class="fu">table</span>(samples<span class="sc">$</span>batch, samples<span class="sc">$</span>treatment)</span>
+<span id="cb13-2"><a aria-hidden="true" tabindex="-1"></a><span class="co">#     ctrl treat</span></span>
+<span id="cb13-3"><a aria-hidden="true" tabindex="-1"></a><span class="co">#   A    1     5</span></span>
+<span id="cb13-4"><a aria-hidden="true" tabindex="-1"></a><span class="co">#   B    5     1</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<table class="caption-top">
+<thead>
+<tr class="header">
+<th>design</th>
+<th>LFC for treatment</th>
+<th>padj</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>~ treatment</code></td>
+<td><span class="math inline">\(-0.19\)</span></td>
+<td>0.88</td>
+</tr>
+<tr class="even">
+<td><code>~ batch + sex + treatment</code></td>
+<td><span class="math inline">\(1.37\)</span></td>
+<td>0.0006</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li>Without batch, the treated samples are mostly from the low batch A, so the up-regulation is hidden: Simpson’s paradox in a real-sized dataset.</li>
+<li>Genes that only differ between batches go the other way: <code>~ treatment</code> calls them as treatment effects. You count them in the exercise.</li>
+</ul>
+<aside class="notes">
+<p>The same story as the 8-sample lm example, now inside DESeq2. Because batch is unbalanced but not perfectly confounded, X has full rank and the adjusted model can separate batch and treatment. The unadjusted model mixes them. The exercise asks students to count how many false calls ~ treatment makes compared with the full design, using the known truth from the simulation.</p>
+<style type="text/css">
+        span.MJX_Assistive_MathML {
+          position:absolute!important;
+          clip: rect(1px, 1px, 1px, 1px);
+          padding: 1px 0 0 0!important;
+          border: 0!important;
+          height: 1px!important;
+          width: 1px!important;
+          overflow: hidden!important;
+          display:block!important;
+      }</style></aside>
+</section>
+<section id="the-not-full-rank-error" class="slide level2 smaller">
+<h2>The “not full rank” error</h2>
+<p>If every control is in batch A and every treated sample in batch B:</p>
+<div class="sourceCode" id="cb14"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb14-1"><a aria-hidden="true" tabindex="-1"></a>dds <span class="ot">&lt;-</span> <span class="fu">DESeqDataSetFromMatrix</span>(counts, samples_conf, <span class="at">design =</span> <span class="sc">~</span> batch <span class="sc">+</span> treatment)</span>
+<span id="cb14-2"><a aria-hidden="true" tabindex="-1"></a><span class="co"># Error in checkFullRank(modelMatrix) :</span></span>
+<span id="cb14-3"><a aria-hidden="true" tabindex="-1"></a><span class="co">#   the model matrix is not full rank, so the model cannot be fit as specified.</span></span>
+<span id="cb14-4"><a aria-hidden="true" tabindex="-1"></a><span class="co">#   One or more variables or interaction terms in the design formula are linear</span></span>
+<span id="cb14-5"><a aria-hidden="true" tabindex="-1"></a><span class="co">#   combinations of the others and must be removed.</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<ul>
+<li>This is the identical-columns case: <code>qr(X)$rank</code> is 2 for 3 columns.</li>
+<li>DESeq2 stops, where <code>lm</code> would return <code>NA</code>. Both mean the same thing: the data <strong>cannot</strong> tell batch from treatment.</li>
+<li>Dropping <code>batch</code> from the formula makes the error go away, but the treatment estimate then <strong>includes</strong> the batch effect.</li>
+<li>The only real fix is in the <strong>experiment</strong>: put both conditions in every batch, ideally balanced. No code can recover what the design did not measure.</li>
+</ul>
+<aside class="notes">
+<p>This error message is the one students will see most often in practice, also for interactions with empty cells and for nested designs. Stress the honest message: removing batch silences the error but does not remove the problem; you get a number you cannot interpret. Planning the batches before sequencing is the fix. If a confounded dataset has already been produced, all you can do is report that treatment and batch cannot be separated.</p>
+<style type="text/css">
+        span.MJX_Assistive_MathML {
+          position:absolute!important;
+          clip: rect(1px, 1px, 1px, 1px);
+          padding: 1px 0 0 0!important;
+          border: 0!important;
+          height: 1px!important;
+          width: 1px!important;
+          overflow: hidden!important;
+          display:block!important;
+      }</style></aside>
+</section>
+<section id="extra-material-limma-for-continuous-omics-data" class="slide level2 smaller">
+<h2>Extra material: limma for continuous omics data</h2>
+<div class="callout callout-note callout-titled callout-style-default">
+<div class="callout-body">
+<div class="callout-title">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<p><strong>Extra material — not examined</strong></p>
+</div>
+<div class="callout-content">
+<p>limma is shown here because proteomics, metabolomics and microarray data are usually analysed with it. The design matrix is exactly the same.</p>
+</div>
+</div>
+</div>
+<ul>
+<li>Mass-spectrometry metabolomics gives <strong>log2 intensities</strong>: continuous numbers, not counts.</li>
+<li><a href="https://bioconductor.org/packages/release/bioc/html/limma.html">limma</a> fits an ordinary linear model to each metabolite (one row) with the same <span class="math inline">\(X\)</span>, and shares variance information across metabolites (<code>eBayes</code>), which helps with few samples.</li>
+<li>The data are already on the log2 scale, so the coefficients are <strong>log2 differences</strong> directly: <code>logFC</code> 1 = twice the intensity.</li>
+<li>Unlike DESeq2, limma takes <span class="math inline">\(X\)</span> itself: you build it with <code>model.matrix</code>.</li>
+</ul>
+<aside class="notes">
+<p>Extra material. The point is that once you understand the design matrix, switching tools is a matter of syntax. limma predates DESeq2 and came from microarrays; today it is the standard for many continuous omics measurements. eBayes is an empirical Bayes step, which connects back to shrinkage in Hierarchical models: each metabolite’s variance is pulled towards a common value.</p>
+<style type="text/css">
+        span.MJX_Assistive_MathML {
+          position:absolute!important;
+          clip: rect(1px, 1px, 1px, 1px);
+          padding: 1px 0 0 0!important;
+          border: 0!important;
+          height: 1px!important;
+          width: 1px!important;
+          overflow: hidden!important;
+          display:block!important;
+      }</style></aside>
+</section>
+<section id="extra-material-lmfit-ebayes-toptable" class="slide level2 smaller">
+<h2>Extra material: <code>lmFit</code>, <code>eBayes</code>, <code>topTable</code></h2>
+<div class="sourceCode" id="cb15"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb15-1"><a aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(limma)</span>
+<span id="cb15-2"><a aria-hidden="true" tabindex="-1"></a><span class="co"># logint: 150 metabolites x 16 samples (log2 intensity); meta: one row per sample</span></span>
+<span id="cb15-3"><a aria-hidden="true" tabindex="-1"></a>design <span class="ot">&lt;-</span> <span class="fu">model.matrix</span>(<span class="sc">~</span> group <span class="sc">+</span> sex <span class="sc">+</span> bmi <span class="sc">+</span> day, <span class="at">data =</span> meta)</span>
+<span id="cb15-4"><a aria-hidden="true" tabindex="-1"></a><span class="fu">colnames</span>(design)</span>
+<span id="cb15-5"><a aria-hidden="true" tabindex="-1"></a><span class="co"># [1] "(Intercept)"  "groupdisease" "sexM"  "bmi"  "day2"</span></span>
+<span id="cb15-6"><a aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-7"><a aria-hidden="true" tabindex="-1"></a>fit <span class="ot">&lt;-</span> <span class="fu">lmFit</span>(logint, design)      <span class="co"># one linear model per metabolite</span></span>
+<span id="cb15-8"><a aria-hidden="true" tabindex="-1"></a>fit <span class="ot">&lt;-</span> <span class="fu">eBayes</span>(fit)                <span class="co"># share variance information across metabolites</span></span>
+<span id="cb15-9"><a aria-hidden="true" tabindex="-1"></a><span class="fu">topTable</span>(fit, <span class="at">coef =</span> <span class="st">"groupdisease"</span>, <span class="at">number =</span> <span class="dv">3</span>)</span>
+<span id="cb15-10"><a aria-hidden="true" tabindex="-1"></a><span class="co">#       logFC AveExpr     t  P.Value adj.P.Val</span></span>
+<span id="cb15-11"><a aria-hidden="true" tabindex="-1"></a><span class="co"># met4   1.69   15.34  5.05  2.0e-06   0.00030</span></span>
+<span id="cb15-12"><a aria-hidden="true" tabindex="-1"></a><span class="co"># met15  1.55   15.91  4.62  1.1e-05   0.00086</span></span>
+<span id="cb15-13"><a aria-hidden="true" tabindex="-1"></a><span class="co"># met3   1.45   20.51  4.17  6.5e-05   0.00275</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<ul>
+<li><code>coef =</code> takes a <strong>column name of the design matrix</strong>, here <code>groupdisease</code> (reference level <code>healthy</code>).</li>
+<li><code>day</code> is the MS run day: a batch covariate. <code>bmi</code> is continuous.</li>
+<li><code>adj.P.Val</code> plays the role of DESeq2’s <code>padj</code>.</li>
+</ul>
+<aside class="notes">
+<p>The workflow in three calls. Point out that coef uses the model.matrix column name directly, not a DESeq2-style name. In the exercise the BMI of the disease group is higher, so leaving BMI out produces false hits among metabolites that only depend on BMI. Columns B (log-odds) are omitted from the printout.</p>
+<style type="text/css">
+        span.MJX_Assistive_MathML {
+          position:absolute!important;
+          clip: rect(1px, 1px, 1px, 1px);
+          padding: 1px 0 0 0!important;
+          border: 0!important;
+          height: 1px!important;
+          width: 1px!important;
+          overflow: hidden!important;
+          display:block!important;
+      }</style></aside>
+</section>
+<section id="summary" class="slide level2 smaller">
+<h2>Summary</h2>
+<ul>
+<li><a href="https://rdrr.io/r/stats/model.matrix.html"><code>model.matrix</code></a><code>(~ ...)</code> builds <span class="math inline">\(X\)</span>; column names are variable + level (<code>treatmenttreat</code>, <code>sexM</code>, <code>batchB</code>, <code>bmi</code>).</li>
+<li>The reference is the alphabetically first level: check <code>levels()</code>, use <a href="https://rdrr.io/r/stats/relevel.html"><code>relevel</code></a> or <code>factor(x, levels = ...)</code> (0 h / 6 h / 24 h!).</li>
+<li>Check <code>qr(X)$rank == ncol(X)</code>. If not: <code>lm</code> gives <code>NA</code>, DESeq2 says “not full rank”. Fix the <strong>design of the experiment</strong>.</li>
+<li>DESeq2: counts + <code>colData</code> + <code>design = ~ batch + sex + treatment</code> → <code>DESeq()</code> → <code>resultsNames()</code> → <code>results(name = ...)</code>.</li>
+<li>Read <code>log2FoldChange</code> (1 = doubled) and <code>padj</code> (adjusted for testing many genes).</li>
+<li>Leaving out a covariate that is unbalanced across groups gives false and missed calls: Simpson’s paradox at genome scale.</li>
+<li>Extra: limma does the same for log2 intensities with <code>lmFit</code>, <code>eBayes</code>, <code>topTable(coef = ...)</code>.</li>
+</ul>
+<p><strong>Next:</strong> <em>Why penalize?</em> What to do when <span class="math inline">\(X\)</span> has more columns than samples.</p>
+<aside class="notes">
+<p>Recap the workflow and the two checks students should always do: levels and rank. The forward link: with more columns than samples the rank condition fails by shape, and penalized models are one way out.</p>
+<style type="text/css">
+        span.MJX_Assistive_MathML {
+          position:absolute!important;
+          clip: rect(1px, 1px, 1px, 1px);
+          padding: 1px 0 0 0!important;
+          border: 0!important;
+          height: 1px!important;
+          width: 1px!important;
+          overflow: hidden!important;
+          display:block!important;
+      }</style></aside>
+
+
+</section>
+    </div>
+  <div class="quarto-auto-generated-content" style="display: none;">
+<div class="footer footer-default">
+
+</div>
+</div></div>
+
+  <script>window.backupDefine = window.define; window.define = undefined;</script>
+  <script src="../site_libs/revealjs/dist/reveal.js"></script>
+  <!-- reveal.js plugins -->
+  <script src="../site_libs/revealjs/plugin/quarto-line-highlight/line-highlight.js"></script>
+  <script src="../site_libs/revealjs/plugin/pdf-export/pdfexport.js"></script>
+  <script src="../site_libs/revealjs/plugin/reveal-menu/menu.js"></script>
+  <script src="../site_libs/revealjs/plugin/reveal-menu/quarto-menu.js"></script>
+  <script src="../site_libs/revealjs/plugin/quarto-support/support.js"></script>
+  
+
+  <script src="../site_libs/revealjs/plugin/notes/notes.js"></script>
+  <script src="../site_libs/revealjs/plugin/search/search.js"></script>
+  <script src="../site_libs/revealjs/plugin/zoom/zoom.js"></script>
+  <script src="../site_libs/revealjs/plugin/math/math.js"></script>
+  <script>window.define = window.backupDefine; window.backupDefine = undefined;</script>
+
+  <script>
+
+      // Full list of configuration options available at:
+      // https://revealjs.com/config/
+      Reveal.initialize({
+'controlsAuto': true,
+'previewLinksAuto': false,
+'pdfSeparateFragments': false,
+'autoAnimateEasing': "ease",
+'autoAnimateDuration': 1,
+'autoAnimateUnmatched': true,
+'jumpToSlide': true,
+'menu': {"side":"left","useTextContentForMissingTitles":true,"markers":false,"loadIcons":false,"custom":[{"title":"Tools","icon":"<i class=\"fas fa-gear\"></i>","content":"<ul class=\"slide-menu-items\">\n<li class=\"slide-tool-item active\" data-item=\"0\"><a href=\"#\" onclick=\"RevealMenuToolHandlers.fullscreen(event)\"><kbd>f</kbd> Fullscreen</a></li>\n<li class=\"slide-tool-item\" data-item=\"1\"><a href=\"#\" onclick=\"RevealMenuToolHandlers.speakerMode(event)\"><kbd>s</kbd> Speaker View</a></li>\n<li class=\"slide-tool-item\" data-item=\"2\"><a href=\"#\" onclick=\"RevealMenuToolHandlers.overview(event)\"><kbd>o</kbd> Slide Overview</a></li>\n<li class=\"slide-tool-item\" data-item=\"3\"><a href=\"#\" onclick=\"RevealMenuToolHandlers.togglePdfExport(event)\"><kbd>e</kbd> PDF Export Mode</a></li>\n<li class=\"slide-tool-item\" data-item=\"4\"><a href=\"#\" onclick=\"RevealMenuToolHandlers.toggleScrollView(event)\"><kbd>r</kbd> Scroll View Mode</a></li>\n<li class=\"slide-tool-item\" data-item=\"5\"><a href=\"#\" onclick=\"RevealMenuToolHandlers.keyboardHelp(event)\"><kbd>?</kbd> Keyboard Help</a></li>\n</ul>"}],"openButton":true},
+'smaller': false,
+ 
+        // Display controls in the bottom right corner
+        controls: false,
+
+        // Help the user learn the controls by providing hints, for example by
+        // bouncing the down arrow when they first encounter a vertical slide
+        controlsTutorial: false,
+
+        // Determines where controls appear, "edges" or "bottom-right"
+        controlsLayout: 'edges',
+
+        // Visibility rule for backwards navigation arrows; "faded", "hidden"
+        // or "visible"
+        controlsBackArrows: 'faded',
+
+        // Display a presentation progress bar
+        progress: true,
+
+        // Display the page number of the current slide
+        slideNumber: 'c/t',
+
+        // 'all', 'print', or 'speaker'
+        showSlideNumber: 'all',
+
+        // Add the current slide number to the URL hash so that reloading the
+        // page/copying the URL will return you to the same slide
+        hash: true,
+
+        // Start with 1 for the hash rather than 0
+        hashOneBasedIndex: false,
+
+        // Flags if we should monitor the hash and change slides accordingly
+        respondToHashChanges: true,
+
+        // Push each slide change to the browser history
+        history: false,
+
+        // Enable keyboard shortcuts for navigation
+        keyboard: true,
+
+        // Enable the slide overview mode
+        overview: true,
+
+        // Disables the default reveal.js slide layout (scaling and centering)
+        // so that you can use custom CSS layout
+        disableLayout: false,
+
+        // Vertical centering of slides
+        center: false,
+
+        // Enables touch navigation on devices with touch input
+        touch: true,
+
+        // Loop the presentation
+        loop: false,
+
+        // Change the presentation direction to be RTL
+        rtl: false,
+
+        // see https://revealjs.com/vertical-slides/#navigation-mode
+        navigationMode: 'linear',
+
+        // Randomizes the order of slides each time the presentation loads
+        shuffle: false,
+
+        // Turns fragments on and off globally
+        fragments: true,
+
+        // Flags whether to include the current fragment in the URL,
+        // so that reloading brings you to the same fragment position
+        fragmentInURL: false,
+
+        // Flags if the presentation is running in an embedded mode,
+        // i.e. contained within a limited portion of the screen
+        embedded: false,
+
+        // Flags if we should show a help overlay when the questionmark
+        // key is pressed
+        help: true,
+
+        // Flags if it should be possible to pause the presentation (blackout)
+        pause: true,
+
+        // Flags if speaker notes should be visible to all viewers
+        showNotes: false,
+
+        // Global override for autoplaying embedded media (null/true/false)
+        autoPlayMedia: null,
+
+        // Global override for preloading lazy-loaded iframes (null/true/false)
+        preloadIframes: null,
+
+        // Number of milliseconds between automatically proceeding to the
+        // next slide, disabled when set to 0, this value can be overwritten
+        // by using a data-autoslide attribute on your slides
+        autoSlide: 0,
+
+        // Stop auto-sliding after user input
+        autoSlideStoppable: true,
+
+        // Use this method for navigation when auto-sliding
+        autoSlideMethod: null,
+
+        // Specify the average time in seconds that you think you will spend
+        // presenting each slide. This is used to show a pacing timer in the
+        // speaker view
+        defaultTiming: null,
+
+        // Enable slide navigation via mouse wheel
+        mouseWheel: false,
+
+        // The display mode that will be used to show slides
+        display: 'block',
+
+        // Hide cursor if inactive
+        hideInactiveCursor: true,
+
+        // Time before the cursor is hidden (in ms)
+        hideCursorTime: 5000,
+
+        // Opens links in an iframe preview overlay
+        previewLinks: false,
+
+        // Transition style (none/fade/slide/convex/concave/zoom)
+        transition: 'none',
+
+        // Transition speed (default/fast/slow)
+        transitionSpeed: 'default',
+
+        // Transition style for full page slide backgrounds
+        // (none/fade/slide/convex/concave/zoom)
+        backgroundTransition: 'none',
+
+        // Number of slides away from the current that are visible
+        viewDistance: 3,
+
+        // Number of slides away from the current that are visible on mobile
+        // devices. It is advisable to set this to a lower number than
+        // viewDistance in order to save resources.
+        mobileViewDistance: 2,
+
+        // The "normal" size of the presentation, aspect ratio will be preserved
+        // when the presentation is scaled to fit different resolutions. Can be
+        // specified using percentage units.
+        width: 1280,
+
+        height: 720,
+
+        // Factor of the display size that should remain empty around the content
+        margin: 0.1,
+
+        math: {
+          mathjax: 'https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.9/MathJax.js',
+          config: 'TeX-AMS_HTML-full',
+          tex2jax: {
+            inlineMath: [['\\(','\\)']],
+            displayMath: [['\\[','\\]']],
+            balanceBraces: true,
+            processEscapes: false,
+            processRefs: true,
+            processEnvironments: true,
+            preview: 'TeX',
+            skipTags: ['script','noscript','style','textarea','pre','code'],
+            ignoreClass: 'tex2jax_ignore',
+            processClass: 'tex2jax_process'
+          },
+        },
+
+        // reveal.js plugins
+        plugins: [QuartoLineHighlight, PdfExport, RevealMenu, QuartoSupport,
+
+          RevealMath,
+          RevealNotes,
+          RevealSearch,
+          RevealZoom
+        ]
+      });
+    </script>
+    <script id="quarto-html-after-body" type="application/javascript">
+      window.document.addEventListener("DOMContentLoaded", function (event) {
+        const tabsets =  window.document.querySelectorAll(".panel-tabset-tabby")
+        tabsets.forEach(function(tabset) {
+          const tabby = new Tabby('#' + tabset.id);
+        });
+        const isCodeAnnotation = (el) => {
+          for (const clz of el.classList) {
+            if (clz.startsWith('code-annotation-')) {                     
+              return true;
+            }
+          }
+          return false;
+        }
+        const onCopySuccess = function(e) {
+          // button target
+          const button = e.trigger;
+          // don't keep focus
+          button.blur();
+          // flash "checked"
+          button.classList.add('code-copy-button-checked');
+          var currentTitle = button.getAttribute("title");
+          button.setAttribute("title", "Copied!");
+          let tooltip;
+          if (window.bootstrap) {
+            button.setAttribute("data-bs-toggle", "tooltip");
+            button.setAttribute("data-bs-placement", "left");
+            button.setAttribute("data-bs-title", "Copied!");
+            tooltip = new bootstrap.Tooltip(button, 
+              { trigger: "manual", 
+                customClass: "code-copy-button-tooltip",
+                offset: [0, -8]});
+            tooltip.show();    
+          }
+          setTimeout(function() {
+            if (tooltip) {
+              tooltip.hide();
+              button.removeAttribute("data-bs-title");
+              button.removeAttribute("data-bs-toggle");
+              button.removeAttribute("data-bs-placement");
+            }
+            button.setAttribute("title", currentTitle);
+            button.classList.remove('code-copy-button-checked');
+          }, 1000);
+          // clear code selection
+          e.clearSelection();
+        }
+        const getTextToCopy = function(trigger) {
+            const codeEl = trigger.previousElementSibling.cloneNode(true);
+            for (const childEl of codeEl.children) {
+              if (isCodeAnnotation(childEl)) {
+                childEl.remove();
+              }
+            }
+            return codeEl.innerText;
+        }
+        const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+          text: getTextToCopy
+        });
+        clipboard.on('success', onCopySuccess);
+        if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+          const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+            text: getTextToCopy,
+            container: window.document.getElementById('quarto-embedded-source-code-modal')
+          });
+          clipboardModal.on('success', onCopySuccess);
+        }
+          var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+          var mailtoRegex = new RegExp(/^mailto:/);
+            var filterRegex = new RegExp('/' + window.location.host + '/');
+          var isInternal = (href) => {
+              return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+          }
+          // Inspect non-navigation links and adorn them if external
+         var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+          for (var i=0; i<links.length; i++) {
+            const link = links[i];
+            if (!isInternal(link.href)) {
+              // undo the damage that might have been done by quarto-nav.js in the case of
+              // links that we want to consider external
+              if (link.dataset.originalHref !== undefined) {
+                link.href = link.dataset.originalHref;
+              }
+            }
+          }
+        function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+          const config = {
+            allowHTML: true,
+            maxWidth: 500,
+            delay: 100,
+            arrow: false,
+            appendTo: function(el) {
+                return el.closest('section.slide') || el.parentElement;
+            },
+            interactive: true,
+            interactiveBorder: 10,
+            theme: 'light-border',
+            placement: 'bottom-start',
+          };
+          if (contentFn) {
+            config.content = contentFn;
+          }
+          if (onTriggerFn) {
+            config.onTrigger = onTriggerFn;
+          }
+          if (onUntriggerFn) {
+            config.onUntrigger = onUntriggerFn;
+          }
+            config['offset'] = [0,0];
+            config['maxWidth'] = 700;
+          window.tippy(el, config); 
+        }
+        const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+        for (var i=0; i<noterefs.length; i++) {
+          const ref = noterefs[i];
+          tippyHover(ref, function() {
+            // use id or data attribute instead here
+            let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+            try { href = new URL(href).hash; } catch {}
+            const id = href.replace(/^#\/?/, "");
+            const note = window.document.getElementById(id);
+            if (note) {
+              return note.innerHTML;
+            } else {
+              return "";
+            }
+          });
+        }
+        const findCites = (el) => {
+          const parentEl = el.parentElement;
+          if (parentEl) {
+            const cites = parentEl.dataset.cites;
+            if (cites) {
+              return {
+                el,
+                cites: cites.split(' ')
+              };
+            } else {
+              return findCites(el.parentElement)
+            }
+          } else {
+            return undefined;
+          }
+        };
+        var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+        for (var i=0; i<bibliorefs.length; i++) {
+          const ref = bibliorefs[i];
+          const citeInfo = findCites(ref);
+          if (citeInfo) {
+            tippyHover(citeInfo.el, function() {
+              var popup = window.document.createElement('div');
+              citeInfo.cites.forEach(function(cite) {
+                var citeDiv = window.document.createElement('div');
+                citeDiv.classList.add('hanging-indent');
+                citeDiv.classList.add('csl-entry');
+                var biblioDiv = window.document.getElementById('ref-' + cite);
+                if (biblioDiv) {
+                  citeDiv.innerHTML = biblioDiv.innerHTML;
+                }
+                popup.appendChild(citeDiv);
+              });
+              return popup.innerHTML;
+            });
+          }
+        }
+      });
+      </script>
+    
+
+</body></html>

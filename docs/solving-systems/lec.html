@@ -254,7 +254,7 @@ Quantitative biology and integrative omics
 </tbody>
 </table>
 <p>We sequence a bulk sample and measure <strong>total</strong> signal: G1 <span class="math inline">\(= 8\)</span>, G2 <span class="math inline">\(= 9\)</span>.</p>
-<p><strong>Question:</strong> how many units of tumour (<span class="math inline">\(x_1\)</span>) and immune (<span class="math inline">\(x_2\)</span>) cells were in the sample?</p>
+<p><strong>Question:</strong> how many units of tumour cells (<span class="math inline">\(x\)</span>) and immune cells (<span class="math inline">\(y\)</span>) were in the sample?</p>
 
 <img data-src="fig02-mixture-deconvolution.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:65.0%"><aside class="notes">
 <p>This is the motivating pairing for this unit and Linear systems in R: cell-type deconvolution. A bulk measurement is a sum over the cell types present. If we know the per-cell-type signature, recovering the amounts is exactly solving a linear system. Keep the numbers tiny here on purpose — we will make them realistic in Linear systems in R.</p>
@@ -275,12 +275,12 @@ Quantitative biology and integrative omics
 <p>Each measured signal is the sum of contributions from each cell type:</p>
 <p><span class="math display">\[
 \begin{aligned}
-\underbrace{2x_1 + 1x_2}_{\text{total G1}} &amp;= 8\\[2pt]
-\underbrace{1x_1 + 3x_2}_{\text{total G2}} &amp;= 9
+\underbrace{2x + 1y}_{\text{total G1}} &amp;= 8\\[2pt]
+\underbrace{1x + 3y}_{\text{total G2}} &amp;= 9
 \end{aligned}
 \]</span></p>
-<p>Two unknowns (<span class="math inline">\(x_1, x_2\)</span>), two equations. This is a <strong>system of linear equations</strong>.</p>
-<p>“Linear” means every unknown appears only to the first power — no <span class="math inline">\(x_1^2\)</span>, no <span class="math inline">\(x_1 x_2\)</span>, no <span class="math inline">\(\sin x_1\)</span>. Just numbers times unknowns, added up.</p>
+<p>Two unknowns (<span class="math inline">\(x\)</span> and <span class="math inline">\(y\)</span>), two equations. This is a <strong>system of linear equations</strong>.</p>
+<p>“Linear” means every unknown appears only to the first power — no <span class="math inline">\(x^2\)</span>, no <span class="math inline">\(xy\)</span>, no <span class="math inline">\(\sin x\)</span>. Just numbers times unknowns, added up.</p>
 
 <img data-src="fig03-two-lines.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:55.0%"><aside class="notes">
 <p>Stress what “linear” rules out: no squares, no products of unknowns, no nonlinear functions. Each equation is a weighted sum of the unknowns set equal to a number. Almost every method in this course reduces, at its core, to solving or approximately solving a system like this.</p>
@@ -301,7 +301,7 @@ Quantitative biology and integrative omics
 <p>We separate the <strong>known coefficients</strong> from the <strong>unknowns</strong> and the <strong>measurements</strong>:</p>
 <p><span class="math display">\[
 \underbrace{\begin{bmatrix} 2 &amp; 1 \\ 1 &amp; 3 \end{bmatrix}}_{A}
-\underbrace{\begin{bmatrix} x_1 \\ x_2 \end{bmatrix}}_{\mathbf{x}}
+\underbrace{\begin{bmatrix} x \\ y \end{bmatrix}}_{\mathbf{x}}
 =
 \underbrace{\begin{bmatrix} 8 \\ 9 \end{bmatrix}}_{\mathbf{b}}
 \]</span></p>
@@ -329,12 +329,12 @@ Quantitative biology and integrative omics
 <section id="strategy-1-substitution" class="slide level2">
 <h2>Strategy 1 — Substitution</h2>
 <p>Solve one equation for one unknown, then substitute into the other.</p>
-<p>From equation 1: <span class="math inline">\(\;2x_1 + x_2 = 8 \;\Rightarrow\; x_2 = 8 - 2x_1\)</span>.</p>
+<p>From equation 1: <span class="math inline">\(\;2x + y = 8 \;\Rightarrow\; y = 8 - 2x\)</span>.</p>
 <p>Put that into equation 2:</p>
 <p><span class="math display">\[
-x_1 + 3(8 - 2x_1) = 9 \;\Rightarrow\; x_1 + 24 - 6x_1 = 9 \;\Rightarrow\; -5x_1 = -15
+x + 3(8 - 2x) = 9 \;\Rightarrow\; x + 24 - 6x = 9 \;\Rightarrow\; -5x = -15
 \]</span></p>
-<p>So <span class="math inline">\(x_1 = 3\)</span>, and then <span class="math inline">\(x_2 = 8 - 2(3) = 2\)</span>.</p>
+<p>So <span class="math inline">\(x = 3\)</span>, and then <span class="math inline">\(y = 8 - 2(3) = 2\)</span>.</p>
 <p><strong>Answer:</strong> 3 units of tumour, 2 units of immune cells.</p>
 <aside class="notes">
 <p>Substitution is the method most students already half-remember from school. Do it slowly. Isolate one variable, push it into the other equation, you now have one equation in one unknown. Solve, then back-substitute. The arithmetic is the only place to slip up, so go step by step on the board.</p>
@@ -352,7 +352,7 @@ x_1 + 3(8 - 2x_1) = 9 \;\Rightarrow\; x_1 + 24 - 6x_1 = 9 \;\Rightarrow\; -5x_1 
 </section>
 <section id="always-check-your-answer" class="slide level2">
 <h2>Always check your answer</h2>
-<p>Plug <span class="math inline">\(x_1 = 3,\; x_2 = 2\)</span> back into the <strong>original</strong> equations:</p>
+<p>Plug <span class="math inline">\(x = 3,\; y = 2\)</span> back into the <strong>original</strong> equations:</p>
 <p><span class="math display">\[
 \begin{aligned}
 2(3) + 1(2) &amp;= 6 + 2 = 8 \quad\checkmark\\
@@ -404,19 +404,19 @@ x_1 + 3(8 - 2x_1) = 9 \;\Rightarrow\; x_1 + 24 - 6x_1 = 9 \;\Rightarrow\; -5x_1 
 <p>Start:</p>
 <p><span class="math display">\[
 \begin{aligned}
-2x_1 + 1x_2 &amp;= 8 \quad(\text{R1})\\
-1x_1 + 3x_2 &amp;= 9 \quad(\text{R2})
+2x + 1y &amp;= 8 \quad(\text{R1})\\
+1x + 3y &amp;= 9 \quad(\text{R2})
 \end{aligned}
 \]</span></p>
-<p>Eliminate <span class="math inline">\(x_1\)</span> from R2. Replace R2 by <span class="math inline">\(\;\text{R2} - \tfrac{1}{2}\text{R1}\)</span>:</p>
+<p>Eliminate <span class="math inline">\(x\)</span> from R2. Replace R2 by <span class="math inline">\(\;\text{R2} - \tfrac{1}{2}\text{R1}\)</span>:</p>
 <p><span class="math display">\[
-\Big(1 - \tfrac{1}{2}\cdot 2\Big)x_1 + \Big(3 - \tfrac{1}{2}\cdot 1\Big)x_2
+\Big(1 - \tfrac{1}{2}\cdot 2\Big)x + \Big(3 - \tfrac{1}{2}\cdot 1\Big)y
 = 9 - \tfrac{1}{2}\cdot 8
-\;\Rightarrow\; 0\,x_1 + 2.5\,x_2 = 5
+\;\Rightarrow\; 0\,x + 2.5\,y = 5
 \]</span></p>
-<p>Now R2 says <span class="math inline">\(2.5\,x_2 = 5 \Rightarrow x_2 = 2\)</span>. <strong>Back-substitute</strong> into R1: <span class="math inline">\(2x_1 + 2 = 8 \Rightarrow x_1 = 3\)</span>. Same answer as before. <span class="math inline">\(\checkmark\)</span></p>
+<p>Now R2 says <span class="math inline">\(2.5\,y = 5 \Rightarrow y = 2\)</span>. <strong>Back-substitute</strong> into R1: <span class="math inline">\(2x + 2 = 8 \Rightarrow x = 3\)</span>. Same answer as before. <span class="math inline">\(\checkmark\)</span></p>
 <aside class="notes">
-<p>Show the multiplier choice: we want to kill x1 in R2, R2 has coefficient 1 and R1 has coefficient 2, so subtract half of R1. The x1 term vanishes by design. Then the last equation has a single unknown — solve it, then back-substitute upward. Reassure them it gives the same answer as substitution; it is the same maths, organised.</p>
+<p>Show the multiplier choice: we want to kill x in R2, R2 has coefficient 1 and R1 has coefficient 2, so subtract half of R1. The x term vanishes by design. Then the last equation has a single unknown — solve it, then back-substitute upward. Reassure them it gives the same answer as substitution; it is the same maths, organised.</p>
 <style type="text/css">
         span.MJX_Assistive_MathML {
           position:absolute!important;
@@ -431,12 +431,12 @@ x_1 + 3(8 - 2x_1) = 9 \;\Rightarrow\; x_1 + 24 - 6x_1 = 9 \;\Rightarrow\; -5x_1 
 </section>
 <section id="try-it-two-equations-two-lines" class="slide level2">
 <h2>Try it: two equations, two lines</h2>
-<p>Each equation is a line; a solution lies on both. Lines <strong>cross</strong> (one solution), are <strong>parallel</strong> (none: elimination gives <span class="math inline">\(0 = c \neq 0\)</span>) or are <strong>the same line</strong> (infinitely many: <span class="math inline">\(0 = 0\)</span>).</p>
+<p>Write the equations as <span class="math inline">\(ax + by = c\)</span> and <span class="math inline">\(dx + ey = f\)</span>. Each is a line; a solution lies on both. Lines <strong>cross</strong> (one solution), are <strong>parallel</strong> (none: elimination leaves <span class="math inline">\(0 =\)</span> a non-zero number) or are <strong>the same line</strong> (infinitely many: <span class="math inline">\(0 = 0\)</span>).</p>
 <link rel="stylesheet" href="../demos/dist/demo.css">
 <div data-demo="twolines" data-eq1="2 1 8" data-eq2="1 3 9"></div>
 <script src="../demos/dist/twolines.js"></script>
 <aside class="notes">
-<p>Live demo. Start on our mixture, 2x1 + x2 = 8 and x1 + 3x2 = 9: the lines cross at (3, 2), and the grey box shows the same elimination step as the previous slide, R2 − ½R1 gives 2.5x2 = 5. Then the three cases. Click “parallel”: same left side, different right side; the step now wipes out x2 as well and leaves 0 = −4, which no (x1, x2) satisfies. Click “same line”: 2x1 + 4x2 = 6 is just twice x1 + 2x2 = 3, so the step leaves 0 = 0 and x2 is free. Ask the room: can two lines meet in exactly two points? No, so a linear system has one, none or infinitely many solutions, never two. Then “nearly parallel”: the crossing sits at (−3, 5); drag c2 up by half a step and it jumps off the plot to (−8, 10). Biology: two cell types with almost the same signature, where a little measurement noise moves the estimated amounts a lot. Linear systems in R returns to these cases with solve() errors and rank. Handles: the open circle shifts a line, the filled one turns it.</p>
+<p>Live demo. Start on our mixture, 2x + y = 8 and x + 3y = 9: the lines cross at (3, 2), and the grey box shows the same elimination step as the previous slide, R2 − ½R1 gives 2.5y = 5. Then the three cases. Click “parallel”: same left side, different right side; the step now wipes out y as well and leaves 0 = −4, which no (x, y) satisfies. Click “same line”: 2x + 4y = 6 is just twice x + 2y = 3, so the step leaves 0 = 0 and y is free. Ask the room: can two lines meet in exactly two points? No, so a linear system has one, none or infinitely many solutions, never two. Then “nearly parallel”: the crossing sits at (−3, 5); drag f up by half a step and it jumps off the plot to (−8, 10). Biology: two cell types with almost the same signature, where a little measurement noise moves the estimated amounts a lot. Linear systems in R returns to these cases with solve() errors and rank. Handles: the open circle shifts a line, the filled one turns it.</p>
 <style type="text/css">
         span.MJX_Assistive_MathML {
           position:absolute!important;
@@ -451,13 +451,13 @@ x_1 + 3(8 - 2x_1) = 9 \;\Rightarrow\; x_1 + 24 - 6x_1 = 9 \;\Rightarrow\; -5x_1 
 </section>
 <section id="the-augmented-matrix-shorthand" class="slide level2 smaller">
 <h2>The augmented matrix shorthand</h2>
-<p>We do not need to keep writing <span class="math inline">\(x_1, x_2\)</span>. Track only the numbers in an <strong>augmented matrix</strong> <span class="math inline">\([\,A \mid \mathbf{b}\,]\)</span>:</p>
+<p>We do not need to keep writing <span class="math inline">\(x\)</span> and <span class="math inline">\(y\)</span>. Track only the numbers in an <strong>augmented matrix</strong> <span class="math inline">\([\,A \mid \mathbf{b}\,]\)</span>:</p>
 <p><span class="math display">\[
 \left[\begin{array}{cc|c} 2 &amp; 1 &amp; 8 \\ 1 &amp; 3 &amp; 9 \end{array}\right]
 \xrightarrow{\;\text{R2}\,-\,\frac12\text{R1}\;}
 \left[\begin{array}{cc|c} 2 &amp; 1 &amp; 8 \\ 0 &amp; 2.5 &amp; 5 \end{array}\right]
 \]</span></p>
-<p>The bottom row reads <span class="math inline">\(2.5\,x_2 = 5\)</span>. The goal is this <strong>upper-triangular</strong> (“staircase”) shape: zeros below the diagonal. Then solve bottom-up.</p>
+<p>The bottom row reads <span class="math inline">\(2.5\,y = 5\)</span>. The goal is this <strong>upper-triangular</strong> (“staircase”) shape: zeros below the diagonal. Then solve bottom-up.</p>
 
 <img data-src="fig09-augmented-triangular.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:65.0%"><aside class="notes">
 <p>The augmented matrix is bookkeeping: a vertical bar separates A from b, and we apply the same row operations to the whole row including the b entry. Target shape is upper triangular — once you are there, the last row is one equation in one unknown and you climb back up. This notation is essential for the 3x3 case.</p>
@@ -475,12 +475,12 @@ x_1 + 3(8 - 2x_1) = 9 \;\Rightarrow\; x_1 + 24 - 6x_1 = 9 \;\Rightarrow\; -5x_1 
 </section>
 <section id="scaling-up-a-33-system" class="slide level2 smaller">
 <h2>Scaling up: a 3×3 system</h2>
-<p>Three cell types (tumour, immune, stroma), three marker genes. Signatures and measurements give:</p>
+<p>Three cell types (tumour, immune, stroma) with amounts <span class="math inline">\(x\)</span>, <span class="math inline">\(y\)</span>, <span class="math inline">\(z\)</span>, three marker genes. Signatures and measurements give:</p>
 <p><span class="math display">\[
 \begin{aligned}
-1x_1 + 1x_2 + 1x_3 &amp;= 6\\
-0x_1 + 2x_2 + 1x_3 &amp;= 7\\
-2x_1 + 1x_2 + 1x_3 &amp;= 8
+1x + 1y + 1z &amp;= 6\\
+0x + 2y + 1z &amp;= 7\\
+2x + 1y + 1z &amp;= 8
 \end{aligned}
 \qquad
 \left[\begin{array}{ccc|c}
@@ -551,7 +551,7 @@ x_1 + 3(8 - 2x_1) = 9 \;\Rightarrow\; x_1 + 24 - 6x_1 = 9 \;\Rightarrow\; -5x_1 
 0 &amp; 0 &amp; -0.5 &amp; -0.5
 \end{array}\right]
 \]</span></p>
-<p>Now upper-triangular. The bottom row reads <span class="math inline">\(-0.5\,x_3 = -0.5\)</span>.</p>
+<p>Now upper-triangular. The bottom row reads <span class="math inline">\(-0.5\,z = -0.5\)</span>.</p>
 <aside class="notes">
 <p>R2 has minus 1 in column 2 below the pivot 2, so add half of R2 to R3 to kill it. Minus 1 plus 1 is 0; minus 1 plus a half is minus a half; minus 4 plus 3.5 is minus a half. We have reached the staircase shape. Now we read off and back- substitute.</p>
 <style type="text/css">
@@ -571,12 +571,12 @@ x_1 + 3(8 - 2x_1) = 9 \;\Rightarrow\; x_1 + 24 - 6x_1 = 9 \;\Rightarrow\; -5x_1 
 <p>From the bottom up:</p>
 <p><span class="math display">\[
 \begin{aligned}
--0.5\,x_3 &amp;= -0.5 &amp;&amp;\Rightarrow\; x_3 = 1\\
-2x_2 + x_3 &amp;= 7 &amp;&amp;\Rightarrow\; 2x_2 + 1 = 7 \;\Rightarrow\; x_2 = 3\\
-x_1 + x_2 + x_3 &amp;= 6 &amp;&amp;\Rightarrow\; x_1 + 3 + 1 = 6 \;\Rightarrow\; x_1 = 2
+-0.5\,z &amp;= -0.5 &amp;&amp;\Rightarrow\; z = 1\\
+2y + z &amp;= 7 &amp;&amp;\Rightarrow\; 2y + 1 = 7 \;\Rightarrow\; y = 3\\
+x + y + z &amp;= 6 &amp;&amp;\Rightarrow\; x + 3 + 1 = 6 \;\Rightarrow\; x = 2
 \end{aligned}
 \]</span></p>
-<p><strong>Solution:</strong> <span class="math inline">\(x_1 = 2,\; x_2 = 3,\; x_3 = 1\)</span>.</p>
+<p><strong>Solution:</strong> <span class="math inline">\(x = 2,\; y = 3,\; z = 1\)</span>.</p>
 <p><strong>Check</strong> in the original: <span class="math inline">\(2+3+1=6\,\checkmark\)</span>, <span class="math inline">\(0+6+1=7\,\checkmark\)</span>, <span class="math inline">\(4+3+1=8\,\checkmark\)</span>.</p>
 <aside class="notes">
 <p>Back-substitution always starts at the last row, which has one unknown. Solve it, carry that value up into the second-last row which now has one remaining unknown, and so on. Then check all three original equations. This is the full recipe they need for the exam.</p>

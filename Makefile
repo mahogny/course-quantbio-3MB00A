@@ -19,6 +19,7 @@ figs:
 	cd scrna-log && Rscript make-log-figs.R
 	cd ctmc && Rscript make-ctmc-figs.R
 	cd vae && Rscript make-vae-figs.R
+	cd kernels && Rscript make-kernel-figs.R
 
 # Build the interactive demos (TypeScript, demos/src/) into demos/dist/.
 # One-time setup: npm i   (installs esbuild + typescript into node_modules/).
@@ -27,7 +28,7 @@ demos:
 
 # Type-check the demo sources (esbuild only strips types, it does not check them).
 typecheck:
-	npx --no-install tsc --noEmit -p demos
+	node_modules/.bin/tsc --noEmit -p demos
 
 # Remove the rendered site and Quarto's cache.
 clean:
@@ -45,6 +46,6 @@ help:
 	@echo "  make preview   start a live-reload preview server"
 	@echo "  make demos     build the interactive demos into demos/dist/ (needs npm i once)"
 	@echo "  make typecheck type-check the demo TypeScript sources"
-	@echo "  make figs      re-generate the R-made figures (matrix-images, polar, compensation, fourier, scrna-log, ctmc, vae)"
+	@echo "  make figs      re-generate the R-made figures (matrix-images, polar, compensation, fourier, scrna-log, ctmc, vae, kernels)"
 	@echo "  make gitadd    stage all source files in git"
 	@echo "  make clean     remove docs/ and .quarto/"

@@ -1,0 +1,543 @@
+---
+title: "Exercise: Design matrices in R — DESeq2 & limma"
+format:
+  html:
+    toc: true
+    code-copy: true
+    code-overflow: wrap
+    highlight-style: github
+---
+
+## Goal
+
+After this exercise you will be able to:
+
+- Predict the output of [`model.matrix`](https://rdrr.io/r/stats/model.matrix.html) (column names, entries, rank) **before** running it.
+- Set reference levels and level order with [`relevel`](https://rdrr.io/r/stats/relevel.html) and [`factor`](https://rdrr.io/r/base/factor.html).
+- Check a design with [`qr`](https://rdrr.io/r/base/qr.html)`(X)$rank` and explain an `NA` coefficient from [`lm`](https://rdrr.io/r/stats/lm.html).
+- Run a **DESeq2** analysis of bulk RNA-seq counts with `design = ~ batch + sex + treatment`, read log2 fold changes and `padj`, and compare designs against a known truth.
+- Explain why a perfectly confounded design gives "the model matrix is not full rank", and why only the experiment can fix it.
+- (Extra material) Run **limma** on log2 intensities from mass-spectrometry metabolomics.
+
+## Background
+
+A design formula is a recipe for the design matrix $X$ in $\mathbf{y} = X\boldsymbol\beta + \boldsymbol\varepsilon$ (see *Design matrices for covariates*). In R:
+
+| formula term | columns of $X$ | coefficient means |
+|---|---|---|
+| intercept (always there) | `(Intercept)`, all 1s | mean of the reference group |
+| factor `treatment` (`ctrl`, `treat`) | `treatmenttreat` | treat minus ctrl |
+| factor `batch` (`A`, `B`, `C`) | `batchB`, `batchC` | B minus A, C minus A |
+| number `bmi` | `bmi` | change per BMI unit |
+
+- The **reference level** is the alphabetically first level, unless you change it.
+- $\boldsymbol\beta$ is unique only if `qr(X)$rank` equals `ncol(X)` (the columns are linearly independent). Otherwise there are infinitely many solutions (see *Linear systems in R*): `lm` returns `NA` for a column, DESeq2 stops with an error.
+- **DESeq2** fits every gene of a count matrix with the **same** $X$ and reports each coefficient as a **log2 fold change** (LFC): LFC 1 = doubled, LFC $-1$ = halved. `padj` is the p-value adjusted for testing thousands of genes: among genes called at `padj < 0.05`, about 5% are expected to be false.
+- If a covariate is **unbalanced** across the groups you compare, leaving it out of the design mixes its effect into the treatment effect (*Confounding & Simpson's paradox*).
+
+## By hand
+
+Do these on paper first. Then check each one in R (the code is in the solutions).
+
+**B1. Predict `model.matrix`.** Six samples:
+
+| sample | batch | sex | treatment |
+|---|---|---|---|
+| 1 | A | F | ctrl |
+| 2 | A | M | treat |
+| 3 | B | F | ctrl |
+| 4 | B | M | treat |
+| 5 | C | F | treat |
+| 6 | C | M | ctrl |
+
+(a) Write the column names of `model.matrix(~ batch + sex + treatment)`. How many columns are there?
+
+(b) Write the full $6 \times 5$ matrix.
+
+(c) Samples 5 and 6 fail quality control and are removed. Write $X$ for the four remaining samples. Which two columns are now identical? What are `ncol(X)` and `qr(X)$rank`? Which coefficient does `lm` report as `NA`?
+
+**B2. The order of levels.** A time course has `time` stored as text: `"0h"`, `"6h"`, `"24h"`, `"48h"`.
+
+(a) Which column names does `model.matrix(~ time)` give, and in which order?
+
+(b) Write the line of R that puts the levels in time order. Which columns do you get then?
+
+(c) If you instead code time as a number of hours, `time_h`, how many columns does $X$ have? What does that model assume that the factor model does not?
+
+**B3. Confounded batches.** Eight samples: samples 1–4 are controls sequenced in batch A, samples 5–8 are treated samples sequenced in batch B.
+
+(a) Write $X$ for `~ batch + treatment`. What is its rank, and how many coefficients are there?
+
+(b) What does `lm` return? What does `DESeqDataSetFromMatrix` say?
+
+(c) Propose a new layout of the same eight samples over the two batches that gives a full-rank $X$. Which layout is best, and why?
+
+**B4. DESeq2 names and fold changes.** A DESeq2 analysis has `colData` with `batch` (A, B, C), `sex` (F, M) and `treatment` (ctrl, treat).
+
+(a) With `design = ~ batch + sex + treatment`, what does `resultsNames(dds)` print?
+
+(b) A colleague writes `design = ~ treatment + batch` and calls `results(dds)` without arguments. Which comparison does that report? How do you avoid this mistake?
+
+(c) A gene has a mean of 100 normalised counts in the controls. Its `log2FoldChange` for `treatment_treat_vs_ctrl` is 2. What is its expected mean in the treated samples (same batch and sex)? And if the LFC were $-1$?
+
+**B5. Reading `lm` output.** For the drug/batch example from *Confounding & Simpson's paradox*, R prints:
+
+```r
+coef(lm(expr ~ treatment, data = g))
+#    (Intercept) treatmenttreat
+#           17.5           -3.0
+coef(lm(expr ~ batch + treatment, data = g))
+#    (Intercept)         batchB treatmenttreat
+#             10             10              2
+```
+
+(a) From the second model, compute the predicted expression of a control in batch B and of a treated sample in batch A.
+
+(b) In one sentence: why are the two `treatmenttreat` coefficients different, and which one is the drug effect?
+
+**B6. (Extra material) A continuous covariate in limma.** A limma fit of one metabolite's log2 intensity with `design <- model.matrix(~ group + bmi)` gives coefficients `(Intercept)` 10, `groupdisease` 1, `bmi` 0.1.
+
+(a) Predict the log2 intensity for a healthy person with BMI 20 and for a disease patient with BMI 30.
+
+(b) The two differ by 2 on the log2 scale, that is a factor 4. How much of that difference is due to disease and how much to BMI?
+
+## In R
+
+Install DESeq2 and limma once with `BiocManager::install(c("DESeq2", "limma"))` (see *Install R*).
+
+### R1 — Simulate a bulk RNA-seq experiment
+
+We simulate counts so that we **know the truth**: 2000 genes, 12 samples in two sequencing batches, F and M samples, controls and treated. Genes 1–200 truly respond to treatment (LFC $\pm 1.5$), genes 101–600 differ between batches (LFC $\pm 2$), genes 1901–1950 are higher in M. The treatment is **unbalanced** across batches: batch A has 1 control and 5 treated samples, batch B the opposite.
+
+```r
+library(DESeq2)
+set.seed(1)
+
+# sample table: one row per sample
+samples <- data.frame(
+  batch     = factor(rep(c("A", "B"), each = 6)),
+  sex       = factor(rep(c("F", "M"), times = 6)),
+  treatment = factor(c("ctrl", rep("treat", 5), rep("ctrl", 5), "treat")))
+rownames(samples) <- paste0("s", 1:12)
+
+# true log2 fold changes, one row per gene
+n <- 2000
+lfc_treat <- rep(0, n); lfc_treat[1:200]   <- sample(c(-1.5, 1.5), 200, TRUE)
+lfc_batch <- rep(0, n); lfc_batch[101:600] <- sample(c(-2, 2), 500, TRUE)
+lfc_sex   <- rep(0, n); lfc_sex[1901:1950] <- 3
+B <- cbind(lfc_batch, lfc_sex, lfc_treat)
+
+# the same design matrix for every gene
+X    <- model.matrix(~ batch + sex + treatment, data = samples)
+base <- exp(rnorm(n, log(200), 1))              # baseline mean count of each gene
+mu   <- base * 2^(B %*% t(X[, -1]))             # mean count: genes x samples
+phi  <- 0.05 + 2 / base                         # negative-binomial dispersion
+counts <- matrix(rnbinom(n * 12, mu = mu, size = 1 / phi), nrow = n,
+                 dimnames = list(paste0("g", 1:n), rownames(samples)))
+truth_de <- lfc_treat != 0                      # TRUE for the 200 DE genes
+```
+
+(a) Print `table(samples$batch, samples$treatment)` and `X`. Check that `X` is what you expect.
+
+(b) Compute `ncol(X)` and `qr(X)$rank`. Can this design separate batch, sex and treatment?
+
+(c) In the line that computes `mu`, what does `B %*% t(X[, -1])` do? Why is it the same `X` for every gene?
+
+### R2 — One gene with `lm`
+
+Gene `g138` is one of the true DE genes (true LFC $+1.5$) and is also higher in batch B (true batch LFC $+2$). Fit it with `lm` on the log2 scale:
+
+```r
+y <- log2(counts["g138", ] + 1)
+coef(lm(y ~ treatment, data = samples))
+coef(lm(y ~ batch + sex + treatment, data = samples))
+```
+
+Which model gets the treatment effect roughly right? Explain the other one with the table from R1(a).
+
+### R3 — DESeq2 with the full design
+
+```r
+dds <- DESeqDataSetFromMatrix(countData = counts, colData = samples,
+                              design = ~ batch + sex + treatment)
+dds <- DESeq(dds)
+resultsNames(dds)
+res <- results(dds, name = "treatment_treat_vs_ctrl")
+head(res[order(res$padj), ])
+```
+
+(a) Which names does `resultsNames` print? Did you predict them in B4?
+
+(b) Look at `res["g138", ]`. Compare its `log2FoldChange` with your `lm` estimate in R2 and with the truth.
+
+(c) How many genes have `padj < 0.05`? How many of them are truly DE, and how many are false positives? Use `table(called = res$padj < 0.05, truly_DE = truth_de, useNA = "ifany")`.
+
+### R4 — Leave batch out
+
+Refit with `design = ~ treatment` and repeat R3(c).
+
+(a) How many genes are called now, and how many of them are false positives?
+
+(b) Most of the false positives come from one group of genes. Which group? Count them with `lfc_batch != 0`.
+
+(c) Look at `g138` again. What happened?
+
+(d) Bonus: with `design = ~ treatment + batch`, what does `results(dds)` without `name =` report? (Read the first line it prints.)
+
+### R5 — A perfectly confounded experiment
+
+Now suppose the lab had put all controls in batch A and all treated samples in batch B:
+
+```r
+samples_conf <- samples
+samples_conf$treatment <- factor(ifelse(samples$batch == "A", "ctrl", "treat"))
+table(samples_conf$batch, samples_conf$treatment)
+
+dds_conf <- DESeqDataSetFromMatrix(counts, samples_conf, design = ~ batch + treatment)
+```
+
+(a) Read the error. Confirm it with `qr(model.matrix(~ batch + treatment, data = samples_conf))$rank`.
+
+(b) What does `lm(log2(counts["g1", ] + 1) ~ batch + treatment, data = samples_conf)` return for `treatmenttreat`?
+
+(c) The error disappears if you use `design = ~ treatment`. Is that a fix? What would you tell the lab?
+
+### R6 — Optional: a real dataset (`airway`)
+
+The [airway](https://bioconductor.org/packages/release/data/experiment/html/airway.html) package has RNA-seq of four airway smooth-muscle cell lines (`cell`), each untreated or treated with dexamethasone (`dex`). Install it with `BiocManager::install("airway")`.
+
+```r
+library(airway)
+data(airway)
+levels(airway$dex)
+airway$dex <- relevel(airway$dex, ref = "untrt")
+dds_air <- DESeqDataSet(airway, design = ~ cell + dex)
+dds_air <- dds_air[rowSums(counts(dds_air)) >= 10, ]   # drop almost-empty genes
+dds_air <- DESeq(dds_air)
+res_air <- results(dds_air, name = "dex_trt_vs_untrt")
+sum(res_air$padj < 0.05, na.rm = TRUE)
+```
+
+(a) What are the levels of `dex` before `relevel`? What would have gone wrong without it?
+
+(b) Why is `cell` in the design? Compare the number of genes at `padj < 0.05` with `design = ~ dex`.
+
+## Extra material: limma on metabolomics data {#limma}
+
+::: {.callout-note}
+## Extra material — not examined
+This part uses **limma** for continuous data. It is the same design-matrix idea as DESeq2, and you will meet it for proteomics and metabolomics.
+:::
+
+We simulate an untargeted mass-spectrometry metabolomics study: log2 intensities of 150 metabolites in 16 people, 8 healthy and 8 with a disease. Covariates: sex, BMI, and the MS **run day** (a batch). Metabolites 1–20 truly change with disease (log2 difference $\pm 1$); metabolites 21–45 rise with BMI (0.15 per BMI unit), 46–55 differ by sex, and every metabolite shifts a little between run days. The disease group has a **higher BMI** on average, and most patients were measured on day 2.
+
+```r
+library(limma)
+set.seed(2)
+meta <- data.frame(
+  group = factor(rep(c("healthy", "disease"), each = 8), levels = c("healthy", "disease")),
+  sex   = factor(rep(c("F", "M"), times = 8)),
+  day   = factor(c(1, 1, 1, 1, 1, 1, 2, 2,  1, 1, 2, 2, 2, 2, 2, 2)))
+meta$bmi <- round(ifelse(meta$group == "disease", 29, 24) + rnorm(16, 0, 2.5))
+rownames(meta) <- paste0("p", 1:16)
+
+m <- 150
+eff_group <- rep(0, m); eff_group[1:20] <- sample(c(-1, 1), 20, TRUE)  # disease
+eff_bmi   <- rep(0, m); eff_bmi[21:45]  <- 0.15                         # per BMI unit
+eff_sex   <- rep(0, m); eff_sex[46:55]  <- 1
+eff_day   <- rnorm(m, 0, 0.7)                                           # run-day shift
+X <- model.matrix(~ group + sex + bmi + day, data = meta)
+B <- cbind(18 + rnorm(m, 0, 2), eff_group, eff_sex, eff_bmi, eff_day)
+logint <- B %*% t(X) + matrix(rnorm(m * 16, 0, 0.4), m)   # metabolites x samples
+dimnames(logint) <- list(paste0("met", 1:m), rownames(meta))
+truth <- eff_group != 0                                   # the 20 changed metabolites
+```
+
+**L1.** Print `table(meta$group, meta$day)` and `tapply(meta$bmi, meta$group, mean)`. Which covariates are unbalanced between healthy and disease?
+
+**L2.** Fit the full model and list the top metabolites for disease:
+
+```r
+design <- model.matrix(~ group + sex + bmi + day, data = meta)
+fit <- eBayes(lmFit(logint, design))
+tt  <- topTable(fit, coef = "groupdisease", number = Inf)
+head(tt)
+```
+
+How many metabolites have `adj.P.Val < 0.05`, and how many of them are among the 20 true ones? Why is the coefficient called `groupdisease`?
+
+**L3.** Repeat L2 with `~ group` and with `~ group + sex + day` (no BMI). A small helper:
+
+```r
+count_hits <- function(f) {
+  fit <- eBayes(lmFit(logint, model.matrix(f, data = meta)))
+  tt  <- topTable(fit, coef = "groupdisease", number = Inf)
+  called <- rownames(tt)[tt$adj.P.Val < 0.05]
+  c(called = length(called), true = sum(called %in% rownames(logint)[truth]))
+}
+count_hits(~ group)
+count_hits(~ group + sex + day)
+count_hits(~ group + sex + bmi + day)
+```
+
+Which design gives false positives, and which metabolites are they? Why does adding `day` find more true metabolites, and why does adding `bmi` remove false ones but also lose some true ones?
+
+## Hints
+
+::: {.callout-tip collapse="true" title="Hint 1 — column names and the reference (B1, B2)"}
+Each factor gives one column per level **except** the reference, which is the alphabetically first level ([`factor`](https://rdrr.io/r/base/factor.html), [`relevel`](https://rdrr.io/r/stats/relevel.html)). The column name is the variable name followed by the level: `batchB`, `sexM`. Text is sorted character by character, so `"24h"` comes before `"6h"`. See [`model.matrix`](https://rdrr.io/r/stats/model.matrix.html).
+:::
+
+::: {.callout-tip collapse="true" title="Hint 2 — rank (B1c, B3, R5)"}
+The rank is the number of linearly independent columns ([`qr`](https://rdrr.io/r/base/qr.html)). Two identical columns, or one column that is a sum of others, lower the rank by one. `lm` then reports `NA` for the later column ([`lm`](https://rdrr.io/r/stats/lm.html), "aliased coefficients"). DESeq2 refuses: see the vignette section [Model matrix not full rank](https://bioconductor.org/packages/release/bioc/vignettes/DESeq2/inst/doc/DESeq2.html#model-matrix-not-full-rank).
+:::
+
+::: {.callout-tip collapse="true" title="Hint 3 — DESeq2 names and default results (B4, R3, R4d)"}
+DESeq2 names a coefficient `variable_level_vs_reference`. [`results`](https://rdrr.io/bioc/DESeq2/man/results.html) without `name =` or `contrast =` reports the **last variable** of the design (its last level vs the reference). See the [DESeq2 vignette](https://bioconductor.org/packages/release/bioc/vignettes/DESeq2/inst/doc/DESeq2.html), sections "Differential expression analysis" and "Multi-factor designs".
+:::
+
+::: {.callout-tip collapse="true" title="Hint 4 — log2 fold changes (B4c)"}
+An LFC of $k$ multiplies the mean by $2^k$: LFC 1 doubles, LFC 2 quadruples, LFC $-1$ halves.
+:::
+
+::: {.callout-tip collapse="true" title="Hint 5 — counting calls against the truth (R3, R4)"}
+`res$padj < 0.05` is `NA` for genes DESeq2 did not test (very low counts), so use `which(res$padj < 0.05)` or `sum(..., na.rm = TRUE)`. A true positive is called **and** `truth_de`; a false positive is called and not `truth_de`. [`table`](https://rdrr.io/r/base/table.html) with two arguments cross-tabulates.
+:::
+
+::: {.callout-tip collapse="true" title="Hint 6 — the simulation line (R1c)"}
+`B` is genes $\times$ 3 (one row of true coefficients per gene) and `t(X[, -1])` is 3 $\times$ samples (the columns of $X$ without the intercept, transposed). Their product is genes $\times$ samples: entry $(g, s)$ is $\mathbf{x}_s \cdot \boldsymbol\beta_g$, the linear predictor of gene $g$ in sample $s$ ([`%*%`](https://rdrr.io/r/base/matmult.html)).
+:::
+
+::: {.callout-tip collapse="true" title="Hint 7 — limma (L2, L3)"}
+[`lmFit`](https://rdrr.io/bioc/limma/man/lmFit.html) fits one linear model per row, [`eBayes`](https://rdrr.io/bioc/limma/man/ebayes.html) shares variance information across rows, and [`topTable`](https://rdrr.io/bioc/limma/man/toptable.html) lists results for one column of the design, given by its **column name** in `coef =`. See the [limma User's Guide](https://bioconductor.org/packages/release/bioc/vignettes/limma/inst/doc/usersguide.pdf), chapter "Linear models overview".
+:::
+
+## Solutions
+
+::: {.callout-note collapse="true" title="Solutions — by hand"}
+
+**B1.** (a) `(Intercept)`, `batchB`, `batchC`, `sexM`, `treatmenttreat`: 5 columns (references A, F, ctrl).
+
+(b)
+```
+  (Intercept) batchB batchC sexM treatmenttreat
+1           1      0      0    0              0
+2           1      0      0    1              1
+3           1      1      0    0              0
+4           1      1      0    1              1
+5           1      0      1    0              1
+6           1      0      1    1              0
+```
+The rank is 5: samples 5 and 6 are the only ones where sex and treatment differ, and that is enough to separate them.
+
+(c) Without samples 5 and 6, batch C is gone (no `batchC` column) and `sexM` = `treatmenttreat` = $(0, 1, 0, 1)$: every M is treated and every F is a control. `ncol(X)` = 4, `qr(X)$rank` = 3. `lm` returns `NA` for `treatmenttreat`, the later of the two identical columns. (If `batch` is a factor that still has the level C, R keeps an all-zero `batchC` column, which lowers the rank as well.)
+
+```r
+b1 <- data.frame(batch = c("A", "A", "B", "B", "C", "C"),
+                 sex   = c("F", "M", "F", "M", "F", "M"),
+                 treatment = c("ctrl", "treat", "ctrl", "treat", "treat", "ctrl"))
+X <- model.matrix(~ batch + sex + treatment, data = b1)
+qr(X)$rank                                              # 5
+X4 <- model.matrix(~ batch + sex + treatment, data = b1[1:4, ])
+ncol(X4); qr(X4)$rank                                   # 4  3
+coef(lm(c(5, 9, 7, 11) ~ batch + sex + treatment, data = b1[1:4, ]))
+#  (Intercept)  batchB  sexM  treatmenttreat
+#            5       2     4              NA
+```
+
+**B2.** (a) `(Intercept)`, `time24h`, `time48h`, `time6h`: alphabetical, because `"2"` < `"4"` < `"6"`. The reference `0h` is first by luck.
+
+(b) `time <- factor(time, levels = c("0h", "6h", "24h", "48h"))` gives `time6h`, `time24h`, `time48h`.
+
+(c) Two columns, `(Intercept)` and `time_h`. The numeric model assumes the expression changes **linearly** with hours (the step from 24 h to 48 h must be 4 times the step from 0 h to 6 h); the factor model lets each time point have its own mean.
+
+**B3.** (a)
+```
+  (Intercept) batchB treatmenttreat
+1-4         1      0              0
+5-8         1      1              1
+```
+`batchB` = `treatmenttreat`, so the rank is 2 for 3 coefficients: infinitely many solutions.
+
+(b) `lm` gives `NA` for `treatmenttreat`; its `batchB` estimate is batch and treatment together. `DESeqDataSetFromMatrix` stops: "the model matrix is not full rank, so the model cannot be fit as specified".
+
+(c) Any layout where both batches contain both conditions gives rank 3. The best is **balanced**: 2 controls and 2 treated in each batch. Then batch and treatment are not related at all, and the treatment effect is estimated as precisely as possible.
+
+**B4.** (a) `"Intercept"`, `"batch_B_vs_A"`, `"batch_C_vs_A"`, `"sex_M_vs_F"`, `"treatment_treat_vs_ctrl"`.
+
+(b) The last variable is `batch`, so `results(dds)` reports **batch C vs A**, not the treatment. Always use `results(dds, name = "treatment_treat_vs_ctrl")` (and, by convention, put the variable of interest last).
+
+(c) $100 \times 2^2 = 400$. With LFC $-1$: $100 \times 2^{-1} = 50$.
+
+**B5.** (a) Control in batch B: $10 + 10 = 20$. Treated in batch A: $10 + 2 = 12$. (These are the data values.)
+
+(b) The treated samples are mostly in the low batch A and the controls mostly in the high batch B, so `~ treatment` mixes the batch difference into the treatment column; the adjusted model compares within batches, and **+2** is the drug effect.
+
+**B6.** (a) Healthy, BMI 20: $10 + 0.1 \cdot 20 = 12$. Disease, BMI 30: $10 + 1 + 0.1 \cdot 30 = 14$.
+
+(b) Disease contributes 1 and the 10 extra BMI units contribute $0.1 \cdot 10 = 1$. Half of the log2 difference of 2 is BMI, not disease.
+:::
+
+::: {.callout-note collapse="true" title="Solutions — DESeq2 (R1–R6)"}
+
+All numbers below are from running the code above (R 4.5, DESeq2 1.44). Messages such as "converting counts to integer mode" are harmless.
+
+**R1.** (a)
+```r
+table(samples$batch, samples$treatment)
+#     ctrl treat
+#   A    1     5
+#   B    5     1
+```
+`X` has the columns `(Intercept)`, `batchB`, `sexM`, `treatmenttreat`: `batchB` is 0 for s1–s6 and 1 for s7–s12, `sexM` alternates 0, 1, and `treatmenttreat` is 1 for s2–s6 and s12.
+
+(b) `ncol(X)` = 4 and `qr(X)$rank` = 4: full rank. Each batch has both conditions, so the design can separate batch and treatment, even though it is unbalanced.
+
+(c) Row $g$ of `B` holds gene $g$'s true coefficients (batch, sex, treatment), and column $s$ of `t(X[, -1])` holds sample $s$'s dummy values. The product is the linear predictor of every gene in every sample. The samples are the same for all genes, so the same $X$ is used for every row; only the coefficients differ between genes.
+
+**R2.**
+```r
+coef(lm(y ~ treatment, data = samples))
+#    (Intercept) treatmenttreat
+#           7.98          -0.24
+coef(lm(y ~ batch + sex + treatment, data = samples))
+#    (Intercept)  batchB   sexM  treatmenttreat
+#           6.20    2.29  -0.37            1.41
+```
+The adjusted model gives 1.41, close to the true 1.5 (and `batchB` 2.29, close to the true 2). Without batch, the gene looks slightly **down** ($-0.24$): 5 of the 6 treated samples are in batch A, where this gene is low, and 5 of the 6 controls are in batch B, where it is high. That is Simpson's paradox.
+
+**R3.** (a) `"Intercept"`, `"batch_B_vs_A"`, `"sex_M_vs_F"`, `"treatment_treat_vs_ctrl"`.
+
+(b)
+```r
+res["g138", ]
+#      baseMean log2FoldChange  lfcSE  stat   pvalue    padj
+# g138    276.3           1.37   0.33  4.10  4.2e-05  0.0006
+```
+LFC 1.37, close to the `lm` estimate 1.41 and the truth 1.5.
+
+(c)
+```r
+table(called = res$padj < 0.05, truly_DE = truth_de, useNA = "ifany")
+#         truly_DE
+# called   FALSE TRUE
+#   FALSE   1751   15
+#   TRUE      14  181
+#   <NA>      35    4
+```
+195 genes are called: **181 true positives** (of 200 DE genes) and **14 false positives** (7%, close to the promised 5%). 39 genes have `padj = NA` because their counts are too low.
+
+**R4.**
+```r
+dds1 <- DESeqDataSetFromMatrix(counts, samples, design = ~ treatment)
+dds1 <- DESeq(dds1)
+res1 <- results(dds1, name = "treatment_treat_vs_ctrl")
+hits1 <- which(res1$padj < 0.05)
+length(hits1); sum(truth_de[hits1]); sum(!truth_de[hits1])
+# [1] 378
+# [1] 152
+# [1] 226
+sum(!truth_de[hits1] & lfc_batch[hits1] != 0)
+# [1] 210
+```
+(a) 378 genes are called, but **226 are false positives**: 60% of the list is wrong. It also finds fewer true genes (152 instead of 181).
+
+(b) 210 of the 226 false positives are **batch-affected** genes. Because treatment is unbalanced across batches, a pure batch difference looks like a treatment difference.
+
+(c) `g138`: LFC $-0.19$, `padj` 0.88. The real up-regulation is hidden by the batch effect and the gene is missed.
+
+(d) With `~ treatment + batch`, `results(dds)` prints `log2 fold change (MLE): batch B vs A`: it reports the batch, because batch is now the last variable.
+
+**R5.** (a)
+```
+Error in checkFullRank(modelMatrix) :
+  the model matrix is not full rank, so the model cannot be fit as specified.
+  One or more variables or interaction terms in the design formula are linear
+  combinations of the others and must be removed.
+```
+`qr(...)$rank` is 2 for 3 columns: `batchB` and `treatmenttreat` are identical.
+
+(b)
+```r
+coef(lm(log2(counts["g1", ] + 1) ~ batch + treatment, data = samples_conf))
+#    (Intercept)         batchB treatmenttreat
+#          8.56           0.77             NA
+```
+`NA`: the 0.77 is batch and treatment together.
+
+(c) No. With `~ treatment` DESeq2 runs, but every "treatment effect" also contains the batch effect, and there is no way to tell how much of it is batch. The data simply do not contain the information. Tell the lab to **redesign the experiment**: put controls and treated samples in every batch, ideally balanced (here 3 + 3 per batch), or sequence everything in one batch.
+
+**R6.** (a) The levels are `"trt"` and `"untrt"`: alphabetically `trt` is the reference, so without `relevel` the coefficient would be `dex_untrt_vs_trt` and every fold change would have the opposite sign.
+
+(b) The four cell lines differ a lot from each other, and each was measured with and without dexamethasone. `cell` is a nuisance covariate (like batch); with it the treatment is compared **within** each cell line. With `~ cell + dex`: 4000 genes at `padj < 0.05` (of 22 369 kept); with `~ dex`: 2694. Here the design is balanced, so leaving `cell` out does not create false positives as in R4; it adds the cell-line differences to the noise and loses power. The top gene is SPARCL1 (LFC 4.6), and the classic glucocorticoid target FKBP5 has LFC 4.0.
+
+```r
+levels(airway$dex)
+# [1] "trt"   "untrt"
+resultsNames(dds_air)
+# [1] "Intercept"               "cell_N061011_vs_N052611"
+# [3] "cell_N080611_vs_N052611" "cell_N61311_vs_N052611"
+# [5] "dex_trt_vs_untrt"
+sum(res_air$padj < 0.05, na.rm = TRUE)
+# [1] 4000
+```
+:::
+
+::: {.callout-note collapse="true" title="Solutions — Extra material: limma (L1–L3)"}
+
+**L1.**
+```r
+table(meta$group, meta$day)
+#            1 2
+#   healthy  6 2
+#   disease  2 6
+tapply(meta$bmi, meta$group, mean)
+# healthy disease
+#   24.00   29.25
+```
+Run day and BMI are both unbalanced: most patients were measured on day 2 and they have a BMI about 5 units higher. Sex is balanced (4 F and 4 M in each group).
+
+**L2.**
+```r
+colnames(design)
+# [1] "(Intercept)"  "groupdisease" "sexM"  "bmi"  "day2"
+head(tt, 4)
+#       logFC AveExpr     t  P.Value adj.P.Val
+# met4   1.69   15.34  5.05  2.0e-06   0.00030
+# met15  1.55   15.91  4.62  1.1e-05   0.00086
+# met3   1.45   20.51  4.17  6.5e-05   0.00275
+# met2   1.37   16.44  4.14  7.3e-05   0.00275
+sum(tt$adj.P.Val < 0.05)
+# [1] 12
+```
+12 metabolites are called, and **all 12 are true**. The coefficient is `groupdisease` because `healthy` was set as the first level, so the column is "disease vs healthy". (The top estimates, such as 1.69 for met4 whose true value is 1, are larger than the truth: the most significant hits tend to be the ones whose noise happened to push them up.)
+
+**L3.**
+```r
+count_hits(~ group)
+# called   true
+#     28     15
+count_hits(~ group + sex + day)
+# called   true
+#     39     19
+count_hits(~ group + sex + bmi + day)
+# called   true
+#     12     12
+```
+
+| design | called | true | false |
+|---|---|---|---|
+| `~ group` | 28 | 15 | 13 |
+| `~ group + sex + day` | 39 | 19 | 20 |
+| `~ group + sex + bmi + day` | 12 | 12 | 0 |
+
+- Without `bmi`, most false positives are the **BMI metabolites** (met21–45): the patients have a higher BMI, so a BMI effect looks like a disease effect. For example met33 has disease logFC 1.0 (`adj.P.Val` 0.005) without `bmi`, but 0.21 (`adj.P.Val` 0.85) with it.
+- Adding `day` removes the run-day shifts from the noise, so every test gets more power: more true metabolites (19), but also more BMI false positives (20).
+- Adding `bmi` removes the false positives. But BMI and disease are correlated, so the model has less information to tell them apart and some true metabolites are lost (12 of 20). The cure for that is again the **design**: recruit patients and controls with similar BMI and spread them over the run days.
+:::
+
+## Where this leads
+
+- **Penalized linear models** (*Why penalize?*): when $X$ has more columns than samples, the rank condition fails by shape, and a penalty is one way to still get a unique $\boldsymbol\beta$.
+- **Interactions in DESeq2** (`~ sex + treatment + sex:treatment`) and **contrasts** between any two levels (`results(dds, contrast = c("batch", "C", "B"))`) use the same design matrix; see the [DESeq2 vignette](https://bioconductor.org/packages/release/bioc/vignettes/DESeq2/inst/doc/DESeq2.html#interactions). We do not cover them further here.
+- DESeq2 and limma both share information between genes (dispersions, variances). That is the same idea as the shrinkage in *Hierarchical models*.

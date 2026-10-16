@@ -10,7 +10,7 @@ cp demos/demo.css demos/dist/demo.css
 names=("$@")
 [ ${#names[@]} -eq 0 ] && names=($(ls demos/src | grep -v '^lib$'))
 for n in "${names[@]}"; do
-  npx --no-install esbuild "demos/src/$n/main.ts" --bundle --format=iife --target=es2020 \
+  node_modules/.bin/esbuild "demos/src/$n/main.ts" --bundle --format=iife --target=es2020 \
     --minify --log-level=warning --outfile="demos/dist/$n.js" \
     --loader:.jpg=dataurl --loader:.png=dataurl
 done

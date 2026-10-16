@@ -1,5 +1,5 @@
 ---
-title: "Exercise: handling covariates"
+title: "Exercise: design matrices for covariates"
 format:
   html:
     toc: true
@@ -13,13 +13,12 @@ format:
 By the end of this exercise you should be able to:
 
 - write a **model formula** for a research question and say what each term does,
-- turn a formula into a **design matrix** $X$ by hand, for both **continuous** and **categorical** predictors,
-- read off what each **coefficient** means, including the crucial **"holding the other predictors constant,"**
-- explain **confounding** and why **adjusting** for a covariate can change — even reverse — an apparent effect,
-- interpret an **interaction** term ($a * b$) and compute a subgroup-specific effect,
-- recognise the common **pitfalls** (wrong reference level, collinearity, over-adjustment).
+- build the **design matrix** $X$ by hand for the common cases: one factor; a factor plus a number (age, BMI); two factors; a factor with three levels (batch, time point); an **interaction** column,
+- compute $X\boldsymbol\beta$ by hand to get each sample's or group's **predicted mean**, and go back from group means to $\boldsymbol\beta$,
+- say what each **coefficient** means (difference from the reference; slope per unit),
+- decide whether $\boldsymbol\beta$ has a **unique** solution, find the dependent columns, and say what to change.
 
-By-hand design-matrix and coefficient interpretation are the examined skills; the R section only confirms your answers.
+Everything in the *By hand* section is examined; the R section only confirms your answers. What "adjusting" for a covariate buys you, and Simpson's paradox, are in [Confounding & Simpson's paradox](../confounding/exercise.qmd). DESeq2 and limma are in [Design matrices in R](../covariates-r/exercise.qmd).
 
 ## Background
 
@@ -30,148 +29,226 @@ $$
 \hat y_i = \beta_0 + \beta_1 x_{i1} + \beta_2 x_{i2} + \dots
 $$
 
+$X$ has **one row per sample** and **one column per coefficient**. With one predictor this is the line $y = a + bx$ from Fitting equations, with $\beta_0 = a$ and $\beta_1 = b$.
+
 **Building the columns of $X$:**
 
-1. **Intercept** — a column of all 1's (present by default). Its coefficient $\beta_0$ is the predicted outcome when every other predictor is 0 (for factors: at the reference level).
-2. **Continuous predictor** (age, BMI) — the raw numbers, one column. Coefficient = change in $\hat y$ **per unit**.
+1. **Intercept** — a column of all 1's (present by default). Its coefficient $\beta_0$ is the predicted outcome when every number is 0 and every factor is at its reference level.
+2. **Continuous predictor** (age, BMI, hours) — the raw numbers, one column. Coefficient = change in $\hat y$ **per unit**.
 3. **Categorical predictor** (a factor with $k$ levels) — $k-1$ **dummy (0/1) columns** under the default *treatment* contrasts. The omitted level is the **reference**, folded into the intercept; each dummy's coefficient = **that level minus the reference**.
+4. **Interaction** `a:b` — the product of the columns for `a` and `b`, entry by entry. `a * b` is short for `a + b + a:b`.
 
-**Adjustment.** Adding `+ z` gives $z$ its own column, so the other coefficients are now interpreted **holding $z$ constant**. A **confounder** (a common cause of the predictor of interest and the outcome) must be adjusted for, or the effect you report is biased.
+**Predictions.** $X\boldsymbol\beta$ is a matrix times a vector: row $i$ of $X$ dotted with $\boldsymbol\beta$ gives $\hat y_i$ (see the [matrix × vector drills](../warmups/02-matrix-vector-product.qmd)). Samples with identical rows get the same prediction, so with only factors in the model $X\boldsymbol\beta$ lists one predicted mean per group.
 
-**Interaction.** `a * b` expands to `a + b + a:b`. The product term `a:b` lets the effect of `a` **depend on** the level of `b`. Under treatment contrasts, the main effect of `a` is the effect of `a` **at the reference level of `b`**, and the interaction is the **extra** effect at the other level.
+**Reference levels.** R orders factor levels **alphabetically, as text**, so the alphabetically first level is the reference (and `"24h"` sorts before `"6h"`). Change it with [`relevel`](https://rdrr.io/r/stats/relevel.html) or `factor(x, levels = ...)`.
 
-**Reference levels.** R orders factor levels **alphabetically** by default, so the alphabetically-first level is the reference. Change it with [`relevel`](https://rdrr.io/r/stats/relevel.html) or `factor(x, levels = ...)`.
+**Existence of solutions.** Fitting means solving $\mathbf y \approx X\boldsymbol\beta$ by least squares. As in [Linear systems in R](../solving-systems-r/lec.qmd), there is **one** best $\boldsymbol\beta$ exactly when the columns of $X$ are **linearly independent** (no column is a sum or multiple of others; `qr(X)$rank` equals the number of columns $p$). That needs $n \ge p$. If the columns are dependent, **infinitely many** $\boldsymbol\beta$ give the same fitted values. Typical causes: a dummy for every level plus an intercept (dummy-variable trap), a batch that coincides with the treatment, an interaction with an empty cell, more columns than samples.
 
 ## By hand
 
-**B1.** Write model formulas (in `y ~ ...` form) for each question:
+**B1. (formulas)** Write model formulas (in `y ~ ...` form) for each question:
 (a) does expression depend on treatment alone?
-(b) does expression depend on treatment, adjusting for age?
+(b) does expression depend on treatment, with age also in the model?
 (c) does expression depend on treatment and sex, allowing the treatment effect to differ between the sexes?
 
-**B2.** You have 4 samples:
+**B2. (treatment + age)** You have 4 mice:
 
-| sample | treatment | age |
+| sample | treatment | age (weeks) |
 |---|---|---|
 | 1 | ctrl  | 10 |
 | 2 | treat | 40 |
-| 3 | ctrl  | 22 |
-| 4 | treat | 35 |
+| 3 | ctrl  | 20 |
+| 4 | treat | 30 |
 
-Write out the design matrix $X$ for the formula `expr ~ treatment + age` by hand (treatment coding, `ctrl` as reference). Label the columns.
+Write out the design matrix $X$ for `expr ~ treatment + age` by hand (treatment coding, `ctrl` as reference). Label the columns.
 
-**B3.** For the fitted model `expr ~ treatment + age` you obtain $\beta_0 = 5$, $\beta_1 = 3$ (`treatmenttreat`), $\beta_2 = 0.1$ (`age`). In words:
-(a) what is the predicted expression for a **treated** animal aged **30**?
-(b) what is the treatment effect, and what does "holding age constant" add to that statement?
-(c) what does $\beta_0 = 5$ correspond to, and why is it not very meaningful here?
+**B3. ($X\boldsymbol\beta$)** For the model in B2 the fitted coefficients are $\beta_0 = 5$, $\beta_1 = 3$ (`treatmenttreat`), $\beta_2 = 0.1$ (`age`).
+(a) Compute $X\boldsymbol\beta$, the predicted expression of all four mice.
+(b) What is the predicted difference between a treated and a control mouse **of the same age**?
+(c) What does $\beta_0 = 5$ correspond to, and why is it not very meaningful here?
 
-**B4. (categorical with three levels)** A factor `tissue` has levels `brain`, `gut`, `liver`. For `expr ~ tissue`:
-(a) how many dummy columns does $X$ have (besides the intercept)?
+**B4. (sex + BMI)** Four patients:
+
+| patient | sex | BMI |
+|---|---|---|
+| 1 | F | 20 |
+| 2 | M | 25 |
+| 3 | F | 30 |
+| 4 | M | 35 |
+
+(a) Write $X$ for `expr ~ sex + bmi` (F is the reference).
+(b) With $\boldsymbol\beta = (2,\ 1,\ 0.2)$ for (`(Intercept)`, `sexM`, `bmi`), compute the predicted expression of each patient.
+(c) In words, what do `sexM` $= 1$ and `bmi` $= 0.2$ mean? By how much does the prediction differ between two women with BMI 20 and BMI 30?
+(d) You centre BMI at 25 (`I(bmi - 25)`). What is the new intercept, and what does it mean? Does the `bmi` coefficient change?
+
+**B5. (a factor with three levels)** Samples were sequenced in three batches, `A`, `B`, `C`. For `expr ~ batch`:
+(a) how many dummy columns does $X$ have (besides the intercept), and what are they called?
 (b) which level is the reference under the default coding?
-(c) if the intercept is 2 and the coefficient `tissuegut` is 4, what is the predicted mean expression in **gut**? In **brain**?
+(c) the intercept is 2, `batchB` is 4 and `batchC` is $-1$. What is the predicted mean in each batch?
+(d) what is the difference C − B?
+(e) in another gene the batch means are A: 5, B: 8, C: 4. Find $\boldsymbol\beta$.
 
-**B5. (confounding)** In a study, treated animals were mostly old and controls mostly young, and expression rises with age. The **unadjusted** model `expr ~ treatment` gives a large positive `treatmenttreat`. After fitting `expr ~ treatment + age`, the `treatmenttreat` coefficient **shrinks toward 0**.
-(a) explain, in terms of confounding, why it shrank;
-(b) which of the two estimates is the honest treatment effect, and why?
+**B6. (two factors: batch + treatment)** A design with two sequencing batches (A, B) and two conditions (ctrl, treat), with every combination present.
+(a) Write the four distinct rows of $X$ for `expr ~ batch + treatment`, one per group, with columns (`(Intercept)`, `batchB`, `treatmenttreat`).
+(b) With $\boldsymbol\beta = (8,\ -2,\ 3)$, compute the predicted mean of each of the four groups.
+(c) What is the treatment effect in batch A? In batch B?
+(d) In a different gene the observed group means are A/ctrl 8, A/treat 11, B/ctrl 6, B/treat 10. Can `expr ~ batch + treatment` reproduce all four means exactly? Why or why not?
 
-**B6. (interaction)** For `expr ~ treatment * sex` with references `ctrl` and `F`, you fit:
-$$\beta_0 = 5,\quad \beta_1\,(\text{treat}) = 2,\quad \beta_2\,(\text{M}) = 1,\quad \beta_3\,(\text{treat:M}) = 3.$$
-(a) what is the treatment effect in **females**?
-(b) what is the treatment effect in **males**?
-(c) what does $\beta_3 = 3$ mean in words? What would $\beta_3 = 0$ imply?
+**B7. (time points)** Expression was measured at 0 h, 6 h and 24 h after stimulation, two samples per time point.
+(a) `factor(time)` gives the levels `"0h" "24h" "6h"`. Why this order? Write the line that puts them in the right order.
+(b) With the order fixed, write $X$ for `expr ~ time` (six rows).
+(c) With $\boldsymbol\beta = (4,\ 6,\ 3)$ for (`(Intercept)`, `time6h`, `time24h`), what is the predicted mean at each time point?
+(d) If you instead use time as a number (`expr ~ hours`, hours = 0, 6, 24), how many columns does $X$ have? Can that model reproduce the means from (c)? Explain in one sentence.
 
-**B7. (reference level)** Your treatment factor has levels `drug` and `placebo`. You fit `expr ~ treatment` and get a coefficient named `treatmentplacebo`.
+**B8. (interaction column)** Four groups: F/ctrl, F/treat, M/ctrl, M/treat.
+(a) Write the four rows of $X$ for `expr ~ treatment * sex`, with columns (`(Intercept)`, `treatmenttreat`, `sexM`, `treatmenttreat:sexM`). Show how the last column is computed.
+(b) With $\boldsymbol\beta = (4,\ 1,\ 2,\ 3)$, compute the four group means. What is the treat − ctrl difference in females? In males?
+(c) In another gene the group means are F/ctrl 6, F/treat 9, M/ctrl 7, M/treat 12. Find all four coefficients.
+
+**B9. (counting columns)** A study uses `expr ~ sex + batch + age + treatment`, where batch has levels A, B, C.
+(a) How many columns $p$ does $X$ have? List them in order.
+(b) Write the row of $X$ for a **treated female, aged 50, sequenced in batch B**.
+(c) What is the smallest number of samples for which $\boldsymbol\beta$ can possibly be unique?
+
+**B10. (reference level)** Your treatment factor has levels `drug` and `placebo`. You fit `expr ~ treatment` and get a coefficient named `treatmentplacebo`.
 (a) which level did R choose as the reference, and why?
 (b) the coefficient `treatmentplacebo` is $-4$. Interpret it. Is the drug raising or lowering expression relative to placebo?
 (c) how would you make `placebo` the reference so the coefficient reads as the drug effect?
 
+**B11. (unique solution? — the dummy-variable trap)** A student builds, for four samples F, M, F, M, a design matrix with three columns: an intercept, `sexF` (1 for females) and `sexM` (1 for males).
+(a) Write $X$. Which combination of columns is linearly dependent?
+(b) The mean in females is 6 and in males is 9. Show that $\boldsymbol\beta = (6,\ 0,\ 3)$ and $\boldsymbol\beta = (9,\ -3,\ 0)$ give the same fitted values. Give a third $\boldsymbol\beta$ that does too.
+(c) Is $\boldsymbol\beta$ unique? What should the student change?
+
+**B12. (unique solution? — batch and treatment)** Two possible layouts for an RNA-seq experiment with four samples:
+
+| sample | Design 1 | Design 2 |
+|---|---|---|
+| 1 | ctrl, batch A  | ctrl, batch A  |
+| 2 | ctrl, batch A  | treat, batch A |
+| 3 | treat, batch B | ctrl, batch B  |
+| 4 | treat, batch B | treat, batch B |
+
+(a) Write $X$ for `expr ~ batch + treatment` for both designs.
+(b) For which design is $\boldsymbol\beta$ unique? Point to the dependent columns in the other one.
+(c) In Design 1 the observed means are 5 (samples 1–2) and 8 (samples 3–4). Give two different $\boldsymbol\beta$ that fit equally well. What can you conclude about the drug?
+(d) What would you tell the person planning Design 1?
+
+**B13. (unique solution? — quick-fire)** For each design, say whether $\boldsymbol\beta$ is unique. If not, name the cause and what to change.
+(a) `expr ~ treatment * sex` with six samples: F/ctrl, F/ctrl, F/treat, F/treat, M/ctrl, M/ctrl.
+(b) `expr ~ treatment + sex + batch + age + bmi` (batch A/B/C) with 5 patients.
+(c) `expr ~ treatment + age` with six mice, three per group, all of different ages.
+(d) `expr ~ time` with time a factor with levels `0h`, `6h`, `24h`, but samples were only collected at 0 h and 6 h.
+
 ## In R
 
-Use R to **confirm** the by-hand answers. The models below are illustrative; the same formulas work in a Bayesian fit (`rstanarm::stan_glm`, `brms::brm`) with priors added.
+Use R to **confirm** the by-hand answers. [`model.matrix`](https://rdrr.io/r/stats/model.matrix.html) shows the $X$ a formula builds and `%*%` multiplies it by $\boldsymbol\beta$.
 
 ### See the design matrix a formula builds
 
 ```r
 treatment <- factor(c("ctrl","treat","ctrl","treat"))
-age       <- c(10, 40, 22, 35)
+age       <- c(10, 40, 20, 30)
 
-model.matrix(~ treatment + age)
+X <- model.matrix(~ treatment + age)
+X
 #   (Intercept) treatmenttreat age
 # 1           1              0  10
 # 2           1              1  40
-# 3           1              0  22
-# 4           1              1  35
+# 3           1              0  20
+# 4           1              1  30
+
+X %*% c(5, 3, 0.1)       # predicted expression, one per mouse
+#   [,1]
+# 1    6
+# 2   12
+# 3    7
+# 4   11
 ```
 
-### Check the reference level of a factor
+### Factors with more levels, and level order
 
 ```r
-levels(treatment)                 # "ctrl" "treat"  -> ctrl is the reference
-contrasts(treatment)              # shows the 0/1 coding
+batch <- factor(c("A","B","C"))
+model.matrix(~ batch)
+#   (Intercept) batchB batchC
+# 1           1      0      0      # A = reference (all dummies 0)
+# 2           1      1      0
+# 3           1      0      1
 
-# force a different reference:
-treatment2 <- relevel(treatment, ref = "treat")
-levels(treatment2)                # "treat" "ctrl"
+time <- c("0h","0h","6h","6h","24h","24h")
+levels(factor(time))               # "0h" "24h" "6h"  -- alphabetical, as text
+time <- factor(time, levels = c("0h","6h","24h"))
+colnames(model.matrix(~ time))     # "(Intercept)" "time6h" "time24h"
 ```
 
-### A factor with three levels
+### An interaction is a product column
 
 ```r
-tissue <- factor(c("brain","gut","liver","gut"))
-model.matrix(~ tissue)
-#   (Intercept) tissuegut tissueliver
-# 1           1         0           0     # brain = reference (all dummies 0)
-# 2           1         1           0
-# 3           1         0           1
-# 4           1         1           0
+treatment <- factor(c("ctrl","treat","ctrl","treat"))
+sex       <- factor(c("F","F","M","M"))
+model.matrix(~ treatment * sex)
+#   (Intercept) treatmenttreat sexM treatmenttreat:sexM
+# 1           1              0    0                   0
+# 2           1              1    0                   0
+# 3           1              0    1                   0
+# 4           1              1    1                   1
 ```
 
-### An interaction expands into three terms
+### Checking for a unique solution
 
 ```r
-sex <- factor(c("F","M","F","M"))
-colnames(model.matrix(~ treatment * sex))
-# "(Intercept)" "treatmenttreat" "sexM" "treatmenttreat:sexM"
+batch     <- factor(c("A","A","B","B"))
+treatment <- factor(c("ctrl","ctrl","treat","treat"))   # Design 1 of B12
+X <- model.matrix(~ batch + treatment)
+ncol(X)          # 3 columns
+qr(X)$rank       # 2  -> columns are dependent, beta is not unique
+y <- c(5, 5, 8, 8)
+coef(lm(y ~ batch + treatment))
+# (Intercept)          batchB treatmenttreat
+#           5               3             NA
 ```
+
+[`qr`](https://rdrr.io/r/base/qr.html)`(X)$rank` smaller than `ncol(X)` means dependent columns. [`lm`](https://rdrr.io/r/stats/lm.html) then reports `NA` for a coefficient it could not separate.
 
 ### Tasks
 
-**R1.** Reproduce the design matrix from **B2** with `model.matrix(~ treatment + age)` and confirm it matches your hand answer column-for-column.
+**R1.** Reproduce $X$ from **B2** with `model.matrix(~ treatment + age)` and the predictions from **B3** with `X %*% c(5, 3, 0.1)`.
 
-**R2.** For **B4**, build `tissue <- factor(c("brain","gut","liver"))` and run `model.matrix(~ tissue)`. Confirm the number of dummy columns and which level is the reference.
+**R2.** For **B4**, build `sex` and `bmi`, run `model.matrix(~ sex + bmi)`, and check your predictions with `%*%`. Then refit with `I(bmi - 25)` and look at the new column.
 
-**R3.** For **B7**, build `treatment <- factor(c("drug","placebo","drug","placebo"))`, check `levels()`, then `relevel()` to make `placebo` the reference and re-check `levels()`.
+**R3.** For **B5** and **B7**, check the dummy columns and the reference level with `model.matrix()`, and check (c) of each with `%*%`.
 
-**R4.** Confirm the interaction expansion from **B6**: `colnames(model.matrix(~ treatment * sex))` should list `treatmenttreat`, `sexM`, and the product `treatmenttreat:sexM`.
+**R4.** For **B8**, check the product column with `model.matrix(~ treatment * sex)` and your group means with `%*% c(4, 1, 2, 3)`.
+
+**R5.** For **B10**, build `treatment <- factor(c("drug","placebo","drug","placebo"))`, check `levels()`, then `relevel()` to make `placebo` the reference and re-check `levels()`.
+
+**R6.** For **B11**–**B13**, build each $X$ (for B11 by hand with `cbind(1, sexF, sexM)`; the others with `model.matrix()`), compare `qr(X)$rank` with `ncol(X)`, and confirm your verdicts.
 
 ## Hints
 
-::: {.callout-tip collapse="true" title="Hint 1 — reading a formula"}
-`+` means "also include this term as a predictor" (not arithmetic). `y ~ a + b` fits an **additive** model; `y ~ a * b` adds the **interaction** `a:b` on top of the two main effects. There is always an intercept unless you write `y ~ 0 + ...` or `y ~ ... - 1`.
+::: {.callout-tip collapse="true" title="Hint 1 — reading a formula (B1)"}
+`+` means "also include this term as a predictor" (not arithmetic). `y ~ a + b` fits an **additive** model; `y ~ a * b` adds the **interaction** `a:b` on top of the two main effects. There is always an intercept unless you write `y ~ 0 + ...`. See [`formula`](https://rdrr.io/r/stats/formula.html).
 :::
 
-::: {.callout-tip collapse="true" title="Hint 2 — building the design matrix"}
-Start with a column of 1's (the intercept). Continuous predictors go in as their raw numbers. For a factor under the default [treatment contrasts](https://rdrr.io/r/stats/contrast.html), add one 0/1 column per **non-reference** level: 1 when the sample is that level, 0 otherwise. Use [`model.matrix`](https://rdrr.io/r/stats/model.matrix.html) to check.
+::: {.callout-tip collapse="true" title="Hint 2 — building the design matrix (B2, B4, B6–B9)"}
+Start with a column of 1's (the intercept). Numbers go in as their raw values. For a factor under the default [treatment contrasts](https://rdrr.io/r/stats/contrast.html), add one 0/1 column per **non-reference** level: 1 when the sample has that level, 0 otherwise. For an interaction, multiply the two dummy columns row by row. Columns come in the order of the formula. Check with [`model.matrix`](https://rdrr.io/r/stats/model.matrix.html).
 :::
 
-::: {.callout-tip collapse="true" title="Hint 3 — what a coefficient means"}
-Every coefficient is read **"holding the other predictors constant."** For a continuous predictor it is the change in $\hat y$ per unit. For a factor dummy it is the difference **between that level and the reference**. The intercept is $\hat y$ when all predictors are 0 / at their reference levels.
+::: {.callout-tip collapse="true" title="Hint 3 — computing $X\\boldsymbol\\beta$ (B3–B8)"}
+Take one row of $X$, multiply each entry by the matching entry of $\boldsymbol\beta$, and add up. A treated mouse aged 40 in B3 gives $5\cdot 1 + 3\cdot 1 + 0.1\cdot 40$. The same rule as in the [matrix × vector drills](../warmups/02-matrix-vector-product.qmd).
 :::
 
-::: {.callout-tip collapse="true" title="Hint 4 — predicting from coefficients (B3)"}
-Plug the sample's values into $\hat y = \beta_0 + \beta_1\cdot\text{treat} + \beta_2\cdot\text{age}$. A treated animal has `treat = 1`; a control has `treat = 0`. So a treated animal aged 30 gives $\hat y = 5 + 3(1) + 0.1(30)$.
+::: {.callout-tip collapse="true" title="Hint 4 — from group means back to $\\boldsymbol\\beta$ (B5e, B6d, B8c)"}
+The reference group has all dummies 0, so its mean is $\beta_0$. A group that differs from the reference in one dummy has mean $\beta_0 + $ that coefficient. With an interaction, the group with both dummies 1 has mean $\beta_0 + \beta_1 + \beta_2 + \beta_3$; solve for $\beta_3$ last.
 :::
 
-::: {.callout-tip collapse="true" title="Hint 5 — confounding (B5)"}
-A confounder is associated with **both** the group and the outcome. The unadjusted treatment coefficient captures the real treatment effect **plus** the age difference between groups. Adding age to the model lets the age effect be estimated separately, so the treatment coefficient keeps only what is left over — the effect "at the same age."
+::: {.callout-tip collapse="true" title="Hint 5 — level order (B7, B10)"}
+`factor()` sorts the distinct values as **text**, character by character: `"2"` comes before `"6"`, so `"24h"` comes before `"6h"`; `"d"` comes before `"p"`, so `drug` comes before `placebo`. Give the order with `factor(x, levels = ...)` or pick the reference with [`relevel`](https://rdrr.io/r/stats/relevel.html).
 :::
 
-::: {.callout-tip collapse="true" title="Hint 6 — interaction coefficients (B6)"}
-Under treatment coding the main effect $\beta_1$ is the treatment effect **in the reference sex (F)**. The interaction $\beta_3$ is the **extra** treatment effect in males, so the male treatment effect is $\beta_1 + \beta_3$. If $\beta_3 = 0$ the effect is identical in both sexes (no interaction).
-:::
-
-::: {.callout-tip collapse="true" title="Hint 7 — reference levels (B7)"}
-R orders factor levels alphabetically, so `drug` (before `placebo`) becomes the reference and the reported coefficient is `treatmentplacebo` = placebo − drug. To read it as the drug effect instead, make placebo the reference with [`relevel`](https://rdrr.io/r/stats/relevel.html)`(treatment, ref = "placebo")`.
+::: {.callout-tip collapse="true" title="Hint 6 — is $\\boldsymbol\\beta$ unique? (B11–B13)"}
+Look for a column that equals another column, is a sum of other columns, or is all zeros. Count columns $p$ and samples $n$: if $p > n$ the columns must be dependent. If you find a dependence, you can move some amount between coefficients without changing $X\boldsymbol\beta$ — that is Case 3 (infinitely many solutions) of [Linear systems in R](../solving-systems-r/lec.qmd). In R, compare [`qr`](https://rdrr.io/r/base/qr.html)`(X)$rank` with `ncol(X)`.
 :::
 
 ## Solutions
@@ -181,16 +258,16 @@ R orders factor levels alphabetically, so `drug` (before `placebo`) becomes the 
 **B1.**
 (a) `expr ~ treatment`
 (b) `expr ~ treatment + age`
-(c) `expr ~ treatment * sex` (equivalently `expr ~ treatment + sex + treatment:sex`). The `*` allows the treatment effect to differ between sexes via the interaction term.
+(c) `expr ~ treatment * sex` (equivalently `expr ~ treatment + sex + treatment:sex`).
 
-**B2.** Intercept column of 1's; a single treatment dummy (`treatmenttreat` = 1 for treated, 0 for control, since `ctrl` is the reference); and the raw age column.
+**B2.** Intercept column of 1's; a single treatment dummy (`treatmenttreat` = 1 for treated, 0 for control); and the raw age column.
 
 $$
 X = \begin{pmatrix}
 1 & 0 & 10 \\
 1 & 1 & 40 \\
-1 & 0 & 22 \\
-1 & 1 & 35
+1 & 0 & 20 \\
+1 & 1 & 30
 \end{pmatrix}
 \quad
 \begin{array}{l}
@@ -201,52 +278,165 @@ X = \begin{pmatrix}
 $$
 
 **B3.**
-(a) $\hat y = \beta_0 + \beta_1\cdot 1 + \beta_2\cdot 30 = 5 + 3 + 0.1\times30 = 5 + 3 + 3 = 11$.
-(b) The treatment effect is $\beta_1 = 3$: treated animals have expression 3 units higher than controls **of the same age**. "Holding age constant" makes clear this is not contaminated by any age imbalance between the groups — it is the treatment effect after age has been accounted for.
-(c) $\beta_0 = 5$ is the predicted expression for a **control** animal of **age 0**. Age 0 is outside any real data (and biologically a newborn / extrapolation), so the raw intercept is not scientifically meaningful. Centring age (`I(age - mean(age))`) would move the intercept to the mean age and make it interpretable.
+(a) $X\boldsymbol\beta = (5 + 0 + 1,\ 5 + 3 + 4,\ 5 + 0 + 2,\ 5 + 3 + 3) = (6,\ 12,\ 7,\ 11)$.
+(b) $\beta_1 = 3$: at any fixed age the treated prediction is 3 higher (the age term is the same for both and cancels).
+(c) $\beta_0 = 5$ is the predicted expression for a **control** mouse of **age 0**. That is outside the data (a newborn, or an extrapolation), so it is not scientifically meaningful. Centring age would move the intercept to a typical age.
 
 **B4.**
-(a) Three levels → $3 - 1 = 2$ dummy columns (`tissuegut`, `tissueliver`), plus the intercept.
-(b) `brain` — it is alphabetically first, so it is the reference (all its dummies are 0).
-(c) Gut mean $=$ intercept $+$ `tissuegut` $= 2 + 4 = 6$. Brain mean $=$ intercept $= 2$ (brain is the reference, so both dummies are 0).
+(a)
+$$
+X = \begin{pmatrix}
+1 & 0 & 20 \\
+1 & 1 & 25 \\
+1 & 0 & 30 \\
+1 & 1 & 35
+\end{pmatrix}
+\quad (\text{(Intercept)},\ \text{sexM},\ \text{bmi})
+$$
+(b) $2 + 0 + 4 = 6$; $\ 2 + 1 + 5 = 8$; $\ 2 + 0 + 6 = 8$; $\ 2 + 1 + 7 = 10$.
+(c) `sexM` $= 1$: men are predicted 1 unit higher than women **with the same BMI**. `bmi` $= 0.2$: each extra BMI unit adds 0.2, in both sexes. BMI 20 vs 30 is 10 units, so the difference is $0.2 \times 10 = 2$ (patients 1 and 3: 6 vs 8).
+(d) New intercept $= 2 + 0.2 \times 25 = 7$: the predicted expression of a **woman with BMI 25**, a realistic person. The `bmi` coefficient stays $0.2$ (and `sexM` stays 1).
 
 **B5.**
-(a) Age is a **confounder**: it differs between the groups (treated older, controls younger) **and** affects the outcome (expression rises with age). In `expr ~ treatment` the treatment coefficient absorbs the treatment effect **plus** the age-driven difference between the groups, inflating it. Adding `+ age` gives age its own coefficient, so the age contribution is removed from the treatment coefficient, and it shrinks toward the true value.
-(b) The **adjusted** estimate (`expr ~ treatment + age`) is the honest one: it estimates the treatment effect **among animals of the same age**, disentangling it from the age imbalance. The unadjusted estimate conflates the two.
+(a) $3 - 1 = 2$ dummy columns: `batchB` and `batchC`.
+(b) `A` — it is alphabetically first, so all its dummies are 0.
+(c) A: $2$; B: $2 + 4 = 6$; C: $2 - 1 = 1$.
+(d) C − B $= \beta_\text{C} - \beta_\text{B} = -1 - 4 = -5$ (check: $1 - 6 = -5$).
+(e) $\beta_0 = 5$ (mean of A), `batchB` $= 8 - 5 = 3$, `batchC` $= 4 - 5 = -1$. So $\boldsymbol\beta = (5,\ 3,\ -1)$.
 
 **B6.**
-(a) Treatment effect in females (the reference sex): $\beta_1 = 2$.
-(b) Treatment effect in males: $\beta_1 + \beta_3 = 2 + 3 = 5$.
-(c) $\beta_3 = 3$ is the **extra** treatment effect in males compared with females — the treatment raises expression 3 units *more* in males than in females (a difference of treatment effects). $\beta_3 = 0$ would mean the treatment acts **equally** in both sexes, i.e. no interaction, and the additive model `expr ~ treatment + sex` would suffice.
+(a) and (b):
+
+| group | (Intercept) | batchB | treatmenttreat | $\hat y$ |
+|---|---|---|---|---|
+| A, ctrl  | 1 | 0 | 0 | $8$ |
+| A, treat | 1 | 0 | 1 | $8 + 3 = 11$ |
+| B, ctrl  | 1 | 1 | 0 | $8 - 2 = 6$ |
+| B, treat | 1 | 1 | 1 | $8 - 2 + 3 = 9$ |
+
+(c) $3$ in both batches ($11 - 8 = 9 - 6 = 3$). The additive model forces the same treatment effect in every batch.
+(d) No. The model has 3 coefficients for 4 groups and assumes the same treat − ctrl difference in both batches, but here it is $11 - 8 = 3$ in batch A and $10 - 6 = 4$ in batch B. Reproducing all four means needs a fourth column, the interaction `batchB:treatmenttreat` (its coefficient would be $4 - 3 = 1$).
 
 **B7.**
-(a) `drug` — factor levels are ordered alphabetically, and `drug` comes before `placebo`, so `drug` is the reference; the non-reference dummy is `treatmentplacebo`.
-(b) `treatmentplacebo` $= -4$ means placebo expression is 4 units **lower** than drug. Equivalently, the **drug raises** expression by 4 units relative to placebo. (The sign is about placebo-minus-drug because drug is the reference.)
-(c) `treatment <- relevel(treatment, ref = "placebo")` (or `factor(treatment, levels = c("placebo","drug"))`). Then the coefficient becomes `treatmentdrug` $= +4$, directly the drug effect.
+(a) R sorts the levels as **text**: `"2"` comes before `"6"`, so `"24h"` comes before `"6h"`. Fix: `time <- factor(time, levels = c("0h", "6h", "24h"))`.
+(b)
+$$
+X = \begin{pmatrix}
+1 & 0 & 0\\
+1 & 0 & 0\\
+1 & 1 & 0\\
+1 & 1 & 0\\
+1 & 0 & 1\\
+1 & 0 & 1
+\end{pmatrix}
+\quad (\text{(Intercept)},\ \text{time6h},\ \text{time24h})
+$$
+(c) 0 h: $4$; 6 h: $4 + 6 = 10$; 24 h: $4 + 3 = 7$.
+(d) Two columns: (Intercept) and `hours`. It cannot: a straight line changes by the same amount per hour, but the means go **up** from 0 h to 6 h (+6) and **down** from 6 h to 24 h (−3).
 
-**R1–R4.** These confirm the hand answers.
+**B8.**
+(a) The interaction column is `treatmenttreat` × `sexM`, row by row:
+
+| group | (Intercept) | treatmenttreat | sexM | treatmenttreat:sexM |
+|---|---|---|---|---|
+| F, ctrl  | 1 | 0 | 0 | $0 \times 0 = 0$ |
+| F, treat | 1 | 1 | 0 | $1 \times 0 = 0$ |
+| M, ctrl  | 1 | 0 | 1 | $0 \times 1 = 0$ |
+| M, treat | 1 | 1 | 1 | $1 \times 1 = 1$ |
+
+(b) F/ctrl $4$; F/treat $4 + 1 = 5$; M/ctrl $4 + 2 = 6$; M/treat $4 + 1 + 2 + 3 = 10$. Treat − ctrl: females $5 - 4 = 1$; males $10 - 6 = 4$ (that is $\beta_1 + \beta_3 = 1 + 3$).
+(c) $\beta_0 = 6$ (F/ctrl). $\beta_1 = 9 - 6 = 3$ (F/treat − F/ctrl). $\beta_2 = 7 - 6 = 1$ (M/ctrl − F/ctrl). M/treat: $6 + 3 + 1 + \beta_3 = 12$, so $\beta_3 = 2$. $\boldsymbol\beta = (6,\ 3,\ 1,\ 2)$.
+
+**B9.**
+(a) $p = 6$: `(Intercept)`, `sexM`, `batchB`, `batchC`, `age`, `treatmenttreat`.
+(b) $(1,\ 0,\ 1,\ 0,\ 50,\ 1)$.
+(c) At least $n = 6$ samples (and even then only if the columns are independent; to also estimate the noise you need $n > 6$).
+
+**B10.**
+(a) `drug` — levels are ordered alphabetically, and `drug` comes before `placebo`, so `drug` is the reference; the non-reference dummy is `treatmentplacebo`.
+(b) `treatmentplacebo` $= -4$: placebo expression is 4 units **lower** than drug, so the **drug raises** expression by 4 relative to placebo.
+(c) `treatment <- relevel(treatment, ref = "placebo")` (or `factor(treatment, levels = c("placebo","drug"))`). Then the coefficient is `treatmentdrug` $= +4$.
+
+**B11.**
+(a)
+$$
+X = \begin{pmatrix}
+1 & 1 & 0\\
+1 & 0 & 1\\
+1 & 1 & 0\\
+1 & 0 & 1
+\end{pmatrix}
+\quad (\text{(Intercept)},\ \text{sexF},\ \text{sexM})
+$$
+`sexF + sexM` equals the intercept column: every sample is either F or M.
+(b) Females: $\beta_0 + \beta_\text{F}$; males: $\beta_0 + \beta_\text{M}$. $(6, 0, 3)$: F $6$, M $9$. $(9, -3, 0)$: F $6$, M $9$. Any $(c,\ 6 - c,\ 9 - c)$ works, e.g. $(0,\ 6,\ 9)$ or $(5,\ 1,\ 4)$.
+(c) Not unique: infinitely many $\boldsymbol\beta$ fit equally well (the dummy-variable trap). Drop one dummy (keep only `sexM`, as R does), or drop the intercept (`~ 0 + sex`, then the two coefficients are the two group means).
+
+**B12.**
+(a)
+$$
+X_1 = \begin{pmatrix}
+1 & 0 & 0\\
+1 & 0 & 0\\
+1 & 1 & 1\\
+1 & 1 & 1
+\end{pmatrix},
+\qquad
+X_2 = \begin{pmatrix}
+1 & 0 & 0\\
+1 & 0 & 1\\
+1 & 1 & 0\\
+1 & 1 & 1
+\end{pmatrix}
+\quad (\text{(Intercept)},\ \text{batchB},\ \text{treatmenttreat})
+$$
+(b) Design 2. In Design 1 the columns `batchB` and `treatmenttreat` are **identical**.
+(c) Every $\boldsymbol\beta$ with $\beta_0 = 5$ and $\beta_\text{batchB} + \beta_\text{treat} = 3$ fits, e.g. $(5,\ 3,\ 0)$ ("all batch") and $(5,\ 0,\ 3)$ ("all drug"), or $(5,\ 1,\ 2)$. The data cannot tell whether the difference of 3 comes from the drug or from the batch, so nothing can be concluded about the drug.
+(d) Re-plan it so that every batch contains both conditions (as in Design 2). This must be fixed in the **design**, before sequencing; no analysis can separate batch and treatment afterwards.
+
+**B13.**
+(a) **Not unique.** There are no treated males, so the `treatmenttreat:sexM` column is all zeros (an empty cell). Drop the interaction (`~ treatment + sex`), or collect treated males.
+(b) **Not unique.** $p = 1 + 1 + 1 + 2 + 1 + 1 = 7$ columns but only $n = 5$ samples, so the columns must be dependent. Use fewer covariates or many more patients (or, with very many predictors, a penalized model).
+(c) **Unique.** $p = 3$, $n = 6$, and no column is a combination of the others (the ages differ, so `age` is not a combination of the intercept and the treatment dummy). Careful: if all controls were 10 weeks and all treated mice 20 weeks, then `age` $= 10 \times$ (Intercept) $+ 10 \times$ `treatmenttreat` and $\boldsymbol\beta$ would not be unique.
+(d) **Not unique** (as `model.matrix` builds it): the `time24h` column is all zeros because no sample is at 24 h. Drop the unused level (`droplevels(time)`). [`lm`](https://rdrr.io/r/stats/lm.html) actually does this for you, but `model.matrix()` and some tools keep the empty column.
+
+**R1–R6.** These confirm the hand answers.
 
 ```r
 treatment <- factor(c("ctrl","treat","ctrl","treat"))
-age       <- c(10, 40, 22, 35)
-model.matrix(~ treatment + age)     # R1: matches the X in B2
+age       <- c(10, 40, 20, 30)
+X <- model.matrix(~ treatment + age)   # R1: matches B2
+X %*% c(5, 3, 0.1)                      #     6 12 7 11 (B3a)
 
-tissue <- factor(c("brain","gut","liver"))
-model.matrix(~ tissue)              # R2: 2 dummies; brain is reference
+sex <- factor(c("F","M","F","M")); bmi <- c(20, 25, 30, 35)
+model.matrix(~ sex + bmi) %*% c(2, 1, 0.2)   # R2: 6 8 8 10 (B4b)
+model.matrix(~ sex + I(bmi - 25))            #     bmi column becomes -5 0 5 10
+
+batch <- factor(c("A","B","C"))
+model.matrix(~ batch) %*% c(2, 4, -1)        # R3: 2 6 1 (B5c)
+time <- factor(c("0h","0h","6h","6h","24h","24h"), levels = c("0h","6h","24h"))
+model.matrix(~ time) %*% c(4, 6, 3)          #     4 4 10 10 7 7 (B7c)
+
+treatment <- factor(c("ctrl","treat","ctrl","treat"))
+sex       <- factor(c("F","F","M","M"))
+model.matrix(~ treatment * sex) %*% c(4, 1, 2, 3)   # R4: 4 5 6 10 (B8b)
 
 treatment <- factor(c("drug","placebo","drug","placebo"))
-levels(treatment)                   # R3: "drug" "placebo" -> drug is reference
-treatment <- relevel(treatment, ref = "placebo")
-levels(treatment)                   # "placebo" "drug"  -> placebo now reference
+levels(treatment)                            # R5: "drug" "placebo"
+levels(relevel(treatment, ref = "placebo"))  #     "placebo" "drug"
 
-sex <- factor(c("F","M","F","M"))
-colnames(model.matrix(~ treatment * sex))   # R4: main effects + product term
+sexF <- c(1, 0, 1, 0); sexM <- c(0, 1, 0, 1)
+qr(cbind(1, sexF, sexM))$rank                # R6: 2 < 3 columns (B11)
+d1 <- model.matrix(~ factor(c("A","A","B","B")) + factor(c("ctrl","ctrl","treat","treat")))
+d2 <- model.matrix(~ factor(c("A","A","B","B")) + factor(c("ctrl","treat","ctrl","treat")))
+qr(d1)$rank; qr(d2)$rank                     #     2 (Design 1), 3 (Design 2)
+tm <- factor(c("0h","0h","6h","6h"), levels = c("0h","6h","24h"))
+qr(model.matrix(~ tm))$rank                  #     2 < 3 columns (B13d)
 ```
 :::
 
 ## Where this leads
 
-- **Error models (Poisson / negative binomial):** for **count** outcomes (RNA-seq), the covariates still enter through the design matrix $X\boldsymbol\beta$, but inside a **log link** ($\log \mu = X\boldsymbol\beta$) with a count likelihood instead of a Gaussian one.
-- **Hierarchical models:** when samples share structure (several technical replicates per animal, several animals per group), covariate effects can be allowed to **vary across replicates** — the distinction between biological and technical replicates becomes a modelling choice.
-- **Penalized linear models:** when you have **many** covariates or **collinear** ones, plain fitting becomes unstable (an identifiability problem); L1/L2 penalties shrink the coefficients to tame it.
-- **Design and contrast matrices** recur in every differential-expression tool (limma, DESeq2, edgeR): the `model.matrix()` you built here is exactly the `design =` argument those tools expect.
+- **Confounding & Simpson's paradox:** what it means that a coefficient is read "holding the other predictors constant", why adding a covariate can change — even reverse — an effect, and how to read interaction coefficients.
+- **Design matrices in R: DESeq2 & limma:** the `model.matrix()` you built here is exactly what `design = ~ batch + treatment` builds inside DESeq2 for every gene, and what limma takes as `design`. DESeq2 stops with *"the model matrix is not full rank"* for the designs that failed in B11–B13.
+- **Penalized linear models:** when you have more columns than samples ($p > n$), or columns that are almost dependent, ridge and lasso add a penalty that makes the answer unique again.
