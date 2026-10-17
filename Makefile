@@ -1,4 +1,4 @@
-.PHONY: all render preview clean gitadd help figs demos typecheck
+.PHONY: all render preview clean gitadd help figs demos typecheck edit-slides
 
 # Default: render the site, then stage every source file in git.
 all: render gitadd
@@ -30,6 +30,12 @@ demos:
 typecheck:
 	node_modules/.bin/tsc --noEmit -p demos
 
+# Edit slide text and SVG labels in the browser (tools/slide-editor/).
+# Prints a URL with an access token; PORT=... and SLIDE_EDIT_TOKEN=... override.
+PORT ?= 8737
+edit-slides:
+	node tools/slide-editor/server.mjs --port $(PORT)
+
 # Remove the rendered site and Quarto's cache.
 clean:
 	rm -rf docs .quarto
@@ -47,5 +53,6 @@ help:
 	@echo "  make demos     build the interactive demos into demos/dist/ (needs npm i once)"
 	@echo "  make typecheck type-check the demo TypeScript sources"
 	@echo "  make figs      re-generate the R-made figures (matrix-images, polar, compensation, fourier, scrna-log, ctmc, vae, kernels)"
+	@echo "  make edit-slides  edit slide text and figure labels in the browser (port 8737)"
 	@echo "  make gitadd    stage all source files in git"
 	@echo "  make clean     remove docs/ and .quarto/"
