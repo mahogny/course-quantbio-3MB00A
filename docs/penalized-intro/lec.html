@@ -96,6 +96,22 @@
     code span.wa { color: #ff5555; } /* Warning */
   </style>
   <link rel="stylesheet" href="../site_libs/revealjs/dist/theme/quarto-bf56578b9c06c165c166475cd19dbcd1.css">
+  <script>window.backupDefine = window.define; window.define = undefined;</script><script src="https://cdn.jsdelivr.net/npm/katex@latest/dist/katex.min.js"></script>
+  <script>document.addEventListener("DOMContentLoaded", function () {
+ var mathElements = document.getElementsByClassName("math");
+ var macros = [];
+ for (var i = 0; i < mathElements.length; i++) {
+  var texText = mathElements[i].firstChild;
+  if (mathElements[i].tagName == "SPAN") {
+   katex.render(texText.data, mathElements[i], {
+    displayMode: mathElements[i].classList.contains('display'),
+    throwOnError: false,
+    macros: macros,
+    fleqn: false
+   });
+}}});
+  </script>
+  <script>window.define = window.backupDefine; window.backupDefine = undefined;</script><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@latest/dist/katex.min.css">
   <link href="../site_libs/revealjs/plugin/quarto-line-highlight/line-highlight.css" rel="stylesheet">
   <link href="../site_libs/revealjs/plugin/reveal-menu/menu.css" rel="stylesheet">
   <link href="../site_libs/revealjs/plugin/reveal-menu/quarto-menu.css" rel="stylesheet">
@@ -233,8 +249,8 @@ Quantitative biology and integrative omics
 <p>A typical transcriptomics experiment: measure the expression of <strong>20,000 genes</strong> across <strong>30 patients</strong>, and predict a clinical outcome (say, drug response) from expression.</p>
 <ul>
 <li>Each patient is one <strong>row</strong>; each gene is one <strong>column</strong> (a predictor).</li>
-<li>You want a linear model: outcome <span class="math inline">\(\approx \beta_1 g_1 + \beta_2 g_2 + \dots + \beta_p g_p\)</span>.</li>
-<li>You have <strong>30 equations</strong> (patients) but <strong>20,000 unknowns</strong> (the <span class="math inline">\(\beta\)</span>’s).</li>
+<li>You want a linear model: outcome <span class="math inline">\approx \beta_1 g_1 + \beta_2 g_2 + \dots + \beta_p g_p</span>.</li>
+<li>You have <strong>30 equations</strong> (patients) but <strong>20,000 unknowns</strong> (the <span class="math inline">\beta</span>’s).</li>
 </ul>
 <p>There are vastly <strong>more predictors than samples</strong>. This is the defining shape of omics data, and ordinary regression was never designed for it.</p>
 
@@ -254,14 +270,14 @@ Quantitative biology and integrative omics
 </section>
 <section id="recall-the-linear-model" class="slide level2 smaller">
 <h2>Recall: the linear model</h2>
-<p>A linear model predicts an outcome <span class="math inline">\(y\)</span> from predictors as a weighted sum:</p>
-<p><span class="math display">\[y \approx \beta_0 + \beta_1 x_1 + \beta_2 x_2 + \dots + \beta_p x_p\]</span></p>
-<p>Stacked over all <span class="math inline">\(n\)</span> samples, this is a matrix equation:</p>
-<p><span class="math display">\[\mathbf{y} \approx X\boldsymbol{\beta}\]</span></p>
+<p>A linear model predicts an outcome <span class="math inline">y</span> from predictors as a weighted sum:</p>
+<p><span class="math display">y \approx \beta_0 + \beta_1 x_1 + \beta_2 x_2 + \dots + \beta_p x_p</span></p>
+<p>Stacked over all <span class="math inline">n</span> samples, this is a matrix equation:</p>
+<p><span class="math display">\mathbf{y} \approx X\boldsymbol{\beta}</span></p>
 <ul>
-<li><span class="math inline">\(\mathbf{y}\)</span>: the outcome, one number per sample (<span class="math inline">\(n\)</span> long).</li>
-<li><span class="math inline">\(X\)</span>: the <strong>design matrix</strong>, <span class="math inline">\(n\)</span> rows (samples) × <span class="math inline">\(p\)</span> columns (predictors).</li>
-<li><span class="math inline">\(\boldsymbol{\beta}\)</span>: the coefficients we want to learn (<span class="math inline">\(p\)</span> long).</li>
+<li><span class="math inline">\mathbf{y}</span>: the outcome, one number per sample (<span class="math inline">n</span> long).</li>
+<li><span class="math inline">X</span>: the <strong>design matrix</strong>, <span class="math inline">n</span> rows (samples) × <span class="math inline">p</span> columns (predictors).</li>
+<li><span class="math inline">\boldsymbol{\beta}</span>: the coefficients we want to learn (<span class="math inline">p</span> long).</li>
 </ul>
 <p>You have used this as <code>lm()</code> in the statistics block. Today we look <strong>underneath</strong> it.</p>
 
@@ -281,11 +297,11 @@ Quantitative biology and integrative omics
 </section>
 <section id="what-least-squares-wants" class="slide level2 smaller">
 <h2>What least squares wants</h2>
-<p>We can’t hit <span class="math inline">\(\mathbf{y} = X\boldsymbol{\beta}\)</span> exactly (data is noisy), so <strong>ordinary least squares (OLS)</strong> picks the <span class="math inline">\(\boldsymbol{\beta}\)</span> that makes the total squared error smallest:</p>
-<p><span class="math display">\[\hat{\boldsymbol{\beta}} = \arg\min_{\boldsymbol{\beta}} \ \|\mathbf{y} - X\boldsymbol{\beta}\|^2\]</span></p>
+<p>We can’t hit <span class="math inline">\mathbf{y} = X\boldsymbol{\beta}</span> exactly (data is noisy), so <strong>ordinary least squares (OLS)</strong> picks the <span class="math inline">\boldsymbol{\beta}</span> that makes the total squared error smallest:</p>
+<p><span class="math display">\hat{\boldsymbol{\beta}} = \arg\min_{\boldsymbol{\beta}} \ \|\mathbf{y} - X\boldsymbol{\beta}\|^2</span></p>
 <p>Working this out gives the <strong>normal equations</strong>:</p>
-<p><span class="math display">\[X^\top X\,\boldsymbol{\beta} = X^\top \mathbf{y} \qquad\Longrightarrow\qquad \hat{\boldsymbol{\beta}} = (X^\top X)^{-1} X^\top \mathbf{y}\]</span></p>
-<p>Everything hinges on that inverse: we can only solve for <span class="math inline">\(\boldsymbol{\beta}\)</span> <strong>if <span class="math inline">\(X^\top X\)</span> is invertible</strong>.</p>
+<p><span class="math display">X^\top X\,\boldsymbol{\beta} = X^\top \mathbf{y} \qquad\Longrightarrow\qquad \hat{\boldsymbol{\beta}} = (X^\top X)^{-1} X^\top \mathbf{y}</span></p>
+<p>Everything hinges on that inverse: we can only solve for <span class="math inline">\boldsymbol{\beta}</span> <strong>if <span class="math inline">X^\top X</span> is invertible</strong>.</p>
 
 <img data-src="fig04-least-squares-projection.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:60.0%"><aside class="notes">
 <p>State the least-squares objective in words: find the coefficients that minimise the total squared gap between prediction and truth. Don’t derive the normal equations — just present them and point at the single load-bearing object, the matrix X-transpose-X (a p by p matrix), and its inverse. The entire rest of the lecture is about when that inverse fails to exist or is untrustworthy. Students met invertibility and singular matrices in the Linear systems units and eigenvalues; lean on that vocabulary: a matrix you cannot invert is singular.</p>
@@ -303,11 +319,11 @@ Quantitative biology and integrative omics
 </section>
 <section id="when-p-n-the-inverse-does-not-exist" class="slide level2 smaller">
 <h2>When p &gt; n, the inverse does not exist</h2>
-<p><span class="math inline">\(X^\top X\)</span> is a <span class="math inline">\(p \times p\)</span> matrix, but it is built from only <span class="math inline">\(n\)</span> samples. A basic fact of linear algebra:</p>
-<p><span class="math display">\[\text{rank}(X^\top X) \le n\]</span></p>
-<p>So when <strong><span class="math inline">\(p &gt; n\)</span></strong> (more genes than patients), <span class="math inline">\(X^\top X\)</span> is a <span class="math inline">\(p\times p\)</span> matrix of rank at most <span class="math inline">\(n &lt; p\)</span> — it is <strong>singular</strong>. It has <strong>no inverse</strong>.</p>
+<p><span class="math inline">X^\top X</span> is a <span class="math inline">p \times p</span> matrix, but it is built from only <span class="math inline">n</span> samples. A basic fact of linear algebra:</p>
+<p><span class="math display">\text{rank}(X^\top X) \le n</span></p>
+<p>So when <strong><span class="math inline">p &gt; n</span></strong> (more genes than patients), <span class="math inline">X^\top X</span> is a <span class="math inline">p\times p</span> matrix of rank at most <span class="math inline">n &lt; p</span> — it is <strong>singular</strong>. It has <strong>no inverse</strong>.</p>
 <ul>
-<li>There is <strong>no unique</strong> least-squares solution — infinitely many <span class="math inline">\(\boldsymbol{\beta}\)</span> fit the data equally (perfectly) well.</li>
+<li>There is <strong>no unique</strong> least-squares solution — infinitely many <span class="math inline">\boldsymbol{\beta}</span> fit the data equally (perfectly) well.</li>
 <li>The model is <strong>unidentifiable</strong>: the data cannot pin down the coefficients.</li>
 </ul>
 
@@ -327,10 +343,10 @@ Quantitative biology and integrative omics
 </section>
 <section id="even-when-it-inverts-it-can-be-bad" class="slide level2 smaller">
 <h2>Even when it inverts, it can be bad</h2>
-<p>Suppose <span class="math inline">\(p &lt; n\)</span>, so <span class="math inline">\(X^\top X\)</span> <em>is</em> invertible. You are still not safe if predictors are <strong>correlated</strong> — which genes always are (co-regulated pathways, batch structure).</p>
+<p>Suppose <span class="math inline">p &lt; n</span>, so <span class="math inline">X^\top X</span> <em>is</em> invertible. You are still not safe if predictors are <strong>correlated</strong> — which genes always are (co-regulated pathways, batch structure).</p>
 <ul>
-<li>Correlated columns make <span class="math inline">\(X^\top X\)</span> <strong>nearly singular</strong> (an eigenvalue close to 0).</li>
-<li>Inverting a nearly-singular matrix <strong>amplifies noise</strong>: tiny changes in the data cause huge swings in <span class="math inline">\(\hat{\boldsymbol{\beta}}\)</span>.</li>
+<li>Correlated columns make <span class="math inline">X^\top X</span> <strong>nearly singular</strong> (an eigenvalue close to 0).</li>
+<li>Inverting a nearly-singular matrix <strong>amplifies noise</strong>: tiny changes in the data cause huge swings in <span class="math inline">\hat{\boldsymbol{\beta}}</span>.</li>
 <li>The fitted coefficients become <strong>large, unstable, and hard to interpret</strong> — often big positive and negative values that cancel.</li>
 </ul>
 <p>This is <strong>multicollinearity</strong>, and in genomics it is the rule, not the exception.</p>
@@ -351,7 +367,7 @@ Quantitative biology and integrative omics
 </section>
 <section id="the-real-goal-prediction-not-perfect-fit" class="slide level2 smaller">
 <h2>The real goal: prediction, not perfect fit</h2>
-<p>It is tempting to want the <span class="math inline">\(\boldsymbol{\beta}\)</span> that fits <em>this</em> dataset best. But we almost never care about this dataset — we care about the <strong>next</strong> patient.</p>
+<p>It is tempting to want the <span class="math inline">\boldsymbol{\beta}</span> that fits <em>this</em> dataset best. But we almost never care about this dataset — we care about the <strong>next</strong> patient.</p>
 <ul>
 <li>A model with enough free parameters can fit the training data <strong>perfectly</strong>, noise and all.</li>
 <li>That model has learned the <strong>noise</strong>, not the biology — it <strong>overfits</strong>.</li>
@@ -380,7 +396,7 @@ Quantitative biology and integrative omics
 <li><strong>Bias</strong> — error from the model being too rigid to capture the true pattern. (Underfitting.)</li>
 <li><strong>Variance</strong> — error from the model being so flexible it chases noise, changing wildly from sample to sample. (Overfitting.)</li>
 </ul>
-<p><span class="math display">\[\text{expected prediction error} \;=\; \text{bias}^2 \;+\; \text{variance} \;+\; \text{irreducible noise}\]</span></p>
+<p><span class="math display">\text{expected prediction error} \;=\; \text{bias}^2 \;+\; \text{variance} \;+\; \text{irreducible noise}</span></p>
 <p>OLS with many predictors is a <strong>low-bias, high-variance</strong> machine: flexible enough to fit anything, so unstable it generalises poorly. We can often <strong>lower total error by accepting a little bias</strong> to cut variance a lot.</p>
 
 <img data-src="fig08-bias-variance-u-curve.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:60.0%"><aside class="notes">
@@ -400,10 +416,10 @@ Quantitative biology and integrative omics
 <section id="the-idea-penalize-large-coefficients" class="slide level2 smaller">
 <h2>The idea: penalize large coefficients</h2>
 <p>Instead of minimising only the fit error, add a <strong>penalty</strong> that grows with the size of the coefficients:</p>
-<p><span class="math display">\[\hat{\boldsymbol{\beta}} = \arg\min_{\boldsymbol{\beta}} \ \underbrace{\|\mathbf{y} - X\boldsymbol{\beta}\|^2}_{\text{fit the data}} \;+\; \lambda\underbrace{\,\text{(size of }\boldsymbol{\beta}\text{)}}_{\text{stay small}}\]</span></p>
+<p><span class="math display">\hat{\boldsymbol{\beta}} = \arg\min_{\boldsymbol{\beta}} \ \underbrace{\|\mathbf{y} - X\boldsymbol{\beta}\|^2}_{\text{fit the data}} \;+\; \lambda\underbrace{\,\text{(size of }\boldsymbol{\beta}\text{)}}_{\text{stay small}}</span></p>
 <ul>
 <li>The first term still rewards fitting the data.</li>
-<li>The second term <strong>punishes</strong> large coefficients. <span class="math inline">\(\lambda \ge 0\)</span> sets how hard.</li>
+<li>The second term <strong>punishes</strong> large coefficients. <span class="math inline">\lambda \ge 0</span> sets how hard.</li>
 <li>The fit now has to <em>justify</em> every unit of coefficient it uses against the penalty.</li>
 </ul>
 <p>We deliberately move <strong>away</strong> from the perfect-fit solution to buy <strong>stability</strong>.</p>
@@ -424,9 +440,9 @@ Quantitative biology and integrative omics
 <section id="what-the-penalty-buys-geometrically" class="slide level2 smaller">
 <h2>What the penalty buys, geometrically</h2>
 <p>Two ways to see why shrinking coefficients helps:</p>
-<p><strong>It fixes the inverse.</strong> The penalized normal equations replace <span class="math inline">\(X^\top X\)</span> with</p>
-<p><span class="math display">\[X^\top X + \lambda I\]</span></p>
-<p>Adding <span class="math inline">\(\lambda\)</span> to the diagonal lifts every eigenvalue by <span class="math inline">\(\lambda &gt; 0\)</span>, so the matrix is <strong>always invertible</strong> — even when <span class="math inline">\(p &gt; n\)</span>. The unidentifiable problem becomes solvable.</p>
+<p><strong>It fixes the inverse.</strong> The penalized normal equations replace <span class="math inline">X^\top X</span> with</p>
+<p><span class="math display">X^\top X + \lambda I</span></p>
+<p>Adding <span class="math inline">\lambda</span> to the diagonal lifts every eigenvalue by <span class="math inline">\lambda &gt; 0</span>, so the matrix is <strong>always invertible</strong> — even when <span class="math inline">p &gt; n</span>. The unidentifiable problem becomes solvable.</p>
 <p><strong>It calms the variance.</strong> Shrinking coefficients toward zero makes them <strong>less sensitive</strong> to noise in any one sample. Estimates stop swinging.</p>
 
 <img data-src="fig10-eigenvalue-shift-lambdaI.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:65.0%"><aside class="notes">
@@ -447,12 +463,12 @@ Quantitative biology and integrative omics
 <h2>The trade, made honest</h2>
 <p>Penalization is not free. By pulling coefficients toward zero we introduce <strong>bias</strong>: the estimates are systematically shrunk, so they no longer match the true values on average.</p>
 <ul>
-<li>Small <span class="math inline">\(\lambda\)</span>: close to OLS — low bias, high variance (overfits).</li>
-<li>Large <span class="math inline">\(\lambda\)</span>: heavy shrinkage — high bias, low variance (underfits, coefficients near 0).</li>
+<li>Small <span class="math inline">\lambda</span>: close to OLS — low bias, high variance (overfits).</li>
+<li>Large <span class="math inline">\lambda</span>: heavy shrinkage — high bias, low variance (underfits, coefficients near 0).</li>
 <li><strong>Somewhere in between</strong> minimises total prediction error.</li>
 </ul>
-<p><span class="math display">\[\text{penalty strength } \lambda \;\longleftrightarrow\; \text{the bias–variance dial}\]</span></p>
-<p>Choosing <span class="math inline">\(\lambda\)</span> well (e.g.&nbsp;by <strong>cross-validation</strong>, in a later unit) is the whole game.</p>
+<p><span class="math display">\text{penalty strength } \lambda \;\longleftrightarrow\; \text{the bias–variance dial}</span></p>
+<p>Choosing <span class="math inline">\lambda</span> well (e.g.&nbsp;by <strong>cross-validation</strong>, in a later unit) is the whole game.</p>
 
 <img data-src="fig11-lambda-shrinkage-dial.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:65.0%"><aside class="notes">
 <p>Be honest about the cost, per the course’s “honest about what we defer” principle. Shrinkage biases the estimates — that is the price. So lambda is literally the bias–variance dial: turn it up and you move from the overfit OLS end toward the oversmoothed end. The sweet spot in the middle minimises total error. How to find it — cross-validation — is deferred to a later unit; name it, don’t teach it today. The takeaway: penalization does not magically improve everything; it lets you <em>choose</em> a better point on the tradeoff than OLS forces on you.</p>
@@ -472,7 +488,7 @@ Quantitative biology and integrative omics
 <h2>Biological payoff</h2>
 <p>Why this matters for the wide, short omics matrix we started with:</p>
 <ul>
-<li><strong>Solvable at all.</strong> With <span class="math inline">\(p \gg n\)</span>, penalization is what makes a gene-expression predictor computable in the first place.</li>
+<li><strong>Solvable at all.</strong> With <span class="math inline">p \gg n</span>, penalization is what makes a gene-expression predictor computable in the first place.</li>
 <li><strong>Stable signatures.</strong> Shrinkage gives coefficients that don’t flip sign when you swap a few patients — reproducible gene signatures.</li>
 <li><strong>Better prediction</strong> on held-out patients, which is what a clinical model is for.</li>
 <li><strong>Some penalties select genes.</strong> One flavour (coming in a later unit) drives most coefficients exactly to zero, yielding a short, interpretable gene list.</li>
@@ -493,7 +509,7 @@ Quantitative biology and integrative omics
 </section>
 <section id="a-first-look-in-r" class="slide level2 smaller">
 <h2>A first look in R</h2>
-<p>You have used <code>lm()</code> for ordinary least squares. Penalized models use <code>glmnet</code>, which fits along a whole range of <span class="math inline">\(\lambda\)</span> at once:</p>
+<p>You have used <code>lm()</code> for ordinary least squares. Penalized models use <code>glmnet</code>, which fits along a whole range of <span class="math inline">\lambda</span> at once:</p>
 <div class="sourceCode" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a aria-hidden="true" tabindex="-1"></a><span class="co"># ordinary least squares -- fails or overfits when p &gt;&gt; n</span></span>
 <span id="cb1-2"><a aria-hidden="true" tabindex="-1"></a>fit_ols <span class="ot">&lt;-</span> <span class="fu">lm</span>(response <span class="sc">~</span> ., <span class="at">data =</span> expr)</span>
 <span id="cb1-3"><a aria-hidden="true" tabindex="-1"></a></span>
@@ -503,7 +519,7 @@ Quantitative biology and integrative omics
 <span id="cb1-7"><a aria-hidden="true" tabindex="-1"></a>y <span class="ot">&lt;-</span> expr<span class="sc">$</span>response</span>
 <span id="cb1-8"><a aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb1-9"><a aria-hidden="true" tabindex="-1"></a>fit_pen <span class="ot">&lt;-</span> <span class="fu">glmnet</span>(x, y, <span class="at">alpha =</span> <span class="dv">0</span>)   <span class="co"># alpha = 0 is ridge; alpha = 1 is lasso</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<p>Don’t worry about the details yet — later units unpack <code>alpha</code>, the <span class="math inline">\(\lambda\)</span> path, and choosing <span class="math inline">\(\lambda\)</span> by cross-validation. Today only the <strong>idea</strong> matters.</p>
+<p>Don’t worry about the details yet — later units unpack <code>alpha</code>, the <span class="math inline">\lambda</span> path, and choosing <span class="math inline">\lambda</span> by cross-validation. Today only the <strong>idea</strong> matters.</p>
 <aside class="notes">
 <p>Show the tool at the horizon so the code is not a surprise later, but keep it static and unrun — no package is installed at render time, and today is conceptual. The one thing to register: <code>lm()</code> gives OLS; <code>glmnet</code> adds the penalty and fits many lambdas at once. Mention that alpha picks the penalty flavour (0 = ridge, 1 = lasso) without explaining the difference — that is a later unit. Reassure them the details come later; do not let them get lost in glmnet arguments today.</p>
 <style type="text/css">
@@ -534,23 +550,23 @@ Quantitative biology and integrative omics
 </thead>
 <tbody>
 <tr class="odd">
-<td>Solving <span class="math inline">\(A\mathbf{x}=\mathbf{b}\)</span>, unique vs.&nbsp;infinite solutions</td>
-<td>when OLS has no unique <span class="math inline">\(\hat{\boldsymbol\beta}\)</span></td>
+<td>Solving <span class="math inline">A\mathbf{x}=\mathbf{b}</span>, unique vs.&nbsp;infinite solutions</td>
+<td>when OLS has no unique <span class="math inline">\hat{\boldsymbol\beta}</span></td>
 </tr>
 <tr class="even">
 <td><strong>Rank</strong> and singular matrices</td>
-<td>why <span class="math inline">\(p&gt;n\)</span> makes <span class="math inline">\(X^\top X\)</span> non-invertible</td>
+<td>why <span class="math inline">p&gt;n</span> makes <span class="math inline">X^\top X</span> non-invertible</td>
 </tr>
 <tr class="odd">
 <td>Matrix <strong>inverse</strong></td>
-<td>the normal equations <span class="math inline">\(\hat{\boldsymbol\beta}=(X^\top X)^{-1}X^\top\mathbf{y}\)</span></td>
+<td>the normal equations <span class="math inline">\hat{\boldsymbol\beta}=(X^\top X)^{-1}X^\top\mathbf{y}</span></td>
 </tr>
 <tr class="even">
 <td><strong>Eigenvalues</strong> near zero</td>
 <td>why correlated genes make the inverse explode</td>
 </tr>
 <tr class="odd">
-<td>Adding <span class="math inline">\(\lambda I\)</span> shifts eigenvalues up</td>
+<td>Adding <span class="math inline">\lambda I</span> shifts eigenvalues up</td>
 <td>why the penalty restores invertibility</td>
 </tr>
 </tbody>
@@ -590,11 +606,11 @@ Quantitative biology and integrative omics
 </tr>
 <tr class="even">
 <td>OLS solution</td>
-<td><span class="math inline">\(\hat{\boldsymbol\beta}=(X^\top X)^{-1}X^\top\mathbf{y}\)</span> — needs an invertible <span class="math inline">\(X^\top X\)</span></td>
+<td><span class="math inline">\hat{\boldsymbol\beta}=(X^\top X)^{-1}X^\top\mathbf{y}</span> — needs an invertible <span class="math inline">X^\top X</span></td>
 </tr>
 <tr class="odd">
 <td>Hard failure</td>
-<td><span class="math inline">\(p&gt;n\)</span> ⇒ <span class="math inline">\(X^\top X\)</span> singular ⇒ <strong>no unique</strong> solution</td>
+<td><span class="math inline">p&gt;n</span> ⇒ <span class="math inline">X^\top X</span> singular ⇒ <strong>no unique</strong> solution</td>
 </tr>
 <tr class="even">
 <td>Soft failure</td>
@@ -610,19 +626,19 @@ Quantitative biology and integrative omics
 </tr>
 <tr class="odd">
 <td><strong>Penalize</strong></td>
-<td>add <span class="math inline">\(\lambda\cdot(\text{coefficient size})\)</span> to the objective</td>
+<td>add <span class="math inline">\lambda\cdot(\text{coefficient size})</span> to the objective</td>
 </tr>
 <tr class="even">
 <td>The fix</td>
-<td><span class="math inline">\(X^\top X + \lambda I\)</span> is always invertible; coefficients shrink &amp; stabilise</td>
+<td><span class="math inline">X^\top X + \lambda I</span> is always invertible; coefficients shrink &amp; stabilise</td>
 </tr>
 <tr class="odd">
 <td>The cost</td>
-<td>shrinkage adds bias; <span class="math inline">\(\lambda\)</span> is the dial, tuned later</td>
+<td>shrinkage adds bias; <span class="math inline">\lambda</span> is the dial, tuned later</td>
 </tr>
 </tbody>
 </table>
-<p><strong>Next in this block:</strong> the specific penalties — <strong>ridge</strong> and <strong>lasso</strong> — and how to choose <span class="math inline">\(\lambda\)</span>.</p>
+<p><strong>Next in this block:</strong> the specific penalties — <strong>ridge</strong> and <strong>lasso</strong> — and how to choose <span class="math inline">\lambda</span>.</p>
 <aside class="notes">
 <p>The summary is the whole argument in one table. Drill the storyline verbally one more time: omics is wide and short; OLS needs an invertible X-transpose-X; p &gt; n makes it singular (hard failure) and correlated genes make it nearly singular (soft failure); we actually care about predicting new data, not fitting this data; the bias–variance tradeoff says we can trade bias for variance; penalization does exactly that by charging for coefficient size, which also restores invertibility via lambda*I. The cost is bias, controlled by lambda. Next units make the penalty concrete (ridge, lasso) and teach choosing lambda.</p>
 <style type="text/css">
@@ -659,7 +675,6 @@ Quantitative biology and integrative omics
   <script src="../site_libs/revealjs/plugin/notes/notes.js"></script>
   <script src="../site_libs/revealjs/plugin/search/search.js"></script>
   <script src="../site_libs/revealjs/plugin/zoom/zoom.js"></script>
-  <script src="../site_libs/revealjs/plugin/math/math.js"></script>
   <script>window.define = window.backupDefine; window.backupDefine = undefined;</script>
 
   <script>
@@ -827,27 +842,9 @@ Quantitative biology and integrative omics
         // Factor of the display size that should remain empty around the content
         margin: 0.1,
 
-        math: {
-          mathjax: 'https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.9/MathJax.js',
-          config: 'TeX-AMS_HTML-full',
-          tex2jax: {
-            inlineMath: [['\\(','\\)']],
-            displayMath: [['\\[','\\]']],
-            balanceBraces: true,
-            processEscapes: false,
-            processRefs: true,
-            processEnvironments: true,
-            preview: 'TeX',
-            skipTags: ['script','noscript','style','textarea','pre','code'],
-            ignoreClass: 'tex2jax_ignore',
-            processClass: 'tex2jax_process'
-          },
-        },
-
         // reveal.js plugins
         plugins: [QuartoLineHighlight, PdfExport, RevealMenu, QuartoSupport,
 
-          RevealMath,
           RevealNotes,
           RevealSearch,
           RevealZoom

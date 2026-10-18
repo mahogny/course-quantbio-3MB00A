@@ -96,6 +96,22 @@
     code span.wa { color: #ff5555; } /* Warning */
   </style>
   <link rel="stylesheet" href="../site_libs/revealjs/dist/theme/quarto-bf56578b9c06c165c166475cd19dbcd1.css">
+  <script>window.backupDefine = window.define; window.define = undefined;</script><script src="https://cdn.jsdelivr.net/npm/katex@latest/dist/katex.min.js"></script>
+  <script>document.addEventListener("DOMContentLoaded", function () {
+ var mathElements = document.getElementsByClassName("math");
+ var macros = [];
+ for (var i = 0; i < mathElements.length; i++) {
+  var texText = mathElements[i].firstChild;
+  if (mathElements[i].tagName == "SPAN") {
+   katex.render(texText.data, mathElements[i], {
+    displayMode: mathElements[i].classList.contains('display'),
+    throwOnError: false,
+    macros: macros,
+    fleqn: false
+   });
+}}});
+  </script>
+  <script>window.define = window.backupDefine; window.backupDefine = undefined;</script><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@latest/dist/katex.min.css">
   <link href="../site_libs/revealjs/plugin/quarto-line-highlight/line-highlight.css" rel="stylesheet">
   <link href="../site_libs/revealjs/plugin/reveal-menu/menu.css" rel="stylesheet">
   <link href="../site_libs/revealjs/plugin/reveal-menu/quarto-menu.css" rel="stylesheet">
@@ -207,15 +223,15 @@ Quantitative biology and integrative omics
 </section>
 <section id="about-this-lecture" class="slide level2">
 <h2>About this lecture</h2>
-<p>In Markov chains, time moved in <strong>steps</strong>: <span class="math inline">\(\mathbf{x}_{t+1} = \mathbf{x}_t P\)</span>. Real cells do not wait for a clock tick. A promoter can switch on at 10:03:17, and an ion channel can open after 2.4 ms.</p>
+<p>In Markov chains, time moved in <strong>steps</strong>: <span class="math inline">\mathbf{x}_{t+1} = \mathbf{x}_t P</span>. Real cells do not wait for a clock tick. A promoter can switch on at 10:03:17, and an ion channel can open after 2.4 ms.</p>
 <p>This lecture builds the <strong>continuous-time</strong> version of the same idea:</p>
 <ul>
 <li><strong>Rates</strong> instead of per-step probabilities.</li>
 <li>The time spent in a state is <strong>exponential</strong> (from Error models).</li>
-<li>The <strong>rate matrix</strong> <span class="math inline">\(Q\)</span>, whose rows sum to <strong>0</strong>.</li>
+<li>The <strong>rate matrix</strong> <span class="math inline">Q</span>, whose rows sum to <strong>0</strong>.</li>
 <li><strong>Simulating</strong> a chain: draw a waiting time, then pick a jump.</li>
-<li>The <strong>stationary distribution</strong> from <span class="math inline">\(\boldsymbol\pi Q = \mathbf{0}\)</span>, found by balancing flows.</li>
-<li>How <span class="math inline">\(Q\)</span> links back to the step matrix <span class="math inline">\(P\)</span>.</li>
+<li>The <strong>stationary distribution</strong> from <span class="math inline">\boldsymbol\pi Q = \mathbf{0}</span>, found by balancing flows.</li>
+<li>How <span class="math inline">Q</span> links back to the step matrix <span class="math inline">P</span>.</li>
 </ul>
 <aside class="notes">
 <p>This is candidate material that builds directly on Markov chains and Markov chains in R, and borrows one result from Error models: waiting times between random events are exponential. Same notation as before: row vectors, rows are “from”, columns are “to”. The one genuinely new object is the rate matrix Q. Everything else is a translation of what students already know about P. Keep the maths at the level of “rate = expected number of events per unit time”.</p>
@@ -258,7 +274,7 @@ Quantitative biology and integrative omics
 </section>
 <section id="from-per-step-probabilities-to-rates" class="slide level2 smaller">
 <h2>From per-step probabilities to rates</h2>
-<p>A <strong>rate</strong> is “expected number of events per unit of time”, for example <span class="math inline">\(0.5\)</span> per minute.</p>
+<p>A <strong>rate</strong> is “expected number of events per unit of time”, for example <span class="math inline">0.5</span> per minute.</p>
 <table class="caption-top">
 <colgroup>
 <col style="width: 33%">
@@ -275,29 +291,29 @@ Quantitative biology and integrative omics
 <tbody>
 <tr class="odd">
 <td>Time</td>
-<td>steps <span class="math inline">\(t = 0, 1, 2, \dots\)</span></td>
-<td>any time <span class="math inline">\(t \ge 0\)</span></td>
+<td>steps <span class="math inline">t = 0, 1, 2, \dots</span></td>
+<td>any time <span class="math inline">t \ge 0</span></td>
 </tr>
 <tr class="even">
-<td>Arrow <span class="math inline">\(i \to j\)</span> carries</td>
-<td>probability <span class="math inline">\(p_{ij}\)</span> per step</td>
-<td><strong>rate</strong> <span class="math inline">\(q_{ij}\)</span>, e.g.&nbsp;0.5 /min</td>
+<td>Arrow <span class="math inline">i \to j</span> carries</td>
+<td>probability <span class="math inline">p_{ij}</span> per step</td>
+<td><strong>rate</strong> <span class="math inline">q_{ij}</span>, e.g.&nbsp;0.5 /min</td>
 </tr>
 <tr class="odd">
 <td>Staying put</td>
-<td>self-loop <span class="math inline">\(p_{ii}\)</span></td>
+<td>self-loop <span class="math inline">p_{ii}</span></td>
 <td>no self-loop: just “not jumped yet”</td>
 </tr>
 <tr class="even">
 <td>Collected in</td>
-<td><span class="math inline">\(P\)</span>, rows sum to <strong>1</strong></td>
-<td><span class="math inline">\(Q\)</span>, rows sum to <strong>0</strong></td>
+<td><span class="math inline">P</span>, rows sum to <strong>1</strong></td>
+<td><span class="math inline">Q</span>, rows sum to <strong>0</strong></td>
 </tr>
 </tbody>
 </table>
-<p>For a <strong>short</strong> time <span class="math inline">\(\Delta t\)</span>, a rate turns into a small probability:</p>
-<p><span class="math display">\[P(\text{jump } i \to j \text{ within } \Delta t) \;\approx\; q_{ij}\,\Delta t .\]</span></p>
-<p>With <span class="math inline">\(q_{\text{ON}\to\text{OFF}} = 0.5\)</span> /min: in 6 seconds (<span class="math inline">\(\Delta t = 0.1\)</span> min) the chance to switch off is about <span class="math inline">\(0.05\)</span>.</p>
+<p>For a <strong>short</strong> time <span class="math inline">\Delta t</span>, a rate turns into a small probability:</p>
+<p><span class="math display">P(\text{jump } i \to j \text{ within } \Delta t) \;\approx\; q_{ij}\,\Delta t .</span></p>
+<p>With <span class="math inline">q_{\text{ON}\to\text{OFF}} = 0.5</span> /min: in 6 seconds (<span class="math inline">\Delta t = 0.1</span> min) the chance to switch off is about <span class="math inline">0.05</span>.</p>
 <aside class="notes">
 <p>The table is the map for the whole lecture; come back to it at the end. The key sentence: a rate is not a probability. A rate can be larger than 1 (2 per minute is fine), and it has units. The approximation q times delta-t only holds for short intervals, where the product is small; for long intervals it would exceed 1. We will return to this approximation near the end, where it gives P ≈ I + QΔt. The “no self-loop” row often surprises students: in continuous time staying is not an event; it is simply time passing without a jump.</p>
 <style type="text/css">
@@ -314,15 +330,15 @@ Quantitative biology and integrative omics
 </section>
 <section id="how-long-do-you-stay-exponential-waiting-times" class="slide level2 smaller">
 <h2>How long do you stay? Exponential waiting times</h2>
-<p>Let <span class="math inline">\(q_i\)</span> be the <strong>total rate of leaving</strong> state <span class="math inline">\(i\)</span> (the sum of the rates on all arrows out of <span class="math inline">\(i\)</span>). Then the time <span class="math inline">\(T\)</span> spent in <span class="math inline">\(i\)</span> before the next jump is <strong>exponential</strong> (see the exponential distribution in Error models):</p>
-<p><span class="math display">\[T \sim \text{Exp}(q_i), \qquad \text{mean time in } i = \frac{1}{q_i}.\]</span></p>
-<p>Promoter: ON is left at <span class="math inline">\(a = 0.5\)</span> /min, so an ON period lasts on average <span class="math inline">\(1/0.5 = 2\)</span> minutes.</p>
+<p>Let <span class="math inline">q_i</span> be the <strong>total rate of leaving</strong> state <span class="math inline">i</span> (the sum of the rates on all arrows out of <span class="math inline">i</span>). Then the time <span class="math inline">T</span> spent in <span class="math inline">i</span> before the next jump is <strong>exponential</strong> (see the exponential distribution in Error models):</p>
+<p><span class="math display">T \sim \text{Exp}(q_i), \qquad \text{mean time in } i = \frac{1}{q_i}.</span></p>
+<p>Promoter: ON is left at <span class="math inline">a = 0.5</span> /min, so an ON period lasts on average <span class="math inline">1/0.5 = 2</span> minutes.</p>
 <div class="columns">
 <div class="column" style="width:52%;">
 <ul>
 <li>Short periods are the most common; long ones are rare but do happen.</li>
 <li><strong>Memoryless</strong>: a promoter that has been ON for 5 minutes is no more likely to switch off in the next second than one that just switched on.</li>
-<li>Same maths as gaps between random events, for example <span class="math inline">\(P(T &gt; 4) = e^{-0.5\cdot 4} \approx 0.135\)</span>.</li>
+<li>Same maths as gaps between random events, for example <span class="math inline">P(T &gt; 4) = e^{-0.5\cdot 4} \approx 0.135</span>.</li>
 </ul>
 </div><div class="column" style="width:48%;">
 <p><img data-src="fig04-waiting-times.svg" style="width:100.0%"></p>
@@ -345,8 +361,8 @@ Quantitative biology and integrative omics
 <h2>Where to jump next: the jump chain</h2>
 <p>When a state has <strong>several</strong> arrows out, two questions are answered separately:</p>
 <ol type="1">
-<li><strong>When</strong> do you leave? After an <span class="math inline">\(\text{Exp}(q_i)\)</span> time, where <span class="math inline">\(q_i = \sum_{j \ne i} q_{ij}\)</span>.</li>
-<li><strong>Where</strong> do you go? To <span class="math inline">\(j\)</span> with probability <span class="math display">\[\frac{q_{ij}}{q_i} = \frac{\text{rate to } j}{\text{total leaving rate}}.\]</span></li>
+<li><strong>When</strong> do you leave? After an <span class="math inline">\text{Exp}(q_i)</span> time, where <span class="math inline">q_i = \sum_{j \ne i} q_{ij}</span>.</li>
+<li><strong>Where</strong> do you go? To <span class="math inline">j</span> with probability <span class="math display">\frac{q_{ij}}{q_i} = \frac{\text{rate to } j}{\text{total leaving rate}}.</span></li>
 </ol>
 
 <img data-src="fig05-jump-chain.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:58.0%"><p>The list of states visited, ignoring the times, is an ordinary discrete Markov chain (the <strong>jump chain</strong>), with no self-loops.</p>
@@ -365,14 +381,14 @@ Quantitative biology and integrative omics
       }</style></aside>
 </section>
 <section id="the-rate-matrix-q" class="slide level2 smaller">
-<h2>The rate matrix <span class="math inline">\(Q\)</span></h2>
-<p>Collect the rates in a matrix, in the same <strong>row = from, column = to</strong> convention as <span class="math inline">\(P\)</span>:</p>
+<h2>The rate matrix <span class="math inline">Q</span></h2>
+<p>Collect the rates in a matrix, in the same <strong>row = from, column = to</strong> convention as <span class="math inline">P</span>:</p>
 <ul>
-<li><strong>Off the diagonal:</strong> <span class="math inline">\(q_{ij}\)</span> = rate from <span class="math inline">\(i\)</span> to <span class="math inline">\(j\)</span> (zero if there is no arrow).</li>
-<li><strong>On the diagonal:</strong> <span class="math inline">\(q_{ii} = -q_i\)</span>, minus the total rate of leaving <span class="math inline">\(i\)</span>.</li>
+<li><strong>Off the diagonal:</strong> <span class="math inline">q_{ij}</span> = rate from <span class="math inline">i</span> to <span class="math inline">j</span> (zero if there is no arrow).</li>
+<li><strong>On the diagonal:</strong> <span class="math inline">q_{ii} = -q_i</span>, minus the total rate of leaving <span class="math inline">i</span>.</li>
 </ul>
-<p>So <strong>every row of <span class="math inline">\(Q\)</span> sums to 0</strong>. For 3 cell states (rates per day):</p>
-<p><span class="math display">\[
+<p>So <strong>every row of <span class="math inline">Q</span> sums to 0</strong>. For 3 cell states (rates per day):</p>
+<p><span class="math display">
 Q = \begin{array}{c c}
 &amp; \begin{array}{ccc}\ \text{stem} &amp; \ \ \text{prog} &amp; \ \ \text{diff}\end{array}\\
 \begin{array}{c}\text{stem}\\ \text{prog}\\ \text{diff}\end{array} &amp;
@@ -383,22 +399,22 @@ Q = \begin{array}{c c}
 \end{array}\right)
 \end{array}
 \qquad \begin{array}{l} \leftarrow -0.4 + 0.4 + 0 = 0\\ \leftarrow 0.2 - 0.4 + 0.2 = 0\\ \leftarrow 0 + 0.1 - 0.1 = 0\end{array}
-\]</span></p>
+</span></p>
 <table class="caption-top">
 <thead>
 <tr class="header">
-<th>Check for <span class="math inline">\(P\)</span> (discrete)</th>
-<th>Check for <span class="math inline">\(Q\)</span> (continuous)</th>
+<th>Check for <span class="math inline">P</span> (discrete)</th>
+<th>Check for <span class="math inline">Q</span> (continuous)</th>
 </tr>
 </thead>
 <tbody>
 <tr class="odd">
 <td>entries between 0 and 1</td>
-<td>off-diagonal entries <span class="math inline">\(\ge 0\)</span> (any size)</td>
+<td>off-diagonal entries <span class="math inline">\ge 0</span> (any size)</td>
 </tr>
 <tr class="even">
 <td>rows sum to <strong>1</strong></td>
-<td>diagonal <span class="math inline">\(\le 0\)</span>, rows sum to <strong>0</strong></td>
+<td>diagonal <span class="math inline">\le 0</span>, rows sum to <strong>0</strong></td>
 </tr>
 </tbody>
 </table>
@@ -422,17 +438,17 @@ Q = \begin{array}{c c}
 <div class="column" style="width:50%;">
 <p><img data-src="fig03-rate-diagram.svg" style="width:100.0%"></p>
 </div><div class="column" style="width:50%;">
-<p>States ordered <span class="math inline">\((\text{ON}, \text{OFF})\)</span>; <span class="math inline">\(a\)</span> = rate ON→OFF, <span class="math inline">\(b\)</span> = rate OFF→ON.</p>
-<p><span class="math display">\[Q = \begin{pmatrix} -a &amp; a\\ b &amp; -b \end{pmatrix} = \begin{pmatrix} -0.5 &amp; 0.5\\ 0.25 &amp; -0.25 \end{pmatrix}\]</span></p>
+<p>States ordered <span class="math inline">(\text{ON}, \text{OFF})</span>; <span class="math inline">a</span> = rate ON→OFF, <span class="math inline">b</span> = rate OFF→ON.</p>
+<p><span class="math display">Q = \begin{pmatrix} -a &amp; a\\ b &amp; -b \end{pmatrix} = \begin{pmatrix} -0.5 &amp; 0.5\\ 0.25 &amp; -0.25 \end{pmatrix}</span></p>
 <ul>
-<li>Rows: <span class="math inline">\(-0.5 + 0.5 = 0\)</span> ✓, <span class="math inline">\(\ 0.25 - 0.25 = 0\)</span> ✓</li>
-<li>Leaving rates: <span class="math inline">\(q_{\text{ON}} = 0.5\)</span>, <span class="math inline">\(q_{\text{OFF}} = 0.25\)</span> /min</li>
-<li>Mean times: ON <span class="math inline">\(1/0.5 = 2\)</span> min, OFF <span class="math inline">\(1/0.25 = 4\)</span> min</li>
+<li>Rows: <span class="math inline">-0.5 + 0.5 = 0</span> ✓, <span class="math inline">\ 0.25 - 0.25 = 0</span> ✓</li>
+<li>Leaving rates: <span class="math inline">q_{\text{ON}} = 0.5</span>, <span class="math inline">q_{\text{OFF}} = 0.25</span> /min</li>
+<li>Mean times: ON <span class="math inline">1/0.5 = 2</span> min, OFF <span class="math inline">1/0.25 = 4</span> min</li>
 <li>With only one arrow out, the jump chain is “always switch”.</li>
 </ul>
 </div></div>
-<p>How does a population change? Like <span class="math inline">\(\mathbf{x}_{t+1} - \mathbf{x}_t = \mathbf{x}_t(P - I)\)</span> in discrete time, here <strong>change per minute</strong> <span class="math inline">\(= \mathbf{x}(t)\,Q\)</span>:</p>
-<p><span class="math display">\[\text{change in } x_{\text{ON}} \text{ per minute} = \underbrace{-a\,x_{\text{ON}}}_{\text{leaving ON}} + \underbrace{b\,x_{\text{OFF}}}_{\text{arriving from OFF}}.\]</span></p>
+<p>How does a population change? Like <span class="math inline">\mathbf{x}_{t+1} - \mathbf{x}_t = \mathbf{x}_t(P - I)</span> in discrete time, here <strong>change per minute</strong> <span class="math inline">= \mathbf{x}(t)\,Q</span>:</p>
+<p><span class="math display">\text{change in } x_{\text{ON}} \text{ per minute} = \underbrace{-a\,x_{\text{ON}}}_{\text{leaving ON}} + \underbrace{b\,x_{\text{OFF}}}_{\text{arriving from OFF}}.</span></p>
 <aside class="notes">
 <p>Work through this on the board. Read Q off the diagram row by row: the ON row has the ON→OFF rate in the OFF column, and minus that on the diagonal. Then the OFF row. Check both row sums. The bottom line is the only “differential equation” in the lecture, and we keep it in words: the fraction ON goes down because ON cells leave at rate a, and up because OFF cells arrive at rate b. In symbols dx/dt = xQ, but students do not need calculus here: “change per minute” is enough. If all start OFF, the fraction ON initially grows at 0.25 per minute.</p>
 <style type="text/css">
@@ -496,18 +512,18 @@ Q = \begin{array}{c c}
 <section id="stationary-distribution-balance-the-flows" class="slide level2 smaller">
 <h2>Stationary distribution: balance the flows</h2>
 <p>The distribution stops changing when the change per unit time is zero:</p>
-<p><span class="math display">\[\boldsymbol\pi Q = \mathbf{0}, \qquad \textstyle\sum_k \pi_k = 1 \qquad \text{(compare } \boldsymbol\pi P = \boldsymbol\pi \text{ in discrete time).}\]</span></p>
+<p><span class="math display">\boldsymbol\pi Q = \mathbf{0}, \qquad \textstyle\sum_k \pi_k = 1 \qquad \text{(compare } \boldsymbol\pi P = \boldsymbol\pi \text{ in discrete time).}</span></p>
 <div class="columns">
 <div class="column" style="width:50%;">
 <p><img data-src="fig07-flow-balance.svg" style="width:100.0%"></p>
 </div><div class="column" style="width:50%;">
 <p>For 2 states this is <strong>flow in = flow out</strong>:</p>
-<p><span class="math display">\[\pi_{\text{ON}}\, a = \pi_{\text{OFF}}\, b .\]</span></p>
-<p>Add <span class="math inline">\(\pi_{\text{ON}} + \pi_{\text{OFF}} = 1\)</span>:</p>
-<p><span class="math display">\[\boldsymbol\pi = \frac{(b,\ a)}{a+b}.\]</span></p>
-<p>Promoter: <span class="math inline">\(\boldsymbol\pi = (0.25, 0.5)/0.75 = (1/3,\ 2/3)\)</span>. ON one third of the time.</p>
+<p><span class="math display">\pi_{\text{ON}}\, a = \pi_{\text{OFF}}\, b .</span></p>
+<p>Add <span class="math inline">\pi_{\text{ON}} + \pi_{\text{OFF}} = 1</span>:</p>
+<p><span class="math display">\boldsymbol\pi = \frac{(b,\ a)}{a+b}.</span></p>
+<p>Promoter: <span class="math inline">\boldsymbol\pi = (0.25, 0.5)/0.75 = (1/3,\ 2/3)</span>. ON one third of the time.</p>
 </div></div>
-<p>Same answer from the waiting times: mean ON 2 min, mean OFF 4 min, so ON a fraction <span class="math inline">\(2/(2+4) = 1/3\)</span> of the time.</p>
+<p>Same answer from the waiting times: mean ON 2 min, mean OFF 4 min, so ON a fraction <span class="math inline">2/(2+4) = 1/3</span> of the time.</p>
 <aside class="notes">
 <p>Flow balance is the intuitive route and avoids any matrix algebra. Picture many cells. Cells leave ON at rate a each, so the flow ON→OFF is π_ON times a cells per minute. The flow OFF→ON is π_OFF times b. At equilibrium these must be equal, otherwise one state would keep filling up. Writing out πQ = 0 gives exactly this equation twice (the two equations are the same, as in Markov chains in R), so we need the sum-to-1 constraint as well. The check with mean waiting times is a nice second view: in the long run the time is split in proportion to the mean lengths of the periods. For more than 2 states, πQ = 0 is a set of linear equations solved like any other; for a chain in a line (stem ↔︎ prog ↔︎ diff) balancing each pair of neighbours still works.</p>
 <style type="text/css">
@@ -524,10 +540,10 @@ Q = \begin{array}{c c}
 </section>
 <section id="relaxation-how-fast-is-equilibrium-reached" class="slide level2 smaller">
 <h2>Relaxation: how fast is equilibrium reached?</h2>
-<p>For 2 states, the distance to <span class="math inline">\(\boldsymbol\pi\)</span> shrinks exponentially, with rate <span class="math inline">\(a + b\)</span>:</p>
-<p><span class="math display">\[x_{\text{ON}}(t) = \pi_{\text{ON}} + \big(x_{\text{ON}}(0) - \pi_{\text{ON}}\big)\, e^{-(a+b)t}.\]</span></p>
+<p>For 2 states, the distance to <span class="math inline">\boldsymbol\pi</span> shrinks exponentially, with rate <span class="math inline">a + b</span>:</p>
+<p><span class="math display">x_{\text{ON}}(t) = \pi_{\text{ON}} + \big(x_{\text{ON}}(0) - \pi_{\text{ON}}\big)\, e^{-(a+b)t}.</span></p>
 
-<img data-src="fig08-relaxation.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:62.0%"><p>Promoter: <span class="math inline">\(a + b = 0.75\)</span> /min, so the gap halves every <span class="math inline">\(\ln 2 / 0.75 \approx 0.9\)</span> min. Both rates speed this up, even though only their <strong>ratio</strong> sets <span class="math inline">\(\boldsymbol\pi\)</span>.</p>
+<img data-src="fig08-relaxation.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:62.0%"><p>Promoter: <span class="math inline">a + b = 0.75</span> /min, so the gap halves every <span class="math inline">\ln 2 / 0.75 \approx 0.9</span> min. Both rates speed this up, even though only their <strong>ratio</strong> sets <span class="math inline">\boldsymbol\pi</span>.</p>
 <aside class="notes">
 <p>We state this result without derivation; it is the continuous-time version of “the distance to π shrinks by the same factor every step”. Check two values: at t = 0 the formula gives x(0); for large t the exponential vanishes and we are left with π. The thin line is 200 simulated walkers starting all OFF: it follows the exact curve with random wobble. Key message: the ratio a:b decides where the chain ends up, the sum a+b decides how fast it gets there. That is why “Fast switching” and “Slow switching” in the demo have the same dashed line but very different curves. For larger chains there are several such rates (they are eigenvalues of Q), and the slowest one dominates.</p>
 <style type="text/css">
@@ -543,16 +559,16 @@ Q = \begin{array}{c c}
       }</style></aside>
 </section>
 <section id="back-to-discrete-time-p-approx-i-qdelta-t" class="slide level2 smaller">
-<h2>Back to discrete time: <span class="math inline">\(P \approx I + Q\,\Delta t\)</span></h2>
-<p>Look at the chain only every <span class="math inline">\(\Delta t\)</span> minutes. For small <span class="math inline">\(\Delta t\)</span>, using <span class="math inline">\(q_{ij}\Delta t\)</span> for the chance of a jump:</p>
-<p><span class="math display">\[P \approx I + Q\,\Delta t, \qquad \Delta t = 0.25:\quad P = \begin{pmatrix} 1 - 0.125 &amp; 0.125\\ 0.0625 &amp; 1 - 0.0625 \end{pmatrix} = \begin{pmatrix} 0.875 &amp; 0.125\\ 0.0625 &amp; 0.9375 \end{pmatrix}.\]</span></p>
+<h2>Back to discrete time: <span class="math inline">P \approx I + Q\,\Delta t</span></h2>
+<p>Look at the chain only every <span class="math inline">\Delta t</span> minutes. For small <span class="math inline">\Delta t</span>, using <span class="math inline">q_{ij}\Delta t</span> for the chance of a jump:</p>
+<p><span class="math display">P \approx I + Q\,\Delta t, \qquad \Delta t = 0.25:\quad P = \begin{pmatrix} 1 - 0.125 &amp; 0.125\\ 0.0625 &amp; 1 - 0.0625 \end{pmatrix} = \begin{pmatrix} 0.875 &amp; 0.125\\ 0.0625 &amp; 0.9375 \end{pmatrix}.</span></p>
 <div class="columns">
 <div class="column" style="width:48%;">
 <ul>
-<li>Rows of <span class="math inline">\(P\)</span> sum to 1, because rows of <span class="math inline">\(Q\)</span> sum to 0.</li>
-<li>Same <span class="math inline">\(\boldsymbol\pi\)</span>: <span class="math inline">\(\boldsymbol\pi P = \boldsymbol\pi + \Delta t\,\boldsymbol\pi Q = \boldsymbol\pi\)</span>.</li>
-<li>Small <span class="math inline">\(\Delta t\)</span> follows the exact curve; large <span class="math inline">\(\Delta t\)</span> does not.</li>
-<li><em>Aside:</em> the exact step matrix is <span class="math inline">\(P(t) = e^{Qt}\)</span>, the “matrix exponential” (<code>expm</code> package). Not needed here.</li>
+<li>Rows of <span class="math inline">P</span> sum to 1, because rows of <span class="math inline">Q</span> sum to 0.</li>
+<li>Same <span class="math inline">\boldsymbol\pi</span>: <span class="math inline">\boldsymbol\pi P = \boldsymbol\pi + \Delta t\,\boldsymbol\pi Q = \boldsymbol\pi</span>.</li>
+<li>Small <span class="math inline">\Delta t</span> follows the exact curve; large <span class="math inline">\Delta t</span> does not.</li>
+<li><em>Aside:</em> the exact step matrix is <span class="math inline">P(t) = e^{Qt}</span>, the “matrix exponential” (<code>expm</code> package). Not needed here.</li>
 </ul>
 </div><div class="column" style="width:52%;">
 <p><img data-src="fig09-small-dt.svg" style="width:100.0%"></p>
@@ -573,9 +589,9 @@ Q = \begin{array}{c c}
 </section>
 <section id="where-this-shows-up-transcriptional-bursting" class="slide level2 smaller">
 <h2>Where this shows up: transcriptional bursting</h2>
-<p>Add mRNA to the telegraph model: while ON, mRNA is made at rate <span class="math inline">\(s\)</span>; each mRNA is degraded at rate <span class="math inline">\(g\)</span>. It is still a continuous-time Markov chain, now with many states (promoter, number of mRNA), simulated with Gillespie.</p>
+<p>Add mRNA to the telegraph model: while ON, mRNA is made at rate <span class="math inline">s</span>; each mRNA is degraded at rate <span class="math inline">g</span>. It is still a continuous-time Markov chain, now with many states (promoter, number of mRNA), simulated with Gillespie.</p>
 
-<img data-src="fig10-bursting.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:82.0%"><p>Short, rare ON periods give <strong>bursts</strong>. Across 2000 simulated cells: mean <span class="math inline">\(4.5\)</span> mRNA, variance <span class="math inline">\(39\)</span>, and <span class="math inline">\(31\%\)</span> zeros where a Poisson with that mean would give <span class="math inline">\(1\%\)</span>. These are the <strong>overdispersed</strong> counts of Error models; with bursty promoters, counts are close to <strong>negative binomial</strong>.</p>
+<img data-src="fig10-bursting.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:82.0%"><p>Short, rare ON periods give <strong>bursts</strong>. Across 2000 simulated cells: mean <span class="math inline">4.5</span> mRNA, variance <span class="math inline">39</span>, and <span class="math inline">31\%</span> zeros where a Poisson with that mean would give <span class="math inline">1\%</span>. These are the <strong>overdispersed</strong> counts of Error models; with bursty promoters, counts are close to <strong>negative binomial</strong>.</p>
 <aside class="notes">
 <p>Parameters for the figure: OFF to ON at 0.05 per minute, ON to OFF at 0.5 per minute, 5 mRNA per minute while ON, mRNA lifetime 10 minutes. The left panel is one cell: the count jumps up during each short ON period (the blue ticks) and decays in between. The right panel is a snapshot of 2000 independent cells. Compared with a Poisson of the same mean (open circles), there are far more zeros and a long right tail. This is one mechanistic explanation for overdispersion in single-cell counts and links the negative binomial of Error models to a physical model; other sources of cell-to-cell variation add to it. The telegraph model goes back to Peccoud &amp; Ycart (1995, Theoretical Population Biology 48: 222–234); transcriptional bursts were counted molecule by molecule in mammalian cells by Raj et al.&nbsp;(2006, PLoS Biology 4: e309).</p>
 <style type="text/css">
@@ -592,13 +608,13 @@ Q = \begin{array}{c c}
 </section>
 <section id="where-this-shows-up-dna-substitution-models" class="slide level2 smaller">
 <h2>Where this shows up: DNA substitution models</h2>
-<p>At one DNA site, bases change by mutation over long times: a 4-state chain on <span class="math inline">\(\{\mathtt{A},\mathtt{C},\mathtt{G},\mathtt{T}\}\)</span>.</p>
-<p>The simplest model, <strong>Jukes–Cantor</strong>: every change happens at the same rate <span class="math inline">\(\alpha\)</span>.</p>
-<p><span class="math display">\[Q = \begin{pmatrix} -3\alpha &amp; \alpha &amp; \alpha &amp; \alpha\\ \alpha &amp; -3\alpha &amp; \alpha &amp; \alpha\\ \alpha &amp; \alpha &amp; -3\alpha &amp; \alpha\\ \alpha &amp; \alpha &amp; \alpha &amp; -3\alpha \end{pmatrix}, \qquad \boldsymbol\pi = \left(\tfrac14, \tfrac14, \tfrac14, \tfrac14\right).\]</span></p>
+<p>At one DNA site, bases change by mutation over long times: a 4-state chain on <span class="math inline">\{\mathtt{A},\mathtt{C},\mathtt{G},\mathtt{T}\}</span>.</p>
+<p>The simplest model, <strong>Jukes–Cantor</strong>: every change happens at the same rate <span class="math inline">\alpha</span>.</p>
+<p><span class="math display">Q = \begin{pmatrix} -3\alpha &amp; \alpha &amp; \alpha &amp; \alpha\\ \alpha &amp; -3\alpha &amp; \alpha &amp; \alpha\\ \alpha &amp; \alpha &amp; -3\alpha &amp; \alpha\\ \alpha &amp; \alpha &amp; \alpha &amp; -3\alpha \end{pmatrix}, \qquad \boldsymbol\pi = \left(\tfrac14, \tfrac14, \tfrac14, \tfrac14\right).</span></p>
 <ul>
-<li>With <span class="math inline">\(3\alpha = 1\)</span>, time is measured in expected substitutions per site, and the chance that a site still shows its original base after time <span class="math inline">\(t\)</span> is <span class="math inline">\(\tfrac14 + \tfrac34 e^{-4t/3}\)</span>.</li>
-<li>So two sequences can never differ at more than about <span class="math inline">\(3/4\)</span> of their sites: changes on top of changes are hidden. Distances between species are corrected for this.</li>
-<li>Richer models give transitions and transversions different rates, or unequal base frequencies. Phylogenetics software fits such <span class="math inline">\(Q\)</span> matrices.</li>
+<li>With <span class="math inline">3\alpha = 1</span>, time is measured in expected substitutions per site, and the chance that a site still shows its original base after time <span class="math inline">t</span> is <span class="math inline">\tfrac14 + \tfrac34 e^{-4t/3}</span>.</li>
+<li>So two sequences can never differ at more than about <span class="math inline">3/4</span> of their sites: changes on top of changes are hidden. Distances between species are corrected for this.</li>
+<li>Richer models give transitions and transversions different rates, or unequal base frequencies. Phylogenetics software fits such <span class="math inline">Q</span> matrices.</li>
 </ul>
 <aside class="notes">
 <p>This is the second big application, kept brief. Each site of an alignment is one walker; the tree tells you how long each walker had to change. Jukes and Cantor (1969) is the classical starting point. The formula 1/4 + 3/4 e^{−4t/3} is the relaxation formula of two slides ago for this chain; we only state it. The saturation at 3/4 is why the raw fraction of differing sites underestimates evolutionary distance for distantly related sequences. The demo has a Jukes–Cantor preset in the exercise page. Models such as Kimura’s two-parameter model, HKY and GTR are the same idea with more rates.</p>
@@ -637,7 +653,7 @@ Q = \begin{array}{c c}
 </tr>
 <tr class="even">
 <td><strong>Constant rates</strong></td>
-<td><span class="math inline">\(q_{ij}\)</span> do not change over time</td>
+<td><span class="math inline">q_{ij}</span> do not change over time</td>
 <td>circadian rhythms, a drug added at a fixed time, cells that age</td>
 </tr>
 <tr class="odd">
@@ -684,38 +700,38 @@ Q = \begin{array}{c c}
 </thead>
 <tbody>
 <tr class="odd">
-<td>Arrow <span class="math inline">\(i \to j\)</span></td>
-<td>probability <span class="math inline">\(p_{ij}\)</span></td>
-<td>rate <span class="math inline">\(q_{ij}\)</span> (per time unit)</td>
+<td>Arrow <span class="math inline">i \to j</span></td>
+<td>probability <span class="math inline">p_{ij}</span></td>
+<td>rate <span class="math inline">q_{ij}</span> (per time unit)</td>
 </tr>
 <tr class="even">
 <td>Matrix</td>
-<td><span class="math inline">\(P\)</span>, rows sum to 1</td>
-<td><span class="math inline">\(Q\)</span>, <span class="math inline">\(q_{ii} = -q_i\)</span>, rows sum to <strong>0</strong></td>
+<td><span class="math inline">P</span>, rows sum to 1</td>
+<td><span class="math inline">Q</span>, <span class="math inline">q_{ii} = -q_i</span>, rows sum to <strong>0</strong></td>
 </tr>
 <tr class="odd">
-<td>Time in state <span class="math inline">\(i\)</span></td>
+<td>Time in state <span class="math inline">i</span></td>
 <td>geometric (in steps)</td>
-<td><strong>exponential</strong>, mean <span class="math inline">\(1/q_i\)</span></td>
+<td><strong>exponential</strong>, mean <span class="math inline">1/q_i</span></td>
 </tr>
 <tr class="even">
 <td>Next state</td>
-<td>row <span class="math inline">\(i\)</span> of <span class="math inline">\(P\)</span></td>
-<td><span class="math inline">\(j\)</span> with probability <span class="math inline">\(q_{ij}/q_i\)</span></td>
+<td>row <span class="math inline">i</span> of <span class="math inline">P</span></td>
+<td><span class="math inline">j</span> with probability <span class="math inline">q_{ij}/q_i</span></td>
 </tr>
 <tr class="odd">
 <td>Evolution</td>
-<td><span class="math inline">\(\mathbf{x}_{t+1} = \mathbf{x}_t P\)</span></td>
-<td>change per time <span class="math inline">\(= \mathbf{x}(t)\,Q\)</span></td>
+<td><span class="math inline">\mathbf{x}_{t+1} = \mathbf{x}_t P</span></td>
+<td>change per time <span class="math inline">= \mathbf{x}(t)\,Q</span></td>
 </tr>
 <tr class="even">
 <td>Stationary</td>
-<td><span class="math inline">\(\boldsymbol\pi P = \boldsymbol\pi\)</span></td>
-<td><span class="math inline">\(\boldsymbol\pi Q = \mathbf{0}\)</span>; 2 states: <span class="math inline">\((b, a)/(a+b)\)</span></td>
+<td><span class="math inline">\boldsymbol\pi P = \boldsymbol\pi</span></td>
+<td><span class="math inline">\boldsymbol\pi Q = \mathbf{0}</span>; 2 states: <span class="math inline">(b, a)/(a+b)</span></td>
 </tr>
 <tr class="odd">
 <td>Link</td>
-<td><span class="math inline">\(P \approx I + Q\,\Delta t\)</span> for small <span class="math inline">\(\Delta t\)</span></td>
+<td><span class="math inline">P \approx I + Q\,\Delta t</span> for small <span class="math inline">\Delta t</span></td>
 <td></td>
 </tr>
 </tbody>
@@ -757,7 +773,6 @@ Q = \begin{array}{c c}
   <script src="../site_libs/revealjs/plugin/notes/notes.js"></script>
   <script src="../site_libs/revealjs/plugin/search/search.js"></script>
   <script src="../site_libs/revealjs/plugin/zoom/zoom.js"></script>
-  <script src="../site_libs/revealjs/plugin/math/math.js"></script>
   <script>window.define = window.backupDefine; window.backupDefine = undefined;</script>
 
   <script>
@@ -925,27 +940,9 @@ Q = \begin{array}{c c}
         // Factor of the display size that should remain empty around the content
         margin: 0.1,
 
-        math: {
-          mathjax: 'https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.9/MathJax.js',
-          config: 'TeX-AMS_HTML-full',
-          tex2jax: {
-            inlineMath: [['\\(','\\)']],
-            displayMath: [['\\[','\\]']],
-            balanceBraces: true,
-            processEscapes: false,
-            processRefs: true,
-            processEnvironments: true,
-            preview: 'TeX',
-            skipTags: ['script','noscript','style','textarea','pre','code'],
-            ignoreClass: 'tex2jax_ignore',
-            processClass: 'tex2jax_process'
-          },
-        },
-
         // reveal.js plugins
         plugins: [QuartoLineHighlight, PdfExport, RevealMenu, QuartoSupport,
 
-          RevealMath,
           RevealNotes,
           RevealSearch,
           RevealZoom

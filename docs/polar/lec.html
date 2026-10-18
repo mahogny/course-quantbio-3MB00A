@@ -96,6 +96,22 @@
     code span.wa { color: #ff5555; } /* Warning */
   </style>
   <link rel="stylesheet" href="../site_libs/revealjs/dist/theme/quarto-bf56578b9c06c165c166475cd19dbcd1.css">
+  <script>window.backupDefine = window.define; window.define = undefined;</script><script src="https://cdn.jsdelivr.net/npm/katex@latest/dist/katex.min.js"></script>
+  <script>document.addEventListener("DOMContentLoaded", function () {
+ var mathElements = document.getElementsByClassName("math");
+ var macros = [];
+ for (var i = 0; i < mathElements.length; i++) {
+  var texText = mathElements[i].firstChild;
+  if (mathElements[i].tagName == "SPAN") {
+   katex.render(texText.data, mathElements[i], {
+    displayMode: mathElements[i].classList.contains('display'),
+    throwOnError: false,
+    macros: macros,
+    fleqn: false
+   });
+}}});
+  </script>
+  <script>window.define = window.backupDefine; window.backupDefine = undefined;</script><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@latest/dist/katex.min.css">
   <link href="../site_libs/revealjs/plugin/quarto-line-highlight/line-highlight.css" rel="stylesheet">
   <link href="../site_libs/revealjs/plugin/reveal-menu/menu.css" rel="stylesheet">
   <link href="../site_libs/revealjs/plugin/reveal-menu/quarto-menu.css" rel="stylesheet">
@@ -207,14 +223,12 @@ Quantitative biology and integrative omics
 </section>
 <section id="about-this-lecture" class="slide level2">
 <h2>About this lecture</h2>
-<p>Many things in biology grow or spread <strong>outwards from a centre</strong>: a drop of antibiotic, a colony, a tumour spheroid, a cell nucleus. For those, <span class="math inline">\((x, y)\)</span> is the wrong way to describe a position. <strong>Distance from the centre and direction</strong> fit much better.</p>
+<p>Many things in biology grow or spread <strong>outwards from a centre</strong>: a drop of antibiotic, a colony, a tumour spheroid, a cell nucleus. For those, <span class="math inline">(x, y)</span> is the wrong way to describe a position. <strong>Distance from the centre and direction</strong> exposes this symmetry and can make the data easier to analyze</p>
 <ul>
-<li><strong>Polar coordinates</strong> <span class="math inline">\((r, \theta)\)</span>: how far from the centre, and in which direction.</li>
+<li><strong>Polar coordinates</strong> <span class="math inline">(r, \theta)</span>: how far from the centre, and in which direction.</li>
 <li>A very <strong>useful</strong> transformation, but a <strong>nonlinear</strong> one: unlike rotation or shear, it is <strong>not a matrix</strong>.</li>
 <li><strong>Unwrapping</strong> an image around a centre turns rings into straight lines.</li>
-<li>Biology: measuring the <strong>zone of inhibition</strong> of an antibiotic, from a photo of a real plate.</li>
 </ul>
-<p>You need the <code>jpeg</code> package from Transforming images with matrices.</p>
 <aside class="notes">
 <p>This unit ends week 1 and reuses the setup from Transforming images with matrices (image as img[x, y], pixel coordinates as a 2 x N matrix). The new idea is a coordinate change that is not linear, and the payoff is a real measurement that clinical microbiology labs make every day. The plate photo is from the CDC Public Health Image Library (PHIL #10785, Gilda L. Jones, 1972), public domain.</p>
 <style type="text/css">
@@ -262,14 +276,15 @@ Quantitative biology and integrative omics
 <h2>Polar coordinates</h2>
 <div class="columns">
 <div class="column" style="width:50%;">
-<p>A point <span class="math inline">\((x, y)\)</span>, seen from a centre <span class="math inline">\((x_0, y_0)\)</span>:</p>
+<p>A point <span class="math inline">(x, y)</span>, seen from a centre <span class="math inline">(x_0, y_0)</span>:</p>
 <ul>
-<li><span class="math inline">\(r\)</span> = <strong>distance</strong> from the centre</li>
-<li><span class="math inline">\(\theta\)</span> = <strong>angle</strong>, counter-clockwise from the <span class="math inline">\(x\)</span> direction</li>
+<li><span class="math inline">r</span> = <strong>distance</strong> from the centre</li>
+<li><span class="math inline">\theta</span> = <strong>angle</strong>, counter-clockwise from the <span class="math inline">x</span> direction</li>
+<li>If we want degrees from 0-360, not just 0-90, atan2() is our friend</li>
 </ul>
-<p><span class="math display">\[r = \sqrt{(x - x_0)^2 + (y - y_0)^2}, \qquad \theta = \operatorname{atan2}(y - y_0,\ x - x_0)\]</span></p>
+<p><span class="math display">r = \sqrt{(x - x_0)^2 + (y - y_0)^2}, \qquad \theta = \operatorname{atan2}(y - y_0,\ x - x_0)</span></p>
 <p>and back again:</p>
-<p><span class="math display">\[x = x_0 + r\cos\theta, \qquad y = y_0 + r\sin\theta\]</span></p>
+<p><span class="math display">x = x_0 + r\cos\theta, \qquad y = y_0 + r\sin\theta</span></p>
 <div class="sourceCode" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a aria-hidden="true" tabindex="-1"></a>dx <span class="ot">&lt;-</span> <span class="dv">3</span>; dy <span class="ot">&lt;-</span> <span class="dv">4</span></span>
 <span id="cb1-2"><a aria-hidden="true" tabindex="-1"></a><span class="fu">sqrt</span>(dx<span class="sc">^</span><span class="dv">2</span> <span class="sc">+</span> dy<span class="sc">^</span><span class="dv">2</span>)          <span class="co"># r = 5</span></span>
 <span id="cb1-3"><a aria-hidden="true" tabindex="-1"></a><span class="fu">atan2</span>(dy, dx) <span class="sc">*</span> <span class="dv">180</span> <span class="sc">/</span> pi   <span class="co"># theta = 53.1 degrees</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
@@ -297,7 +312,7 @@ Quantitative biology and integrative omics
 <img data-src="fig04-not-linear.png" class="quarto-figure quarto-figure-center r-stretch" style="width:82.0%"><ul>
 <li>Every transformation in Transforming images with matrices kept <strong>straight lines straight</strong>: that is what a matrix does.</li>
 <li>Polar coordinates turn <strong>circles into straight lines</strong> and <strong>straight lines into curves</strong>. No 2 × 2 matrix can do that.</li>
-<li>Check with one point: doubling <span class="math inline">\((1, 1)\)</span> doubles <span class="math inline">\(r\)</span> but <strong>keeps</strong> <span class="math inline">\(\theta\)</span>. A linear map would double both outputs.</li>
+<li>Check with one point: doubling <span class="math inline">(1, 1)</span> doubles <span class="math inline">r</span> but <strong>keeps</strong> <span class="math inline">\theta</span>. A linear map would double both outputs.</li>
 </ul>
 <aside class="notes">
 <p>This is the conceptual point of the unit. A linear map satisfies f(a + b) = f(a) + f(b) and f(c a) = c f(a). For polar coordinates, f(2 p) = (2r, theta): theta does not scale. Also (1, 0) has theta = 0 and (0, 1) has theta = 90, but their sum (1, 1) has theta = 45, not 90. So there is no matrix for it, and we compute r and theta with sqrt and atan2 instead of %*%. The upside is the right panel: around the right centre, a circle is the simplest possible shape, a horizontal line.</p>
@@ -315,7 +330,7 @@ Quantitative biology and integrative omics
 </section>
 <section id="every-pixel-gets-a-distance" class="slide level2 smaller">
 <h2>Every pixel gets a distance</h2>
-<p>Load the plate as in Transforming images with matrices, then compute <span class="math inline">\(r\)</span> for <strong>every</strong> pixel around disk 5:</p>
+<p>Load the plate as in Transforming images with matrices, then compute <span class="math inline">r</span> for <strong>every</strong> pixel around disk 5:</p>
 <div class="sourceCode" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a aria-hidden="true" tabindex="-1"></a>img <span class="ot">&lt;-</span> jpeg<span class="sc">::</span><span class="fu">readJPEG</span>(<span class="st">"plate.jpg"</span>)                <span class="co"># 600 x 600 grey levels, 0..1</span></span>
 <span id="cb2-2"><a aria-hidden="true" tabindex="-1"></a>img <span class="ot">&lt;-</span> <span class="fu">t</span>(img[<span class="fu">nrow</span>(img)<span class="sc">:</span><span class="dv">1</span>, ])                      <span class="co"># flip so up is up; now img[x, y]</span></span>
 <span id="cb2-3"><a aria-hidden="true" tabindex="-1"></a>xy  <span class="ot">&lt;-</span> <span class="fu">t</span>(<span class="fu">expand.grid</span>(<span class="dv">1</span><span class="sc">:</span><span class="fu">nrow</span>(img), <span class="dv">1</span><span class="sc">:</span><span class="fu">ncol</span>(img)))   <span class="co"># 2 x N pixel coordinates</span></span>
@@ -365,7 +380,7 @@ Quantitative biology and integrative omics
 </section>
 <section id="unwrapping-work-backwards-from-r-θ" class="slide level2 smaller">
 <h2>Unwrapping: work backwards from (r, θ)</h2>
-<p>To turn the ring into a <strong>picture</strong> in <span class="math inline">\((\theta, r)\)</span>, go backwards: for each <span class="math inline">\((r, \theta)\)</span> on a grid, compute <span class="math inline">\(x, y\)</span> and look up the nearest pixel.</p>
+<p>To turn the ring into a <strong>picture</strong> in <span class="math inline">(\theta, r)</span>, go backwards: for each <span class="math inline">(r, \theta)</span> on a grid, compute <span class="math inline">x, y</span> and look up the nearest pixel.</p>
 <div class="sourceCode" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a aria-hidden="true" tabindex="-1"></a>unwrap <span class="ot">&lt;-</span> <span class="cf">function</span>(x0, y0, <span class="at">rmax =</span> <span class="dv">80</span>) {</span>
 <span id="cb4-2"><a aria-hidden="true" tabindex="-1"></a>  r     <span class="ot">&lt;-</span> <span class="dv">0</span><span class="sc">:</span>rmax</span>
 <span id="cb4-3"><a aria-hidden="true" tabindex="-1"></a>  theta <span class="ot">&lt;-</span> (<span class="dv">0</span><span class="sc">:</span><span class="dv">359</span>) <span class="sc">*</span> pi <span class="sc">/</span> <span class="dv">180</span>                     <span class="co"># one column per degree</span></span>
@@ -417,7 +432,7 @@ Quantitative biology and integrative omics
 <span id="cb5-3"><a aria-hidden="true" tabindex="-1"></a><span class="fu">range</span>(edge_at)                                    <span class="co"># 69 to 83 pixels: not a circle</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 
 <img data-src="fig08-oval-zone.png" class="quarto-figure quarto-figure-center r-stretch" style="width:72.0%"><ul>
-<li>The edge <span class="math inline">\(r(\theta)\)</span> is a <strong>curve</strong> in the strip, not a line. Averaging over <span class="math inline">\(\theta\)</span> would hide that.</li>
+<li>The edge <span class="math inline">r(\theta)</span> is a <strong>curve</strong> in the strip, not a line. Averaging over <span class="math inline">\theta</span> would hide that.</li>
 <li>Lab rule of thumb: an irregular or merging zone is unreliable; repeat the test or read the <strong>undisturbed</strong> side.</li>
 </ul>
 <p><span style="font-size: 0.6em; color: #666;">Image: CDC / Gilda L. Jones, PHIL #10785, public domain.</span></p>
@@ -474,7 +489,7 @@ Quantitative biology and integrative omics
 <thead>
 <tr class="header">
 <th>Where</th>
-<th>What <span class="math inline">\(r\)</span> or <span class="math inline">\(\theta\)</span> tells you</th>
+<th>What <span class="math inline">r</span> or <span class="math inline">\theta</span> tells you</th>
 </tr>
 </thead>
 <tbody>
@@ -488,11 +503,11 @@ Quantitative biology and integrative omics
 </tr>
 <tr class="odd">
 <td>Centrosome, mitotic spindle</td>
-<td>microtubules radiate outwards: in <span class="math inline">\((\theta, r)\)</span> they become vertical lines</td>
+<td>microtubules radiate outwards: in <span class="math inline">(\theta, r)</span> they become vertical lines</td>
 </tr>
 <tr class="even">
 <td>Cell migration</td>
-<td><span class="math inline">\(\theta\)</span> alone: do cells move <strong>towards</strong> a chemoattractant? (circular statistics)</td>
+<td><span class="math inline">\theta</span> alone: do cells move <strong>towards</strong> a chemoattractant? (circular statistics)</td>
 </tr>
 <tr class="odd">
 <td>Fourier transform (later)</td>
@@ -536,28 +551,28 @@ Quantitative biology and integrative omics
 <td><code>sqrt(dx^2 + dy^2)</code>, <code>atan2(dy, dx)</code></td>
 </tr>
 <tr class="even">
-<td>Back to <span class="math inline">\((x, y)\)</span></td>
-<td><span class="math inline">\(x = x_0 + r\cos\theta,\ y = y_0 + r\sin\theta\)</span></td>
+<td>Back to <span class="math inline">(x, y)</span></td>
+<td><span class="math inline">x = x_0 + r\cos\theta,\ y = y_0 + r\sin\theta</span></td>
 <td><code>x0 + r * cos(theta)</code></td>
 </tr>
 <tr class="odd">
 <td>Not a matrix</td>
-<td>circles → lines, lines → curves; <span class="math inline">\(\theta\)</span> does not scale</td>
+<td>circles → lines, lines → curves; <span class="math inline">\theta</span> does not scale</td>
 <td>—</td>
 </tr>
 <tr class="even">
 <td>Radial profile</td>
-<td>average over <span class="math inline">\(\theta\)</span>: one number per distance</td>
+<td>average over <span class="math inline">\theta</span>: one number per distance</td>
 <td><code>tapply(img, round(r), mean)</code></td>
 </tr>
 <tr class="odd">
 <td>Unwrapping</td>
-<td>for each <span class="math inline">\((r, \theta)\)</span>, look up the pixel it came from</td>
+<td>for each <span class="math inline">(r, \theta)</span>, look up the pixel it came from</td>
 <td><code>img[cbind(i, j)]</code></td>
 </tr>
 <tr class="even">
 <td>Shape of a zone</td>
-<td>edge per angle, <span class="math inline">\(r(\theta)\)</span>; flat means round</td>
+<td>edge per angle, <span class="math inline">r(\theta)</span>; flat means round</td>
 <td><code>apply(u, 2, ...)</code></td>
 </tr>
 <tr class="odd">
@@ -604,7 +619,6 @@ Quantitative biology and integrative omics
   <script src="../site_libs/revealjs/plugin/notes/notes.js"></script>
   <script src="../site_libs/revealjs/plugin/search/search.js"></script>
   <script src="../site_libs/revealjs/plugin/zoom/zoom.js"></script>
-  <script src="../site_libs/revealjs/plugin/math/math.js"></script>
   <script>window.define = window.backupDefine; window.backupDefine = undefined;</script>
 
   <script>
@@ -772,27 +786,9 @@ Quantitative biology and integrative omics
         // Factor of the display size that should remain empty around the content
         margin: 0.1,
 
-        math: {
-          mathjax: 'https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.9/MathJax.js',
-          config: 'TeX-AMS_HTML-full',
-          tex2jax: {
-            inlineMath: [['\\(','\\)']],
-            displayMath: [['\\[','\\]']],
-            balanceBraces: true,
-            processEscapes: false,
-            processRefs: true,
-            processEnvironments: true,
-            preview: 'TeX',
-            skipTags: ['script','noscript','style','textarea','pre','code'],
-            ignoreClass: 'tex2jax_ignore',
-            processClass: 'tex2jax_process'
-          },
-        },
-
         // reveal.js plugins
         plugins: [QuartoLineHighlight, PdfExport, RevealMenu, QuartoSupport,
 
-          RevealMath,
           RevealNotes,
           RevealSearch,
           RevealZoom

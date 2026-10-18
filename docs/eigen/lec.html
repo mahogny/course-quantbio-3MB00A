@@ -30,6 +30,22 @@
     }
   </style>
   <link rel="stylesheet" href="../site_libs/revealjs/dist/theme/quarto-bf56578b9c06c165c166475cd19dbcd1.css">
+  <script>window.backupDefine = window.define; window.define = undefined;</script><script src="https://cdn.jsdelivr.net/npm/katex@latest/dist/katex.min.js"></script>
+  <script>document.addEventListener("DOMContentLoaded", function () {
+ var mathElements = document.getElementsByClassName("math");
+ var macros = [];
+ for (var i = 0; i < mathElements.length; i++) {
+  var texText = mathElements[i].firstChild;
+  if (mathElements[i].tagName == "SPAN") {
+   katex.render(texText.data, mathElements[i], {
+    displayMode: mathElements[i].classList.contains('display'),
+    throwOnError: false,
+    macros: macros,
+    fleqn: false
+   });
+}}});
+  </script>
+  <script>window.define = window.backupDefine; window.backupDefine = undefined;</script><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@latest/dist/katex.min.css">
   <link href="../site_libs/revealjs/plugin/quarto-line-highlight/line-highlight.css" rel="stylesheet">
   <link href="../site_libs/revealjs/plugin/reveal-menu/menu.css" rel="stylesheet">
   <link href="../site_libs/revealjs/plugin/reveal-menu/quarto-menu.css" rel="stylesheet">
@@ -144,8 +160,8 @@ Quantitative biology and integrative omics
 <p>In Matrices as transformations, a matrix is a <strong>function</strong> that moves vectors around — it stretches, rotates, mixes the axes. Today we hunt for the <strong>special directions</strong> a matrix leaves alone.</p>
 <ul>
 <li>Most vectors get <strong>rotated</strong> by a matrix. A few special ones only get <strong>scaled</strong> — those are <strong>eigenvectors</strong>.</li>
-<li>The amount of scaling is the <strong>eigenvalue</strong> <span class="math inline">\(\lambda\)</span>, and the whole idea is one equation: <span class="math inline">\(A\mathbf{v} = \lambda\mathbf{v}\)</span>.</li>
-<li>How to find them <strong>by hand</strong> in the cases that matter: <strong>check</strong> a candidate, <strong>read</strong> a diagonal or triangular matrix, the <strong>symmetric</strong> <span class="math inline">\(2\times2\)</span> pattern, and <strong>geometry</strong>. Everything else: <code>eigen()</code> in R.</li>
+<li>The amount of scaling is the <strong>eigenvalue</strong> <span class="math inline">\lambda</span>, and the whole idea is one equation: <span class="math inline">A\mathbf{v} = \lambda\mathbf{v}</span>.</li>
+<li>How to find them <strong>by hand</strong> in the cases that matter: <strong>check</strong> a candidate, <strong>read</strong> a diagonal or triangular matrix, the <strong>symmetric</strong> <span class="math inline">2\times2</span> pattern, and <strong>geometry</strong>. Everything else: <code>eigen()</code> in R.</li>
 <li>Why <strong>symmetric</strong> matrices (like a covariance matrix) are special: <strong>real</strong> eigenvalues, <strong>orthogonal</strong> eigenvectors.</li>
 <li>Biology: the eigenvectors of a covariance matrix point along the <strong>main axes of variation</strong> in a dataset — the seed of PCA (later this week).</li>
 </ul>
@@ -191,14 +207,14 @@ Quantitative biology and integrative omics
 </section>
 <section id="most-vectors-get-rotated" class="slide level2 smaller">
 <h2>Most vectors get rotated</h2>
-<p>Take a matrix <span class="math inline">\(A\)</span> and feed it different input vectors. Watch the <strong>direction</strong> of the output.</p>
-<p><span class="math display">\[A = \begin{pmatrix} 2 &amp; 1 \\ 1 &amp; 2 \end{pmatrix}\]</span></p>
+<p>Take a matrix <span class="math inline">A</span> and feed it different input vectors. Watch the <strong>direction</strong> of the output.</p>
+<p><span class="math display">A = \begin{pmatrix} 2 &amp; 1 \\ 1 &amp; 2 \end{pmatrix}</span></p>
 <ul>
-<li><span class="math inline">\(A\begin{pmatrix}1\\0\end{pmatrix} = \begin{pmatrix}2\\1\end{pmatrix}\)</span> — pointed along x, came out tilted <strong>up</strong>. Direction changed.</li>
-<li><span class="math inline">\(A\begin{pmatrix}0\\1\end{pmatrix} = \begin{pmatrix}1\\2\end{pmatrix}\)</span> — pointed along y, came out tilted. Direction changed.</li>
-<li><span class="math inline">\(A\begin{pmatrix}1\\1\end{pmatrix} = \begin{pmatrix}3\\3\end{pmatrix}\)</span> — pointed along the diagonal, came out <strong>on the same line</strong>, just longer!</li>
+<li><span class="math inline">A\begin{pmatrix}1\\0\end{pmatrix} = \begin{pmatrix}2\\1\end{pmatrix}</span> — pointed along x, came out tilted <strong>up</strong>. Direction changed.</li>
+<li><span class="math inline">A\begin{pmatrix}0\\1\end{pmatrix} = \begin{pmatrix}1\\2\end{pmatrix}</span> — pointed along y, came out tilted. Direction changed.</li>
+<li><span class="math inline">A\begin{pmatrix}1\\1\end{pmatrix} = \begin{pmatrix}3\\3\end{pmatrix}</span> — pointed along the diagonal, came out <strong>on the same line</strong>, just longer!</li>
 </ul>
-<p>That last one is special: <span class="math inline">\(A\)</span> only <strong>scaled</strong> it (by 3), without rotating it.</p>
+<p>That last one is special: <span class="math inline">A</span> only <strong>scaled</strong> it (by 3), without rotating it.</p>
 
 <img data-src="fig03-rotate-vs-scale.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:55.0%"><aside class="notes">
 <p>This is the heart of the lecture. Pick a symmetric matrix so the special directions are clean. Show that generic inputs (the x-axis, the y-axis) get tilted, but the diagonal direction (1,1) comes out as (3,3) — exactly 3 times itself, no rotation. Make students feel the contrast: rotation is the rule, pure scaling is the exception, and the exceptional directions are what we care about. The number 3 here is the eigenvalue; (1,1) is the eigenvector. We will also find the other special direction, (1,-1).</p>
@@ -215,15 +231,15 @@ Quantitative biology and integrative omics
       }</style></aside>
 </section>
 <section id="the-definition-amathbfv-lambdamathbfv" class="slide level2 smaller">
-<h2>The definition: <span class="math inline">\(A\mathbf{v} = \lambda\mathbf{v}\)</span></h2>
-<p>A nonzero vector <span class="math inline">\(\mathbf{v}\)</span> is an <strong>eigenvector</strong> of <span class="math inline">\(A\)</span> if <span class="math inline">\(A\)</span> only <strong>scales</strong> it:</p>
-<p><span class="math display">\[A\mathbf{v} = \lambda\mathbf{v}\]</span></p>
+<h2>The definition: <span class="math inline">A\mathbf{v} = \lambda\mathbf{v}</span></h2>
+<p>A nonzero vector <span class="math inline">\mathbf{v}</span> is an <strong>eigenvector</strong> of <span class="math inline">A</span> if <span class="math inline">A</span> only <strong>scales</strong> it:</p>
+<p><span class="math display">A\mathbf{v} = \lambda\mathbf{v}</span></p>
 <ul>
-<li><span class="math inline">\(\lambda\)</span> (a scalar) is the <strong>eigenvalue</strong> — the stretch factor for that direction.</li>
+<li><span class="math inline">\lambda</span> (a scalar) is the <strong>eigenvalue</strong> — the stretch factor for that direction.</li>
 <li>“Eigen” is German for <em>own / characteristic</em>: these are the matrix’s own special directions.</li>
 </ul>
-<p>Reading the equation: <em>transforming <span class="math inline">\(\mathbf{v}\)</span> with <span class="math inline">\(A\)</span> gives the same thing as just multiplying <span class="math inline">\(\mathbf{v}\)</span> by the number <span class="math inline">\(\lambda\)</span>.</em> The matrix acts like a plain number <strong>on that direction</strong>.</p>
-<p>From the previous slide: <span class="math inline">\(A\begin{pmatrix}1\\1\end{pmatrix} = \begin{pmatrix}3\\3\end{pmatrix} = 3\begin{pmatrix}1\\1\end{pmatrix}\)</span>, so <span class="math inline">\(\mathbf{v}=(1,1)\)</span> is an eigenvector with eigenvalue <span class="math inline">\(\lambda = 3\)</span>.</p>
+<p>Reading the equation: <em>transforming <span class="math inline">\mathbf{v}</span> with <span class="math inline">A</span> gives the same thing as just multiplying <span class="math inline">\mathbf{v}</span> by the number <span class="math inline">\lambda</span>.</em> The matrix acts like a plain number <strong>on that direction</strong>.</p>
+<p>From the previous slide: <span class="math inline">A\begin{pmatrix}1\\1\end{pmatrix} = \begin{pmatrix}3\\3\end{pmatrix} = 3\begin{pmatrix}1\\1\end{pmatrix}</span>, so <span class="math inline">\mathbf{v}=(1,1)</span> is an eigenvector with eigenvalue <span class="math inline">\lambda = 3</span>.</p>
 <aside class="notes">
 <p>Write the defining equation and read it aloud in words several times: applying the matrix equals multiplying by a number, but only for these special vectors. Stress nonzero: the zero vector trivially satisfies it and is excluded by definition. Connect straight back to the (1,1) -&gt; (3,3) example so the equation is not abstract. Mention the etymology — eigen = own — because it demystifies the intimidating word. Note that any nonzero multiple of an eigenvector is also an eigenvector with the same eigenvalue (the whole line is special).</p>
 <style type="text/css">
@@ -240,12 +256,12 @@ Quantitative biology and integrative omics
 </section>
 <section id="the-whole-line-is-special" class="slide level2 smaller">
 <h2>The whole line is special</h2>
-<p>If <span class="math inline">\(\mathbf{v}\)</span> is an eigenvector, so is <span class="math inline">\(2\mathbf{v}\)</span>, <span class="math inline">\(-\mathbf{v}\)</span>, <span class="math inline">\(0.5\mathbf{v}\)</span> — any nonzero multiple:</p>
-<p><span class="math display">\[A(2\mathbf{v}) = 2(A\mathbf{v}) = 2(\lambda\mathbf{v}) = \lambda(2\mathbf{v})\]</span></p>
+<p>If <span class="math inline">\mathbf{v}</span> is an eigenvector, so is <span class="math inline">2\mathbf{v}</span>, <span class="math inline">-\mathbf{v}</span>, <span class="math inline">0.5\mathbf{v}</span> — any nonzero multiple:</p>
+<p><span class="math display">A(2\mathbf{v}) = 2(A\mathbf{v}) = 2(\lambda\mathbf{v}) = \lambda(2\mathbf{v})</span></p>
 <ul>
 <li>An eigenvector defines a <strong>direction (a line through the origin)</strong>, not one specific arrow.</li>
 <li>So we are free to pick a convenient representative — usually the simplest integers, or a <strong>unit</strong> vector (length 1).</li>
-<li>R will hand you the <strong>unit</strong> version by default; on paper we keep nice whole numbers like <span class="math inline">\((1,1)\)</span>.</li>
+<li>R will hand you the <strong>unit</strong> version by default; on paper we keep nice whole numbers like <span class="math inline">(1,1)</span>.</li>
 </ul>
 
 <img data-src="fig05-eigenline.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:55.0%"><aside class="notes">
@@ -264,13 +280,13 @@ Quantitative biology and integrative omics
 </section>
 <section id="test-a-candidate-just-multiply" class="slide level2 smaller">
 <h2>Test a candidate: just multiply</h2>
-<p>To check whether a given <span class="math inline">\(\mathbf v\)</span> is an eigenvector, compute <span class="math inline">\(A\mathbf v\)</span> and ask: <strong>is the output a multiple of the input?</strong></p>
-<p>With <span class="math inline">\(A = \begin{pmatrix} 2 &amp; 1 \\ 1 &amp; 2 \end{pmatrix}\)</span>:</p>
+<p>To check whether a given <span class="math inline">\mathbf v</span> is an eigenvector, compute <span class="math inline">A\mathbf v</span> and ask: <strong>is the output a multiple of the input?</strong></p>
+<p>With <span class="math inline">A = \begin{pmatrix} 2 &amp; 1 \\ 1 &amp; 2 \end{pmatrix}</span>:</p>
 <ul>
-<li><span class="math inline">\(\mathbf v = (1, -1)\)</span>: <span class="math inline">\(\ A\mathbf v = (2-1,\ 1-2) = (1, -1) = 1\cdot\mathbf v\)</span>. <strong>Yes</strong>, eigenvector with <span class="math inline">\(\lambda = 1\)</span>.</li>
-<li><span class="math inline">\(\mathbf v = (1, 2)\)</span>: <span class="math inline">\(\ A\mathbf v = (2+2,\ 1+4) = (4, 5)\)</span>. Is <span class="math inline">\((4, 5) = \lambda(1, 2)\)</span>? It would need <span class="math inline">\(\lambda = 4\)</span> <strong>and</strong> <span class="math inline">\(\lambda = 2.5\)</span>. <strong>No.</strong></li>
+<li><span class="math inline">\mathbf v = (1, -1)</span>: <span class="math inline">\ A\mathbf v = (2-1,\ 1-2) = (1, -1) = 1\cdot\mathbf v</span>. <strong>Yes</strong>, eigenvector with <span class="math inline">\lambda = 1</span>.</li>
+<li><span class="math inline">\mathbf v = (1, 2)</span>: <span class="math inline">\ A\mathbf v = (2+2,\ 1+4) = (4, 5)</span>. Is <span class="math inline">(4, 5) = \lambda(1, 2)</span>? It would need <span class="math inline">\lambda = 4</span> <strong>and</strong> <span class="math inline">\lambda = 2.5</span>. <strong>No.</strong></li>
 </ul>
-<p>The eigenvalue is read off by comparing entries: divide each entry of <span class="math inline">\(A\mathbf v\)</span> by the matching entry of <span class="math inline">\(\mathbf v\)</span>. Both ratios must agree, and they equal <span class="math inline">\(\lambda\)</span>.</p>
+<p>The eigenvalue is read off by comparing entries: divide each entry of <span class="math inline">A\mathbf v</span> by the matching entry of <span class="math inline">\mathbf v</span>. Both ratios must agree, and they equal <span class="math inline">\lambda</span>.</p>
 <aside class="notes">
 <p>This is the most basic and most useful by-hand skill: no formulas, only one matrix-vector product. The test is “same ratio in every entry”. Watch out for zero entries in v: if an entry of v is 0, the matching entry of Av must also be 0. In R this is A %<em>% v compared with lambda </em> v.</p>
 <style type="text/css">
@@ -288,11 +304,11 @@ Quantitative biology and integrative omics
 <section id="eigenvalues-you-can-read-off" class="slide level2 smaller">
 <h2>Eigenvalues you can read off</h2>
 <p><strong>Diagonal</strong> matrix: each axis is only scaled, so the axes are the eigenvectors and the diagonal entries are the eigenvalues.</p>
-<p><span class="math display">\[\begin{pmatrix} 4 &amp; 0 \\ 0 &amp; 2 \end{pmatrix}: \quad \lambda = 4 \text{ for } (1,0), \qquad \lambda = 2 \text{ for } (0,1)\]</span></p>
+<p><span class="math display">\begin{pmatrix} 4 &amp; 0 \\ 0 &amp; 2 \end{pmatrix}: \quad \lambda = 4 \text{ for } (1,0), \qquad \lambda = 2 \text{ for } (0,1)</span></p>
 <p><strong>Triangular</strong> matrix (zeros below <strong>or</strong> above the diagonal): the eigenvalues are still the <strong>diagonal entries</strong>.</p>
-<p><span class="math display">\[A = \begin{pmatrix} 3 &amp; 1 \\ 0 &amp; 2 \end{pmatrix}: \quad \lambda = 3 \text{ and } \lambda = 2\]</span></p>
+<p><span class="math display">A = \begin{pmatrix} 3 &amp; 1 \\ 0 &amp; 2 \end{pmatrix}: \quad \lambda = 3 \text{ and } \lambda = 2</span></p>
 <ul>
-<li>One eigenvector comes for free: <span class="math inline">\(A(1, 0) = (3, 0) = 3\,(1, 0)\)</span>.</li>
+<li>One eigenvector comes for free: <span class="math inline">A(1, 0) = (3, 0) = 3\,(1, 0)</span>.</li>
 <li>The other is found on the next slide.</li>
 </ul>
 <aside class="notes">
@@ -310,13 +326,13 @@ Quantitative biology and integrative omics
       }</style></aside>
 </section>
 <section id="finding-the-eigenvector-for-a-known-lambda" class="slide level2 smaller">
-<h2>Finding the eigenvector for a known <span class="math inline">\(\lambda\)</span></h2>
-<p>Once you know <span class="math inline">\(\lambda\)</span>, the eigenvector is a small linear system. Start from <span class="math inline">\(A\mathbf{v} = \lambda\mathbf{v}\)</span> and move everything to one side (write <span class="math inline">\(\lambda\mathbf{v} = \lambda I\mathbf{v}\)</span> so the shapes match):</p>
-<p><span class="math display">\[(A - \lambda I)\mathbf{v} = \mathbf{0}, \qquad A - \lambda I = \text{$A$ with $\lambda$ subtracted from each diagonal entry.}\]</span></p>
-<p>For <span class="math inline">\(A = \begin{pmatrix} 3 &amp; 1 \\ 0 &amp; 2 \end{pmatrix}\)</span> and <span class="math inline">\(\lambda = 2\)</span>:</p>
-<p><span class="math display">\[A - 2I = \begin{pmatrix} 1 &amp; 1 \\ 0 &amp; 0 \end{pmatrix}\]</span></p>
-<p>Write <span class="math inline">\(\mathbf v = (x, y)\)</span>. Row 1 says <span class="math inline">\(x + y = 0\)</span>, i.e.&nbsp;<span class="math inline">\(y = -x\)</span>. Pick <span class="math inline">\(x = 1\)</span>: <span class="math inline">\(\ \mathbf v = (1, -1)\)</span>.</p>
-<p><strong>Verify:</strong> <span class="math inline">\(A(1,-1) = (3-1,\ 0-2) = (2, -2) = 2\,(1,-1)\)</span>. ✓</p>
+<h2>Finding the eigenvector for a known <span class="math inline">\lambda</span></h2>
+<p>Once you know <span class="math inline">\lambda</span>, the eigenvector is a small linear system. Start from <span class="math inline">A\mathbf{v} = \lambda\mathbf{v}</span> and move everything to one side (write <span class="math inline">\lambda\mathbf{v} = \lambda I\mathbf{v}</span> so the shapes match):</p>
+<p><span class="math display">(A - \lambda I)\mathbf{v} = \mathbf{0}, \qquad A - \lambda I = \text{$A$ with $\lambda$ subtracted from each diagonal entry.}</span></p>
+<p>For <span class="math inline">A = \begin{pmatrix} 3 &amp; 1 \\ 0 &amp; 2 \end{pmatrix}</span> and <span class="math inline">\lambda = 2</span>:</p>
+<p><span class="math display">A - 2I = \begin{pmatrix} 1 &amp; 1 \\ 0 &amp; 0 \end{pmatrix}</span></p>
+<p>Write <span class="math inline">\mathbf v = (x, y)</span>. Row 1 says <span class="math inline">x + y = 0</span>, i.e.&nbsp;<span class="math inline">y = -x</span>. Pick <span class="math inline">x = 1</span>: <span class="math inline">\ \mathbf v = (1, -1)</span>.</p>
+<p><strong>Verify:</strong> <span class="math inline">A(1,-1) = (3-1,\ 0-2) = (2, -2) = 2\,(1,-1)</span>. ✓</p>
 <aside class="notes">
 <p>Subtract lambda from the diagonal only, off-diagonals untouched. For an eigenvalue the two rows of A - lambda I always say the same thing (or one of them is all zeros), so one row gives the relation between x and y. There is a free choice of scale (the whole line is special); pick the simplest integers. Always verify by multiplying: it is the cheapest check there is. This is the same row reasoning as in Linear systems by hand.</p>
 <style type="text/css">
@@ -332,11 +348,11 @@ Quantitative biology and integrative omics
       }</style></aside>
 </section>
 <section id="the-symmetric-2times2-pattern" class="slide level2 smaller">
-<h2>The symmetric <span class="math inline">\(2\times2\)</span> pattern</h2>
+<h2>The symmetric <span class="math inline">2\times2</span> pattern</h2>
 <p>For a symmetric matrix with <strong>equal diagonal entries</strong>, the eigenvectors are always the two diagonals of the plane:</p>
-<p><span class="math display">\[A = \begin{pmatrix} a &amp; b \\ b &amp; a \end{pmatrix}: \qquad A\begin{pmatrix}1\\1\end{pmatrix} = (a+b)\begin{pmatrix}1\\1\end{pmatrix}, \qquad A\begin{pmatrix}1\\-1\end{pmatrix} = (a-b)\begin{pmatrix}1\\-1\end{pmatrix}\]</span></p>
-<p>For our <span class="math inline">\(A = \begin{pmatrix} 2 &amp; 1 \\ 1 &amp; 2 \end{pmatrix}\)</span>: <span class="math inline">\(\lambda_1 = 2 + 1 = 3\)</span> for <span class="math inline">\((1,1)\)</span> and <span class="math inline">\(\lambda_2 = 2 - 1 = 1\)</span> for <span class="math inline">\((1,-1)\)</span>.</p>
-<p>Notice: <span class="math inline">\(\mathbf{v}_1\cdot\mathbf{v}_2 = (1)(1) + (1)(-1) = 0\)</span> — the two eigenvectors are <strong>orthogonal</strong>!</p>
+<p><span class="math display">A = \begin{pmatrix} a &amp; b \\ b &amp; a \end{pmatrix}: \qquad A\begin{pmatrix}1\\1\end{pmatrix} = (a+b)\begin{pmatrix}1\\1\end{pmatrix}, \qquad A\begin{pmatrix}1\\-1\end{pmatrix} = (a-b)\begin{pmatrix}1\\-1\end{pmatrix}</span></p>
+<p>For our <span class="math inline">A = \begin{pmatrix} 2 &amp; 1 \\ 1 &amp; 2 \end{pmatrix}</span>: <span class="math inline">\lambda_1 = 2 + 1 = 3</span> for <span class="math inline">(1,1)</span> and <span class="math inline">\lambda_2 = 2 - 1 = 1</span> for <span class="math inline">(1,-1)</span>.</p>
+<p>Notice: <span class="math inline">\mathbf{v}_1\cdot\mathbf{v}_2 = (1)(1) + (1)(-1) = 0</span> — the two eigenvectors are <strong>orthogonal</strong>!</p>
 
 <img data-src="fig11-orthogonal-eigvecs.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:45.0%"><aside class="notes">
 <p>Prove the pattern on the board by multiplying: A(1,1) = (a+b, b+a) and A(1,-1) = (a-b, b-a) = (a-b)(1,-1). Nothing to memorise beyond “the diagonals of the plane”. Many covariance matrices of two equally variable, correlated variables have exactly this form, so it covers a lot of examples. Then highlight the punchline: the dot product is zero, so the eigenvectors are perpendicular. This is not a coincidence; it happens because A is symmetric (next slides).</p>
@@ -370,28 +386,28 @@ Quantitative biology and integrative omics
 </thead>
 <tbody>
 <tr class="odd">
-<td><span class="math inline">\(\begin{pmatrix} 1 &amp; 0 \\ 0 &amp; 0 \end{pmatrix}\)</span></td>
+<td><span class="math inline">\begin{pmatrix} 1 &amp; 0 \\ 0 &amp; 0 \end{pmatrix}</span></td>
 <td>projects onto the x-axis</td>
-<td><span class="math inline">\((1,0)\)</span>: <span class="math inline">\(\lambda = 1\)</span> (kept); <span class="math inline">\(\ (0,1)\)</span>: <span class="math inline">\(\lambda = 0\)</span> (squashed)</td>
+<td><span class="math inline">(1,0)</span>: <span class="math inline">\lambda = 1</span> (kept); <span class="math inline">\ (0,1)</span>: <span class="math inline">\lambda = 0</span> (squashed)</td>
 </tr>
 <tr class="even">
-<td><span class="math inline">\(\begin{pmatrix} 0 &amp; 1 \\ 1 &amp; 0 \end{pmatrix}\)</span></td>
-<td>mirrors in the line <span class="math inline">\(y = x\)</span></td>
-<td><span class="math inline">\((1,1)\)</span>: <span class="math inline">\(\lambda = 1\)</span> (on the mirror); <span class="math inline">\(\ (1,-1)\)</span>: <span class="math inline">\(\lambda = -1\)</span> (flipped)</td>
+<td><span class="math inline">\begin{pmatrix} 0 &amp; 1 \\ 1 &amp; 0 \end{pmatrix}</span></td>
+<td>mirrors in the line <span class="math inline">y = x</span></td>
+<td><span class="math inline">(1,1)</span>: <span class="math inline">\lambda = 1</span> (on the mirror); <span class="math inline">\ (1,-1)</span>: <span class="math inline">\lambda = -1</span> (flipped)</td>
 </tr>
 <tr class="odd">
-<td><span class="math inline">\(\begin{pmatrix} 1 &amp; 0.5 \\ 0 &amp; 1 \end{pmatrix}\)</span></td>
+<td><span class="math inline">\begin{pmatrix} 1 &amp; 0.5 \\ 0 &amp; 1 \end{pmatrix}</span></td>
 <td>shear</td>
-<td><span class="math inline">\((1,0)\)</span>: <span class="math inline">\(\lambda = 1\)</span>; no other direction</td>
+<td><span class="math inline">(1,0)</span>: <span class="math inline">\lambda = 1</span>; no other direction</td>
 </tr>
 <tr class="even">
-<td><span class="math inline">\(\begin{pmatrix} 0 &amp; -1 \\ 1 &amp; 0 \end{pmatrix}\)</span></td>
-<td>rotates <span class="math inline">\(90^\circ\)</span></td>
+<td><span class="math inline">\begin{pmatrix} 0 &amp; -1 \\ 1 &amp; 0 \end{pmatrix}</span></td>
+<td>rotates <span class="math inline">90^\circ</span></td>
 <td><strong>none</strong>: every direction is turned</td>
 </tr>
 </tbody>
 </table>
-<p><strong>Check your answer:</strong> the eigenvalues always <strong>add up to the trace</strong> (sum of the diagonal). For <span class="math inline">\(\begin{pmatrix} 2 &amp; 1 \\ 1 &amp; 2 \end{pmatrix}\)</span>: <span class="math inline">\(3 + 1 = 4 = 2 + 2\)</span>. ✓</p>
+<p><strong>Check your answer:</strong> the eigenvalues always <strong>add up to the trace</strong> (sum of the diagonal). For <span class="math inline">\begin{pmatrix} 2 &amp; 1 \\ 1 &amp; 2 \end{pmatrix}</span>: <span class="math inline">3 + 1 = 4 = 2 + 2</span>. ✓</p>
 <p>For any other matrix: let R do it with <code>eigen()</code> (Eigenvalues in R).</p>
 <aside class="notes">
 <p>Geometry first, algebra second: a projection keeps the line it projects onto (lambda 1) and kills the perpendicular direction (lambda 0); a mirror keeps the mirror line (1) and flips the perpendicular one (-1); a shear keeps only the x-axis; a rotation keeps nothing. Each can be verified by one multiplication. The trace check catches arithmetic slips for free: projection 1 + 0 = 1 = trace, mirror 1 + (-1) = 0 = trace. The by-hand toolbox is now complete; general matrices are for eigen() in R. The determinant recipe is in the bonus slides at the end.</p>
@@ -428,13 +444,13 @@ Quantitative biology and integrative omics
 </section>
 <section id="symmetric-matrices-are-special" class="slide level2 smaller">
 <h2>Symmetric matrices are special</h2>
-<p>A matrix is <strong>symmetric</strong> if <span class="math inline">\(A = A^\top\)</span> (it equals its own transpose — mirror across the diagonal). Our example <span class="math inline">\(\begin{pmatrix} 2 &amp; 1 \\ 1 &amp; 2 \end{pmatrix}\)</span> is symmetric (<span class="math inline">\(b = c = 1\)</span>).</p>
+<p>A matrix is <strong>symmetric</strong> if <span class="math inline">A = A^\top</span> (it equals its own transpose — mirror across the diagonal). Our example <span class="math inline">\begin{pmatrix} 2 &amp; 1 \\ 1 &amp; 2 \end{pmatrix}</span> is symmetric (<span class="math inline">b = c = 1</span>).</p>
 <p>For symmetric matrices (a theorem — the <strong>spectral theorem</strong>):</p>
 <ul>
 <li>All eigenvalues are <strong>real</strong> (no awkward complex numbers).</li>
 <li>Eigenvectors for <strong>different</strong> eigenvalues are <strong>orthogonal</strong> (perpendicular).</li>
 </ul>
-<p>This is exactly what we just saw: real eigenvalues <span class="math inline">\(3, 1\)</span> and perpendicular eigenvectors <span class="math inline">\((1,1) \perp (1,-1)\)</span>.</p>
+<p>This is exactly what we just saw: real eigenvalues <span class="math inline">3, 1</span> and perpendicular eigenvectors <span class="math inline">(1,1) \perp (1,-1)</span>.</p>
 <aside class="notes">
 <p>This slide is the conceptual reward. Define symmetric (A = A transpose). State the spectral theorem in plain terms: symmetric matrices always have real eigenvalues and a full set of mutually perpendicular eigenvectors. No proof — just the fact and the reassurance that nothing weird (complex numbers, tilted non-orthogonal axes) can happen. Point back to the worked example as a live instance. The why-we-care comes next: covariance matrices are symmetric.</p>
 <style type="text/css">
@@ -451,9 +467,9 @@ Quantitative biology and integrative omics
 </section>
 <section id="why-biologists-care-covariance-is-symmetric" class="slide level2 smaller">
 <h2>Why biologists care: covariance is symmetric</h2>
-<p>For a dataset (e.g.&nbsp;expression of 2 genes, <span class="math inline">\(x\)</span> and <span class="math inline">\(y\)</span>, across many cells), the <strong>covariance matrix</strong> <span class="math inline">\(C\)</span> summarises spread:</p>
-<p><span class="math display">\[C = \begin{pmatrix} \text{var}(x) &amp; \text{cov}(x,y) \\ \text{cov}(x,y) &amp; \text{var}(y) \end{pmatrix}\]</span></p>
-<p><span class="math inline">\(C\)</span> is <strong>symmetric</strong> (cov<span class="math inline">\((x,y)=\)</span> cov<span class="math inline">\((y,x)\)</span>), so by the spectral theorem:</p>
+<p>For a dataset (e.g.&nbsp;expression of 2 genes, <span class="math inline">x</span> and <span class="math inline">y</span>, across many cells), the <strong>covariance matrix</strong> <span class="math inline">C</span> summarises spread:</p>
+<p><span class="math display">C = \begin{pmatrix} \text{var}(x) &amp; \text{cov}(x,y) \\ \text{cov}(x,y) &amp; \text{var}(y) \end{pmatrix}</span></p>
+<p><span class="math inline">C</span> is <strong>symmetric</strong> (cov<span class="math inline">(x,y)=</span> cov<span class="math inline">(y,x)</span>), so by the spectral theorem:</p>
 <ul>
 <li>its eigenvectors are <strong>orthogonal</strong> → they form clean perpendicular axes,</li>
 <li>its eigenvalues are <strong>real and positive</strong> → the <strong>amount of variance</strong> along each axis.</li>
@@ -477,9 +493,9 @@ Quantitative biology and integrative omics
 <section id="special-cases-gotchas" class="slide level2 smaller">
 <h2>Special cases &amp; gotchas</h2>
 <ul>
-<li><strong>Repeated eigenvalue:</strong> <span class="math inline">\(\begin{pmatrix} 2 &amp; 0 \\ 0 &amp; 2 \end{pmatrix}\)</span> has <span class="math inline">\(\lambda = 2\)</span> twice. <em>Every</em> direction is an eigenvector (it scales everything equally).</li>
+<li><strong>Repeated eigenvalue:</strong> <span class="math inline">\begin{pmatrix} 2 &amp; 0 \\ 0 &amp; 2 \end{pmatrix}</span> has <span class="math inline">\lambda = 2</span> twice. <em>Every</em> direction is an eigenvector (it scales everything equally).</li>
 <li><strong>Diagonal matrix:</strong> eigenvalues are just the diagonal entries; eigenvectors are the axes.</li>
-<li><strong>Complex eigenvalues:</strong> a pure rotation <span class="math inline">\(\begin{pmatrix} 0 &amp; -1 \\ 1 &amp; 0 \end{pmatrix}\)</span> has <strong>no real</strong> eigenvector — it rotates <em>everything</em>, leaving no direction fixed. (This can’t happen for symmetric matrices.)</li>
+<li><strong>Complex eigenvalues:</strong> a pure rotation <span class="math inline">\begin{pmatrix} 0 &amp; -1 \\ 1 &amp; 0 \end{pmatrix}</span> has <strong>no real</strong> eigenvector — it rotates <em>everything</em>, leaving no direction fixed. (This can’t happen for symmetric matrices.)</li>
 <li><strong>Scale freedom:</strong> eigenvectors are only defined up to length and sign.</li>
 </ul>
 
@@ -513,38 +529,38 @@ Quantitative biology and integrative omics
 <tbody>
 <tr class="odd">
 <td>Eigenvector</td>
-<td>direction <span class="math inline">\(A\)</span> only <strong>scales</strong>, never rotates</td>
+<td>direction <span class="math inline">A</span> only <strong>scales</strong>, never rotates</td>
 </tr>
 <tr class="even">
 <td>Eigen relation</td>
-<td><span class="math inline">\(A\mathbf{v} = \lambda\mathbf{v}\)</span> (<span class="math inline">\(\mathbf{v}\neq\mathbf{0}\)</span>)</td>
+<td><span class="math inline">A\mathbf{v} = \lambda\mathbf{v}</span> (<span class="math inline">\mathbf{v}\neq\mathbf{0}</span>)</td>
 </tr>
 <tr class="odd">
 <td>Eigenvalue</td>
-<td>the scaling factor <span class="math inline">\(\lambda\)</span></td>
+<td>the scaling factor <span class="math inline">\lambda</span></td>
 </tr>
 <tr class="even">
 <td>Test a candidate</td>
-<td>compute <span class="math inline">\(A\mathbf{v}\)</span>: a multiple of <span class="math inline">\(\mathbf{v}\)</span>?</td>
+<td>compute <span class="math inline">A\mathbf{v}</span>: a multiple of <span class="math inline">\mathbf{v}</span>?</td>
 </tr>
 <tr class="odd">
 <td>Diagonal / triangular</td>
 <td>eigenvalues = diagonal entries</td>
 </tr>
 <tr class="even">
-<td>Symmetric <span class="math inline">\(\begin{pmatrix} a &amp; b \\ b &amp; a \end{pmatrix}\)</span></td>
-<td><span class="math inline">\((1,1)\)</span>: <span class="math inline">\(a+b\)</span>; <span class="math inline">\(\ (1,-1)\)</span>: <span class="math inline">\(a-b\)</span></td>
+<td>Symmetric <span class="math inline">\begin{pmatrix} a &amp; b \\ b &amp; a \end{pmatrix}</span></td>
+<td><span class="math inline">(1,1)</span>: <span class="math inline">a+b</span>; <span class="math inline">\ (1,-1)</span>: <span class="math inline">a-b</span></td>
 </tr>
 <tr class="odd">
-<td>Find <span class="math inline">\(\mathbf{v}\)</span> for known <span class="math inline">\(\lambda\)</span></td>
-<td>solve <span class="math inline">\((A-\lambda I)\mathbf{v}=\mathbf{0}\)</span>, pick nice scale</td>
+<td>Find <span class="math inline">\mathbf{v}</span> for known <span class="math inline">\lambda</span></td>
+<td>solve <span class="math inline">(A-\lambda I)\mathbf{v}=\mathbf{0}</span>, pick nice scale</td>
 </tr>
 <tr class="even">
 <td>Check</td>
-<td><span class="math inline">\(\sum\lambda\)</span> = trace</td>
+<td><span class="math inline">\sum\lambda</span> = trace</td>
 </tr>
 <tr class="odd">
-<td>Symmetric <span class="math inline">\(A\)</span></td>
+<td>Symmetric <span class="math inline">A</span></td>
 <td>real eigenvalues, <strong>orthogonal</strong> eigenvectors</td>
 </tr>
 <tr class="even">
@@ -570,11 +586,11 @@ Quantitative biology and integrative omics
 </section>
 <section id="bonus-the-characteristic-equation" class="slide level2 smaller">
 <h2>Bonus: the characteristic equation</h2>
-<p>Where do eigenvalues come from in general? From <span class="math inline">\((A - \lambda I)\mathbf{v} = \mathbf{0}\)</span>: we need a <strong>nonzero</strong> <span class="math inline">\(\mathbf{v}\)</span> that <span class="math inline">\(A-\lambda I\)</span> sends to zero. A matrix can only crush a nonzero vector to zero if it is <strong>singular</strong> — i.e.&nbsp;its determinant is zero:</p>
-<p><span class="math display">\[\boxed{\ \det(A - \lambda I) = 0\ }\]</span></p>
-<p>For a <span class="math inline">\(2\times2\)</span>, <span class="math inline">\(\det\begin{pmatrix} a &amp; b \\ c &amp; d \end{pmatrix} = ad - bc\)</span>, so</p>
-<p><span class="math display">\[\det(A - \lambda I) = (a-\lambda)(d-\lambda) - bc = 0,\]</span></p>
-<p>a <strong>quadratic in <span class="math inline">\(\lambda\)</span></strong>.</p>
+<p>Where do eigenvalues come from in general? From <span class="math inline">(A - \lambda I)\mathbf{v} = \mathbf{0}</span>: we need a <strong>nonzero</strong> <span class="math inline">\mathbf{v}</span> that <span class="math inline">A-\lambda I</span> sends to zero. A matrix can only crush a nonzero vector to zero if it is <strong>singular</strong> — i.e.&nbsp;its determinant is zero:</p>
+<p><span class="math display">\boxed{\ \det(A - \lambda I) = 0\ }</span></p>
+<p>For a <span class="math inline">2\times2</span>, <span class="math inline">\det\begin{pmatrix} a &amp; b \\ c &amp; d \end{pmatrix} = ad - bc</span>, so</p>
+<p><span class="math display">\det(A - \lambda I) = (a-\lambda)(d-\lambda) - bc = 0,</span></p>
+<p>a <strong>quadratic in <span class="math inline">\lambda</span></strong>.</p>
 
 <img data-src="fig07-det-2x2.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:62.0%"><p><span style="font-size: 0.8em; color: #bc4749;">Bonus material.</span></p>
 <aside class="notes">
@@ -593,15 +609,15 @@ Quantitative biology and integrative omics
 </section>
 <section id="bonus-a-worked-example" class="slide level2 smaller">
 <h2>Bonus: a worked example</h2>
-<p><span class="math display">\[A = \begin{pmatrix} 2 &amp; 1 \\ 1 &amp; 2 \end{pmatrix}\]</span></p>
-<p><span class="math display">\[\det(A - \lambda I) = (2-\lambda)(2-\lambda) - (1)(1) = \lambda^2 - 4\lambda + 3 = (\lambda - 3)(\lambda - 1) = 0\]</span></p>
-<p>So <span class="math inline">\(\lambda_1 = 3,\ \lambda_2 = 1\)</span> — the same as the symmetric pattern gave.</p>
+<p><span class="math display">A = \begin{pmatrix} 2 &amp; 1 \\ 1 &amp; 2 \end{pmatrix}</span></p>
+<p><span class="math display">\det(A - \lambda I) = (2-\lambda)(2-\lambda) - (1)(1) = \lambda^2 - 4\lambda + 3 = (\lambda - 3)(\lambda - 1) = 0</span></p>
+<p>So <span class="math inline">\lambda_1 = 3,\ \lambda_2 = 1</span> — the same as the symmetric pattern gave.</p>
 <p>Two checks:</p>
 <ul>
-<li><strong>Sum</strong> of eigenvalues = <strong>trace</strong>: <span class="math inline">\(3 + 1 = 4 = 2 + 2\)</span>. ✓</li>
-<li><strong>Product</strong> of eigenvalues = <strong>determinant</strong> of <span class="math inline">\(A\)</span>: <span class="math inline">\(3 \times 1 = 3 = (2)(2) - (1)(1)\)</span>. ✓</li>
+<li><strong>Sum</strong> of eigenvalues = <strong>trace</strong>: <span class="math inline">3 + 1 = 4 = 2 + 2</span>. ✓</li>
+<li><strong>Product</strong> of eigenvalues = <strong>determinant</strong> of <span class="math inline">A</span>: <span class="math inline">3 \times 1 = 3 = (2)(2) - (1)(1)</span>. ✓</li>
 </ul>
-<p>The same method works for matrices without a pattern, e.g.&nbsp;<span class="math inline">\(\begin{pmatrix} 2 &amp; 1 \\ 1 &amp; 0 \end{pmatrix}\)</span> gives <span class="math inline">\(\lambda^2 - 2\lambda - 1 = 0\)</span>, so <span class="math inline">\(\lambda = 1 \pm \sqrt 2\)</span>. A rotation gives <span class="math inline">\(\lambda^2 + 1 = 0\)</span>: no real solution.</p>
+<p>The same method works for matrices without a pattern, e.g.&nbsp;<span class="math inline">\begin{pmatrix} 2 &amp; 1 \\ 1 &amp; 0 \end{pmatrix}</span> gives <span class="math inline">\lambda^2 - 2\lambda - 1 = 0</span>, so <span class="math inline">\lambda = 1 \pm \sqrt 2</span>. A rotation gives <span class="math inline">\lambda^2 + 1 = 0</span>: no real solution.</p>
 <p><span style="font-size: 0.8em; color: #bc4749;">Bonus material.</span></p>
 <aside class="notes">
 <p>Bonus slide. Expand (2 - lambda)^2 - 1, factor, and land on 3 and 1, matching the symmetric pattern from earlier. The product = det check is only available with determinants; the sum = trace check is the one that works without them. The last line shows the method’s real strength: matrices with no pattern and the rotation’s missing real eigenvalues. In practice, eigen() in R does this for any size.</p>
@@ -639,7 +655,6 @@ Quantitative biology and integrative omics
   <script src="../site_libs/revealjs/plugin/notes/notes.js"></script>
   <script src="../site_libs/revealjs/plugin/search/search.js"></script>
   <script src="../site_libs/revealjs/plugin/zoom/zoom.js"></script>
-  <script src="../site_libs/revealjs/plugin/math/math.js"></script>
   <script>window.define = window.backupDefine; window.backupDefine = undefined;</script>
 
   <script>
@@ -807,27 +822,9 @@ Quantitative biology and integrative omics
         // Factor of the display size that should remain empty around the content
         margin: 0.1,
 
-        math: {
-          mathjax: 'https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.9/MathJax.js',
-          config: 'TeX-AMS_HTML-full',
-          tex2jax: {
-            inlineMath: [['\\(','\\)']],
-            displayMath: [['\\[','\\]']],
-            balanceBraces: true,
-            processEscapes: false,
-            processRefs: true,
-            processEnvironments: true,
-            preview: 'TeX',
-            skipTags: ['script','noscript','style','textarea','pre','code'],
-            ignoreClass: 'tex2jax_ignore',
-            processClass: 'tex2jax_process'
-          },
-        },
-
         // reveal.js plugins
         plugins: [QuartoLineHighlight, PdfExport, RevealMenu, QuartoSupport,
 
-          RevealMath,
           RevealNotes,
           RevealSearch,
           RevealZoom

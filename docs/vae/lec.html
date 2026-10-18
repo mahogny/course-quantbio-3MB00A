@@ -30,6 +30,22 @@
     }
   </style>
   <link rel="stylesheet" href="../site_libs/revealjs/dist/theme/quarto-bf56578b9c06c165c166475cd19dbcd1.css">
+  <script>window.backupDefine = window.define; window.define = undefined;</script><script src="https://cdn.jsdelivr.net/npm/katex@latest/dist/katex.min.js"></script>
+  <script>document.addEventListener("DOMContentLoaded", function () {
+ var mathElements = document.getElementsByClassName("math");
+ var macros = [];
+ for (var i = 0; i < mathElements.length; i++) {
+  var texText = mathElements[i].firstChild;
+  if (mathElements[i].tagName == "SPAN") {
+   katex.render(texText.data, mathElements[i], {
+    displayMode: mathElements[i].classList.contains('display'),
+    throwOnError: false,
+    macros: macros,
+    fleqn: false
+   });
+}}});
+  </script>
+  <script>window.define = window.backupDefine; window.backupDefine = undefined;</script><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@latest/dist/katex.min.css">
   <link href="../site_libs/revealjs/plugin/quarto-line-highlight/line-highlight.css" rel="stylesheet">
   <link href="../site_libs/revealjs/plugin/reveal-menu/menu.css" rel="stylesheet">
   <link href="../site_libs/revealjs/plugin/reveal-menu/quarto-menu.css" rel="stylesheet">
@@ -217,8 +233,8 @@ Quantitative biology and integrative omics
 <h2>The autoencoder: squeeze, then rebuild</h2>
 
 <img data-src="fig01-hourglass.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:92.0%"><ul>
-<li>The <strong>encoder</strong> compresses a cell into a few numbers <span class="math inline">\(z\)</span>, its position in latent space.</li>
-<li>The <strong>decoder</strong> rebuilds the whole expression profile from <span class="math inline">\(z\)</span> alone.</li>
+<li>The <strong>encoder</strong> compresses a cell into a few numbers <span class="math inline">z</span>, its position in latent space.</li>
+<li>The <strong>decoder</strong> rebuilds the whole expression profile from <span class="math inline">z</span> alone.</li>
 <li>Training adjusts both until the <strong>output is close to the input</strong>, for thousands of cells.</li>
 <li>The narrow <strong>bottleneck</strong> is the point: to rebuild 20,000 genes from 2 numbers, those 2 numbers must capture what matters most about the cell.</li>
 </ul>
@@ -242,11 +258,11 @@ Quantitative biology and integrative omics
 <div class="column" style="width:52%;">
 <p><img data-src="fig02-pca-autoencoder.svg" style="width:100.0%"></p>
 </div><div class="column" style="width:48%;">
-<p>Two genes, one number (PC1, <span class="math inline">\(\mathbf{u} = (0.8, 0.6)\)</span>):</p>
+<p>Two genes, one number (PC1, <span class="math inline">\mathbf{u} = (0.8, 0.6)</span>):</p>
 <ul>
-<li><strong>Encode</strong>: the score <span class="math inline">\(= \mathbf{x}\cdot\mathbf{u} = 0.8\cdot 3 + 0.6\cdot 1 = 3.0\)</span>.</li>
-<li><strong>Decode</strong>: score <span class="math inline">\(\times\ \mathbf{u} = 3.0\cdot(0.8, 0.6) = (2.4, 1.8)\)</span>.</li>
-<li><strong>Error</strong>: <span class="math inline">\((3, 1) - (2.4, 1.8) = (0.6, -0.8)\)</span>, squared length <span class="math inline">\(1.0\)</span>.</li>
+<li><strong>Encode</strong>: the score <span class="math inline">= \mathbf{x}\cdot\mathbf{u} = 0.8\cdot 3 + 0.6\cdot 1 = 3.0</span>.</li>
+<li><strong>Decode</strong>: score <span class="math inline">\times\ \mathbf{u} = 3.0\cdot(0.8, 0.6) = (2.4, 1.8)</span>.</li>
+<li><strong>Error</strong>: <span class="math inline">(3, 1) - (2.4, 1.8) = (0.6, -0.8)</span>, squared length <span class="math inline">1.0</span>.</li>
 </ul>
 <p>Of all <strong>straight-line</strong> encoders and decoders, PCA gives the smallest total reconstruction error.</p>
 <p>A neural network replaces both straight maps by <strong>curved</strong> ones: same hourglass, more flexible.</p>
@@ -319,7 +335,7 @@ Quantitative biology and integrative omics
 <li>A <strong>penalty</strong> keeps every cloud close to one standard bell-shaped cloud around 0, so the clouds stay close together and fill the space with few gaps.</li>
 <li>The spread is a statement of <strong>uncertainty</strong>: few counts → wide cloud.</li>
 </ul>
-<p>In Bayesian words: the standard bell-shaped cloud is the <strong>prior</strong> for <span class="math inline">\(z\)</span>, and the cell’s cloud is an approximate <strong>posterior</strong> for where that cell sits in latent space. “Variational” names the method that finds these approximations.</p>
+<p>In Bayesian words: the standard bell-shaped cloud is the <strong>prior</strong> for <span class="math inline">z</span>, and the cell’s cloud is an approximate <strong>posterior</strong> for where that cell sits in latent space. “Variational” names the method that finds these approximations.</p>
 <aside class="notes">
 <p>This is the whole difference between an autoencoder and a variational autoencoder, in words. Two forces act during training: rebuild the cell well (which pulls clouds apart and makes them small), and stay close to the standard cloud (which pulls them together and makes them wide). The balance gives a tidy latent space in which a point between two groups decodes to something reasonable, often an in-between profile. The link to the Bayesian block is a single sentence: prior on z, approximate posterior per cell. We do not write the penalty; it is a KL divergence, if a student asks, and the method was introduced by Kingma and Welling (2014). Reference: D. P. Kingma, M. Welling (2014), Auto-Encoding Variational Bayes, ICLR 2014, arXiv:1312.6114.</p>
 <style type="text/css">
@@ -337,10 +353,10 @@ Quantitative biology and integrative omics
 <section id="the-decoder-outputs-a-distribution" class="slide level2">
 <h2>The decoder outputs a distribution</h2>
 <p>For counts, the decoder does not output one cell. For every gene it outputs the parameters of a <strong>count distribution</strong>:</p>
-<p><span class="math display">\[\text{gene } g \text{ in a cell at } z: \qquad \text{count} \sim \text{NB}\big(\text{mean} = \mu_g(z),\ \text{dispersion } \phi_g\big)\]</span></p>
+<p><span class="math display">\text{gene } g \text{ in a cell at } z: \qquad \text{count} \sim \text{NB}\big(\text{mean} = \mu_g(z),\ \text{dispersion } \phi_g\big)</span></p>
 <ul>
-<li>The <strong>mean</strong> <span class="math inline">\(\mu_g(z)\)</span> changes with the position <span class="math inline">\(z\)</span>: this is the biology.</li>
-<li>The <strong>spread</strong> around it is the overdispersed counting noise of Error models: <span class="math inline">\(\text{Var} = \mu + \phi\mu^2\)</span>.</li>
+<li>The <strong>mean</strong> <span class="math inline">\mu_g(z)</span> changes with the position <span class="math inline">z</span>: this is the biology.</li>
+<li>The <strong>spread</strong> around it is the overdispersed counting noise of Error models: <span class="math inline">\text{Var} = \mu + \phi\mu^2</span>.</li>
 <li>Training asks: how <strong>probable</strong> are the observed counts under this NB? (A likelihood, as in Bayesian statistics.)</li>
 </ul>
 <p>This is what <strong>scVI</strong> does for single-cell RNA-seq (Lopez et al.&nbsp;2018).</p>
@@ -359,10 +375,10 @@ Quantitative biology and integrative omics
       }</style></aside>
 </section>
 <section id="generating-cells-one-z-many-cells" class="slide level2 smaller">
-<h2>Generating cells: one <span class="math inline">\(z\)</span>, many cells</h2>
-<p>To <strong>generate</strong> a cell: pick a point <span class="math inline">\(z\)</span> → decode to expected counts → <strong>draw</strong> counts from the NB.</p>
+<h2>Generating cells: one <span class="math inline">z</span>, many cells</h2>
+<p>To <strong>generate</strong> a cell: pick a point <span class="math inline">z</span> → decode to expected counts → <strong>draw</strong> counts from the NB.</p>
 
-<img data-src="fig04-one-z-many-cells.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:88.0%"><p>The <strong>same</strong> <span class="math inline">\(z\)</span> gives <strong>different</strong> cells every time. They differ only by sampling noise, as real cells in the <strong>same state</strong> do.</p>
+<img data-src="fig04-one-z-many-cells.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:88.0%"><p>The <strong>same</strong> <span class="math inline">z</span> gives <strong>different</strong> cells every time. They differ only by sampling noise, as real cells in the <strong>same state</strong> do.</p>
 <aside class="notes">
 <p>This is the main message of the lecture. The bars are the decoder’s expected counts at one latent point (here from the hand-written decoder of the exercise, at z1 = −1: a stem-like cell). The dots and the heatmap rows are 12 cells drawn from the negative binomial around those means. Stem1 has mean 19.6 but the 12 cells range from 3 to 24. That spread is not a failure of the model; it is the model saying that cells in this state really do vary that much in their counts. Ask: if you sequenced 12 cells that are biologically identical, would you expect identical counts? No: Error models said counts are overdispersed. A generative model reproduces that.</p>
 <style type="text/css">
@@ -379,9 +395,9 @@ Quantitative biology and integrative omics
 </section>
 <section id="a-walk-through-latent-space" class="slide level2 smaller">
 <h2>A walk through latent space</h2>
-<p>Different <span class="math inline">\(z\)</span> → different cell states. Moving <span class="math inline">\(z\)</span> along a line gives a <strong>smooth transition</strong>:</p>
+<p>Different <span class="math inline">z</span> → different cell states. Moving <span class="math inline">z</span> along a line gives a <strong>smooth transition</strong>:</p>
 
-<img data-src="fig05-walk.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:82.0%"><p>The midpoint is <strong>not</strong> the average of the two end profiles: the progenitor gene peaks at <span class="math inline">\(z_1 = 0\)</span> (mean 15) but is only 5.5 at both ends. The decoder bends the path through gene space.</p>
+<img data-src="fig05-walk.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:82.0%"><p>The midpoint is <strong>not</strong> the average of the two end profiles: the progenitor gene peaks at <span class="math inline">z_1 = 0</span> (mean 15) but is only 5.5 at both ends. The decoder bends the path through gene space.</p>
 <aside class="notes">
 <p>The lines are decoded means along a straight walk from z1 = −2 to z1 = 2; the dots are one sampled cell per step, which wobble around the lines. A straight line in latent space is a curve in gene space. Averaging the two endpoint profiles would give a progenitor value of 5.5; decoding the latent midpoint gives 15. This is the nonlinear part: the transient programme appears only through the decoder. In real data this is how VAEs are used to explore trajectories or to ask “what lies between these two cell states?”. With a trained model, how believable the in-between profiles are depends on whether real cells lived there.</p>
 <style type="text/css">
@@ -397,7 +413,7 @@ Quantitative biology and integrative omics
       }</style></aside>
 </section>
 <section id="try-it-one-z-many-cells" class="slide level2">
-<h2>Try it: one <span class="math inline">\(z\)</span>, many cells</h2>
+<h2>Try it: one <span class="math inline">z</span>, many cells</h2>
 <link rel="stylesheet" href="../demos/dist/demo.css">
 <div data-demo="vaegen" data-tabs="cells"></div>
 <script src="../demos/dist/vaegen.js"></script>
@@ -438,9 +454,9 @@ Quantitative biology and integrative omics
 <h2>Uses in single-cell analysis</h2>
 
 <img data-src="fig06-scvi.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:80.0%"><ul>
-<li><strong>scVI</strong>: the latent <span class="math inline">\(z\)</span> is used for clustering and UMAP instead of PCA. Telling the decoder the <strong>batch</strong> lets <span class="math inline">\(z\)</span> ignore batch differences (batch correction), and decoded means give <strong>denoised</strong> expression.</li>
+<li><strong>scVI</strong>: the latent <span class="math inline">z</span> is used for clustering and UMAP instead of PCA. Telling the decoder the <strong>batch</strong> lets <span class="math inline">z</span> ignore batch differences (batch correction), and decoded means give <strong>denoised</strong> expression.</li>
 <li><strong>Several modalities</strong> in one latent space: totalVI for RNA + surface proteins (Gayoso et al.&nbsp;2021), MultiVI for RNA + chromatin accessibility (Ashuach et al.&nbsp;2023). Compare the joint latent space of Multiome data integration.</li>
-<li><strong>Generating or imputing</strong>: decode <span class="math inline">\(z\)</span> to fill in missing values or simulate cells.</li>
+<li><strong>Generating or imputing</strong>: decode <span class="math inline">z</span> to fill in missing values or simulate cells.</li>
 </ul>
 <aside class="notes">
 <p>Keep this brief. The batch trick is the most used feature: if the decoder already knows which batch a cell came from, the latent space does not need to encode batch, so cells from different batches but the same type land in the same place. Decoding a cell’s z with a different batch label gives “this cell as if measured in batch A”. totalVI and MultiVI give each modality its own decoder and its own error model, all reading from one shared z: the same joint-latent-space idea as in the Multiome unit, but nonlinear. All three are in the scvi-tools Python package. References: A. Gayoso et al.&nbsp;(2021), Joint probabilistic modeling of single-cell multi-omic data with totalVI, Nature Methods 18, 272–282. T. Ashuach et al.&nbsp;(2023), MultiVI: deep generative model for the integration of multimodal data, Nature Methods 20, 1222–1231.</p>
@@ -459,7 +475,7 @@ Quantitative biology and integrative omics
 <section id="caveats-do-not-over-interpret" class="slide level2">
 <h2>Caveats: do not over-interpret</h2>
 <ul>
-<li><strong>Latent axes have no fixed meaning.</strong> Unlike PCA loadings, <span class="math inline">\(z_1\)</span> and <span class="math inline">\(z_2\)</span> are not ranked or interpretable by construction; a rotated or flipped latent space can fit about as well.</li>
+<li><strong>Latent axes have no fixed meaning.</strong> Unlike PCA loadings, <span class="math inline">z_1</span> and <span class="math inline">z_2</span> are not ranked or interpretable by construction; a rotated or flipped latent space can fit about as well.</li>
 <li><strong>Results depend on training</strong>: random starting values, network size and training length all change the latent space. Retrain with another seed and the picture moves.</li>
 <li><strong>Generated cells are only as good as the training data.</strong> Far from the data, the decoder extrapolates; between groups it interpolates. Neither is guaranteed to be biology.</li>
 <li><strong>Distances in latent space</strong> are not calibrated; the same reading rules as for a UMAP apply.</li>
@@ -495,11 +511,11 @@ Quantitative biology and integrative omics
 <tbody>
 <tr class="odd">
 <td>Encoder</td>
-<td>cell → a few numbers <span class="math inline">\(z\)</span> (its place in latent space)</td>
+<td>cell → a few numbers <span class="math inline">z</span> (its place in latent space)</td>
 </tr>
 <tr class="even">
 <td>Decoder</td>
-<td><span class="math inline">\(z\)</span> → expected expression of every gene</td>
+<td><span class="math inline">z</span> → expected expression of every gene</td>
 </tr>
 <tr class="odd">
 <td>Autoencoder</td>
@@ -519,7 +535,7 @@ Quantitative biology and integrative omics
 </tr>
 <tr class="odd">
 <td>Generative</td>
-<td>one <span class="math inline">\(z\)</span> → many different cells; a walk in <span class="math inline">\(z\)</span> → a smooth transition</td>
+<td>one <span class="math inline">z</span> → many different cells; a walk in <span class="math inline">z</span> → a smooth transition</td>
 </tr>
 <tr class="even">
 <td>Caution</td>
@@ -563,7 +579,6 @@ Quantitative biology and integrative omics
   <script src="../site_libs/revealjs/plugin/notes/notes.js"></script>
   <script src="../site_libs/revealjs/plugin/search/search.js"></script>
   <script src="../site_libs/revealjs/plugin/zoom/zoom.js"></script>
-  <script src="../site_libs/revealjs/plugin/math/math.js"></script>
   <script>window.define = window.backupDefine; window.backupDefine = undefined;</script>
 
   <script>
@@ -731,27 +746,9 @@ Quantitative biology and integrative omics
         // Factor of the display size that should remain empty around the content
         margin: 0.1,
 
-        math: {
-          mathjax: 'https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.9/MathJax.js',
-          config: 'TeX-AMS_HTML-full',
-          tex2jax: {
-            inlineMath: [['\\(','\\)']],
-            displayMath: [['\\[','\\]']],
-            balanceBraces: true,
-            processEscapes: false,
-            processRefs: true,
-            processEnvironments: true,
-            preview: 'TeX',
-            skipTags: ['script','noscript','style','textarea','pre','code'],
-            ignoreClass: 'tex2jax_ignore',
-            processClass: 'tex2jax_process'
-          },
-        },
-
         // reveal.js plugins
         plugins: [QuartoLineHighlight, PdfExport, RevealMenu, QuartoSupport,
 
-          RevealMath,
           RevealNotes,
           RevealSearch,
           RevealZoom

@@ -96,6 +96,22 @@
     code span.wa { color: #ff5555; } /* Warning */
   </style>
   <link rel="stylesheet" href="../site_libs/revealjs/dist/theme/quarto-bf56578b9c06c165c166475cd19dbcd1.css">
+  <script>window.backupDefine = window.define; window.define = undefined;</script><script src="https://cdn.jsdelivr.net/npm/katex@latest/dist/katex.min.js"></script>
+  <script>document.addEventListener("DOMContentLoaded", function () {
+ var mathElements = document.getElementsByClassName("math");
+ var macros = [];
+ for (var i = 0; i < mathElements.length; i++) {
+  var texText = mathElements[i].firstChild;
+  if (mathElements[i].tagName == "SPAN") {
+   katex.render(texText.data, mathElements[i], {
+    displayMode: mathElements[i].classList.contains('display'),
+    throwOnError: false,
+    macros: macros,
+    fleqn: false
+   });
+}}});
+  </script>
+  <script>window.define = window.backupDefine; window.backupDefine = undefined;</script><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@latest/dist/katex.min.css">
   <link href="../site_libs/revealjs/plugin/quarto-line-highlight/line-highlight.css" rel="stylesheet">
   <link href="../site_libs/revealjs/plugin/reveal-menu/menu.css" rel="stylesheet">
   <link href="../site_libs/revealjs/plugin/reveal-menu/quarto-menu.css" rel="stylesheet">
@@ -232,13 +248,13 @@ Quantitative biology and integrative omics
 </section>
 <section id="a-biology-problem-first" class="slide level2 smaller">
 <h2>A biology problem first</h2>
-<p>You stain a tissue and score cells for a marker gene. Out of <strong>20 cells</strong>, <strong>13 express</strong> it. What fraction <span class="math inline">\(\theta\)</span> of cells in this tissue express the marker?</p>
+<p>You stain a tissue and score cells for a marker gene. Out of <strong>20 cells</strong>, <strong>13 express</strong> it. What fraction <span class="math inline">\theta</span> of cells in this tissue express the marker?</p>
 <ul>
-<li>The naive point estimate is <span class="math inline">\(13/20 = 0.65\)</span>. But with only 20 cells, how <strong>sure</strong> are we?</li>
-<li>A frequentist gives a confidence interval. A <strong>Bayesian</strong> wants the whole <strong>posterior distribution</strong> of <span class="math inline">\(\theta\)</span> — a probability curve over every value <span class="math inline">\(\theta\)</span> could take.</li>
+<li>The naive point estimate is <span class="math inline">13/20 = 0.65</span>. But with only 20 cells, how <strong>sure</strong> are we?</li>
+<li>A frequentist gives a confidence interval. A <strong>Bayesian</strong> wants the whole <strong>posterior distribution</strong> of <span class="math inline">\theta</span> — a probability curve over every value <span class="math inline">\theta</span> could take.</li>
 <li>We also have <strong>prior</strong> knowledge: this marker is usually expressed in <em>roughly half</em> the cells, rarely near 0 or 1.</li>
 </ul>
-<p>The question is not “what is <span class="math inline">\(\theta\)</span>?” but “<strong>what does the data plus prior tell us about the plausible values of <span class="math inline">\(\theta\)</span>?</strong>” That is a posterior, and Stan will compute it.</p>
+<p>The question is not “what is <span class="math inline">\theta</span>?” but “<strong>what does the data plus prior tell us about the plausible values of <span class="math inline">\theta</span>?</strong>” That is a posterior, and Stan will compute it.</p>
 
 <img data-src="fig02-prior-likelihood-posterior.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:70.0%"><aside class="notes">
 <p>Anchor the abstraction in a concrete count. Scoring 13 of 20 cells positive is exactly the kind of small-sample problem where uncertainty matters and a single ratio is misleading. Contrast the frequentist confidence interval (which students met in their prior stats course) with the Bayesian posterior: a full probability distribution over the unknown fraction. Plant the prior naturally — biological background says the marker sits around half — so priors feel like real information, not a philosophical imposition. This binomial-proportion problem is the running example for the whole lecture; keep coming back to it.</p>
@@ -257,12 +273,12 @@ Quantitative biology and integrative omics
 <section id="recap-prior-likelihood-posterior" class="slide level2 smaller">
 <h2>Recap: prior, likelihood, posterior</h2>
 <p>Bayes’ theorem, in the form we actually use:</p>
-<p><span class="math display">\[\underbrace{p(\theta \mid y)}_{\text{posterior}} \;\propto\; \underbrace{p(y \mid \theta)}_{\text{likelihood}} \times \underbrace{p(\theta)}_{\text{prior}}\]</span></p>
+<p><span class="math display">\underbrace{p(\theta \mid y)}_{\text{posterior}} \;\propto\; \underbrace{p(y \mid \theta)}_{\text{likelihood}} \times \underbrace{p(\theta)}_{\text{prior}}</span></p>
 <p>For the marker example:</p>
 <ul>
-<li><strong>Parameter:</strong> <span class="math inline">\(\theta\)</span>, the fraction expressing (a number between 0 and 1).</li>
-<li><strong>Likelihood:</strong> the count <span class="math inline">\(y=13\)</span> out of <span class="math inline">\(N=20\)</span> is <strong>Binomial</strong>: <span class="math inline">\(y \sim \text{Binomial}(N, \theta)\)</span>.</li>
-<li><strong>Prior:</strong> “usually about half” — a <strong>Beta</strong> distribution, e.g.&nbsp;<span class="math inline">\(\theta \sim \text{Beta}(2,2)\)</span>, a gentle hump centred on <span class="math inline">\(0.5\)</span>.</li>
+<li><strong>Parameter:</strong> <span class="math inline">\theta</span>, the fraction expressing (a number between 0 and 1).</li>
+<li><strong>Likelihood:</strong> the count <span class="math inline">y=13</span> out of <span class="math inline">N=20</span> is <strong>Binomial</strong>: <span class="math inline">y \sim \text{Binomial}(N, \theta)</span>.</li>
+<li><strong>Prior:</strong> “usually about half” — a <strong>Beta</strong> distribution, e.g.&nbsp;<span class="math inline">\theta \sim \text{Beta}(2,2)</span>, a gentle hump centred on <span class="math inline">0.5</span>.</li>
 </ul>
 <p>The posterior is the prior <em>reshaped</em> by the data. Stan’s job is to produce that posterior for us.</p>
 
@@ -283,7 +299,7 @@ Quantitative biology and integrative omics
 <section id="why-we-need-a-computer" class="slide level2 smaller">
 <h2>Why we need a computer</h2>
 <p>For this one example the posterior happens to have a clean formula (Beta prior + Binomial likelihood is <strong>conjugate</strong>). But that is a lucky special case.</p>
-<p><span class="math display">\[p(\theta \mid y) = \frac{p(y \mid \theta)\,p(\theta)}{\displaystyle\int p(y \mid \theta)\,p(\theta)\,d\theta}\]</span></p>
+<p><span class="math display">p(\theta \mid y) = \frac{p(y \mid \theta)\,p(\theta)}{\displaystyle\int p(y \mid \theta)\,p(\theta)\,d\theta}</span></p>
 <ul>
 <li>The denominator is an <strong>integral over all parameter values</strong>. For one parameter it is doable; for a realistic model with <strong>dozens or hundreds</strong> of parameters it is a hopeless high-dimensional integral.</li>
 <li>Almost no real model is conjugate, so there is <strong>no formula</strong> for the posterior.</li>
@@ -416,7 +432,7 @@ Quantitative biology and integrative omics
 <ul>
 <li><code>theta</code> is our unknown fraction. It is <code>real</code> (continuous).</li>
 <li><code>&lt;lower=0, upper=1&gt;</code> constrains it to a valid <strong>probability</strong>. Stan samples <em>only</em> inside this range.</li>
-<li>This one line is why the whole model exists: <strong>the posterior we want is <span class="math inline">\(p(\theta \mid y)\)</span>.</strong></li>
+<li>This one line is why the whole model exists: <strong>the posterior we want is <span class="math inline">p(\theta \mid y)</span>.</strong></li>
 </ul>
 <aside class="notes">
 <p>The parameters block is short but conceptually central: it names what we are trying to learn and therefore what the posterior lives on. theta is a fraction, so it is continuous and bounded to [0,1] — the lower/upper constraints are not decoration, they tell Stan to only ever propose valid probabilities, which also makes the sampler behave. Contrast with the data block: data are fixed numbers you supply; parameters are never supplied, they are inferred. Everything the printout reports later will be about this theta.</p>
@@ -440,8 +456,8 @@ Quantitative biology and integrative omics
 <span id="cb3-3"><a aria-hidden="true" tabindex="-1"></a>  y ~ binomial(N, theta);      <span class="co">// likelihood: 13 of 20 expressed</span></span>
 <span id="cb3-4"><a aria-hidden="true" tabindex="-1"></a>}</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <ul>
-<li><code>~</code> reads “<strong>is distributed as</strong>”. <code>theta ~ beta(2,2)</code> <em>is</em> the prior <span class="math inline">\(p(\theta)\)</span>.</li>
-<li><code>y ~ binomial(N, theta)</code> <em>is</em> the likelihood <span class="math inline">\(p(y \mid \theta)\)</span> — it links the known counts to the unknown <span class="math inline">\(\theta\)</span>.</li>
+<li><code>~</code> reads “<strong>is distributed as</strong>”. <code>theta ~ beta(2,2)</code> <em>is</em> the prior <span class="math inline">p(\theta)</span>.</li>
+<li><code>y ~ binomial(N, theta)</code> <em>is</em> the likelihood <span class="math inline">p(y \mid \theta)</span> — it links the known counts to the unknown <span class="math inline">\theta</span>.</li>
 <li>Stan multiplies these together (adds their logs) to get the posterior — you never write the normalising integral.</li>
 </ul>
 <aside class="notes">
@@ -521,17 +537,17 @@ Quantitative biology and integrative omics
 </section>
 <section id="what-comes-back-draws-from-the-posterior" class="slide level2 smaller">
 <h2>What comes back: draws from the posterior</h2>
-<p>MCMC does not return <em>the</em> value of <span class="math inline">\(\theta\)</span>. It returns thousands of <strong>samples</strong> of <span class="math inline">\(\theta\)</span>, drawn in proportion to the posterior.</p>
+<p>MCMC does not return <em>the</em> value of <span class="math inline">\theta</span>. It returns thousands of <strong>samples</strong> of <span class="math inline">\theta</span>, drawn in proportion to the posterior.</p>
 <ul>
-<li>After warmup, 4 chains <span class="math inline">\(\times\)</span> 1000 kept iterations <span class="math inline">\(=\)</span> <strong>4000 draws</strong> of <span class="math inline">\(\theta\)</span>.</li>
+<li>After warmup, 4 chains <span class="math inline">\times</span> 1000 kept iterations <span class="math inline">=</span> <strong>4000 draws</strong> of <span class="math inline">\theta</span>.</li>
 <li>A <strong>histogram</strong> of those draws <em>is</em> the posterior distribution.</li>
 <li>Any summary you want is just a summary of the draws:
 <ul>
-<li>posterior <strong>mean</strong> <span class="math inline">\(\approx\)</span> <code>mean(draws)</code></li>
-<li>95% <strong>credible interval</strong> <span class="math inline">\(\approx\)</span> the 2.5% and 97.5% <strong>quantiles</strong> of the draws.</li>
+<li>posterior <strong>mean</strong> <span class="math inline">\approx</span> <code>mean(draws)</code></li>
+<li>95% <strong>credible interval</strong> <span class="math inline">\approx</span> the 2.5% and 97.5% <strong>quantiles</strong> of the draws.</li>
 </ul></li>
 </ul>
-<p><span class="math display">\[\theta_1, \theta_2, \theta_3, \dots, \theta_{4000} \quad\longrightarrow\quad \text{histogram} = \text{posterior}\]</span></p>
+<p><span class="math display">\theta_1, \theta_2, \theta_3, \dots, \theta_{4000} \quad\longrightarrow\quad \text{histogram} = \text{posterior}</span></p>
 
 <img data-src="fig12-draws-to-posterior.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:70.0%"><aside class="notes">
 <p>This is the single most important conceptual slide and worth dwelling on. The output of Bayesian computation is not a point but a sample — a cloud of thousands of plausible theta values whose density reproduces the posterior. Everything downstream is descriptive statistics on that sample: the mean of the draws estimates the posterior mean, and the empirical 2.5%/97.5% quantiles give a 95% credible interval. Contrast a credible interval (“95% probability theta is in here”, a direct probability statement) with a frequentist confidence interval, which students learned has a more contorted interpretation — this directness is a selling point of the Bayesian approach. The more draws, the sharper these estimates.</p>
@@ -596,8 +612,8 @@ Quantitative biology and integrative omics
 <pre class="text"><code>        mean se_mean   sd  2.5%   25%   50%   75% 97.5% n_eff Rhat
 theta   0.63    0.00 0.10  0.42  0.56  0.63  0.70  0.82  1580    1</code></pre>
 <ul>
-<li><strong><code>mean</code></strong> <span class="math inline">\(0.63\)</span> — the posterior mean of <span class="math inline">\(\theta\)</span> (pulled slightly from <span class="math inline">\(13/20=0.65\)</span> toward the prior’s <span class="math inline">\(0.5\)</span>).</li>
-<li><strong><code>2.5%</code> … <code>97.5%</code></strong> <span class="math inline">\(= [0.42,\ 0.82]\)</span> — a <strong>95% credible interval</strong>: there is a 95% posterior probability that <span class="math inline">\(\theta\)</span> lies in this range.</li>
+<li><strong><code>mean</code></strong> <span class="math inline">0.63</span> — the posterior mean of <span class="math inline">\theta</span> (pulled slightly from <span class="math inline">13/20=0.65</span> toward the prior’s <span class="math inline">0.5</span>).</li>
+<li><strong><code>2.5%</code> … <code>97.5%</code></strong> <span class="math inline">= [0.42,\ 0.82]</span> — a <strong>95% credible interval</strong>: there is a 95% posterior probability that <span class="math inline">\theta</span> lies in this range.</li>
 <li><strong><code>n_eff</code></strong> and <strong><code>Rhat</code></strong> are diagnostics — the next slide.</li>
 </ul>
 <aside class="notes">
@@ -618,10 +634,10 @@ theta   0.63    0.00 0.10  0.42  0.56  0.63  0.70  0.82  1580    1</code></pre>
 <h2>Did it work? <code>Rhat</code> and <code>n_eff</code></h2>
 <p>Two numbers tell you whether to <strong>trust</strong> the draws:</p>
 <ul>
-<li><strong><code>Rhat</code></strong> (<span class="math inline">\(\hat R\)</span>): compares variation <strong>between</strong> chains to variation <strong>within</strong> chains.
+<li><strong><code>Rhat</code></strong> (<span class="math inline">\hat R</span>): compares variation <strong>between</strong> chains to variation <strong>within</strong> chains.
 <ul>
-<li><span class="math inline">\(\hat R \approx 1.00\)</span> means the chains agree → converged. <strong>Want <span class="math inline">\(\hat R &lt; 1.01\)</span>.</strong></li>
-<li><span class="math inline">\(\hat R = 1.1\)</span> or more → chains disagree → <strong>do not trust the result.</strong> Run longer or fix the model.</li>
+<li><span class="math inline">\hat R \approx 1.00</span> means the chains agree → converged. <strong>Want <span class="math inline">\hat R &lt; 1.01</span>.</strong></li>
+<li><span class="math inline">\hat R = 1.1</span> or more → chains disagree → <strong>do not trust the result.</strong> Run longer or fix the model.</li>
 </ul></li>
 <li><strong><code>n_eff</code></strong> (effective sample size): MCMC draws are <strong>correlated</strong>, so 4000 draws are worth <em>fewer</em> independent ones. <code>n_eff</code> is that effective count.
 <ul>
@@ -713,7 +729,7 @@ theta   0.63    0.00 0.10  0.42  0.56  0.63  0.70  0.82  1580    1</code></pre>
 <tbody>
 <tr class="odd">
 <td>Goal</td>
-<td>compute the <strong>posterior</strong> <span class="math inline">\(p(\theta\mid y)\)</span> for real models</td>
+<td>compute the <strong>posterior</strong> <span class="math inline">p(\theta\mid y)</span> for real models</td>
 </tr>
 <tr class="even">
 <td>Stan</td>
@@ -749,7 +765,7 @@ theta   0.63    0.00 0.10  0.42  0.56  0.63  0.70  0.82  1580    1</code></pre>
 </tr>
 <tr class="even">
 <td><code>Rhat</code></td>
-<td><span class="math inline">\(\approx 1\)</span> = chains agree = <strong>trust it</strong> (<span class="math inline">\(&lt;1.01\)</span>)</td>
+<td><span class="math inline">\approx 1</span> = chains agree = <strong>trust it</strong> (<span class="math inline">&lt;1.01</span>)</td>
 </tr>
 <tr class="odd">
 <td><code>n_eff</code></td>
@@ -798,7 +814,6 @@ theta   0.63    0.00 0.10  0.42  0.56  0.63  0.70  0.82  1580    1</code></pre>
   <script src="../site_libs/revealjs/plugin/notes/notes.js"></script>
   <script src="../site_libs/revealjs/plugin/search/search.js"></script>
   <script src="../site_libs/revealjs/plugin/zoom/zoom.js"></script>
-  <script src="../site_libs/revealjs/plugin/math/math.js"></script>
   <script>window.define = window.backupDefine; window.backupDefine = undefined;</script>
 
   <script>
@@ -966,27 +981,9 @@ theta   0.63    0.00 0.10  0.42  0.56  0.63  0.70  0.82  1580    1</code></pre>
         // Factor of the display size that should remain empty around the content
         margin: 0.1,
 
-        math: {
-          mathjax: 'https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.9/MathJax.js',
-          config: 'TeX-AMS_HTML-full',
-          tex2jax: {
-            inlineMath: [['\\(','\\)']],
-            displayMath: [['\\[','\\]']],
-            balanceBraces: true,
-            processEscapes: false,
-            processRefs: true,
-            processEnvironments: true,
-            preview: 'TeX',
-            skipTags: ['script','noscript','style','textarea','pre','code'],
-            ignoreClass: 'tex2jax_ignore',
-            processClass: 'tex2jax_process'
-          },
-        },
-
         // reveal.js plugins
         plugins: [QuartoLineHighlight, PdfExport, RevealMenu, QuartoSupport,
 
-          RevealMath,
           RevealNotes,
           RevealSearch,
           RevealZoom

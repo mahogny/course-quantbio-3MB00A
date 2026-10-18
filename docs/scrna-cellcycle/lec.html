@@ -96,6 +96,22 @@
     code span.wa { color: #ff5555; } /* Warning */
   </style>
   <link rel="stylesheet" href="../site_libs/revealjs/dist/theme/quarto-bf56578b9c06c165c166475cd19dbcd1.css">
+  <script>window.backupDefine = window.define; window.define = undefined;</script><script src="https://cdn.jsdelivr.net/npm/katex@latest/dist/katex.min.js"></script>
+  <script>document.addEventListener("DOMContentLoaded", function () {
+ var mathElements = document.getElementsByClassName("math");
+ var macros = [];
+ for (var i = 0; i < mathElements.length; i++) {
+  var texText = mathElements[i].firstChild;
+  if (mathElements[i].tagName == "SPAN") {
+   katex.render(texText.data, mathElements[i], {
+    displayMode: mathElements[i].classList.contains('display'),
+    throwOnError: false,
+    macros: macros,
+    fleqn: false
+   });
+}}});
+  </script>
+  <script>window.define = window.backupDefine; window.backupDefine = undefined;</script><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@latest/dist/katex.min.css">
   <link href="../site_libs/revealjs/plugin/quarto-line-highlight/line-highlight.css" rel="stylesheet">
   <link href="../site_libs/revealjs/plugin/reveal-menu/menu.css" rel="stylesheet">
   <link href="../site_libs/revealjs/plugin/reveal-menu/quarto-menu.css" rel="stylesheet">
@@ -306,12 +322,12 @@ Quantitative biology and integrative omics
 <section id="idea-score-a-phase-from-a-gene-set" class="slide level2 smaller">
 <h2>Idea: score a phase from a gene set</h2>
 <p>We do not trust any <strong>single</strong> gene (dropouts, noise). Instead we use a <strong>set</strong> of phase markers and summarise them into one number per cell — a <strong>module score</strong>.</p>
-<p>For cell <span class="math inline">\(c\)</span> and an S-phase gene set <span class="math inline">\(\mathcal{S}\)</span>, a simple score is the <strong>average expression</strong> of those genes:</p>
-<p><span class="math display">\[\text{Score}_S(c) = \frac{1}{|\mathcal{S}|}\sum_{g \in \mathcal{S}} x_{gc}\]</span></p>
-<p>where <span class="math inline">\(x_{gc}\)</span> is the (log-normalised) expression of gene <span class="math inline">\(g\)</span> in cell <span class="math inline">\(c\)</span>.</p>
+<p>For cell <span class="math inline">c</span> and an S-phase gene set <span class="math inline">\mathcal{S}</span>, a simple score is the <strong>average expression</strong> of those genes:</p>
+<p><span class="math display">\text{Score}_S(c) = \frac{1}{|\mathcal{S}|}\sum_{g \in \mathcal{S}} x_{gc}</span></p>
+<p>where <span class="math inline">x_{gc}</span> is the (log-normalised) expression of gene <span class="math inline">g</span> in cell <span class="math inline">c</span>.</p>
 <ul>
-<li>A high <span class="math inline">\(\text{Score}_S\)</span> means the S-phase program is switched on in that cell.</li>
-<li>We compute an analogous <span class="math inline">\(\text{Score}_{G2M}\)</span> from the G2/M gene set.</li>
+<li>A high <span class="math inline">\text{Score}_S</span> means the S-phase program is switched on in that cell.</li>
+<li>We compute an analogous <span class="math inline">\text{Score}_{G2M}</span> from the G2/M gene set.</li>
 </ul>
 
 <img data-src="fig05-module-score.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:70.0%"><aside class="notes">
@@ -332,7 +348,7 @@ Quantitative biology and integrative omics
 <h2>Making the score fair: a background control</h2>
 <p>A problem: some cells simply have <strong>more counts</strong> or more genes detected, inflating any average. We want a score that reflects the <strong>program</strong>, not sequencing depth.</p>
 <p>The standard fix (the <code>AddModuleScore</code> idea): subtract the average expression of a <strong>matched set of control genes</strong> picked to have <strong>similar overall expression levels</strong>:</p>
-<p><span class="math display">\[\text{Score}_S(c) = \underbrace{\overline{x}_{\mathcal{S}}(c)}_{\text{marker average}} \;-\; \underbrace{\overline{x}_{\text{ctrl}}(c)}_{\text{control average}}\]</span></p>
+<p><span class="math display">\text{Score}_S(c) = \underbrace{\overline{x}_{\mathcal{S}}(c)}_{\text{marker average}} \;-\; \underbrace{\overline{x}_{\text{ctrl}}(c)}_{\text{control average}}</span></p>
 <ul>
 <li>The control genes track the <strong>background</strong> a cell would show anyway, so the difference isolates the <strong>cell-cycle signal</strong>.</li>
 <li>A score near <strong>0</strong> means “no more than background”; a clearly <strong>positive</strong> score means the program is active.</li>
@@ -354,11 +370,11 @@ Quantitative biology and integrative omics
 </section>
 <section id="assigning-the-phase" class="slide level2 smaller">
 <h2>Assigning the phase</h2>
-<p>Each cell now has two numbers, <span class="math inline">\(\text{Score}_S\)</span> and <span class="math inline">\(\text{Score}_{G2M}\)</span>. Assign a label by which program is <strong>on</strong>:</p>
+<p>Each cell now has two numbers, <span class="math inline">\text{Score}_S</span> and <span class="math inline">\text{Score}_{G2M}</span>. Assign a label by which program is <strong>on</strong>:</p>
 <ul>
 <li>If <strong>both</strong> scores are low (near or below 0) → <strong>G1</strong> (not obviously cycling).</li>
-<li>If <span class="math inline">\(\text{Score}_S\)</span> is the <strong>highest</strong> positive → <strong>S</strong>.</li>
-<li>If <span class="math inline">\(\text{Score}_{G2M}\)</span> is the <strong>highest</strong> positive → <strong>G2M</strong>.</li>
+<li>If <span class="math inline">\text{Score}_S</span> is the <strong>highest</strong> positive → <strong>S</strong>.</li>
+<li>If <span class="math inline">\text{Score}_{G2M}</span> is the <strong>highest</strong> positive → <strong>G2M</strong>.</li>
 </ul>
 <p>This is the logic behind Seurat’s <code>CellCycleScoring</code>: it returns <code>S.Score</code>, <code>G2M.Score</code>, and a discrete <code>Phase</code>.</p>
 <p>Now we have both a <strong>continuous</strong> readout (the scores) and a <strong>categorical</strong> one (the phase) for every cell.</p>
@@ -498,11 +514,11 @@ Quantitative biology and integrative omics
 <section id="removing-the-effect-regress-it-out" class="slide level2 smaller">
 <h2>Removing the effect: regress it out</h2>
 <p>If the cell cycle is a <strong>nuisance</strong> here, we remove its contribution <strong>before</strong> PCA. The tool is one they already know: a <strong>linear model per gene</strong>.</p>
-<p>For each gene <span class="math inline">\(g\)</span>, fit its expression across cells on the cell-cycle scores and <strong>keep the residuals</strong>:</p>
-<p><span class="math display">\[x_{gc} = \beta_{0g} + \beta_{1g}\,\text{Score}_S(c) + \beta_{2g}\,\text{Score}_{G2M}(c) + \varepsilon_{gc}\]</span></p>
+<p>For each gene <span class="math inline">g</span>, fit its expression across cells on the cell-cycle scores and <strong>keep the residuals</strong>:</p>
+<p><span class="math display">x_{gc} = \beta_{0g} + \beta_{1g}\,\text{Score}_S(c) + \beta_{2g}\,\text{Score}_{G2M}(c) + \varepsilon_{gc}</span></p>
 <ul>
 <li>The fitted part is the variation <strong>explained by</strong> the cell cycle.</li>
-<li>The <strong>residual</strong> <span class="math inline">\(\varepsilon_{gc}\)</span> is what is left <strong>after</strong> removing it — this is what we feed to PCA.</li>
+<li>The <strong>residual</strong> <span class="math inline">\varepsilon_{gc}</span> is what is left <strong>after</strong> removing it — this is what we feed to PCA.</li>
 </ul>
 <p>The cell-cycle axis is now flattened, so it no longer claims a top PC.</p>
 
@@ -554,7 +570,7 @@ Quantitative biology and integrative omics
 <li><strong>Tumour, immune activation, development, stem/progenitor cells</strong> — here <em>dividing vs.&nbsp;resting</em> is real biology. Remove the cycle and you may <strong>erase your result</strong>.</li>
 <li><strong>Resolving fine cell subtypes in a proliferating tissue</strong> — here the cycle is a <strong>nuisance</strong> hiding identity; removing it helps.</li>
 </ul>
-<p>A common middle path: regress the <strong>difference</strong> <span class="math inline">\(\text{Score}_S - \text{Score}_{G2M}\)</span> instead of both. This removes <strong>phase differences among cycling cells</strong> but keeps <strong>cycling vs.&nbsp;non-cycling</strong> — useful when you still care <em>that</em> a cell divides, just not <em>where</em> in the cycle it is.</p>
+<p>A common middle path: regress the <strong>difference</strong> <span class="math inline">\text{Score}_S - \text{Score}_{G2M}</span> instead of both. This removes <strong>phase differences among cycling cells</strong> but keeps <strong>cycling vs.&nbsp;non-cycling</strong> — useful when you still care <em>that</em> a cell divides, just not <em>where</em> in the cycle it is.</p>
 
 <img data-src="fig14-difference-regression.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:70.0%"><aside class="notes">
 <p>This is the judgement slide and arguably the most important message. Regression is destructive: it removes a real signal, so only remove it when it is genuinely a nuisance for the current question. Give the two contrasting scenarios. Then the nuanced Seurat “alternate workflow”: regressing S.Score minus G2M.Score collapses the within-cycle phase gradient but retains the cycling/non-cycling contrast — the right tool when proliferation status matters but exact phase does not. The meta-lesson: correction decisions must be driven by the biological question, not applied reflexively.</p>
@@ -715,7 +731,6 @@ Quantitative biology and integrative omics
   <script src="../site_libs/revealjs/plugin/notes/notes.js"></script>
   <script src="../site_libs/revealjs/plugin/search/search.js"></script>
   <script src="../site_libs/revealjs/plugin/zoom/zoom.js"></script>
-  <script src="../site_libs/revealjs/plugin/math/math.js"></script>
   <script>window.define = window.backupDefine; window.backupDefine = undefined;</script>
 
   <script>
@@ -883,27 +898,9 @@ Quantitative biology and integrative omics
         // Factor of the display size that should remain empty around the content
         margin: 0.1,
 
-        math: {
-          mathjax: 'https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.9/MathJax.js',
-          config: 'TeX-AMS_HTML-full',
-          tex2jax: {
-            inlineMath: [['\\(','\\)']],
-            displayMath: [['\\[','\\]']],
-            balanceBraces: true,
-            processEscapes: false,
-            processRefs: true,
-            processEnvironments: true,
-            preview: 'TeX',
-            skipTags: ['script','noscript','style','textarea','pre','code'],
-            ignoreClass: 'tex2jax_ignore',
-            processClass: 'tex2jax_process'
-          },
-        },
-
         // reveal.js plugins
         plugins: [QuartoLineHighlight, PdfExport, RevealMenu, QuartoSupport,
 
-          RevealMath,
           RevealNotes,
           RevealSearch,
           RevealZoom

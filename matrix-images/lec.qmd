@@ -16,6 +16,7 @@ format:
     incremental: false
     chalkboard: false
     menu: true
+    html-math-method: katex
 ---
 
 ## About this lecture
@@ -55,7 +56,7 @@ From here on, every transformation we meet is also applied to this image, so stu
 
 ## Rotating an image {.smaller}
 
-The rotation matrix $R(\theta)$ from Matrices as transformations, applied to all 19 200 pixels in **one** `%*%`:
+The rotation matrix $R(\theta)$ from Matrices as transformations, applied to the positions of all 19 200 pixels **using a single** `%*%`:
 
 ```r
 theta <- pi/6                       # 30 degrees
@@ -164,22 +165,21 @@ This is THE motivation for matrix-matrix multiplication: composing is multiplyin
 
 ## Biology: undoing a misalignment {.smaller}
 
-The same cell is imaged a second time, but the section sits at an angle and is slightly skewed: the second image is $A\,\mathbf{xy}$. If we **know** $A$, its inverse undoes it — `solve(A)` from Linear systems in R.
+A slide was scanned at an angle: all we have is the tilted scan. The label should be horizontal, and it is tilted by 20°, so the scanner applied a rotation $A = R(20°)$ to every pixel. Its inverse undoes it — `solve(A)` from Linear systems in R.
 
 ```r
-A <- matrix(c( 0.94, 0.58,
-              -0.34, 0.85), nrow = 2, byrow = TRUE)   # the misalignment
-moved    <- A %*% xy
-restored <- solve(A) %*% moved
-max(abs(restored - xy))                               # about 1e-14: back where we started
+theta <- pi/9                   # 20 degrees: read off from the tilted label
+A <- matrix(c(cos(theta), -sin(theta),
+              sin(theta),  cos(theta)), nrow = 2, byrow = TRUE)
+restored <- solve(A) %*% scan   # scan: the 2 x N pixel positions of the tilted image
 ```
 
-![](fig08-registration.png){width="85%" fig-align="center"}
+![](fig08-registration.png){width="80%" fig-align="center"}
 
 [Image: Robert M. Hunt, [CC BY 3.0](https://creativecommons.org/licenses/by/3.0), via Wikimedia Commons.]{style="font-size: 0.6em; color: #666;"}
 
 ::: notes
-Image registration — aligning two images of the same specimen (repeated imaging rounds, H&E vs a spatial-transcriptomics grid, a crooked slide) — is a matrix problem. Here A is given; real registration software estimates A from the images, which is beyond this course. The inverse exists because det(A) is not 0; a singular A (the collapsed line in the gallery) could never be undone. Link: solve(A) is the same function used to solve Ax = b in Linear systems in R. The same undo-with-the-inverse idea returns in Compensation & spectral unmixing, where solve(S) separates mixed fluorescent dyes.
+Image registration — straightening a crooked scan, or aligning two images of the same specimen (repeated imaging rounds, H&E vs a spatial-transcriptomics grid) — is a matrix problem. Here we read A off the image: the label must be horizontal and is tilted by 20 degrees. Real registration software estimates A from the images, which is beyond this course. The label strip was added to the micrograph for this example. The inverse exists because det(A) is not 0; a singular A (the collapsed line in the gallery) could never be undone. Link: solve(A) is the same function used to solve Ax = b in Linear systems in R. The same undo-with-the-inverse idea returns in Compensation & spectral unmixing, where solve(S) separates mixed fluorescent dyes.
 :::
 
 ## Summary {.smaller}

@@ -96,6 +96,22 @@
     code span.wa { color: #ff5555; } /* Warning */
   </style>
   <link rel="stylesheet" href="../site_libs/revealjs/dist/theme/quarto-bf56578b9c06c165c166475cd19dbcd1.css">
+  <script>window.backupDefine = window.define; window.define = undefined;</script><script src="https://cdn.jsdelivr.net/npm/katex@latest/dist/katex.min.js"></script>
+  <script>document.addEventListener("DOMContentLoaded", function () {
+ var mathElements = document.getElementsByClassName("math");
+ var macros = [];
+ for (var i = 0; i < mathElements.length; i++) {
+  var texText = mathElements[i].firstChild;
+  if (mathElements[i].tagName == "SPAN") {
+   katex.render(texText.data, mathElements[i], {
+    displayMode: mathElements[i].classList.contains('display'),
+    throwOnError: false,
+    macros: macros,
+    fleqn: false
+   });
+}}});
+  </script>
+  <script>window.define = window.backupDefine; window.backupDefine = undefined;</script><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@latest/dist/katex.min.css">
   <link href="../site_libs/revealjs/plugin/quarto-line-highlight/line-highlight.css" rel="stylesheet">
   <link href="../site_libs/revealjs/plugin/reveal-menu/menu.css" rel="stylesheet">
   <link href="../site_libs/revealjs/plugin/reveal-menu/quarto-menu.css" rel="stylesheet">
@@ -207,11 +223,11 @@ Quantitative biology and integrative omics
 </section>
 <section id="about-this-lecture" class="slide level2">
 <h2>About this lecture</h2>
-<p>In PCA we found the directions of <strong>greatest variation</strong> in a data matrix <span class="math inline">\(X\)</span> — a purely <strong>unsupervised</strong> view that never looks at any outcome. Today we bring the outcome back in.</p>
+<p>In PCA we found the directions of <strong>greatest variation</strong> in a data matrix <span class="math inline">X</span> — a purely <strong>unsupervised</strong> view that never looks at any outcome. Today we bring the outcome back in.</p>
 <ul>
 <li>Why <strong>PCA can miss the biology</strong>: its biggest axis may be a batch effect, not your disease.</li>
-<li><strong>PLS</strong>: find directions in <span class="math inline">\(X\)</span> that <strong>covary with an outcome <span class="math inline">\(Y\)</span></strong> (supervised latent variables).</li>
-<li><strong>OPLS</strong>: split <span class="math inline">\(X\)</span>-variation into a <strong>predictive</strong> part (correlated with <span class="math inline">\(Y\)</span>) and an <strong>orthogonal</strong> part (structured noise — batch, instrument, physiology).</li>
+<li><strong>PLS</strong>: find directions in <span class="math inline">X</span> that <strong>covary with an outcome <span class="math inline">Y</span></strong> (supervised latent variables).</li>
+<li><strong>OPLS</strong>: split <span class="math inline">X</span>-variation into a <strong>predictive</strong> part (correlated with <span class="math inline">Y</span>) and an <strong>orthogonal</strong> part (structured noise — batch, instrument, physiology).</li>
 <li>Why this split makes a model <strong>easier to interpret</strong>, and where it is standard (<strong>metabolomics</strong>).</li>
 <li>The catch: supervised models can <strong>fit noise</strong>, so we must <strong>validate</strong> honestly.</li>
 </ul>
@@ -258,14 +274,14 @@ Quantitative biology and integrative omics
 </section>
 <section id="recap-what-pca-gives-us" class="slide level2 smaller">
 <h2>Recap: what PCA gives us</h2>
-<p>PCA takes the (centred) data matrix <span class="math inline">\(X\)</span> and returns latent axes ordered by variance:</p>
+<p>PCA takes the (centred) data matrix <span class="math inline">X</span> and returns latent axes ordered by variance:</p>
 <ul>
-<li><strong>Scores</strong> <span class="math inline">\(T\)</span> — coordinates of each <strong>sample</strong> on the new axes,</li>
-<li><strong>Loadings</strong> <span class="math inline">\(P\)</span> — how each <strong>feature</strong> contributes to each axis,</li>
-<li>reconstruction <span class="math inline">\(X \approx T P^\top\)</span>, with the first axes capturing the most variance.</li>
+<li><strong>Scores</strong> <span class="math inline">T</span> — coordinates of each <strong>sample</strong> on the new axes,</li>
+<li><strong>Loadings</strong> <span class="math inline">P</span> — how each <strong>feature</strong> contributes to each axis,</li>
+<li>reconstruction <span class="math inline">X \approx T P^\top</span>, with the first axes capturing the most variance.</li>
 </ul>
-<p><span class="math display">\[\text{PC 1 = direction of maximum variance in } X.\]</span></p>
-<p>PCA is <strong>unsupervised</strong>: it never sees any outcome <span class="math inline">\(Y\)</span>. It answers <em>“what varies most?”</em> — a fine question, but <strong>not</strong> <em>“what varies <strong>with the disease</strong>?”</em></p>
+<p><span class="math display">\text{PC 1 = direction of maximum variance in } X.</span></p>
+<p>PCA is <strong>unsupervised</strong>: it never sees any outcome <span class="math inline">Y</span>. It answers <em>“what varies most?”</em> — a fine question, but <strong>not</strong> <em>“what varies <strong>with the disease</strong>?”</em></p>
 
 <img data-src="fig03-pca-factorization.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:70.0%"><aside class="notes">
 <p>A one-slide refresher tying to the PCA unit. Reuse their vocabulary exactly: scores are the samples’ new coordinates, loadings tell you which original features build each component, and X factorises approximately as scores times loadings transposed. The single sentence to burn in: PCA maximises variance and is blind to Y. Everything today is a reaction to that blindness. Do not re-derive PCA; just re-activate it.</p>
@@ -309,14 +325,14 @@ Quantitative biology and integrative omics
 </section>
 <section id="bring-in-the-outcome-supervision" class="slide level2 smaller">
 <h2>Bring in the outcome: supervision</h2>
-<p>Attach the response we care about as a vector (or matrix) <span class="math inline">\(Y\)</span>:</p>
+<p>Attach the response we care about as a vector (or matrix) <span class="math inline">Y</span>:</p>
 <ul>
-<li><strong>regression flavour:</strong> <span class="math inline">\(Y\)</span> is a quantity — e.g.&nbsp;a drug dose, a bioactivity value;</li>
-<li><strong>classification flavour:</strong> <span class="math inline">\(Y\)</span> encodes a class — e.g.&nbsp;case <span class="math inline">\(=1\)</span>, control <span class="math inline">\(=0\)</span> (this is <strong>OPLS-DA</strong>, discriminant analysis).</li>
+<li><strong>regression flavour:</strong> <span class="math inline">Y</span> is a quantity — e.g.&nbsp;a drug dose, a bioactivity value;</li>
+<li><strong>classification flavour:</strong> <span class="math inline">Y</span> encodes a class — e.g.&nbsp;case <span class="math inline">=1</span>, control <span class="math inline">=0</span> (this is <strong>OPLS-DA</strong>, discriminant analysis).</li>
 </ul>
 <p>Now ask a <strong>supervised</strong> question:</p>
-<p><span class="math display">\[\text{find directions in } X \text{ that are useful for } Y.\]</span></p>
-<p>Instead of maximising variance in <span class="math inline">\(X\)</span> alone, we bring <span class="math inline">\(X\)</span> <strong>and</strong> <span class="math inline">\(Y\)</span> into the objective. That single change turns PCA into <strong>PLS</strong>.</p>
+<p><span class="math display">\text{find directions in } X \text{ that are useful for } Y.</span></p>
+<p>Instead of maximising variance in <span class="math inline">X</span> alone, we bring <span class="math inline">X</span> <strong>and</strong> <span class="math inline">Y</span> into the objective. That single change turns PCA into <strong>PLS</strong>.</p>
 <aside class="notes">
 <p>Introduce Y as the pivot. Two modes: continuous Y (PLS regression) and categorical Y coded as dummy 0/1 (the discriminant variant, OPLS-DA, which is the common one in metabolomics case/control work). Keep the phrasing “directions in X useful for Y” deliberately loose here; the precise objective (covariance) comes next. The conceptual leap is small but important: we are no longer describing X, we are relating X to Y. Students who have used lm() know supervision; frame PLS as “regression that also builds its own latent axes.”</p>
 <style type="text/css">
@@ -333,12 +349,12 @@ Quantitative biology and integrative omics
 </section>
 <section id="pls-directions-that-covary-with-y" class="slide level2 smaller">
 <h2>PLS: directions that covary with Y</h2>
-<p><strong>Partial Least Squares.</strong> PLS builds latent components <span class="math inline">\(t = Xw\)</span> as linear combinations of the features, choosing the weights <span class="math inline">\(w\)</span> so the component has <strong>maximum covariance with <span class="math inline">\(Y\)</span></strong>:</p>
-<p><span class="math display">\[\max_{\|w\|=1}\ \operatorname{cov}(Xw,\ Y).\]</span></p>
-<p>Contrast with PCA, which maximises <span class="math inline">\(\operatorname{var}(Xw)\)</span> alone.</p>
+<p><strong>Partial Least Squares.</strong> PLS builds latent components <span class="math inline">t = Xw</span> as linear combinations of the features, choosing the weights <span class="math inline">w</span> so the component has <strong>maximum covariance with <span class="math inline">Y</span></strong>:</p>
+<p><span class="math display">\max_{\|w\|=1}\ \operatorname{cov}(Xw,\ Y).</span></p>
+<p>Contrast with PCA, which maximises <span class="math inline">\operatorname{var}(Xw)</span> alone.</p>
 <ul>
-<li>Covariance = variance <strong>and</strong> correlation-with-<span class="math inline">\(Y\)</span> together, so a PLS component must both <strong>vary</strong> and <strong>track <span class="math inline">\(Y\)</span></strong>.</li>
-<li>After extracting one component, PLS <strong>removes</strong> it from <span class="math inline">\(X\)</span> (deflation) and finds the next — giving several ordered components, like PCA but <span class="math inline">\(Y\)</span>-aware.</li>
+<li>Covariance = variance <strong>and</strong> correlation-with-<span class="math inline">Y</span> together, so a PLS component must both <strong>vary</strong> and <strong>track <span class="math inline">Y</span></strong>.</li>
+<li>After extracting one component, PLS <strong>removes</strong> it from <span class="math inline">X</span> (deflation) and finds the next — giving several ordered components, like PCA but <span class="math inline">Y</span>-aware.</li>
 </ul>
 
 <img data-src="fig06-pca-vs-pls-axis.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:60.0%"><aside class="notes">
@@ -357,7 +373,7 @@ Quantitative biology and integrative omics
 </section>
 <section id="scores-and-loadings-again" class="slide level2 smaller">
 <h2>Scores and loadings, again</h2>
-<p>PLS keeps the same two-part vocabulary as PCA, now <span class="math inline">\(Y\)</span>-aware:</p>
+<p>PLS keeps the same two-part vocabulary as PCA, now <span class="math inline">Y</span>-aware:</p>
 <table class="caption-top">
 <colgroup>
 <col style="width: 33%">
@@ -373,7 +389,7 @@ Quantitative biology and integrative omics
 </thead>
 <tbody>
 <tr class="odd">
-<td><strong>Scores</strong> <span class="math inline">\(t\)</span></td>
+<td><strong>Scores</strong> <span class="math inline">t</span></td>
 <td>each <strong>sample’s</strong> coordinate on a latent component</td>
 <td>sample space</td>
 </tr>
@@ -388,7 +404,7 @@ Quantitative biology and integrative omics
 <li><strong>Score plot</strong> → do the <strong>samples</strong> (cases vs controls) separate?</li>
 <li><strong>Loading plot</strong> → which <strong>metabolites</strong> drive that separation?</li>
 </ul>
-<p>A latent component is still just a <strong>weighted combination of the original features</strong> — a new “meta-feature” — only now the weights are chosen with <span class="math inline">\(Y\)</span> in view.</p>
+<p>A latent component is still just a <strong>weighted combination of the original features</strong> — a new “meta-feature” — only now the weights are chosen with <span class="math inline">Y</span> in view.</p>
 <aside class="notes">
 <p>Reassure students that no new machinery is needed to read PLS output: scores and loadings mean what they meant in PCA. The score plot answers “do my groups separate,” the loading plot answers “which features are responsible.” The phrase “latent variable” simply means a constructed axis that is a linear combination of measured features; it is latent because it is not directly measured. This slide is the bridge that lets them interpret OPLS output later without new vocabulary.</p>
 <style type="text/css">
@@ -405,12 +421,12 @@ Quantitative biology and integrative omics
 </section>
 <section id="the-opls-idea-split-the-variation" class="slide level2 smaller">
 <h2>The OPLS idea: split the variation</h2>
-<p>PLS mixes two kinds of <span class="math inline">\(X\)</span>-variation inside its components: variation that <strong>relates to <span class="math inline">\(Y\)</span></strong>, and variation that is <strong>large but irrelevant</strong> (batch, physiology). That makes components hard to read.</p>
+<p>PLS mixes two kinds of <span class="math inline">X</span>-variation inside its components: variation that <strong>relates to <span class="math inline">Y</span></strong>, and variation that is <strong>large but irrelevant</strong> (batch, physiology). That makes components hard to read.</p>
 <p><strong>OPLS</strong> (Orthogonal PLS) adds one idea: <strong>separate</strong> them.</p>
-<p><span class="math display">\[\underbrace{\text{variation in } X}_{\text{systematic part}} = \underbrace{\text{predictive}}_{\text{correlated with } Y} \ +\ \underbrace{\text{orthogonal}}_{\text{uncorrelated with } Y} \ +\ \text{residual noise}\]</span></p>
+<p><span class="math display">\underbrace{\text{variation in } X}_{\text{systematic part}} = \underbrace{\text{predictive}}_{\text{correlated with } Y} \ +\ \underbrace{\text{orthogonal}}_{\text{uncorrelated with } Y} \ +\ \text{residual noise}</span></p>
 <ul>
-<li><strong>Predictive</strong> variation → put it in <strong>one</strong> component (for a single <span class="math inline">\(Y\)</span>) that carries the <span class="math inline">\(Y\)</span>-related signal.</li>
-<li><strong>Orthogonal</strong> variation → structured, but <strong>uncorrelated with <span class="math inline">\(Y\)</span></strong>; parked in <strong>separate</strong> orthogonal components.</li>
+<li><strong>Predictive</strong> variation → put it in <strong>one</strong> component (for a single <span class="math inline">Y</span>) that carries the <span class="math inline">Y</span>-related signal.</li>
+<li><strong>Orthogonal</strong> variation → structured, but <strong>uncorrelated with <span class="math inline">Y</span></strong>; parked in <strong>separate</strong> orthogonal components.</li>
 </ul>
 
 <img data-src="fig08-variation-split.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:70.0%"><aside class="notes">
@@ -429,7 +445,7 @@ Quantitative biology and integrative omics
 </section>
 <section id="what-is-orthogonal-variation" class="slide level2 smaller">
 <h2>What is “orthogonal variation”?</h2>
-<p>Orthogonal variation is <strong>real, structured</strong> signal in <span class="math inline">\(X\)</span> that has <strong>nothing to do with <span class="math inline">\(Y\)</span></strong>. In the serum study it might be:</p>
+<p>Orthogonal variation is <strong>real, structured</strong> signal in <span class="math inline">X</span> that has <strong>nothing to do with <span class="math inline">Y</span></strong>. In the serum study it might be:</p>
 <ul>
 <li><strong>instrument / batch</strong> drift between run days,</li>
 <li><strong>age, sex, BMI, diet</strong> differences between individuals,</li>
@@ -453,16 +469,16 @@ Quantitative biology and integrative omics
 </section>
 <section id="the-opls-decomposition" class="slide level2 smaller">
 <h2>The OPLS decomposition</h2>
-<p>For a single response <span class="math inline">\(Y\)</span>, OPLS factorises <span class="math inline">\(X\)</span> as</p>
-<p><span class="math display">\[X = \underbrace{t_p\, p_p^\top}_{\text{predictive}} \;+\; \underbrace{T_o\, P_o^\top}_{\text{orthogonal}} \;+\; E,\]</span></p>
-<p>and predicts <span class="math inline">\(Y\)</span> from the <strong>predictive score only</strong>:</p>
-<p><span class="math display">\[\hat Y = t_p\, c + \text{(intercept)}.\]</span></p>
+<p>For a single response <span class="math inline">Y</span>, OPLS factorises <span class="math inline">X</span> as</p>
+<p><span class="math display">X = \underbrace{t_p\, p_p^\top}_{\text{predictive}} \;+\; \underbrace{T_o\, P_o^\top}_{\text{orthogonal}} \;+\; E,</span></p>
+<p>and predicts <span class="math inline">Y</span> from the <strong>predictive score only</strong>:</p>
+<p><span class="math display">\hat Y = t_p\, c + \text{(intercept)}.</span></p>
 <ul>
-<li><span class="math inline">\(t_p\)</span> — the <strong>predictive scores</strong> (one per sample): the samples’ position along the <span class="math inline">\(Y\)</span>-related axis.</li>
-<li><span class="math inline">\(T_o, P_o\)</span> — <strong>orthogonal</strong> scores and loadings: the nuisance structure, set aside.</li>
-<li><span class="math inline">\(E\)</span> — residual.</li>
+<li><span class="math inline">t_p</span> — the <strong>predictive scores</strong> (one per sample): the samples’ position along the <span class="math inline">Y</span>-related axis.</li>
+<li><span class="math inline">T_o, P_o</span> — <strong>orthogonal</strong> scores and loadings: the nuisance structure, set aside.</li>
+<li><span class="math inline">E</span> — residual.</li>
 </ul>
-<p>So a single number per sample, <span class="math inline">\(t_p\)</span>, carries the disease signal; everything Y-irrelevant is elsewhere.</p>
+<p>So a single number per sample, <span class="math inline">t_p</span>, carries the disease signal; everything Y-irrelevant is elsewhere.</p>
 
 <img data-src="fig10-opls-decomposition.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:75.0%"><aside class="notes">
 <p>Show the equation but do not derive it — flag it as “light math, for orientation.” The structure to read: X is a sum of a rank-one predictive piece (score vector times loading vector), a multi-component orthogonal piece, and residual. The prediction of Y uses only the predictive score t_p times a scalar c.&nbsp;The pedagogical point is that OPLS collapses “how diseased is this sample” into one coordinate t_p, which is what makes the score plot so readable. Symbols: subscript p = predictive, o = orthogonal. Reassure them the software computes all of this; they need to interpret it.</p>
@@ -480,12 +496,12 @@ Quantitative biology and integrative omics
 </section>
 <section id="reading-an-opls-da-model" class="slide level2 smaller">
 <h2>Reading an OPLS-DA model</h2>
-<p>The standard plot: <strong>predictive score <span class="math inline">\(t_p\)</span></strong> on the x-axis vs the <strong>first orthogonal score <span class="math inline">\(t_o\)</span></strong> on the y-axis.</p>
+<p>The standard plot: <strong>predictive score <span class="math inline">t_p</span></strong> on the x-axis vs the <strong>first orthogonal score <span class="math inline">t_o</span></strong> on the y-axis.</p>
 <ul>
 <li><strong>Left–right (predictive axis):</strong> cases vs controls should separate <strong>horizontally</strong>.</li>
 <li><strong>Up–down (orthogonal axis):</strong> spread that is <strong>within</strong> the biology — batch, individual variation — but does <strong>not</strong> separate the groups.</li>
 </ul>
-<p>To find <em>which metabolites</em> drive the separation, metabolomics often uses an <strong>S-plot</strong>: for each feature, plot its <strong>covariance</strong> with <span class="math inline">\(t_p\)</span> against its <strong>correlation</strong> with <span class="math inline">\(t_p\)</span>. Features in the extreme corners are the strong, reliable discriminators.</p>
+<p>To find <em>which metabolites</em> drive the separation, metabolomics often uses an <strong>S-plot</strong>: for each feature, plot its <strong>covariance</strong> with <span class="math inline">t_p</span> against its <strong>correlation</strong> with <span class="math inline">t_p</span>. Features in the extreme corners are the strong, reliable discriminators.</p>
 
 <img data-src="fig11-scoreplot-splot.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:75.0%"><aside class="notes">
 <p>This is how the model is actually consumed. The predictive axis is the interpretable one: group separation lives there, by construction. Orthogonal axes show you the nuisance spread you have quarantined. The S-plot (Wiklund et al., 2008) is a metabolomics staple for biomarker shortlisting: high covariance means the feature contributes a lot (magnitude), high correlation means it does so reliably (low relative noise); the corners have both. Caution students that S-plot “hits” are candidates requiring independent validation, not proven biomarkers — a recurring theme.</p>
@@ -524,11 +540,11 @@ Quantitative biology and integrative omics
 <td><strong>PLS / OPLS</strong></td>
 </tr>
 <tr class="even">
-<td>Many correlated features, wide matrix (<span class="math inline">\(p \gg n\)</span>)</td>
+<td>Many correlated features, wide matrix (<span class="math inline">p \gg n</span>)</td>
 <td><strong>PLS / OPLS</strong></td>
 </tr>
 <tr class="odd">
-<td>Want the <span class="math inline">\(Y\)</span>-signal in <strong>one interpretable axis</strong></td>
+<td>Want the <span class="math inline">Y</span>-signal in <strong>one interpretable axis</strong></td>
 <td><strong>OPLS</strong></td>
 </tr>
 </tbody>
@@ -553,9 +569,9 @@ Quantitative biology and integrative omics
 </section>
 <section id="the-catch-supervision-can-fit-noise" class="slide level2 smaller">
 <h2>The catch: supervision can fit noise</h2>
-<p>The moment we let <span class="math inline">\(Y\)</span> steer the axes, we gain a new danger PCA never had: with <strong>thousands of features and dozens of samples</strong>, a supervised model can separate the groups <strong>even when there is no real difference</strong>.</p>
+<p>The moment we let <span class="math inline">Y</span> steer the axes, we gain a new danger PCA never had: with <strong>thousands of features and dozens of samples</strong>, a supervised model can separate the groups <strong>even when there is no real difference</strong>.</p>
 <ul>
-<li>With <span class="math inline">\(p \gg n\)</span>, some linear combination of features will line up with <strong>any</strong> labelling — including a random one — <strong>by chance</strong>.</li>
+<li>With <span class="math inline">p \gg n</span>, some linear combination of features will line up with <strong>any</strong> labelling — including a random one — <strong>by chance</strong>.</li>
 <li>A beautiful case/control separation on the <strong>training</strong> data can be <strong>pure overfitting</strong>.</li>
 </ul>
 <blockquote>
@@ -580,10 +596,10 @@ Quantitative biology and integrative omics
 <h2>Validate honestly: R², Q²</h2>
 <p>Two numbers report the model’s fit and its <strong>generalisation</strong>:</p>
 <ul>
-<li><strong><span class="math inline">\(R^2\)</span></strong> — variance <strong>explained</strong> on the data used to fit (<span class="math inline">\(R^2X\)</span>, <span class="math inline">\(R^2Y\)</span>). Always looks good; <strong>rises</strong> as you add components.</li>
-<li><strong><span class="math inline">\(Q^2\)</span></strong> — variance <strong>predicted</strong> under <strong>cross-validation</strong> (hold out samples, predict them). This is the honest number.</li>
+<li><strong><span class="math inline">R^2</span></strong> — variance <strong>explained</strong> on the data used to fit (<span class="math inline">R^2X</span>, <span class="math inline">R^2Y</span>). Always looks good; <strong>rises</strong> as you add components.</li>
+<li><strong><span class="math inline">Q^2</span></strong> — variance <strong>predicted</strong> under <strong>cross-validation</strong> (hold out samples, predict them). This is the honest number.</li>
 </ul>
-<p>Healthy model: <span class="math inline">\(Q^2\)</span> close to <span class="math inline">\(R^2Y\)</span>, both clearly above 0. Warning sign: high <span class="math inline">\(R^2Y\)</span> but <strong>low or negative <span class="math inline">\(Q^2\)</span></strong> → the model fits the training data but <strong>does not generalise</strong> — overfitting.</p>
+<p>Healthy model: <span class="math inline">Q^2</span> close to <span class="math inline">R^2Y</span>, both clearly above 0. Warning sign: high <span class="math inline">R^2Y</span> but <strong>low or negative <span class="math inline">Q^2</span></strong> → the model fits the training data but <strong>does not generalise</strong> — overfitting.</p>
 
 <img data-src="fig14-r2-q2-curves.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:60.0%"><aside class="notes">
 <p>Define the two metrics plainly. R2 is in-sample fit and is optimistic by construction — it never goes down as you add components, so it cannot tell you when to stop. Q2 is the cross-validated analogue: repeatedly leave samples out, predict them, measure how much variance you genuinely capture. The diagnostic gap between a high R2Y and a low or negative Q2 is the fingerprint of overfitting. This is students’ first close look at cross-validation as a guard; the Cross-validation unit builds it out. Rule of thumb only: there is no universal Q2 threshold, it depends on the field and problem.</p>
@@ -601,14 +617,14 @@ Quantitative biology and integrative omics
 </section>
 <section id="validate-honestly-the-permutation-test" class="slide level2 smaller">
 <h2>Validate honestly: the permutation test</h2>
-<p>The strongest simple check: <strong>break the link between <span class="math inline">\(X\)</span> and <span class="math inline">\(Y\)</span> on purpose</strong>, many times.</p>
+<p>The strongest simple check: <strong>break the link between <span class="math inline">X</span> and <span class="math inline">Y</span> on purpose</strong>, many times.</p>
 <ol type="1">
-<li>Randomly <strong>shuffle</strong> the class labels <span class="math inline">\(Y\)</span>.</li>
-<li>Refit OPLS-DA and record <span class="math inline">\(R^2Y\)</span> and <span class="math inline">\(Q^2\)</span>.</li>
+<li>Randomly <strong>shuffle</strong> the class labels <span class="math inline">Y</span>.</li>
+<li>Refit OPLS-DA and record <span class="math inline">R^2Y</span> and <span class="math inline">Q^2</span>.</li>
 <li>Repeat hundreds of times to build a <strong>null distribution</strong>.</li>
 <li>Compare your <strong>real</strong> model against that null.</li>
 </ol>
-<p>If the real <span class="math inline">\(Q^2\)</span> is <strong>not clearly better</strong> than what shuffled labels achieve, your separation is <strong>noise</strong>. If it sits far out in the tail, the signal is likely real.</p>
+<p>If the real <span class="math inline">Q^2</span> is <strong>not clearly better</strong> than what shuffled labels achieve, your separation is <strong>noise</strong>. If it sits far out in the tail, the signal is likely real.</p>
 
 <img data-src="fig15-permutation-null.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:60.0%"><aside class="notes">
 <p>The permutation test is the most intuitive safeguard and worth teaching as a habit. By shuffling Y you destroy any true X-Y relationship while preserving the shapes and sizes of both matrices, so the resulting R2/Q2 values show what this method can achieve on pure chance for data of exactly this dimensionality. Your real model must beat that null convincingly. This is a concrete instance of the general permutation-testing logic; frame it as the same reasoning students may meet elsewhere for significance. Emphasise: in the p greater-than-n regime, always permute — a good-looking plot is not enough.</p>
@@ -639,7 +655,7 @@ Quantitative biology and integrative omics
 <span id="cb1-10"><a aria-hidden="true" tabindex="-1"></a><span class="fu">getScoreMN</span>(model)     <span class="co"># predictive &amp; orthogonal scores  (the score plot)</span></span>
 <span id="cb1-11"><a aria-hidden="true" tabindex="-1"></a><span class="fu">getLoadingMN</span>(model)   <span class="co"># feature loadings                (which metabolites)</span></span>
 <span id="cb1-12"><a aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(model, <span class="at">typeVn =</span> <span class="st">"x-score"</span>)   <span class="co"># the t_p vs t_o score plot</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<p>Read the printed <strong><span class="math inline">\(Q^2\)</span></strong> and <strong>permutation p-values before</strong> you trust any score plot.</p>
+<p>Read the printed <strong><span class="math inline">Q^2</span></strong> and <strong>permutation p-values before</strong> you trust any score plot.</p>
 <aside class="notes">
 <p>Static code only — nothing runs at render time. ropls is the de facto metabolomics tool (Thevenot et al., 2015) and conveniently bundles the validation we just described. Walk the arguments: predI = 1 because a single response has one predictive component; orthoI = NA lets cross-validation pick the orthogonal count (guarding against adding noise components); permI triggers the permutation test. The deliberate order of the punchline: look at Q2 and the permutation p-value first, plots second. Mention pls as the base-R-adjacent alternative for plain PLS regression, but ropls is the one to know here.</p>
 <style type="text/css">
@@ -670,7 +686,7 @@ Quantitative biology and integrative omics
 <tbody>
 <tr class="odd">
 <td>PCA</td>
-<td>unsupervised; maximises <strong>variance</strong>, ignores <span class="math inline">\(Y\)</span></td>
+<td>unsupervised; maximises <strong>variance</strong>, ignores <span class="math inline">Y</span></td>
 </tr>
 <tr class="even">
 <td>PCA pitfall</td>
@@ -678,7 +694,7 @@ Quantitative biology and integrative omics
 </tr>
 <tr class="odd">
 <td>PLS</td>
-<td>supervised; maximises <strong>covariance</strong> of <span class="math inline">\(Xw\)</span> with <span class="math inline">\(Y\)</span></td>
+<td>supervised; maximises <strong>covariance</strong> of <span class="math inline">Xw</span> with <span class="math inline">Y</span></td>
 </tr>
 <tr class="even">
 <td>Scores / loadings</td>
@@ -686,11 +702,11 @@ Quantitative biology and integrative omics
 </tr>
 <tr class="odd">
 <td>OPLS</td>
-<td>splits <span class="math inline">\(X\)</span> into <strong>predictive</strong> (<span class="math inline">\(Y\)</span>-correlated) + <strong>orthogonal</strong> (nuisance)</td>
+<td>splits <span class="math inline">X</span> into <strong>predictive</strong> (<span class="math inline">Y</span>-correlated) + <strong>orthogonal</strong> (nuisance)</td>
 </tr>
 <tr class="even">
-<td>Predictive score <span class="math inline">\(t_p\)</span></td>
-<td>one axis carrying the <span class="math inline">\(Y\)</span>-signal — the interpretable one</td>
+<td>Predictive score <span class="math inline">t_p</span></td>
+<td>one axis carrying the <span class="math inline">Y</span>-signal — the interpretable one</td>
 </tr>
 <tr class="odd">
 <td>OPLS vs PLS</td>
@@ -702,11 +718,11 @@ Quantitative biology and integrative omics
 </tr>
 <tr class="odd">
 <td>The danger</td>
-<td>with <span class="math inline">\(p \gg n\)</span>, supervision can <strong>separate noise</strong></td>
+<td>with <span class="math inline">p \gg n</span>, supervision can <strong>separate noise</strong></td>
 </tr>
 <tr class="even">
 <td>Honesty</td>
-<td>trust <strong><span class="math inline">\(Q^2\)</span></strong> + <strong>permutation test</strong>, not a pretty plot</td>
+<td>trust <strong><span class="math inline">Q^2</span></strong> + <strong>permutation test</strong>, not a pretty plot</td>
 </tr>
 </tbody>
 </table>
@@ -747,7 +763,6 @@ Quantitative biology and integrative omics
   <script src="../site_libs/revealjs/plugin/notes/notes.js"></script>
   <script src="../site_libs/revealjs/plugin/search/search.js"></script>
   <script src="../site_libs/revealjs/plugin/zoom/zoom.js"></script>
-  <script src="../site_libs/revealjs/plugin/math/math.js"></script>
   <script>window.define = window.backupDefine; window.backupDefine = undefined;</script>
 
   <script>
@@ -915,27 +930,9 @@ Quantitative biology and integrative omics
         // Factor of the display size that should remain empty around the content
         margin: 0.1,
 
-        math: {
-          mathjax: 'https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.9/MathJax.js',
-          config: 'TeX-AMS_HTML-full',
-          tex2jax: {
-            inlineMath: [['\\(','\\)']],
-            displayMath: [['\\[','\\]']],
-            balanceBraces: true,
-            processEscapes: false,
-            processRefs: true,
-            processEnvironments: true,
-            preview: 'TeX',
-            skipTags: ['script','noscript','style','textarea','pre','code'],
-            ignoreClass: 'tex2jax_ignore',
-            processClass: 'tex2jax_process'
-          },
-        },
-
         // reveal.js plugins
         plugins: [QuartoLineHighlight, PdfExport, RevealMenu, QuartoSupport,
 
-          RevealMath,
           RevealNotes,
           RevealSearch,
           RevealZoom

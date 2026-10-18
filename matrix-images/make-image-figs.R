@@ -199,16 +199,6 @@ fig("fig07-image-pipeline.png", 1800, 560, c(1, 4), {
   show(M, L, paste("3. resize:  M = S H R =", mat_label(M)))
 })
 
-## ---- fig08: undoing a known misalignment ---------------------------------
-
-A <- rot(-pi/9) %*% shear(0.25)          # the misalignment of the second image
-L <- lim_of(diag(2), A)
-fig("fig08-registration.png", 1650, 700, c(1, 3), {
-  show(diag(2), L, "first image:  xy")
-  show(A, L, paste("second image:  A %*% xy,  A =", mat_label(A)))
-  show(solve(A) %*% A, L, "restored:  solve(A) %*% (A %*% xy)")
-})
-
 ## ---- fig09: holes when scaling up ----------------------------------------
 
 S3 <- diag(c(3, 3))
@@ -221,3 +211,37 @@ fig("fig09-gap-artefact.png", 1500, 760, c(1, 2), {
 })
 
 cat("done\n")
+
+## ---- fig08: undoing a known misalignment ---------------------------------
+# A scan that came out tilted. To make the right orientation obvious, the image
+# gets a white label strip with text, so it is clear which way is up. Uses a
+# finer copy of the micrograph (10 x 10 blocks) so the text is readable.
+
+f2  <- 10
+nr2 <- nrow(big) %/% f2; nc2 <- ncol(big) %/% f2
+b2  <- big[1:(nr2 * f2), 1:(nc2 * f2)]
+s2  <- matrix(colMeans(matrix(aperm(array(b2, c(f2, nr2, f2, nc2)), c(1, 3, 2, 4)), f2 * f2)), nr2, nc2)
+s2  <- (s2 - min(s2)) / diff(range(s2))
+strip <- 34
+tmp <- tempfile(fileext = ".png")
+png(tmp, width = nc2, height = nr2 + strip)
+par(mar = c(0, 0, 0, 0))
+plot(NA, xlim = c(0, nc2), ylim = c(0, nr2 + strip), xaxs = "i", yaxs = "i", axes = FALSE)
+rasterImage(s2, 0, strip, nc2, nr2 + strip, interpolate = FALSE)
+rect(0, 0, nc2, strip, col = "white", border = NA)
+text(nc2 / 2, strip / 2, "SLIDE 12", font = 2, cex = 1.6)
+dev.off()
+lab <- png::readPNG(tmp)[, , 1]
+
+img <- t(lab[nrow(lab):1, ])                      # same steps as the student setup
+xy  <- t(expand.grid(1:nrow(img), 1:ncol(img)))
+col <- gray(img)
+frame0 <- cbind(c(0.5, 0.5), c(nrow(img) + 0.5, 0.5),
+                c(nrow(img) + 0.5, ncol(img) + 0.5), c(0.5, ncol(img) + 0.5))
+
+A <- rot(pi/9)                                    # the scanner tilted the slide by 20 degrees
+L <- lim_of(A, diag(2))
+fig("fig08-registration.png", 1500, 760, c(1, 2), {
+  show(A, L, "what we got: the scan is tilted", frame = FALSE)
+  show(solve(A) %*% A, L, "restored:  solve(A) %*% scan", frame = FALSE)
+})

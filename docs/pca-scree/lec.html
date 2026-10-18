@@ -96,6 +96,22 @@
     code span.wa { color: #ff5555; } /* Warning */
   </style>
   <link rel="stylesheet" href="../site_libs/revealjs/dist/theme/quarto-bf56578b9c06c165c166475cd19dbcd1.css">
+  <script>window.backupDefine = window.define; window.define = undefined;</script><script src="https://cdn.jsdelivr.net/npm/katex@latest/dist/katex.min.js"></script>
+  <script>document.addEventListener("DOMContentLoaded", function () {
+ var mathElements = document.getElementsByClassName("math");
+ var macros = [];
+ for (var i = 0; i < mathElements.length; i++) {
+  var texText = mathElements[i].firstChild;
+  if (mathElements[i].tagName == "SPAN") {
+   katex.render(texText.data, mathElements[i], {
+    displayMode: mathElements[i].classList.contains('display'),
+    throwOnError: false,
+    macros: macros,
+    fleqn: false
+   });
+}}});
+  </script>
+  <script>window.define = window.backupDefine; window.backupDefine = undefined;</script><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@latest/dist/katex.min.css">
   <link href="../site_libs/revealjs/plugin/quarto-line-highlight/line-highlight.css" rel="stylesheet">
   <link href="../site_libs/revealjs/plugin/reveal-menu/menu.css" rel="stylesheet">
   <link href="../site_libs/revealjs/plugin/reveal-menu/quarto-menu.css" rel="stylesheet">
@@ -231,7 +247,7 @@ Quantitative biology and integrative omics
 </section>
 <section id="the-biology-you-ran-a-pca-now-what" class="slide level2 smaller">
 <h2>The biology: you ran a PCA, now what?</h2>
-<p>You have a gene-expression matrix: 60 tumour samples <span class="math inline">\(\times\)</span> 20,000 genes. You run <code>prcomp</code> and get <strong>60 principal components</strong> back.</p>
+<p>You have a gene-expression matrix: 60 tumour samples <span class="math inline">\times</span> 20,000 genes. You run <code>prcomp</code> and get <strong>60 principal components</strong> back.</p>
 <ul>
 <li>Plotting <strong>PC1 vs PC2</strong> shows two clean clusters. Great — but are two components <em>enough</em>?</li>
 <li>Would PC3 split a cluster into two disease subtypes? Would PC4? Where do you stop?</li>
@@ -255,9 +271,9 @@ Quantitative biology and integrative omics
 </section>
 <section id="each-pc-carries-a-slice-of-variance" class="slide level2 smaller">
 <h2>Each PC carries a slice of variance</h2>
-<p>From Eigenvalues &amp; eigenvectors: PCA diagonalises the (centred) data’s covariance matrix. Each PC is an <strong>eigenvector</strong>; its <strong>eigenvalue <span class="math inline">\(\lambda_k\)</span> is the variance of the data along that PC</strong>.</p>
+<p>From Eigenvalues &amp; eigenvectors: PCA diagonalises the (centred) data’s covariance matrix. Each PC is an <strong>eigenvector</strong>; its <strong>eigenvalue <span class="math inline">\lambda_k</span> is the variance of the data along that PC</strong>.</p>
 <ul>
-<li>PCs come <strong>sorted</strong>: <span class="math inline">\(\lambda_1 \ge \lambda_2 \ge \dots \ge \lambda_p \ge 0\)</span>. PC1 captures the most variance, PC2 the most of what remains, and so on.</li>
+<li>PCs come <strong>sorted</strong>: <span class="math inline">\lambda_1 \ge \lambda_2 \ge \dots \ge \lambda_p \ge 0</span>. PC1 captures the most variance, PC2 the most of what remains, and so on.</li>
 <li>The eigenvalues sum to the <strong>total variance</strong> in the data: $_k _k = $ total variance.</li>
 <li>In R, <code>prcomp</code> reports the <strong>standard deviation</strong> of each PC in <code>sdev</code>, so the variance (the eigenvalue) is <code>sdev^2</code>.</li>
 </ul>
@@ -280,11 +296,11 @@ Quantitative biology and integrative omics
 <section id="from-eigenvalue-to-proportion-of-variance" class="slide level2 smaller">
 <h2>From eigenvalue to proportion of variance</h2>
 <p>Raw eigenvalues depend on units. Convert each to a <strong>proportion of variance explained (PVE)</strong>:</p>
-<p><span class="math display">\[\text{PVE}_k = \frac{\lambda_k}{\sum_{j=1}^{p} \lambda_j}\]</span></p>
+<p><span class="math display">\text{PVE}_k = \frac{\lambda_k}{\sum_{j=1}^{p} \lambda_j}</span></p>
 <ul>
-<li>PVE<span class="math inline">\(_k\)</span> is a number in <span class="math inline">\([0,1]\)</span>: the <strong>fraction</strong> of total variance living on PC <span class="math inline">\(k\)</span>.</li>
-<li>The <strong>cumulative</strong> PVE, <span class="math inline">\(\sum_{j\le k}\text{PVE}_j\)</span>, is the fraction captured by the <strong>first <span class="math inline">\(k\)</span></strong> PCs together.</li>
-<li>Example: if the first three PVEs are <span class="math inline">\(0.42, 0.18, 0.07\)</span>, then PC1–PC3 together explain <span class="math inline">\(0.42+0.18+0.07 = 0.67\)</span>, i.e.&nbsp;<strong>67%</strong> of the variance.</li>
+<li>PVE<span class="math inline">_k</span> is a number in <span class="math inline">[0,1]</span>: the <strong>fraction</strong> of total variance living on PC <span class="math inline">k</span>.</li>
+<li>The <strong>cumulative</strong> PVE, <span class="math inline">\sum_{j\le k}\text{PVE}_j</span>, is the fraction captured by the <strong>first <span class="math inline">k</span></strong> PCs together.</li>
+<li>Example: if the first three PVEs are <span class="math inline">0.42, 0.18, 0.07</span>, then PC1–PC3 together explain <span class="math inline">0.42+0.18+0.07 = 0.67</span>, i.e.&nbsp;<strong>67%</strong> of the variance.</li>
 </ul>
 <p>This is the raw material for every rule that follows.</p>
 
@@ -330,7 +346,7 @@ Quantitative biology and integrative omics
 <h2>Cumulative-variance threshold</h2>
 <p>A more decisive rule: keep <strong>as many PCs as needed to reach a target cumulative PVE</strong> — commonly <strong>80%, 90%, or 95%</strong>.</p>
 <ul>
-<li>“Keep enough PCs to explain <strong>90%</strong> of the variance” → find the smallest <span class="math inline">\(k\)</span> with cumulative PVE <span class="math inline">\(\ge 0.90\)</span>.</li>
+<li>“Keep enough PCs to explain <strong>90%</strong> of the variance” → find the smallest <span class="math inline">k</span> with cumulative PVE <span class="math inline">\ge 0.90</span>.</li>
 <li>Good when PCA is a <strong>compression / denoising</strong> step feeding a downstream model, and you want a guaranteed amount of signal retained.</li>
 <li>The threshold is still a <strong>choice</strong>: 90% is a convention, not a fact. A flat scree tail means the last few percent cost <strong>many</strong> PCs.</li>
 </ul>
@@ -353,7 +369,7 @@ Quantitative biology and integrative omics
 <section id="two-more-rules-you-will-meet" class="slide level2 smaller">
 <h2>Two more rules you will meet</h2>
 <ul>
-<li><strong>Kaiser criterion</strong> — on <strong>standardised</strong> data (correlation matrix), keep PCs with <strong>eigenvalue <span class="math inline">\(&gt; 1\)</span></strong>. Rationale: after standardising, each original variable contributes variance 1, so the average eigenvalue is 1; a PC “worth more than one variable” clears the bar. Known to <strong>over-retain</strong>; use with care.</li>
+<li><strong>Kaiser criterion</strong> — on <strong>standardised</strong> data (correlation matrix), keep PCs with <strong>eigenvalue <span class="math inline">&gt; 1</span></strong>. Rationale: after standardising, each original variable contributes variance 1, so the average eigenvalue is 1; a PC “worth more than one variable” clears the bar. Known to <strong>over-retain</strong>; use with care.</li>
 <li><strong>Parallel analysis / permutation</strong> — compare your eigenvalues to those from <strong>randomised data</strong> (columns shuffled independently, so real correlations are destroyed). Keep only PCs whose eigenvalue <strong>exceeds</strong> what pure noise produces. More principled, needs a little computation.</li>
 </ul>
 <p>No rule is authoritative. Sensible practice: look at the <strong>scree plot</strong>, sanity-check with a <strong>threshold</strong>, and if it matters, run a <strong>permutation</strong> check.</p>
@@ -599,8 +615,8 @@ Quantitative biology and integrative omics
 </thead>
 <tbody>
 <tr class="odd">
-<td>How much does PC <span class="math inline">\(k\)</span> explain?</td>
-<td>PVE<span class="math inline">\(_k = \lambda_k / \sum_j \lambda_j\)</span> (in R: <code>sdev^2</code>, normalise)</td>
+<td>How much does PC <span class="math inline">k</span> explain?</td>
+<td>PVE<span class="math inline">_k = \lambda_k / \sum_j \lambda_j</span> (in R: <code>sdev^2</code>, normalise)</td>
 </tr>
 <tr class="even">
 <td>How many PCs? (eyeball)</td>
@@ -612,10 +628,10 @@ Quantitative biology and integrative omics
 </tr>
 <tr class="even">
 <td>Other rules</td>
-<td><strong>Kaiser</strong> (<span class="math inline">\(\lambda&gt;1\)</span>, standardised; over-retains), <strong>permutation / parallel analysis</strong></td>
+<td><strong>Kaiser</strong> (<span class="math inline">\lambda&gt;1</span>, standardised; over-retains), <strong>permutation / parallel analysis</strong></td>
 </tr>
 <tr class="odd">
-<td>Largest variance <span class="math inline">\(\ne\)</span> interesting</td>
+<td>Largest variance <span class="math inline">\ne</span> interesting</td>
 <td>PCA is <strong>unsupervised</strong>; use OPLS/LDA to separate known groups</td>
 </tr>
 <tr class="even">
@@ -669,7 +685,6 @@ Quantitative biology and integrative omics
   <script src="../site_libs/revealjs/plugin/notes/notes.js"></script>
   <script src="../site_libs/revealjs/plugin/search/search.js"></script>
   <script src="../site_libs/revealjs/plugin/zoom/zoom.js"></script>
-  <script src="../site_libs/revealjs/plugin/math/math.js"></script>
   <script>window.define = window.backupDefine; window.backupDefine = undefined;</script>
 
   <script>
@@ -837,27 +852,9 @@ Quantitative biology and integrative omics
         // Factor of the display size that should remain empty around the content
         margin: 0.1,
 
-        math: {
-          mathjax: 'https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.9/MathJax.js',
-          config: 'TeX-AMS_HTML-full',
-          tex2jax: {
-            inlineMath: [['\\(','\\)']],
-            displayMath: [['\\[','\\]']],
-            balanceBraces: true,
-            processEscapes: false,
-            processRefs: true,
-            processEnvironments: true,
-            preview: 'TeX',
-            skipTags: ['script','noscript','style','textarea','pre','code'],
-            ignoreClass: 'tex2jax_ignore',
-            processClass: 'tex2jax_process'
-          },
-        },
-
         // reveal.js plugins
         plugins: [QuartoLineHighlight, PdfExport, RevealMenu, QuartoSupport,
 
-          RevealMath,
           RevealNotes,
           RevealSearch,
           RevealZoom

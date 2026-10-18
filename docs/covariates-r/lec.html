@@ -96,6 +96,22 @@
     code span.wa { color: #ff5555; } /* Warning */
   </style>
   <link rel="stylesheet" href="../site_libs/revealjs/dist/theme/quarto-bf56578b9c06c165c166475cd19dbcd1.css">
+  <script>window.backupDefine = window.define; window.define = undefined;</script><script src="https://cdn.jsdelivr.net/npm/katex@latest/dist/katex.min.js"></script>
+  <script>document.addEventListener("DOMContentLoaded", function () {
+ var mathElements = document.getElementsByClassName("math");
+ var macros = [];
+ for (var i = 0; i < mathElements.length; i++) {
+  var texText = mathElements[i].firstChild;
+  if (mathElements[i].tagName == "SPAN") {
+   katex.render(texText.data, mathElements[i], {
+    displayMode: mathElements[i].classList.contains('display'),
+    throwOnError: false,
+    macros: macros,
+    fleqn: false
+   });
+}}});
+  </script>
+  <script>window.define = window.backupDefine; window.backupDefine = undefined;</script><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@latest/dist/katex.min.css">
   <link href="../site_libs/revealjs/plugin/quarto-line-highlight/line-highlight.css" rel="stylesheet">
   <link href="../site_libs/revealjs/plugin/reveal-menu/menu.css" rel="stylesheet">
   <link href="../site_libs/revealjs/plugin/reveal-menu/quarto-menu.css" rel="stylesheet">
@@ -207,10 +223,10 @@ Quantitative biology and integrative omics
 </section>
 <section id="about-this-lecture" class="slide level2">
 <h2>About this lecture</h2>
-<p>In <em>Design matrices for covariates</em> you built <span class="math inline">\(X\)</span> by hand, and in <em>Confounding &amp; Simpson’s paradox</em> you saw why the columns you put in decide the answer. Today R builds <span class="math inline">\(X\)</span> for us, and we hand the same <span class="math inline">\(X\)</span> to the tools used for real omics data. You will be able to:</p>
+<p>In <em>Design matrices for covariates</em> you built <span class="math inline">X</span> by hand, and in <em>Confounding &amp; Simpson’s paradox</em> you saw why the columns you put in decide the answer. Today R builds <span class="math inline">X</span> for us, and we hand the same <span class="math inline">X</span> to the tools used for real omics data. You will be able to:</p>
 <ul>
-<li>Turn a formula into <span class="math inline">\(X\)</span> with <a href="https://rdrr.io/r/stats/model.matrix.html"><code>model.matrix</code></a>, and control the reference level with <a href="https://rdrr.io/r/stats/relevel.html"><code>relevel</code></a> and <a href="https://rdrr.io/r/base/factor.html"><code>factor</code></a>.</li>
-<li><strong>Check the rank</strong> of <span class="math inline">\(X\)</span> before fitting, and recognise the <code>NA</code> that <a href="https://rdrr.io/r/stats/lm.html"><code>lm</code></a> returns for a column it cannot estimate.</li>
+<li>Turn a formula into <span class="math inline">X</span> with <a href="https://rdrr.io/r/stats/model.matrix.html"><code>model.matrix</code></a>, and control the reference level with <a href="https://rdrr.io/r/stats/relevel.html"><code>relevel</code></a> and <a href="https://rdrr.io/r/base/factor.html"><code>factor</code></a>.</li>
+<li><strong>Check the rank</strong> of <span class="math inline">X</span> before fitting, and recognise the <code>NA</code> that <a href="https://rdrr.io/r/stats/lm.html"><code>lm</code></a> returns for a column it cannot estimate.</li>
 <li>Run <strong>limma</strong> on a whole omics table with <code>design = ~ batch + sex + treatment</code>, and read log2 fold changes and adjusted p-values.</li>
 <li>Recognise “coefficients not estimable”, and know that only the <strong>experiment</strong> can fix it.</li>
 <li>(Extra material) Know that <strong>DESeq2</strong> does the same for raw counts, with a count error model.</li>
@@ -230,18 +246,18 @@ Quantitative biology and integrative omics
       }</style></aside>
 </section>
 <section id="recap-a-formula-is-a-recipe-for-x" class="slide level2 smaller">
-<h2>Recap: a formula is a recipe for <span class="math inline">\(X\)</span></h2>
-<p><span class="math display">\[
+<h2>Recap: a formula is a recipe for <span class="math inline">X</span></h2>
+<p><span class="math display">
 \mathbf{y} = X\boldsymbol\beta + \boldsymbol\varepsilon
-\]</span></p>
+</span></p>
 <ul>
-<li>One <strong>row</strong> of <span class="math inline">\(X\)</span> per sample, one <strong>column</strong> per coefficient.</li>
-<li><code>(Intercept)</code> is a column of 1s; it holds <span class="math inline">\(\beta_0\)</span>, the mean of the <strong>reference</strong> group.</li>
-<li>A factor with <span class="math inline">\(k\)</span> levels gives <span class="math inline">\(k-1\)</span> dummy columns: “difference from the reference”.</li>
+<li>One <strong>row</strong> of <span class="math inline">X</span> per sample, one <strong>column</strong> per coefficient.</li>
+<li><code>(Intercept)</code> is a column of 1s; it holds <span class="math inline">\beta_0</span>, the mean of the <strong>reference</strong> group.</li>
+<li>A factor with <span class="math inline">k</span> levels gives <span class="math inline">k-1</span> dummy columns: “difference from the reference”.</li>
 <li>A continuous covariate (age, BMI) gives one column of numbers: a slope.</li>
-<li><span class="math inline">\(\boldsymbol\beta\)</span> is unique only if the columns of <span class="math inline">\(X\)</span> are <strong>linearly independent</strong> (full column rank).</li>
+<li><span class="math inline">\boldsymbol\beta</span> is unique only if the columns of <span class="math inline">X</span> are <strong>linearly independent</strong> (full column rank).</li>
 </ul>
-<p>In R you never type <span class="math inline">\(X\)</span> yourself. You write the formula and R builds <span class="math inline">\(X\)</span>, with the same rules you used by hand.</p>
+<p>In R you never type <span class="math inline">X</span> yourself. You write the formula and R builds <span class="math inline">X</span>, with the same rules you used by hand.</p>
 <aside class="notes">
 <p>One slide of recap so that the code that follows has something to hang on. The last bullet is the existence-of-solutions result from Design matrices for covariates and ties back to the zero, one or infinitely many solutions of Linear systems in R. Today we will see what each tool does when that condition fails.</p>
 <style type="text/css">
@@ -257,7 +273,7 @@ Quantitative biology and integrative omics
       }</style></aside>
 </section>
 <section id="model.matrix-builds-x" class="slide level2 smaller">
-<h2><code>model.matrix()</code> builds <span class="math inline">\(X\)</span></h2>
+<h2><code>model.matrix()</code> builds <span class="math inline">X</span></h2>
 <div class="sourceCode" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a aria-hidden="true" tabindex="-1"></a>d <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(</span>
 <span id="cb1-2"><a aria-hidden="true" tabindex="-1"></a>  <span class="at">treatment =</span> <span class="fu">c</span>(<span class="st">"ctrl"</span>, <span class="st">"ctrl"</span>, <span class="st">"ctrl"</span>, <span class="st">"treat"</span>, <span class="st">"treat"</span>, <span class="st">"treat"</span>),</span>
 <span id="cb1-3"><a aria-hidden="true" tabindex="-1"></a>  <span class="at">sex       =</span> <span class="fu">c</span>(<span class="st">"F"</span>, <span class="st">"M"</span>, <span class="st">"F"</span>, <span class="st">"M"</span>, <span class="st">"F"</span>, <span class="st">"M"</span>),</span>
@@ -301,7 +317,7 @@ Quantitative biology and integrative omics
 <span id="cb2-7"><a aria-hidden="true" tabindex="-1"></a><span class="co"># 5           1              1  27</span></span>
 <span id="cb2-8"><a aria-hidden="true" tabindex="-1"></a><span class="co"># 6           1              1  30</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <ul>
-<li><code>bmi</code> is copied in as it is. Its coefficient is the change in <span class="math inline">\(y\)</span> <strong>per BMI unit</strong>, holding treatment fixed.</li>
+<li><code>bmi</code> is copied in as it is. Its coefficient is the change in <span class="math inline">y</span> <strong>per BMI unit</strong>, holding treatment fixed.</li>
 <li>The intercept is now “control at BMI 0”. To make it readable, centre: <code>~ treatment + I(bmi - mean(bmi))</code>. The slope does not change.</li>
 <li>Age works the same way.</li>
 </ul>
@@ -442,7 +458,7 @@ Quantitative biology and integrative omics
 <span id="cb6-13"><a aria-hidden="true" tabindex="-1"></a><span class="fu">qr</span>(X)<span class="sc">$</span>rank       <span class="co"># 2  -&gt; only 2 independent columns: no unique solution</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <ul>
 <li><code>batchB</code> and <code>treatmenttreat</code> are <strong>identical</strong> columns: perfect confounding.</li>
-<li><a href="https://rdrr.io/r/base/qr.html"><code>qr</code></a><code>(X)$rank</code> <span class="math inline">\(&lt;\)</span> <code>ncol(X)</code> means infinitely many <span class="math inline">\(\boldsymbol\beta\)</span> fit equally well, as in <em>Linear systems in R</em>.</li>
+<li><a href="https://rdrr.io/r/base/qr.html"><code>qr</code></a><code>(X)$rank</code> <span class="math inline">&lt;</span> <code>ncol(X)</code> means infinitely many <span class="math inline">\boldsymbol\beta</span> fit equally well, as in <em>Linear systems in R</em>.</li>
 </ul>
 <aside class="notes">
 <p>This is the rank check from Linear systems in R applied to a design matrix. The rule to remember: rank equal to the number of columns means a unique beta, rank smaller means infinitely many. Here batch and treatment carry exactly the same information, so any split of the difference between the two coefficients fits equally well. X[, ] just prints the matrix without the attr lines.</p>
@@ -499,8 +515,8 @@ Quantitative biology and integrative omics
 <span id="cb8-11"><a aria-hidden="true" tabindex="-1"></a><span class="co">#    (Intercept)         batchB treatmenttreat</span></span>
 <span id="cb8-12"><a aria-hidden="true" tabindex="-1"></a><span class="co">#             10             10              2     # +2 within each batch</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <ul>
-<li>Adding the <code>batchB</code> column turns <span class="math inline">\(-3\)</span> into <span class="math inline">\(+2\)</span>. The rank is 3 = number of columns, so <span class="math inline">\(\boldsymbol\beta\)</span> is unique: batch is <strong>partly</strong> confounded, not perfectly.</li>
-<li>Check one prediction: treated in batch B <span class="math inline">\(= 10 + 10 + 2 = 22\)</span>. ✓</li>
+<li>Adding the <code>batchB</code> column turns <span class="math inline">-3</span> into <span class="math inline">+2</span>. The rank is 3 = number of columns, so <span class="math inline">\boldsymbol\beta</span> is unique: batch is <strong>partly</strong> confounded, not perfectly.</li>
+<li>Check one prediction: treated in batch B <span class="math inline">= 10 + 10 + 2 = 22</span>. ✓</li>
 </ul>
 <aside class="notes">
 <p>These are exactly the numbers students computed by hand in the confounding unit, so they can check that R agrees. The data fit the adjusted model exactly, which is why the coefficients are round numbers. The important contrast with the previous slide: here every batch contains both conditions, so the design matrix has full rank and adjustment works. Next: do this for 20 000 genes at once.</p>
@@ -521,8 +537,8 @@ Quantitative biology and integrative omics
 
 <img data-src="fig01-one-design-many-genes.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:95.0%"><ul>
 <li>An omics experiment gives a table: one row per gene (or protein, metabolite), one column per sample, on a <strong>log2 scale</strong> (see <em>Log and pseudolog transforms</em>).</li>
-<li><a href="https://bioconductor.org/packages/release/bioc/html/limma.html">limma</a> fits every row with the <strong>same design matrix</strong> <span class="math inline">\(X\)</span>: 20 000 ordinary linear models.</li>
-<li>On the log2 scale a coefficient is a <strong>log2 fold change</strong> (logFC): 1 = doubled, <span class="math inline">\(-1\)</span> = halved, 0 = no change.</li>
+<li><a href="https://bioconductor.org/packages/release/bioc/html/limma.html">limma</a> fits every row with the <strong>same design matrix</strong> <span class="math inline">X</span>: 20 000 ordinary linear models.</li>
+<li>On the log2 scale a coefficient is a <strong>log2 fold change</strong> (logFC): 1 = doubled, <span class="math inline">-1</span> = halved, 0 = no change.</li>
 </ul>
 <aside class="notes">
 <p>The key picture of the day. The samples are the same for every gene, so the design matrix is the same; only y changes from row to row. limma is in effect 20 000 lm calls with one shared X. Because the data are on the log2 scale, differences of log2 values are log2 fold changes, which is why we spent a unit on the log. limma adds one important trick, eBayes, on the next slide.</p>
@@ -552,7 +568,7 @@ Quantitative biology and integrative omics
 <span id="cb9-10"><a aria-hidden="true" tabindex="-1"></a><span class="co"># g188 -1.97   10.02 -6.88  3.8e-10   2.2e-07</span></span>
 <span id="cb9-11"><a aria-hidden="true" tabindex="-1"></a><span class="co"># g145 -1.87   11.57 -6.86  4.2e-10   2.2e-07</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <ul>
-<li>limma takes <span class="math inline">\(X\)</span> itself, and <code>coef =</code> is a <strong>column name of <span class="math inline">\(X\)</span></strong>: <code>treatmenttreat</code>.</li>
+<li>limma takes <span class="math inline">X</span> itself, and <code>coef =</code> is a <strong>column name of <span class="math inline">X</span></strong>: <code>treatmenttreat</code>.</li>
 <li><a href="https://rdrr.io/bioc/limma/man/voom.html"><code>voom</code></a> is only needed for RNA-seq counts: it takes the log2 and records how noisy each value is. Data that are already log2 intensities (proteomics, metabolomics) go straight into <code>lmFit</code>.</li>
 </ul>
 <aside class="notes">
@@ -605,7 +621,7 @@ Quantitative biology and integrative omics
 </tbody>
 </table>
 <ul>
-<li>g188: logFC <span class="math inline">\(-1.97\)</span>, so about <strong>four times lower</strong> in treated samples (<span class="math inline">\(2^{-2} = 1/4\)</span>).</li>
+<li>g188: logFC <span class="math inline">-1.97</span>, so about <strong>four times lower</strong> in treated samples (<span class="math inline">2^{-2} = 1/4</span>).</li>
 <li>This is simulated data with a known truth: 200 genes respond. The 188 calls are <strong>177 true</strong> and 11 false.</li>
 </ul>
 <aside class="notes">
@@ -642,14 +658,14 @@ Quantitative biology and integrative omics
 <tbody>
 <tr class="odd">
 <td><code>~ treatment</code></td>
-<td><span class="math inline">\(-0.16\)</span></td>
+<td><span class="math inline">-0.16</span></td>
 <td>0.90</td>
 <td>304</td>
 <td>154</td>
 </tr>
 <tr class="even">
 <td><code>~ batch + sex + treatment</code></td>
-<td><span class="math inline">\(1.34\)</span></td>
+<td><span class="math inline">1.34</span></td>
 <td>0.001</td>
 <td>188</td>
 <td>11</td>
@@ -768,7 +784,7 @@ Quantitative biology and integrative omics
 </div>
 
 <img data-src="fig02-deseq2-pipeline.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:75.0%"><ul>
-<li>Same design formula, same <span class="math inline">\(X\)</span>, same rank condition. A confounded design gives the error “the model matrix is not full rank”.</li>
+<li>Same design formula, same <span class="math inline">X</span>, same rank condition. A confounded design gives the error “the model matrix is not full rank”.</li>
 <li>Coefficients are named <code>treatment_treat_vs_ctrl</code>; ask for them by name with <code>results(dds, name = ...)</code>.</li>
 </ul>
 <aside class="notes">
@@ -788,7 +804,7 @@ Quantitative biology and integrative omics
 <section id="summary" class="slide level2 smaller">
 <h2>Summary</h2>
 <ul>
-<li><a href="https://rdrr.io/r/stats/model.matrix.html"><code>model.matrix</code></a><code>(~ ...)</code> builds <span class="math inline">\(X\)</span>; column names are variable + level (<code>treatmenttreat</code>, <code>sexM</code>, <code>batchB</code>, <code>bmi</code>).</li>
+<li><a href="https://rdrr.io/r/stats/model.matrix.html"><code>model.matrix</code></a><code>(~ ...)</code> builds <span class="math inline">X</span>; column names are variable + level (<code>treatmenttreat</code>, <code>sexM</code>, <code>batchB</code>, <code>bmi</code>).</li>
 <li>The reference is the alphabetically first level: check <code>levels()</code>, use <a href="https://rdrr.io/r/stats/relevel.html"><code>relevel</code></a> or <code>factor(x, levels = ...)</code> (0 h / 6 h / 24 h!).</li>
 <li>Check <code>qr(X)$rank == ncol(X)</code>. If not: <code>lm</code> and limma give <code>NA</code>. Fix the <strong>design of the experiment</strong>.</li>
 <li>limma: log2 data (<code>voom</code> for counts) + <code>design</code> → <code>lmFit()</code> → <code>eBayes()</code> → <code>topTable(coef = ...)</code>.</li>
@@ -796,7 +812,7 @@ Quantitative biology and integrative omics
 <li>Leaving out a covariate that is unbalanced across groups gives false and missed calls: Simpson’s paradox at genome scale.</li>
 <li>Extra: DESeq2 does the same on raw counts, with a count error model.</li>
 </ul>
-<p><strong>Next (week 4):</strong> <em>Why penalize?</em> What to do when <span class="math inline">\(X\)</span> has more columns than samples.</p>
+<p><strong>Next (week 4):</strong> <em>Why penalize?</em> What to do when <span class="math inline">X</span> has more columns than samples.</p>
 <aside class="notes">
 <p>Recap the workflow and the two checks students should always do: levels and rank. The forward link: with more columns than samples the rank condition fails by shape, and penalized models are one way out.</p>
 <style type="text/css">
@@ -833,7 +849,6 @@ Quantitative biology and integrative omics
   <script src="../site_libs/revealjs/plugin/notes/notes.js"></script>
   <script src="../site_libs/revealjs/plugin/search/search.js"></script>
   <script src="../site_libs/revealjs/plugin/zoom/zoom.js"></script>
-  <script src="../site_libs/revealjs/plugin/math/math.js"></script>
   <script>window.define = window.backupDefine; window.backupDefine = undefined;</script>
 
   <script>
@@ -1001,27 +1016,9 @@ Quantitative biology and integrative omics
         // Factor of the display size that should remain empty around the content
         margin: 0.1,
 
-        math: {
-          mathjax: 'https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.9/MathJax.js',
-          config: 'TeX-AMS_HTML-full',
-          tex2jax: {
-            inlineMath: [['\\(','\\)']],
-            displayMath: [['\\[','\\]']],
-            balanceBraces: true,
-            processEscapes: false,
-            processRefs: true,
-            processEnvironments: true,
-            preview: 'TeX',
-            skipTags: ['script','noscript','style','textarea','pre','code'],
-            ignoreClass: 'tex2jax_ignore',
-            processClass: 'tex2jax_process'
-          },
-        },
-
         // reveal.js plugins
         plugins: [QuartoLineHighlight, PdfExport, RevealMenu, QuartoSupport,
 
-          RevealMath,
           RevealNotes,
           RevealSearch,
           RevealZoom

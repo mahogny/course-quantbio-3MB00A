@@ -96,6 +96,22 @@
     code span.wa { color: #ff5555; } /* Warning */
   </style>
   <link rel="stylesheet" href="../site_libs/revealjs/dist/theme/quarto-bf56578b9c06c165c166475cd19dbcd1.css">
+  <script>window.backupDefine = window.define; window.define = undefined;</script><script src="https://cdn.jsdelivr.net/npm/katex@latest/dist/katex.min.js"></script>
+  <script>document.addEventListener("DOMContentLoaded", function () {
+ var mathElements = document.getElementsByClassName("math");
+ var macros = [];
+ for (var i = 0; i < mathElements.length; i++) {
+  var texText = mathElements[i].firstChild;
+  if (mathElements[i].tagName == "SPAN") {
+   katex.render(texText.data, mathElements[i], {
+    displayMode: mathElements[i].classList.contains('display'),
+    throwOnError: false,
+    macros: macros,
+    fleqn: false
+   });
+}}});
+  </script>
+  <script>window.define = window.backupDefine; window.backupDefine = undefined;</script><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@latest/dist/katex.min.css">
   <link href="../site_libs/revealjs/plugin/quarto-line-highlight/line-highlight.css" rel="stylesheet">
   <link href="../site_libs/revealjs/plugin/reveal-menu/menu.css" rel="stylesheet">
   <link href="../site_libs/revealjs/plugin/reveal-menu/quarto-menu.css" rel="stylesheet">
@@ -231,7 +247,7 @@ Quantitative biology and integrative omics
 </section>
 <section id="an-image-is-a-matrix-of-points" class="slide level2 smaller">
 <h2>An image is a matrix of points</h2>
-<p>A greyscale image is a grid of intensities. Each pixel sits at a coordinate <span class="math inline">\((x, y)\)</span>, so the whole image is a <strong>2 × N matrix of points</strong> — one pixel per column, exactly like a dataset of samples.</p>
+<p>A greyscale image is a grid of intensities. Each pixel sits at a coordinate <span class="math inline">(x, y)</span>, so the whole image is a <strong>2 × N matrix of points</strong> — one pixel per column, exactly like a dataset of samples.</p>
 <div class="sourceCode" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a aria-hidden="true" tabindex="-1"></a>img <span class="ot">&lt;-</span> jpeg<span class="sc">::</span><span class="fu">readJPEG</span>(<span class="st">"msc-small.jpg"</span>)            <span class="co"># 160 x 120 grey levels, 0..1</span></span>
 <span id="cb1-2"><a aria-hidden="true" tabindex="-1"></a>img <span class="ot">&lt;-</span> <span class="fu">t</span>(img[<span class="fu">nrow</span>(img)<span class="sc">:</span><span class="dv">1</span>, ])                      <span class="co"># flip so up is up; now img[x, y]</span></span>
 <span id="cb1-3"><a aria-hidden="true" tabindex="-1"></a>xy  <span class="ot">&lt;-</span> <span class="fu">t</span>(<span class="fu">expand.grid</span>(<span class="dv">1</span><span class="sc">:</span><span class="fu">nrow</span>(img), <span class="dv">1</span><span class="sc">:</span><span class="fu">ncol</span>(img)))   <span class="co"># 2 x 19200: one pixel per COLUMN</span></span>
@@ -255,7 +271,7 @@ Quantitative biology and integrative omics
 </section>
 <section id="rotating-an-image" class="slide level2 smaller">
 <h2>Rotating an image</h2>
-<p>The rotation matrix <span class="math inline">\(R(\theta)\)</span> from Matrices as transformations, applied to all 19 200 pixels in <strong>one</strong> <code>%*%</code>:</p>
+<p>The rotation matrix <span class="math inline">R(\theta)</span> from Matrices as transformations, applied to the positions of all 19 200 pixels <strong>using a single</strong> <code>%*%</code>:</p>
 <div class="sourceCode" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a aria-hidden="true" tabindex="-1"></a>theta <span class="ot">&lt;-</span> pi<span class="sc">/</span><span class="dv">6</span>                       <span class="co"># 30 degrees</span></span>
 <span id="cb2-2"><a aria-hidden="true" tabindex="-1"></a>R <span class="ot">&lt;-</span> <span class="fu">matrix</span>(<span class="fu">c</span>(<span class="fu">cos</span>(theta), <span class="sc">-</span><span class="fu">sin</span>(theta),</span>
 <span id="cb2-3"><a aria-hidden="true" tabindex="-1"></a>              <span class="fu">sin</span>(theta),  <span class="fu">cos</span>(theta)), <span class="at">nrow =</span> <span class="dv">2</span>, <span class="at">byrow =</span> <span class="cn">TRUE</span>)</span>
@@ -279,11 +295,11 @@ Quantitative biology and integrative omics
 <section id="shear-read-it-from-the-columns" class="slide level2 smaller">
 <h2>Shear: read it from the columns</h2>
 <p>A <strong>shear</strong> (skew) slides each row sideways in proportion to its height:</p>
-<p><span class="math display">\[H = \begin{pmatrix} 1 &amp; 0.5 \\ 0 &amp; 1 \end{pmatrix}: \quad (x, y) \mapsto (x + 0.5\,y,\ y)\]</span></p>
+<p><span class="math display">H = \begin{pmatrix} 1 &amp; 0.5 \\ 0 &amp; 1 \end{pmatrix}: \quad (x, y) \mapsto (x + 0.5\,y,\ y)</span></p>
 <div class="sourceCode" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a aria-hidden="true" tabindex="-1"></a>H <span class="ot">&lt;-</span> <span class="fu">matrix</span>(<span class="fu">c</span>(<span class="dv">1</span>, <span class="fl">0.5</span>,</span>
 <span id="cb3-2"><a aria-hidden="true" tabindex="-1"></a>              <span class="dv">0</span>, <span class="dv">1</span>), <span class="at">nrow =</span> <span class="dv">2</span>, <span class="at">byrow =</span> <span class="cn">TRUE</span>)</span>
 <span id="cb3-3"><a aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(<span class="fu">t</span>(H <span class="sc">%*%</span> xy), <span class="at">col =</span> col, <span class="at">pch =</span> <span class="dv">15</span>, <span class="at">asp =</span> <span class="dv">1</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<p>The x-axis stays put (column 1 = <span class="math inline">\((1,0)\)</span>); the y-axis tips over to column 2 = <span class="math inline">\((0.5, 1)\)</span>.</p>
+<p>The x-axis stays put (column 1 = <span class="math inline">(1,0)</span>); the y-axis tips over to column 2 = <span class="math inline">(0.5, 1)</span>.</p>
 <div class="quarto-figure quarto-figure-center">
 <figure>
 <p><img data-src="fig04-shear-axes.png" class="quarto-figure quarto-figure-center" style="width:58.0%"></p>
@@ -306,7 +322,7 @@ Quantitative biology and integrative omics
 </section>
 <section id="a-gallery-of-2-2-matrices" class="slide level2 smaller">
 <h2>A gallery of 2 × 2 matrices</h2>
-<p>Every panel is <code>plot(t(A %*% xy), ...)</code> with a different <span class="math inline">\(A\)</span>. Predict each one from its columns first.</p>
+<p>Every panel is <code>plot(t(A %*% xy), ...)</code> with a different <span class="math inline">A</span>. Predict each one from its columns first.</p>
 
 <img data-src="fig05-image-gallery.png" class="quarto-figure quarto-figure-center r-stretch" style="width:68.0%"><ul>
 <li><strong>Reflection</strong> <code>diag(c(-1, 1))</code>: flips x — the cell is now mirrored.</li>
@@ -349,7 +365,7 @@ Quantitative biology and integrative omics
 </section>
 <section id="order-matters-on-an-image" class="slide level2 smaller">
 <h2>Order matters — on an image</h2>
-<p>Same two matrices, <span class="math inline">\(R\)</span> (rotate 30°) and <span class="math inline">\(H\)</span> (shear), applied in the two possible orders:</p>
+<p>Same two matrices, <span class="math inline">R</span> (rotate 30°) and <span class="math inline">H</span> (shear), applied in the two possible orders:</p>
 <div class="sourceCode" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(<span class="fu">t</span>(H <span class="sc">%*%</span> R <span class="sc">%*%</span> xy), <span class="at">col =</span> col, <span class="at">pch =</span> <span class="dv">15</span>, <span class="at">asp =</span> <span class="dv">1</span>)   <span class="co"># rotate, then shear</span></span>
 <span id="cb4-2"><a aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(<span class="fu">t</span>(R <span class="sc">%*%</span> H <span class="sc">%*%</span> xy), <span class="at">col =</span> col, <span class="at">pch =</span> <span class="dv">15</span>, <span class="at">asp =</span> <span class="dv">1</span>)   <span class="co"># shear, then rotate</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 
@@ -378,7 +394,7 @@ Quantitative biology and integrative omics
 <span id="cb5-5"><a aria-hidden="true" tabindex="-1"></a><span class="fu">all.equal</span>(out1, out2)                   <span class="co"># TRUE</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 
 <img data-src="fig07-image-pipeline.png" class="quarto-figure quarto-figure-center r-stretch" style="width:95.0%"><ul>
-<li>A whole chain of transformations is still just <strong>one</strong> 2 × 2 matrix <span class="math inline">\(M = SHR\)</span>.</li>
+<li>A whole chain of transformations is still just <strong>one</strong> 2 × 2 matrix <span class="math inline">M = SHR</span>.</li>
 <li>Combining costs a few multiplications of 2 × 2 matrices; the image is touched once. With millions of pixels (or genes), that matters.</li>
 </ul>
 <p><span style="font-size: 0.6em; color: #666;">Image: Robert M. Hunt, <a href="https://creativecommons.org/licenses/by/3.0">CC BY 3.0</a>, via Wikimedia Commons.</span></p>
@@ -398,16 +414,15 @@ Quantitative biology and integrative omics
 </section>
 <section id="biology-undoing-a-misalignment" class="slide level2 smaller">
 <h2>Biology: undoing a misalignment</h2>
-<p>The same cell is imaged a second time, but the section sits at an angle and is slightly skewed: the second image is <span class="math inline">\(A\,\mathbf{xy}\)</span>. If we <strong>know</strong> <span class="math inline">\(A\)</span>, its inverse undoes it — <code>solve(A)</code> from Linear systems in R.</p>
-<div class="sourceCode" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a aria-hidden="true" tabindex="-1"></a>A <span class="ot">&lt;-</span> <span class="fu">matrix</span>(<span class="fu">c</span>( <span class="fl">0.94</span>, <span class="fl">0.58</span>,</span>
-<span id="cb6-2"><a aria-hidden="true" tabindex="-1"></a>              <span class="sc">-</span><span class="fl">0.34</span>, <span class="fl">0.85</span>), <span class="at">nrow =</span> <span class="dv">2</span>, <span class="at">byrow =</span> <span class="cn">TRUE</span>)   <span class="co"># the misalignment</span></span>
-<span id="cb6-3"><a aria-hidden="true" tabindex="-1"></a>moved    <span class="ot">&lt;-</span> A <span class="sc">%*%</span> xy</span>
-<span id="cb6-4"><a aria-hidden="true" tabindex="-1"></a>restored <span class="ot">&lt;-</span> <span class="fu">solve</span>(A) <span class="sc">%*%</span> moved</span>
-<span id="cb6-5"><a aria-hidden="true" tabindex="-1"></a><span class="fu">max</span>(<span class="fu">abs</span>(restored <span class="sc">-</span> xy))                               <span class="co"># about 1e-14: back where we started</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>A slide was scanned at an angle: all we have is the tilted scan. The label should be horizontal, and it is tilted by 20°, so the scanner applied a rotation <span class="math inline">A = R(20°)</span> to every pixel. Its inverse undoes it — <code>solve(A)</code> from Linear systems in R.</p>
+<div class="sourceCode" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a aria-hidden="true" tabindex="-1"></a>theta <span class="ot">&lt;-</span> pi<span class="sc">/</span><span class="dv">9</span>                   <span class="co"># 20 degrees: read off from the tilted label</span></span>
+<span id="cb6-2"><a aria-hidden="true" tabindex="-1"></a>A <span class="ot">&lt;-</span> <span class="fu">matrix</span>(<span class="fu">c</span>(<span class="fu">cos</span>(theta), <span class="sc">-</span><span class="fu">sin</span>(theta),</span>
+<span id="cb6-3"><a aria-hidden="true" tabindex="-1"></a>              <span class="fu">sin</span>(theta),  <span class="fu">cos</span>(theta)), <span class="at">nrow =</span> <span class="dv">2</span>, <span class="at">byrow =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb6-4"><a aria-hidden="true" tabindex="-1"></a>restored <span class="ot">&lt;-</span> <span class="fu">solve</span>(A) <span class="sc">%*%</span> scan   <span class="co"># scan: the 2 x N pixel positions of the tilted image</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 
-<img data-src="fig08-registration.png" class="quarto-figure quarto-figure-center r-stretch" style="width:85.0%"><p><span style="font-size: 0.6em; color: #666;">Image: Robert M. Hunt, <a href="https://creativecommons.org/licenses/by/3.0">CC BY 3.0</a>, via Wikimedia Commons.</span></p>
+<img data-src="fig08-registration.png" class="quarto-figure quarto-figure-center r-stretch" style="width:80.0%"><p><span style="font-size: 0.6em; color: #666;">Image: Robert M. Hunt, <a href="https://creativecommons.org/licenses/by/3.0">CC BY 3.0</a>, via Wikimedia Commons.</span></p>
 <aside class="notes">
-<p>Image registration — aligning two images of the same specimen (repeated imaging rounds, H&amp;E vs a spatial-transcriptomics grid, a crooked slide) — is a matrix problem. Here A is given; real registration software estimates A from the images, which is beyond this course. The inverse exists because det(A) is not 0; a singular A (the collapsed line in the gallery) could never be undone. Link: solve(A) is the same function used to solve Ax = b in Linear systems in R. The same undo-with-the-inverse idea returns in Compensation &amp; spectral unmixing, where solve(S) separates mixed fluorescent dyes.</p>
+<p>Image registration — straightening a crooked scan, or aligning two images of the same specimen (repeated imaging rounds, H&amp;E vs a spatial-transcriptomics grid) — is a matrix problem. Here we read A off the image: the label must be horizontal and is tilted by 20 degrees. Real registration software estimates A from the images, which is beyond this course. The label strip was added to the micrograph for this example. The inverse exists because det(A) is not 0; a singular A (the collapsed line in the gallery) could never be undone. Link: solve(A) is the same function used to solve Ax = b in Linear systems in R. The same undo-with-the-inverse idea returns in Compensation &amp; spectral unmixing, where solve(S) separates mixed fluorescent dyes.</p>
 <style type="text/css">
         span.MJX_Assistive_MathML {
           position:absolute!important;
@@ -448,12 +463,12 @@ Quantitative biology and integrative omics
 </tr>
 <tr class="odd">
 <td>Shear</td>
-<td>one axis tips over: column 2 = <span class="math inline">\((k, 1)\)</span></td>
+<td>one axis tips over: column 2 = <span class="math inline">(k, 1)</span></td>
 <td><code>matrix(c(1,k,0,1),2,byrow=TRUE)</code></td>
 </tr>
 <tr class="even">
 <td>Reflection</td>
-<td>mirror image; <span class="math inline">\(\det = -1\)</span></td>
+<td>mirror image; <span class="math inline">\det = -1</span></td>
 <td><code>diag(c(-1, 1))</code></td>
 </tr>
 <tr class="odd">
@@ -463,7 +478,7 @@ Quantitative biology and integrative omics
 </tr>
 <tr class="even">
 <td>Order</td>
-<td><span class="math inline">\(HR \neq RH\)</span>: rightmost acts first</td>
+<td><span class="math inline">HR \neq RH</span>: rightmost acts first</td>
 <td><code>H %*% R</code> vs <code>R %*% H</code></td>
 </tr>
 <tr class="odd">
@@ -515,7 +530,6 @@ Quantitative biology and integrative omics
   <script src="../site_libs/revealjs/plugin/notes/notes.js"></script>
   <script src="../site_libs/revealjs/plugin/search/search.js"></script>
   <script src="../site_libs/revealjs/plugin/zoom/zoom.js"></script>
-  <script src="../site_libs/revealjs/plugin/math/math.js"></script>
   <script>window.define = window.backupDefine; window.backupDefine = undefined;</script>
 
   <script>
@@ -683,27 +697,9 @@ Quantitative biology and integrative omics
         // Factor of the display size that should remain empty around the content
         margin: 0.1,
 
-        math: {
-          mathjax: 'https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.9/MathJax.js',
-          config: 'TeX-AMS_HTML-full',
-          tex2jax: {
-            inlineMath: [['\\(','\\)']],
-            displayMath: [['\\[','\\]']],
-            balanceBraces: true,
-            processEscapes: false,
-            processRefs: true,
-            processEnvironments: true,
-            preview: 'TeX',
-            skipTags: ['script','noscript','style','textarea','pre','code'],
-            ignoreClass: 'tex2jax_ignore',
-            processClass: 'tex2jax_process'
-          },
-        },
-
         // reveal.js plugins
         plugins: [QuartoLineHighlight, PdfExport, RevealMenu, QuartoSupport,
 
-          RevealMath,
           RevealNotes,
           RevealSearch,
           RevealZoom

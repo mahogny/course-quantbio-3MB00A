@@ -96,6 +96,22 @@
     code span.wa { color: #ff5555; } /* Warning */
   </style>
   <link rel="stylesheet" href="../site_libs/revealjs/dist/theme/quarto-bf56578b9c06c165c166475cd19dbcd1.css">
+  <script>window.backupDefine = window.define; window.define = undefined;</script><script src="https://cdn.jsdelivr.net/npm/katex@latest/dist/katex.min.js"></script>
+  <script>document.addEventListener("DOMContentLoaded", function () {
+ var mathElements = document.getElementsByClassName("math");
+ var macros = [];
+ for (var i = 0; i < mathElements.length; i++) {
+  var texText = mathElements[i].firstChild;
+  if (mathElements[i].tagName == "SPAN") {
+   katex.render(texText.data, mathElements[i], {
+    displayMode: mathElements[i].classList.contains('display'),
+    throwOnError: false,
+    macros: macros,
+    fleqn: false
+   });
+}}});
+  </script>
+  <script>window.define = window.backupDefine; window.backupDefine = undefined;</script><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@latest/dist/katex.min.css">
   <link href="../site_libs/revealjs/plugin/quarto-line-highlight/line-highlight.css" rel="stylesheet">
   <link href="../site_libs/revealjs/plugin/reveal-menu/menu.css" rel="stylesheet">
   <link href="../site_libs/revealjs/plugin/reveal-menu/quarto-menu.css" rel="stylesheet">
@@ -209,8 +225,8 @@ Quantitative biology and integrative omics
 <h2>About this lecture</h2>
 <p>In the linear algebra block you fitted a straight line by <strong>least squares</strong>: one best line, one number per coefficient. Today we ask a different question — <em>how sure are we?</em> — and answer it by fitting the same line the <strong>Bayesian</strong> way.</p>
 <ul>
-<li>The model is unchanged: <span class="math inline">\(y = a + b\,x + \text{noise}\)</span>. What changes is the <strong>answer</strong>: each coefficient becomes a <strong>distribution</strong>, not a single number.</li>
-<li>Put <strong>priors</strong> on the intercept <span class="math inline">\(a\)</span>, slope <span class="math inline">\(b\)</span>, and noise scale <span class="math inline">\(\sigma\)</span>; combine with the data (<strong>likelihood</strong>) to get the <strong>posterior</strong>.</li>
+<li>The model is unchanged: <span class="math inline">y = a + b\,x + \text{noise}</span>. What changes is the <strong>answer</strong>: each coefficient becomes a <strong>distribution</strong>, not a single number.</li>
+<li>Put <strong>priors</strong> on the intercept <span class="math inline">a</span>, slope <span class="math inline">b</span>, and noise scale <span class="math inline">\sigma</span>; combine with the data (<strong>likelihood</strong>) to get the <strong>posterior</strong>.</li>
 <li>Read a slope as <em>“there is a 96% chance it is positive”</em> instead of a bare point estimate and a p-value.</li>
 <li><strong>Predict</strong> a new observation <strong>with uncertainty</strong> — a credible band, not just a line.</li>
 <li>Biology: does a gene’s expression rise with donor <strong>age</strong>? With only a handful of samples, honest uncertainty matters more than a single best-fit slope.</li>
@@ -255,15 +271,15 @@ Quantitative biology and integrative omics
 </section>
 <section id="the-model-a-line-plus-noise" class="slide level2 smaller">
 <h2>The model: a line plus noise</h2>
-<p>We assume each donor’s expression <span class="math inline">\(y_i\)</span> is a straight-line function of age <span class="math inline">\(x_i\)</span> plus random scatter:</p>
-<p><span class="math display">\[y_i = a + b\,x_i + \varepsilon_i, \qquad \varepsilon_i \sim \mathcal{N}(0,\ \sigma^2)\]</span></p>
+<p>We assume each donor’s expression <span class="math inline">y_i</span> is a straight-line function of age <span class="math inline">x_i</span> plus random scatter:</p>
+<p><span class="math display">y_i = a + b\,x_i + \varepsilon_i, \qquad \varepsilon_i \sim \mathcal{N}(0,\ \sigma^2)</span></p>
 <p>Three unknowns to learn from the data:</p>
 <ul>
-<li><span class="math inline">\(a\)</span> — the <strong>intercept</strong> (expression at <span class="math inline">\(x=0\)</span>, or at a centred reference age),</li>
-<li><span class="math inline">\(b\)</span> — the <strong>slope</strong> (change in expression <strong>per year</strong> of age); this is the biology we care about,</li>
-<li><span class="math inline">\(\sigma\)</span> — the <strong>noise scale</strong>: how far points scatter around the line (donor-to-donor variability, measurement error).</li>
+<li><span class="math inline">a</span> — the <strong>intercept</strong> (expression at <span class="math inline">x=0</span>, or at a centred reference age),</li>
+<li><span class="math inline">b</span> — the <strong>slope</strong> (change in expression <strong>per year</strong> of age); this is the biology we care about,</li>
+<li><span class="math inline">\sigma</span> — the <strong>noise scale</strong>: how far points scatter around the line (donor-to-donor variability, measurement error).</li>
 </ul>
-<p>This is the <em>same</em> model as ordinary linear regression. The Bayesian and least-squares approaches differ only in <strong>what they report about <span class="math inline">\(a\)</span>, <span class="math inline">\(b\)</span>, <span class="math inline">\(\sigma\)</span></strong>.</p>
+<p>This is the <em>same</em> model as ordinary linear regression. The Bayesian and least-squares approaches differ only in <strong>what they report about <span class="math inline">a</span>, <span class="math inline">b</span>, <span class="math inline">\sigma</span></strong>.</p>
 
 <img data-src="fig04-line-plus-noise.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:60.0%"><aside class="notes">
 <p>Write the model and name all three parameters, stressing that sigma is a parameter too, not a nuisance to be swept away — its size controls how confident predictions can be. Interpret the slope in biological units (change in log-expression per year) because coefficients are only meaningful with units attached. Reiterate the through-line: identical model, different accounting of uncertainty. Mention centring age (subtracting the mean) so the intercept is interpretable as expression at the average age rather than at the biologically meaningless age zero.</p>
@@ -281,13 +297,13 @@ Quantitative biology and integrative omics
 </section>
 <section id="recap-the-least-squares-fit" class="slide level2 smaller">
 <h2>Recap: the least-squares fit</h2>
-<p>From the linear algebra block, the <strong>least-squares</strong> line minimises the sum of squared residuals. Stacking the data into a design matrix <span class="math inline">\(X\)</span> (a column of 1s for <span class="math inline">\(a\)</span>, a column of ages for <span class="math inline">\(b\)</span>), the best-fit coefficients solve the <strong>normal equations</strong>:</p>
-<p><span class="math display">\[\hat{\boldsymbol\beta} = (X^\top X)^{-1} X^\top \mathbf{y}\]</span></p>
+<p>From the linear algebra block, the <strong>least-squares</strong> line minimises the sum of squared residuals. Stacking the data into a design matrix <span class="math inline">X</span> (a column of 1s for <span class="math inline">a</span>, a column of ages for <span class="math inline">b</span>), the best-fit coefficients solve the <strong>normal equations</strong>:</p>
+<p><span class="math display">\hat{\boldsymbol\beta} = (X^\top X)^{-1} X^\top \mathbf{y}</span></p>
 <p>In R this is one call:</p>
 <div class="sourceCode" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a aria-hidden="true" tabindex="-1"></a>fit_ls <span class="ot">&lt;-</span> <span class="fu">lm</span>(expr <span class="sc">~</span> age, <span class="at">data =</span> donors)</span>
 <span id="cb1-2"><a aria-hidden="true" tabindex="-1"></a><span class="fu">coef</span>(fit_ls)      <span class="co"># (Intercept)  age   -&gt; point estimates of a and b</span></span>
 <span id="cb1-3"><a aria-hidden="true" tabindex="-1"></a><span class="fu">confint</span>(fit_ls)   <span class="co"># 95% confidence intervals</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<p>This gives <strong>one</strong> number for <span class="math inline">\(a\)</span> and <strong>one</strong> for <span class="math inline">\(b\)</span> (plus a confidence interval and a p-value). It is fast, familiar, and often enough.</p>
+<p>This gives <strong>one</strong> number for <span class="math inline">a</span> and <strong>one</strong> for <span class="math inline">b</span> (plus a confidence interval and a p-value). It is fast, familiar, and often enough.</p>
 
 <img data-src="fig05-design-matrix.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:60.0%"><aside class="notes">
 <p>Deliberately re-derive the connection to linear algebra: least squares is exactly the normal equations they solved by hand, beta_hat = (X^T X)^{-1} X^T y. Show that lm() is the production tool for it. The point of this slide is continuity — the Bayesian fit is not a replacement or a rival, it is the same fit seen through a probabilistic lens. Note in passing that under Gaussian noise the least-squares estimate coincides with the maximum-likelihood estimate; this sets up the likelihood on a later slide. Keep it short; they know this material.</p>
@@ -305,7 +321,7 @@ Quantitative biology and integrative omics
 </section>
 <section id="what-least-squares-does-and-doesnt-give" class="slide level2 smaller">
 <h2>What least squares does — and doesn’t — give</h2>
-<p>Least squares hands you a <strong>point estimate</strong>: the single most-consistent <span class="math inline">\(a\)</span> and <span class="math inline">\(b\)</span>.</p>
+<p>Least squares hands you a <strong>point estimate</strong>: the single most-consistent <span class="math inline">a</span> and <span class="math inline">b</span>.</p>
 <ul>
 <li>A <strong>confidence interval</strong> and <strong>p-value</strong> come with it, but their interpretation is subtle: the 95% refers to the <em>procedure over hypothetical repeated experiments</em>, not to <em>this</em> slope.</li>
 <li>It gives <strong>no direct probability statement</strong> about the parameter, e.g.&nbsp;you cannot say “there is a 96% probability the slope is positive.”</li>
@@ -329,10 +345,10 @@ Quantitative biology and integrative omics
 </section>
 <section id="the-bayesian-shift-parameters-as-distributions" class="slide level2 smaller">
 <h2>The Bayesian shift: parameters as distributions</h2>
-<p>Frequentist: <span class="math inline">\(a\)</span>, <span class="math inline">\(b\)</span>, <span class="math inline">\(\sigma\)</span> are <strong>fixed unknown numbers</strong>; the data are random.</p>
-<p>Bayesian: we describe our <strong>uncertainty about</strong> <span class="math inline">\(a\)</span>, <span class="math inline">\(b\)</span>, <span class="math inline">\(\sigma\)</span> with <strong>probability distributions</strong>, and update them using data via <strong>Bayes’ theorem</strong> (from the prior/likelihood/posterior unit):</p>
-<p><span class="math display">\[\underbrace{p(\theta \mid \text{data})}_{\text{posterior}} \ \propto\ \underbrace{p(\text{data} \mid \theta)}_{\text{likelihood}} \times \underbrace{p(\theta)}_{\text{prior}}\]</span></p>
-<p>Here <span class="math inline">\(\theta = (a, b, \sigma)\)</span>. The output is the <strong>posterior</strong>: a distribution over <em>all three parameters at once</em> that says which combinations are plausible given the data.</p>
+<p>Frequentist: <span class="math inline">a</span>, <span class="math inline">b</span>, <span class="math inline">\sigma</span> are <strong>fixed unknown numbers</strong>; the data are random.</p>
+<p>Bayesian: we describe our <strong>uncertainty about</strong> <span class="math inline">a</span>, <span class="math inline">b</span>, <span class="math inline">\sigma</span> with <strong>probability distributions</strong>, and update them using data via <strong>Bayes’ theorem</strong> (from the prior/likelihood/posterior unit):</p>
+<p><span class="math display">\underbrace{p(\theta \mid \text{data})}_{\text{posterior}} \ \propto\ \underbrace{p(\text{data} \mid \theta)}_{\text{likelihood}} \times \underbrace{p(\theta)}_{\text{prior}}</span></p>
+<p>Here <span class="math inline">\theta = (a, b, \sigma)</span>. The output is the <strong>posterior</strong>: a distribution over <em>all three parameters at once</em> that says which combinations are plausible given the data.</p>
 
 <img data-src="fig07-prior-likelihood-posterior.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:80.0%"><aside class="notes">
 <p>State the philosophical switch cleanly, then immediately ground it in Bayes’ theorem, which they met in the prior/likelihood/posterior unit. The key mental move: uncertainty about a parameter is itself represented by a distribution. Read the theorem in words - posterior is proportional to likelihood times prior. Stress that the posterior is joint over (a, b, sigma); we usually look at one coefficient at a time (a marginal), but the machinery handles their correlations. Keep the proportionality sign honest: the missing constant (the evidence) is what makes it a proper distribution, and is what MCMC lets us avoid computing directly.</p>
@@ -351,13 +367,13 @@ Quantitative biology and integrative omics
 <section id="priors-what-we-believe-before-the-data" class="slide level2 smaller">
 <h2>Priors: what we believe before the data</h2>
 <p>A prior encodes what is plausible for each parameter <strong>before</strong> seeing this dataset. Weakly-informative priors are a good default — wide enough not to force a conclusion, tight enough to rule out the absurd.</p>
-<p><span class="math display">\[a \sim \mathcal{N}(0,\ 5), \qquad b \sim \mathcal{N}(0,\ 0.1), \qquad \sigma \sim \text{Exponential}(1)\]</span></p>
+<p><span class="math display">a \sim \mathcal{N}(0,\ 5), \qquad b \sim \mathcal{N}(0,\ 0.1), \qquad \sigma \sim \text{Exponential}(1)</span></p>
 <ul>
-<li><strong>Intercept</strong> <span class="math inline">\(a\)</span>: centred, broad — expression at the mean age could be a range of values.</li>
-<li><strong>Slope</strong> <span class="math inline">\(b\)</span>: centred at <strong>0</strong> (no assumed direction) but on a biologically sane scale — ageing genes change <em>slowly</em> per year, so large slopes are implausible.</li>
-<li><strong>Noise</strong> <span class="math inline">\(\sigma\)</span>: must be <strong>positive</strong>, so an Exponential (or half-Normal) prior; mass on small-to-moderate scatter.</li>
+<li><strong>Intercept</strong> <span class="math inline">a</span>: centred, broad — expression at the mean age could be a range of values.</li>
+<li><strong>Slope</strong> <span class="math inline">b</span>: centred at <strong>0</strong> (no assumed direction) but on a biologically sane scale — ageing genes change <em>slowly</em> per year, so large slopes are implausible.</li>
+<li><strong>Noise</strong> <span class="math inline">\sigma</span>: must be <strong>positive</strong>, so an Exponential (or half-Normal) prior; mass on small-to-moderate scatter.</li>
 </ul>
-<p>A centred prior on <span class="math inline">\(b\)</span> is <strong>honest</strong>, not a thumb on the scale: it lets the data move the slope, but resists over-reacting to a few noisy points.</p>
+<p>A centred prior on <span class="math inline">b</span> is <strong>honest</strong>, not a thumb on the scale: it lets the data move the slope, but resists over-reacting to a few noisy points.</p>
 
 <img data-src="fig08-three-priors.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:80.0%"><aside class="notes">
 <p>Priors are where students get nervous, so demystify them: a weakly-informative prior states the scale of plausible values, not the answer. Justify each choice biologically. The slope prior centred at zero is important to explain - it is the sceptical, conservative choice; it does not assume the gene is flat, it just requires evidence to move away from flat, which regularises small-n fits. Emphasise sigma must be positive so its prior lives on the positive line (Exponential or half-Normal). Mention prior predictive checks in passing as the principled way to sanity-check priors (simulate lines from the prior and see if they are biologically ridiculous). Numbers here are illustrative for a centred, standardised-ish response.</p>
@@ -375,10 +391,10 @@ Quantitative biology and integrative omics
 </section>
 <section id="the-likelihood-how-data-pull-on-the-parameters" class="slide level2 smaller">
 <h2>The likelihood: how data pull on the parameters</h2>
-<p>The <strong>likelihood</strong> measures how well a given <span class="math inline">\((a, b, \sigma)\)</span> explains the observed points. Under the line-plus-Gaussian-noise model, each donor contributes a normal density:</p>
-<p><span class="math display">\[p(y_i \mid a, b, \sigma) = \mathcal{N}\!\left(y_i \ \middle|\ a + b\,x_i,\ \sigma^2\right)\]</span></p>
+<p>The <strong>likelihood</strong> measures how well a given <span class="math inline">(a, b, \sigma)</span> explains the observed points. Under the line-plus-Gaussian-noise model, each donor contributes a normal density:</p>
+<p><span class="math display">p(y_i \mid a, b, \sigma) = \mathcal{N}\!\left(y_i \ \middle|\ a + b\,x_i,\ \sigma^2\right)</span></p>
 <p>and, assuming donors are independent, the full likelihood is the product:</p>
-<p><span class="math display">\[p(\text{data} \mid a,b,\sigma) = \prod_{i=1}^{n} \mathcal{N}\!\left(y_i \ \middle|\ a + b\,x_i,\ \sigma\right)\]</span></p>
+<p><span class="math display">p(\text{data} \mid a,b,\sigma) = \prod_{i=1}^{n} \mathcal{N}\!\left(y_i \ \middle|\ a + b\,x_i,\ \sigma\right)</span></p>
 <p>Maximising this product <strong>alone</strong> (ignoring priors) gives back the <strong>least-squares</strong> line — the frequentist and Bayesian fits share the same likelihood, and differ only by the prior.</p>
 
 <img data-src="fig09-likelihood-gaussians.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:60.0%"><aside class="notes">
@@ -397,11 +413,11 @@ Quantitative biology and integrative omics
 </section>
 <section id="the-posterior-prior-likelihood" class="slide level2 smaller">
 <h2>The posterior: prior × likelihood</h2>
-<p>Multiply prior and likelihood and normalise — the result is the <strong>posterior</strong> over <span class="math inline">\((a, b, \sigma)\)</span>:</p>
-<p><span class="math display">\[p(a, b, \sigma \mid \text{data}) \ \propto\ \left[\prod_{i} \mathcal{N}(y_i \mid a + b x_i,\ \sigma)\right]\ p(a)\,p(b)\,p(\sigma)\]</span></p>
+<p>Multiply prior and likelihood and normalise — the result is the <strong>posterior</strong> over <span class="math inline">(a, b, \sigma)</span>:</p>
+<p><span class="math display">p(a, b, \sigma \mid \text{data}) \ \propto\ \left[\prod_{i} \mathcal{N}(y_i \mid a + b x_i,\ \sigma)\right]\ p(a)\,p(b)\,p(\sigma)</span></p>
 <ul>
 <li>For a straight line with Gaussian noise there is <strong>no simple formula</strong> to write down for the full posterior, so we <strong>sample</strong> from it with <strong>MCMC</strong> (Markov-chain Monte Carlo).</li>
-<li>MCMC returns thousands of <strong>draws</strong> <span class="math inline">\((a^{(k)}, b^{(k)}, \sigma^{(k)})\)</span> — a cloud of plausible parameter sets.</li>
+<li>MCMC returns thousands of <strong>draws</strong> <span class="math inline">(a^{(k)}, b^{(k)}, \sigma^{(k)})</span> — a cloud of plausible parameter sets.</li>
 <li>The <strong>spread</strong> of the draws <em>is</em> the uncertainty. Summaries (mean, 95% interval) are just descriptions of that cloud.</li>
 </ul>
 
@@ -456,7 +472,7 @@ Quantitative biology and integrative omics
 <div class="sourceCode" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a aria-hidden="true" tabindex="-1"></a><span class="fu">summary</span>(fit)          <span class="co"># look at Rhat and ESS for every parameter</span></span>
 <span id="cb3-2"><a aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(fit)             <span class="co"># trace plots: chains should overlap like "fuzzy caterpillars"</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <ul>
-<li><strong><code>Rhat</code></strong> should be <span class="math inline">\(\approx 1.00\)</span> for every parameter (chains agree). Values <span class="math inline">\(\gtrsim 1.01\)</span> signal trouble.</li>
+<li><strong><code>Rhat</code></strong> should be <span class="math inline">\approx 1.00</span> for every parameter (chains agree). Values <span class="math inline">\gtrsim 1.01</span> signal trouble.</li>
 <li><strong><code>ESS</code></strong> (effective sample size) should be comfortably large (hundreds+).</li>
 <li><strong>Trace plots</strong> should look like stationary noise with the chains fully overlapping.</li>
 </ul>
@@ -489,17 +505,17 @@ Quantitative biology and integrative omics
 </thead>
 <tbody>
 <tr class="odd">
-<td>Intercept <span class="math inline">\(a\)</span></td>
+<td>Intercept <span class="math inline">a</span></td>
 <td>4.20</td>
 <td>[3.95, 4.45]</td>
 </tr>
 <tr class="even">
-<td>slope <span class="math inline">\(b\)</span></td>
+<td>slope <span class="math inline">b</span></td>
 <td>0.018</td>
 <td>[0.001, 0.035]</td>
 </tr>
 <tr class="odd">
-<td><span class="math inline">\(\sigma\)</span></td>
+<td><span class="math inline">\sigma</span></td>
 <td>0.31</td>
 <td>[0.22, 0.44]</td>
 </tr>
@@ -507,7 +523,7 @@ Quantitative biology and integrative omics
 </table>
 <ul>
 <li>Each row is a <strong>summary of that parameter’s marginal posterior</strong> — the shape of the whole distribution, boiled down.</li>
-<li>The slope’s 95% <strong>credible interval</strong> <span class="math inline">\([0.001, 0.035]\)</span> means: <em>given the data and priors, there is a 95% probability the true per-year change lies in this range.</em></li>
+<li>The slope’s 95% <strong>credible interval</strong> <span class="math inline">[0.001, 0.035]</span> means: <em>given the data and priors, there is a 95% probability the true per-year change lies in this range.</em></li>
 <li>That is the plain-English reading people <strong>wrongly</strong> attach to a frequentist CI — here it is actually correct.</li>
 </ul>
 
@@ -557,8 +573,8 @@ Quantitative biology and integrative omics
 <h2>Prediction with uncertainty: two questions</h2>
 <p>For a new donor aged 70, “predict the expression” is really <strong>two</strong> questions:</p>
 <ul>
-<li><strong>Where is the average line?</strong> Uncertainty in <span class="math inline">\(a\)</span> and <span class="math inline">\(b\)</span> only → a <strong>credible interval for the mean</strong> expression at age 70. Narrow.</li>
-<li><strong>Where will one new donor land?</strong> Adds the noise <span class="math inline">\(\sigma\)</span> on top → a wider <strong>prediction interval</strong> for a single observation.</li>
+<li><strong>Where is the average line?</strong> Uncertainty in <span class="math inline">a</span> and <span class="math inline">b</span> only → a <strong>credible interval for the mean</strong> expression at age 70. Narrow.</li>
+<li><strong>Where will one new donor land?</strong> Adds the noise <span class="math inline">\sigma</span> on top → a wider <strong>prediction interval</strong> for a single observation.</li>
 </ul>
 <div class="sourceCode" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a aria-hidden="true" tabindex="-1"></a>newdata <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(<span class="at">age =</span> <span class="dv">70</span>)</span>
 <span id="cb6-2"><a aria-hidden="true" tabindex="-1"></a></span>
@@ -633,7 +649,7 @@ Quantitative biology and integrative omics
 <tr class="even">
 <td>Slope reading</td>
 <td>estimate + p-value</td>
-<td><span class="math inline">\(P(b&gt;0\mid\text{data})\)</span> directly</td>
+<td><span class="math inline">P(b&gt;0\mid\text{data})</span> directly</td>
 </tr>
 <tr class="odd">
 <td>Interval meaning</td>
@@ -698,15 +714,15 @@ Quantitative biology and integrative omics
 <tbody>
 <tr class="odd">
 <td>Model</td>
-<td><span class="math inline">\(y = a + b\,x + \varepsilon\)</span>, <span class="math inline">\(\varepsilon\sim\mathcal N(0,\sigma^2)\)</span> — same as ordinary regression</td>
+<td><span class="math inline">y = a + b\,x + \varepsilon</span>, <span class="math inline">\varepsilon\sim\mathcal N(0,\sigma^2)</span> — same as ordinary regression</td>
 </tr>
 <tr class="even">
 <td>Bayesian shift</td>
-<td>parameters <span class="math inline">\(a,b,\sigma\)</span> get <strong>distributions</strong>, not single numbers</td>
+<td>parameters <span class="math inline">a,b,\sigma</span> get <strong>distributions</strong>, not single numbers</td>
 </tr>
 <tr class="odd">
 <td>Bayes’ theorem</td>
-<td>posterior <span class="math inline">\(\propto\)</span> likelihood <span class="math inline">\(\times\)</span> prior</td>
+<td>posterior <span class="math inline">\propto</span> likelihood <span class="math inline">\times</span> prior</td>
 </tr>
 <tr class="even">
 <td>Prior</td>
@@ -718,11 +734,11 @@ Quantitative biology and integrative omics
 </tr>
 <tr class="even">
 <td>Posterior</td>
-<td>sampled by <strong>MCMC</strong>; draws = a cloud of plausible <span class="math inline">\((a,b,\sigma)\)</span></td>
+<td>sampled by <strong>MCMC</strong>; draws = a cloud of plausible <span class="math inline">(a,b,\sigma)</span></td>
 </tr>
 <tr class="odd">
 <td>Coefficient reading</td>
-<td><span class="math inline">\(P(b&gt;0\mid\text{data})\)</span> = fraction of draws with <span class="math inline">\(b&gt;0\)</span></td>
+<td><span class="math inline">P(b&gt;0\mid\text{data})</span> = fraction of draws with <span class="math inline">b&gt;0</span></td>
 </tr>
 <tr class="even">
 <td>Credible interval</td>
@@ -730,11 +746,11 @@ Quantitative biology and integrative omics
 </tr>
 <tr class="odd">
 <td>Prediction</td>
-<td><strong>mean</strong> band (narrow) vs <strong>individual</strong> band (wider, adds <span class="math inline">\(\sigma\)</span>)</td>
+<td><strong>mean</strong> band (narrow) vs <strong>individual</strong> band (wider, adds <span class="math inline">\sigma</span>)</td>
 </tr>
 <tr class="even">
 <td>Diagnostics</td>
-<td>check <code>Rhat</code> <span class="math inline">\(\approx 1\)</span> and trace plots <strong>before</strong> interpreting</td>
+<td>check <code>Rhat</code> <span class="math inline">\approx 1</span> and trace plots <strong>before</strong> interpreting</td>
 </tr>
 </tbody>
 </table>
@@ -775,7 +791,6 @@ Quantitative biology and integrative omics
   <script src="../site_libs/revealjs/plugin/notes/notes.js"></script>
   <script src="../site_libs/revealjs/plugin/search/search.js"></script>
   <script src="../site_libs/revealjs/plugin/zoom/zoom.js"></script>
-  <script src="../site_libs/revealjs/plugin/math/math.js"></script>
   <script>window.define = window.backupDefine; window.backupDefine = undefined;</script>
 
   <script>
@@ -943,27 +958,9 @@ Quantitative biology and integrative omics
         // Factor of the display size that should remain empty around the content
         margin: 0.1,
 
-        math: {
-          mathjax: 'https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.9/MathJax.js',
-          config: 'TeX-AMS_HTML-full',
-          tex2jax: {
-            inlineMath: [['\\(','\\)']],
-            displayMath: [['\\[','\\]']],
-            balanceBraces: true,
-            processEscapes: false,
-            processRefs: true,
-            processEnvironments: true,
-            preview: 'TeX',
-            skipTags: ['script','noscript','style','textarea','pre','code'],
-            ignoreClass: 'tex2jax_ignore',
-            processClass: 'tex2jax_process'
-          },
-        },
-
         // reveal.js plugins
         plugins: [QuartoLineHighlight, PdfExport, RevealMenu, QuartoSupport,
 
-          RevealMath,
           RevealNotes,
           RevealSearch,
           RevealZoom

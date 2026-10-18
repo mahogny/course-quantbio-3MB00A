@@ -96,6 +96,22 @@
     code span.wa { color: #ff5555; } /* Warning */
   </style>
   <link rel="stylesheet" href="../site_libs/revealjs/dist/theme/quarto-bf56578b9c06c165c166475cd19dbcd1.css">
+  <script>window.backupDefine = window.define; window.define = undefined;</script><script src="https://cdn.jsdelivr.net/npm/katex@latest/dist/katex.min.js"></script>
+  <script>document.addEventListener("DOMContentLoaded", function () {
+ var mathElements = document.getElementsByClassName("math");
+ var macros = [];
+ for (var i = 0; i < mathElements.length; i++) {
+  var texText = mathElements[i].firstChild;
+  if (mathElements[i].tagName == "SPAN") {
+   katex.render(texText.data, mathElements[i], {
+    displayMode: mathElements[i].classList.contains('display'),
+    throwOnError: false,
+    macros: macros,
+    fleqn: false
+   });
+}}});
+  </script>
+  <script>window.define = window.backupDefine; window.backupDefine = undefined;</script><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@latest/dist/katex.min.css">
   <link href="../site_libs/revealjs/plugin/quarto-line-highlight/line-highlight.css" rel="stylesheet">
   <link href="../site_libs/revealjs/plugin/reveal-menu/menu.css" rel="stylesheet">
   <link href="../site_libs/revealjs/plugin/reveal-menu/quarto-menu.css" rel="stylesheet">
@@ -256,9 +272,9 @@ Quantitative biology and integrative omics
 <section id="what-is-an-error-model" class="slide level2 smaller">
 <h2>What is an error model?</h2>
 <p>A measurement is <strong>signal + noise</strong>. The error model is the probability distribution you assume for the noise — equivalently, the distribution the data are drawn from given the underlying truth.</p>
-<p><span class="math display">\[\text{data} \sim \text{Distribution}(\text{parameters})\]</span></p>
+<p><span class="math display">\text{data} \sim \text{Distribution}(\text{parameters})</span></p>
 <ul>
-<li>It answers: <em>“If the true value were <span class="math inline">\(\mu\)</span>, how likely is the number I actually observed?”</em></li>
+<li>It answers: <em>“If the true value were <span class="math inline">\mu</span>, how likely is the number I actually observed?”</em></li>
 <li>That “how likely” is the <strong>likelihood</strong> — the same likelihood that feeds into Bayes’ theorem in the <strong>prior, likelihood and posterior</strong> unit.</li>
 <li>Fitting a model (a t-test, a linear model with <code>lm</code>, a genomics tool) always assumes <em>some</em> error model, whether or not you named it.</li>
 </ul>
@@ -281,10 +297,10 @@ Quantitative biology and integrative omics
 <section id="gaussian-continuous-measurements" class="slide level2 smaller">
 <h2>Gaussian: continuous measurements</h2>
 <p>The <strong>Gaussian</strong> (normal) distribution fits measurements that are <strong>continuous</strong> and scatter <strong>symmetrically</strong> around a mean.</p>
-<p><span class="math display">\[X \sim \mathcal{N}(\mu, \sigma^2), \qquad f(x) = \frac{1}{\sqrt{2\pi\sigma^2}}\, e^{-\frac{(x-\mu)^2}{2\sigma^2}}\]</span></p>
+<p><span class="math display">X \sim \mathcal{N}(\mu, \sigma^2), \qquad f(x) = \frac{1}{\sqrt{2\pi\sigma^2}}\, e^{-\frac{(x-\mu)^2}{2\sigma^2}}</span></p>
 <ul>
-<li>Two separate parameters: mean <span class="math inline">\(\mu\)</span> and variance <span class="math inline">\(\sigma^2\)</span> (<strong>spread is independent of the mean</strong>).</li>
-<li>Good for: protein concentration, cell diameter, <span class="math inline">\(\log\)</span>-transformed intensities, height, temperature.</li>
+<li>Two separate parameters: mean <span class="math inline">\mu</span> and variance <span class="math inline">\sigma^2</span> (<strong>spread is independent of the mean</strong>).</li>
+<li>Good for: protein concentration, cell diameter, <span class="math inline">\log</span>-transformed intensities, height, temperature.</li>
 <li>The default assumption behind the <strong>t-test</strong>, <strong>linear regression</strong>, and <code>lm</code>.</li>
 </ul>
 <p>It can take <strong>any real value</strong> — including negatives — which is exactly why it is wrong for counts.</p>
@@ -307,7 +323,7 @@ Quantitative biology and integrative omics
 <h2>Counts are not Gaussian</h2>
 <p>Sequencing gives <strong>counts</strong>: reads per gene, molecules per cell, variants per kilobase, colonies per plate. Counts have structure a Gaussian ignores:</p>
 <ul>
-<li><strong>Non-negative integers</strong> — you cannot observe <span class="math inline">\(-2\)</span> or <span class="math inline">\(3.7\)</span> reads.</li>
+<li><strong>Non-negative integers</strong> — you cannot observe <span class="math inline">-2</span> or <span class="math inline">3.7</span> reads.</li>
 <li><strong>Discrete</strong>, especially near zero (many genes have 0, 1, 2 reads).</li>
 <li><strong>Spread grows with the mean</strong> — highly expressed genes vary more, in absolute terms, than lowly expressed ones (we saw this in the two groups).</li>
 </ul>
@@ -330,13 +346,13 @@ Quantitative biology and integrative omics
 <section id="poisson-the-count-distribution" class="slide level2 smaller">
 <h2>Poisson: the count distribution</h2>
 <p>The <strong>Poisson</strong> distribution models the number of independent events in a fixed interval (of time, space, or sequencing depth), occurring at constant average rate.</p>
-<p><span class="math display">\[X \sim \text{Poisson}(\lambda), \qquad P(X = k) = \frac{\lambda^k e^{-\lambda}}{k!}, \quad k = 0, 1, 2, \dots\]</span></p>
+<p><span class="math display">X \sim \text{Poisson}(\lambda), \qquad P(X = k) = \frac{\lambda^k e^{-\lambda}}{k!}, \quad k = 0, 1, 2, \dots</span></p>
 <ul>
-<li><strong>One</strong> parameter <span class="math inline">\(\lambda &gt; 0\)</span> — the average count (the rate).</li>
+<li><strong>One</strong> parameter <span class="math inline">\lambda &gt; 0</span> — the average count (the rate).</li>
 <li>Discrete and non-negative by construction.</li>
-<li><strong>Defining property:</strong> <span class="math inline">\(\;\mathbb{E}[X] = \lambda \;\)</span> and <span class="math inline">\(\; \text{Var}(X) = \lambda\)</span>.</li>
+<li><strong>Defining property:</strong> <span class="math inline">\;\mathbb{E}[X] = \lambda \;</span> and <span class="math inline">\; \text{Var}(X) = \lambda</span>.</li>
 </ul>
-<p><span class="math display">\[\boxed{\text{mean} = \text{variance} = \lambda}\]</span></p>
+<p><span class="math display">\boxed{\text{mean} = \text{variance} = \lambda}</span></p>
 
 <img data-src="fig06-poisson-pmf.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:70.0%"><aside class="notes">
 <p>Introduce Poisson as the natural law for “count of rare-ish independent events in a fixed window.” Reads mapping to a gene fit this picture: each of millions of reads independently has a small probability of landing on this gene. The headline, worth repeating aloud, is mean equals variance — a single parameter controls both. This is a strong, testable claim about data: if counts are truly Poisson, their sample variance should roughly equal their sample mean. Keep the factorial formula on screen but do not dwell on it; the conceptual content is the mean = variance identity and the “events in a window” picture.</p>
@@ -354,9 +370,9 @@ Quantitative biology and integrative omics
 </section>
 <section id="poisson-a-small-example" class="slide level2 smaller">
 <h2>Poisson: a small example</h2>
-<p>A gene receives on average <span class="math inline">\(\lambda = 3\)</span> reads per sample. Then:</p>
-<p><span class="math display">\[P(0) = \frac{3^0 e^{-3}}{0!} = e^{-3} \approx 0.050, \quad P(3) = \frac{3^3 e^{-3}}{3!} = \frac{27 e^{-3}}{6} \approx 0.224\]</span></p>
-<p>The distribution is <strong>right-skewed</strong> for small <span class="math inline">\(\lambda\)</span> and piles up near zero; as <span class="math inline">\(\lambda\)</span> grows it becomes more symmetric.</p>
+<p>A gene receives on average <span class="math inline">\lambda = 3</span> reads per sample. Then:</p>
+<p><span class="math display">P(0) = \frac{3^0 e^{-3}}{0!} = e^{-3} \approx 0.050, \quad P(3) = \frac{3^3 e^{-3}}{3!} = \frac{27 e^{-3}}{6} \approx 0.224</span></p>
+<p>The distribution is <strong>right-skewed</strong> for small <span class="math inline">\lambda</span> and piles up near zero; as <span class="math inline">\lambda</span> grows it becomes more symmetric.</p>
 <div class="sourceCode" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a aria-hidden="true" tabindex="-1"></a><span class="co"># probabilities for counts 0..8 when lambda = 3</span></span>
 <span id="cb1-2"><a aria-hidden="true" tabindex="-1"></a>lambda <span class="ot">&lt;-</span> <span class="dv">3</span></span>
 <span id="cb1-3"><a aria-hidden="true" tabindex="-1"></a>k <span class="ot">&lt;-</span> <span class="dv">0</span><span class="sc">:</span><span class="dv">8</span></span>
@@ -383,8 +399,8 @@ Quantitative biology and integrative omics
 <h2>Where Poisson comes from: rare events</h2>
 <p>Poisson is the limit of <strong>many independent trials, each with tiny success probability</strong>.</p>
 <ul>
-<li><span class="math inline">\(n\)</span> reads in a library, each landing on our gene with small probability <span class="math inline">\(p\)</span>.</li>
-<li>Total on-gene reads is <span class="math inline">\(\text{Binomial}(n, p)\)</span>; as <span class="math inline">\(n \to \infty\)</span>, <span class="math inline">\(p \to 0\)</span> with <span class="math inline">\(np = \lambda\)</span> fixed, this becomes <span class="math inline">\(\text{Poisson}(\lambda)\)</span>.</li>
+<li><span class="math inline">n</span> reads in a library, each landing on our gene with small probability <span class="math inline">p</span>.</li>
+<li>Total on-gene reads is <span class="math inline">\text{Binomial}(n, p)</span>; as <span class="math inline">n \to \infty</span>, <span class="math inline">p \to 0</span> with <span class="math inline">np = \lambda</span> fixed, this becomes <span class="math inline">\text{Poisson}(\lambda)</span>.</li>
 </ul>
 <p>That is precisely the sequencing picture: <strong>millions of reads</strong>, each with a <strong>tiny</strong> chance of hitting any one gene. So idealised counts of independent molecules are Poisson.</p>
 <p>This same “stream of random events” also has a <strong>waiting-time</strong> description — which is where the <strong>exponential</strong> enters.</p>
@@ -405,12 +421,12 @@ Quantitative biology and integrative omics
 </section>
 <section id="exponential-waiting-times" class="slide level2 smaller">
 <h2>Exponential: waiting times</h2>
-<p>The <strong>exponential</strong> distribution models the <strong>waiting time</strong> until the next event in a stream of random events occurring at rate <span class="math inline">\(\lambda\)</span>.</p>
-<p><span class="math display">\[T \sim \text{Exp}(\lambda), \qquad f(t) = \lambda e^{-\lambda t}, \quad t \ge 0\]</span></p>
+<p>The <strong>exponential</strong> distribution models the <strong>waiting time</strong> until the next event in a stream of random events occurring at rate <span class="math inline">\lambda</span>.</p>
+<p><span class="math display">T \sim \text{Exp}(\lambda), \qquad f(t) = \lambda e^{-\lambda t}, \quad t \ge 0</span></p>
 <ul>
 <li><strong>Continuous</strong> and non-negative (a time, a distance, a length).</li>
-<li><span class="math inline">\(\mathbb{E}[T] = \dfrac{1}{\lambda}, \qquad \text{Var}(T) = \dfrac{1}{\lambda^2}\)</span>.</li>
-<li><strong>Memoryless:</strong> the chance of waiting another <span class="math inline">\(s\)</span> seconds does not depend on how long you have already waited.</li>
+<li><span class="math inline">\mathbb{E}[T] = \dfrac{1}{\lambda}, \qquad \text{Var}(T) = \dfrac{1}{\lambda^2}</span>.</li>
+<li><strong>Memoryless:</strong> the chance of waiting another <span class="math inline">s</span> seconds does not depend on how long you have already waited.</li>
 </ul>
 <p>Biology: time between action-potential spikes, intervals between mutations along a genome, survival/dwell times, gaps between binding events.</p>
 
@@ -430,8 +446,8 @@ Quantitative biology and integrative omics
 </section>
 <section id="exponential-a-small-example" class="slide level2 smaller">
 <h2>Exponential: a small example</h2>
-<p>Mutations fall along a genome at rate <span class="math inline">\(\lambda = 2\)</span> per megabase. The waiting <strong>distance</strong> to the next mutation is <span class="math inline">\(\text{Exp}(2)\)</span> (in Mb):</p>
-<p><span class="math display">\[\mathbb{E}[T] = \frac{1}{2} = 0.5 \text{ Mb}, \qquad P(T &gt; 1) = e^{-\lambda \cdot 1} = e^{-2} \approx 0.135\]</span></p>
+<p>Mutations fall along a genome at rate <span class="math inline">\lambda = 2</span> per megabase. The waiting <strong>distance</strong> to the next mutation is <span class="math inline">\text{Exp}(2)</span> (in Mb):</p>
+<p><span class="math display">\mathbb{E}[T] = \frac{1}{2} = 0.5 \text{ Mb}, \qquad P(T &gt; 1) = e^{-\lambda \cdot 1} = e^{-2} \approx 0.135</span></p>
 <p>So there is a ~13.5% chance of a gap longer than 1 Mb.</p>
 <div class="sourceCode" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a aria-hidden="true" tabindex="-1"></a>lambda <span class="ot">&lt;-</span> <span class="dv">2</span></span>
 <span id="cb2-2"><a aria-hidden="true" tabindex="-1"></a><span class="fu">pexp</span>(<span class="dv">1</span>, <span class="at">rate =</span> lambda, <span class="at">lower.tail =</span> <span class="cn">FALSE</span>) <span class="co"># P(T &gt; 1) = e^{-2} ~ 0.135</span></span>
@@ -456,7 +472,7 @@ Quantitative biology and integrative omics
 </section>
 <section id="two-views-of-one-process" class="slide level2 smaller">
 <h2>Two views of one process</h2>
-<p>The <strong>Poisson process</strong> is a single model of random events at rate <span class="math inline">\(\lambda\)</span>, seen two ways:</p>
+<p>The <strong>Poisson process</strong> is a single model of random events at rate <span class="math inline">\lambda</span>, seen two ways:</p>
 <table class="caption-top">
 <colgroup>
 <col style="width: 33%">
@@ -473,19 +489,19 @@ Quantitative biology and integrative omics
 <tbody>
 <tr class="odd">
 <td>How <strong>many</strong> events in a fixed window?</td>
-<td><span class="math inline">\(\text{Poisson}(\lambda)\)</span></td>
-<td>mean count <span class="math inline">\(= \lambda\)</span></td>
+<td><span class="math inline">\text{Poisson}(\lambda)</span></td>
+<td>mean count <span class="math inline">= \lambda</span></td>
 </tr>
 <tr class="even">
 <td>How <strong>long</strong> until the next event?</td>
-<td><span class="math inline">\(\text{Exp}(\lambda)\)</span></td>
-<td>mean wait <span class="math inline">\(= 1/\lambda\)</span></td>
+<td><span class="math inline">\text{Exp}(\lambda)</span></td>
+<td>mean wait <span class="math inline">= 1/\lambda</span></td>
 </tr>
 </tbody>
 </table>
 <ul>
-<li><strong>Counts</strong> in a window <span class="math inline">\(\to\)</span> Poisson.</li>
-<li><strong>Gaps</strong> between events <span class="math inline">\(\to\)</span> exponential.</li>
+<li><strong>Counts</strong> in a window <span class="math inline">\to</span> Poisson.</li>
+<li><strong>Gaps</strong> between events <span class="math inline">\to</span> exponential.</li>
 </ul>
 <p>Same underlying randomness, different question. Which one you use is set by <strong>what you measured</strong>, not by the biology alone.</p>
 
@@ -510,9 +526,9 @@ Quantitative biology and integrative omics
 <ul>
 <li>genetically and environmentally variable individuals,</li>
 <li>cell-state and batch differences,</li>
-<li>the true rate <span class="math inline">\(\lambda\)</span> itself <strong>varies from sample to sample</strong>.</li>
+<li>the true rate <span class="math inline">\lambda</span> itself <strong>varies from sample to sample</strong>.</li>
 </ul>
-<p>Extra variation in <span class="math inline">\(\lambda\)</span> adds variance <strong>on top of</strong> the Poisson counting noise. Technical replicates can look Poisson; <strong>biological</strong> replicates almost never do.</p>
+<p>Extra variation in <span class="math inline">\lambda</span> adds variance <strong>on top of</strong> the Poisson counting noise. Technical replicates can look Poisson; <strong>biological</strong> replicates almost never do.</p>
 
 <img data-src="fig12-mean-variance-overdispersion.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:60.0%"><aside class="notes">
 <p>This is the single most important practical fact for genomics count analysis. Poisson is the floor of variability — pure counting noise assuming a fixed rate. Real biological replicates carry additional variation because the rate itself fluctuates between samples (genetics, environment, cell state, batch). By the law of total variance, letting lambda vary inflates the variance above the mean. The classic distinction: technical replicates (same sample resequenced) can be near-Poisson; biological replicates (different organisms/cultures) are overdispersed. Any method that assumes Poisson for biological replicates will understate the true variability — the consequence, quantified two slides on, is too many false positives.</p>
@@ -531,13 +547,13 @@ Quantitative biology and integrative omics
 <section id="negative-binomial-overdispersed-counts" class="slide level2 smaller">
 <h2>Negative binomial: overdispersed counts</h2>
 <p>The <strong>negative binomial (NB)</strong> is a count distribution with a <strong>separate</strong> dispersion knob, letting variance exceed the mean.</p>
-<p><span class="math display">\[X \sim \text{NB}(\mu, \phi), \qquad \text{Var}(X) = \mu + \phi\,\mu^2\]</span></p>
+<p><span class="math display">X \sim \text{NB}(\mu, \phi), \qquad \text{Var}(X) = \mu + \phi\,\mu^2</span></p>
 <ul>
-<li><span class="math inline">\(\mu\)</span> = mean; <span class="math inline">\(\phi \ge 0\)</span> = <strong>dispersion</strong>.</li>
-<li><span class="math inline">\(\phi = 0\)</span> recovers <strong>Poisson</strong> (variance <span class="math inline">\(= \mu\)</span>); larger <span class="math inline">\(\phi\)</span> = more overdispersion.</li>
-<li>The extra <span class="math inline">\(\phi\mu^2\)</span> term is why highly expressed genes vary <em>disproportionately</em> more.</li>
+<li><span class="math inline">\mu</span> = mean; <span class="math inline">\phi \ge 0</span> = <strong>dispersion</strong>.</li>
+<li><span class="math inline">\phi = 0</span> recovers <strong>Poisson</strong> (variance <span class="math inline">= \mu</span>); larger <span class="math inline">\phi</span> = more overdispersion.</li>
+<li>The extra <span class="math inline">\phi\mu^2</span> term is why highly expressed genes vary <em>disproportionately</em> more.</li>
 </ul>
-<p>It arises naturally as a <strong>Poisson whose rate <span class="math inline">\(\lambda\)</span> is itself Gamma-distributed</strong> — exactly the “rate varies between samples” story.</p>
+<p>It arises naturally as a <strong>Poisson whose rate <span class="math inline">\lambda</span> is itself Gamma-distributed</strong> — exactly the “rate varies between samples” story.</p>
 <p>The workhorse error model of <strong><code>DESeq2</code></strong> and <strong><code>edgeR</code></strong> for RNA-seq differential expression.</p>
 
 <img data-src="fig13-gamma-poisson-mixture.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:72.0%"><aside class="notes">
@@ -578,7 +594,7 @@ Quantitative biology and integrative omics
 <p>Using an error model whose variance is <strong>too small</strong> makes you <strong>overconfident</strong> — you declare differences “significant” that are just noise.</p>
 <ul>
 <li><strong>Gaussian / t-test on counts:</strong> assumes one shared variance and allows negative values; mis-estimates spread, especially for low counts and near zero.</li>
-<li><strong>Poisson on overdispersed RNA-seq:</strong> variance assumed <span class="math inline">\(= \mu\)</span>, but true variance is <span class="math inline">\(\mu + \phi\mu^2\)</span> (larger). The test <strong>understates</strong> noise <span class="math inline">\(\Rightarrow\)</span> p-values too small <span class="math inline">\(\Rightarrow\)</span> <strong>inflated false positives</strong>.</li>
+<li><strong>Poisson on overdispersed RNA-seq:</strong> variance assumed <span class="math inline">= \mu</span>, but true variance is <span class="math inline">\mu + \phi\mu^2</span> (larger). The test <strong>understates</strong> noise <span class="math inline">\Rightarrow</span> p-values too small <span class="math inline">\Rightarrow</span> <strong>inflated false positives</strong>.</li>
 </ul>
 <div class="sourceCode" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a aria-hidden="true" tabindex="-1"></a><span class="co"># same mean (mu = 50), very different spread</span></span>
 <span id="cb3-2"><a aria-hidden="true" tabindex="-1"></a><span class="fu">mean</span>(<span class="fu">rpois</span>(<span class="fl">1e5</span>, <span class="dv">50</span>)); <span class="fu">var</span>(<span class="fu">rpois</span>(<span class="fl">1e5</span>, <span class="dv">50</span>))          <span class="co"># ~50, ~50</span></span>
@@ -620,27 +636,27 @@ Quantitative biology and integrative omics
 <tbody>
 <tr class="odd">
 <td>Continuous, symmetric spread</td>
-<td><strong>Gaussian</strong> <span class="math inline">\(\mathcal{N}(\mu,\sigma^2)\)</span></td>
+<td><strong>Gaussian</strong> <span class="math inline">\mathcal{N}(\mu,\sigma^2)</span></td>
 <td>mean and variance independent</td>
 </tr>
 <tr class="even">
 <td>Counts, idealised / technical</td>
-<td><strong>Poisson</strong><span class="math inline">\((\lambda)\)</span></td>
+<td><strong>Poisson</strong><span class="math inline">(\lambda)</span></td>
 <td>variance = mean</td>
 </tr>
 <tr class="odd">
 <td>Counts, biological replicates</td>
-<td><strong>Negative binomial</strong><span class="math inline">\((\mu,\phi)\)</span></td>
-<td>variance = <span class="math inline">\(\mu + \phi\mu^2\)</span></td>
+<td><strong>Negative binomial</strong><span class="math inline">(\mu,\phi)</span></td>
+<td>variance = <span class="math inline">\mu + \phi\mu^2</span></td>
 </tr>
 <tr class="even">
-<td>Waiting times / gaps (continuous, <span class="math inline">\(\ge 0\)</span>)</td>
-<td><strong>Exponential</strong><span class="math inline">\((\lambda)\)</span></td>
-<td>memoryless, mean <span class="math inline">\(1/\lambda\)</span></td>
+<td>Waiting times / gaps (continuous, <span class="math inline">\ge 0</span>)</td>
+<td><strong>Exponential</strong><span class="math inline">(\lambda)</span></td>
+<td>memoryless, mean <span class="math inline">1/\lambda</span></td>
 </tr>
 </tbody>
 </table>
-<p><strong>Diagnostic:</strong> for counts, compare the sample variance to the sample mean. Variance <span class="math inline">\(\approx\)</span> mean <span class="math inline">\(\to\)</span> Poisson may do; variance <span class="math inline">\(\gg\)</span> mean <span class="math inline">\(\to\)</span> overdispersed, use NB.</p>
+<p><strong>Diagnostic:</strong> for counts, compare the sample variance to the sample mean. Variance <span class="math inline">\approx</span> mean <span class="math inline">\to</span> Poisson may do; variance <span class="math inline">\gg</span> mean <span class="math inline">\to</span> overdispersed, use NB.</p>
 <aside class="notes">
 <p>The decision table is the take-home cheat-sheet. Walk each row: what does the data look like, and what is the one feature that picks the distribution. The practical diagnostic is the mean-variance comparison for counts — cheap and decisive. If variance tracks the mean, Poisson is defensible (often only for technical replicates); if variance blows past the mean, you have overdispersion and need the negative binomial. Note that exponential is the odd one out here — continuous waiting times, not counts — included because it is the same Poisson process seen the other way. Students should leave able to look at a column of numbers and name the right error model.</p>
 <style type="text/css">
@@ -679,15 +695,15 @@ Quantitative biology and integrative omics
 </tr>
 <tr class="odd">
 <td>Poisson</td>
-<td>counts; <strong>variance = mean = <span class="math inline">\(\lambda\)</span></strong>; limit of many rare events</td>
+<td>counts; <strong>variance = mean = <span class="math inline">\lambda</span></strong>; limit of many rare events</td>
 </tr>
 <tr class="even">
 <td>Exponential</td>
-<td>waiting times/gaps; memoryless; mean <span class="math inline">\(1/\lambda\)</span></td>
+<td>waiting times/gaps; memoryless; mean <span class="math inline">1/\lambda</span></td>
 </tr>
 <tr class="odd">
 <td>Poisson process</td>
-<td>one process: counts <span class="math inline">\(\to\)</span> Poisson, gaps <span class="math inline">\(\to\)</span> exponential</td>
+<td>one process: counts <span class="math inline">\to</span> Poisson, gaps <span class="math inline">\to</span> exponential</td>
 </tr>
 <tr class="even">
 <td>Overdispersion</td>
@@ -695,11 +711,11 @@ Quantitative biology and integrative omics
 </tr>
 <tr class="odd">
 <td>Negative binomial</td>
-<td>counts with dispersion; <span class="math inline">\(\text{Var} = \mu + \phi\mu^2\)</span>; RNA-seq (<code>DESeq2</code>, <code>edgeR</code>)</td>
+<td>counts with dispersion; <span class="math inline">\text{Var} = \mu + \phi\mu^2</span>; RNA-seq (<code>DESeq2</code>, <code>edgeR</code>)</td>
 </tr>
 <tr class="even">
 <td>Wrong model</td>
-<td>too-small variance <span class="math inline">\(\to\)</span> overconfidence <span class="math inline">\(\to\)</span> <strong>false positives</strong></td>
+<td>too-small variance <span class="math inline">\to</span> overconfidence <span class="math inline">\to</span> <strong>false positives</strong></td>
 </tr>
 </tbody>
 </table>
@@ -740,7 +756,6 @@ Quantitative biology and integrative omics
   <script src="../site_libs/revealjs/plugin/notes/notes.js"></script>
   <script src="../site_libs/revealjs/plugin/search/search.js"></script>
   <script src="../site_libs/revealjs/plugin/zoom/zoom.js"></script>
-  <script src="../site_libs/revealjs/plugin/math/math.js"></script>
   <script>window.define = window.backupDefine; window.backupDefine = undefined;</script>
 
   <script>
@@ -908,27 +923,9 @@ Quantitative biology and integrative omics
         // Factor of the display size that should remain empty around the content
         margin: 0.1,
 
-        math: {
-          mathjax: 'https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.9/MathJax.js',
-          config: 'TeX-AMS_HTML-full',
-          tex2jax: {
-            inlineMath: [['\\(','\\)']],
-            displayMath: [['\\[','\\]']],
-            balanceBraces: true,
-            processEscapes: false,
-            processRefs: true,
-            processEnvironments: true,
-            preview: 'TeX',
-            skipTags: ['script','noscript','style','textarea','pre','code'],
-            ignoreClass: 'tex2jax_ignore',
-            processClass: 'tex2jax_process'
-          },
-        },
-
         // reveal.js plugins
         plugins: [QuartoLineHighlight, PdfExport, RevealMenu, QuartoSupport,
 
-          RevealMath,
           RevealNotes,
           RevealSearch,
           RevealZoom

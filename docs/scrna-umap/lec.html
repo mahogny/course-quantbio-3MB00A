@@ -96,6 +96,22 @@
     code span.wa { color: #ff5555; } /* Warning */
   </style>
   <link rel="stylesheet" href="../site_libs/revealjs/dist/theme/quarto-bf56578b9c06c165c166475cd19dbcd1.css">
+  <script>window.backupDefine = window.define; window.define = undefined;</script><script src="https://cdn.jsdelivr.net/npm/katex@latest/dist/katex.min.js"></script>
+  <script>document.addEventListener("DOMContentLoaded", function () {
+ var mathElements = document.getElementsByClassName("math");
+ var macros = [];
+ for (var i = 0; i < mathElements.length; i++) {
+  var texText = mathElements[i].firstChild;
+  if (mathElements[i].tagName == "SPAN") {
+   katex.render(texText.data, mathElements[i], {
+    displayMode: mathElements[i].classList.contains('display'),
+    throwOnError: false,
+    macros: macros,
+    fleqn: false
+   });
+}}});
+  </script>
+  <script>window.define = window.backupDefine; window.backupDefine = undefined;</script><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@latest/dist/katex.min.css">
   <link href="../site_libs/revealjs/plugin/quarto-line-highlight/line-highlight.css" rel="stylesheet">
   <link href="../site_libs/revealjs/plugin/reveal-menu/menu.css" rel="stylesheet">
   <link href="../site_libs/revealjs/plugin/reveal-menu/quarto-menu.css" rel="stylesheet">
@@ -258,7 +274,7 @@ Quantitative biology and integrative omics
 <section id="each-cell-is-a-point-in-gene-space" class="slide level2 smaller">
 <h2>Each cell is a point in gene space</h2>
 <p>Stack the normalized data as a matrix: rows = cells, columns = genes.</p>
-<p><span class="math display">\[
+<p><span class="math display">
 X = \begin{pmatrix}
 x_{11} &amp; x_{12} &amp; \cdots &amp; x_{1g} \\
 x_{21} &amp; x_{22} &amp; \cdots &amp; x_{2g} \\
@@ -270,10 +286,10 @@ x_{n1} &amp; x_{n2} &amp; \cdots &amp; x_{ng}
 n \approx \text{thousands of cells} \\
 g \approx \text{2000 genes}
 \end{array}
-\]</span></p>
+</span></p>
 <ul>
-<li>Row <span class="math inline">\(i\)</span> is one cell: a point in a <strong><span class="math inline">\(g\)</span>-dimensional</strong> space (one axis per gene).</li>
-<li>“Similar cells” = points whose rows are close, e.g.&nbsp;small <strong>Euclidean distance</strong> <span class="math inline">\(\lVert \mathbf{x}_i - \mathbf{x}_j \rVert\)</span>.</li>
+<li>Row <span class="math inline">i</span> is one cell: a point in a <strong><span class="math inline">g</span>-dimensional</strong> space (one axis per gene).</li>
+<li>“Similar cells” = points whose rows are close, e.g.&nbsp;small <strong>Euclidean distance</strong> <span class="math inline">\lVert \mathbf{x}_i - \mathbf{x}_j \rVert</span>.</li>
 </ul>
 <p>We cannot plot a 2000-dimensional space. We need to <strong>compress</strong> it to 2D <strong>without destroying</strong> the neighbourhood structure. That is the whole problem.</p>
 
@@ -293,7 +309,7 @@ g \approx \text{2000 genes}
 </section>
 <section id="the-pipeline-in-one-picture" class="slide level2 smaller">
 <h2>The pipeline in one picture</h2>
-<p><span class="math display">\[
+<p><span class="math display">
 \underbrace{X}_{\text{cells × genes}}
 \;\xrightarrow{\;\text{PCA}\;}\;
 \underbrace{Z}_{\text{cells × }\sim 30\text{ PCs}}
@@ -301,7 +317,7 @@ g \approx \text{2000 genes}
 \underbrace{G}_{\text{neighbour graph}}
 \;\xrightarrow{\;\begin{array}{c}\text{UMAP}\\\text{clustering}\end{array}\;}\;
 \underbrace{\text{2D map + cluster labels}}_{\text{what you look at}}
-\]</span></p>
+</span></p>
 <table class="caption-top">
 <colgroup>
 <col style="width: 33%">
@@ -410,12 +426,12 @@ g \approx \text{2000 genes}
 </section>
 <section id="step-2-the-k-nearest-neighbour-graph" class="slide level2 smaller">
 <h2>Step 2: the k-nearest-neighbour graph</h2>
-<p>Work in the ~30-PC space. For each cell, find its <strong><span class="math inline">\(k\)</span> nearest neighbours</strong> (typical <span class="math inline">\(k \approx 15\)</span>) by Euclidean distance, and draw an <strong>edge</strong> to each.</p>
-<p><span class="math display">\[
+<p>Work in the ~30-PC space. For each cell, find its <strong><span class="math inline">k</span> nearest neighbours</strong> (typical <span class="math inline">k \approx 15</span>) by Euclidean distance, and draw an <strong>edge</strong> to each.</p>
+<p><span class="math display">
 \text{dist}(\mathbf{x}_i, \mathbf{x}_j) = \lVert \mathbf{x}_i - \mathbf{x}_j \rVert = \sqrt{\sum_{p=1}^{30} (x_{ip} - x_{jp})^2}
-\]</span></p>
+</span></p>
 <ul>
-<li>The result is a <strong>graph</strong> <span class="math inline">\(G\)</span>: nodes = cells, edges = “is a near neighbour of”.</li>
+<li>The result is a <strong>graph</strong> <span class="math inline">G</span>: nodes = cells, edges = “is a near neighbour of”.</li>
 <li>It records only <strong>local</strong> relationships — who is close to whom — and throws away exact long-range distances.</li>
 <li>Densely connected clumps of cells = candidate cell populations.</li>
 </ul>
@@ -437,11 +453,11 @@ g \approx \text{2000 genes}
 </section>
 <section id="step-3-umap-lays-the-graph-out-in-2d" class="slide level2 smaller">
 <h2>Step 3: UMAP lays the graph out in 2D</h2>
-<p><strong>UMAP</strong> = <em>Uniform Manifold Approximation and Projection</em>. Input: the kNN graph. Output: an <span class="math inline">\((x, y)\)</span> coordinate for every cell.</p>
+<p><strong>UMAP</strong> = <em>Uniform Manifold Approximation and Projection</em>. Input: the kNN graph. Output: an <span class="math inline">(x, y)</span> coordinate for every cell.</p>
 <p>The idea (no formulas today):</p>
 <ul>
 <li>Assume the cells lie on a smooth low-dimensional <strong>manifold</strong> curled up inside gene space.</li>
-<li>Find 2D coordinates so that cells that are <strong>neighbours in the graph</strong> stay <strong>close</strong> in the plot, and non-neighbours are pushed apart. There is <strong>no formula</strong> from genes to <span class="math inline">\((x, y)\)</span>: each cell’s position is optimised directly (springs between neighbours + repulsion).</li>
+<li>Find 2D coordinates so that cells that are <strong>neighbours in the graph</strong> stay <strong>close</strong> in the plot, and non-neighbours are pushed apart. There is <strong>no formula</strong> from genes to <span class="math inline">(x, y)</span>: each cell’s position is optimised directly (springs between neighbours + repulsion).</li>
 <li>It is <strong>non-linear</strong>: it may <strong>stretch and bend</strong> the space differently in different regions to make local neighbourhoods fit on a flat page.</li>
 </ul>
 <p>The result: tight <strong>islands</strong> of similar cells, visibly separated — the canonical single-cell figure.</p>
@@ -604,9 +620,9 @@ g \approx \text{2000 genes}
 <li><strong>Low</strong> resolution → <strong>fewer, larger</strong> clusters (lumps related types together).</li>
 <li><strong>High</strong> resolution → <strong>more, smaller</strong> clusters (splits fine subtypes — and eventually splits noise).</li>
 </ul>
-<p><span class="math display">\[
+<p><span class="math display">
 \text{resolution} \uparrow \quad\Longrightarrow\quad \text{number of clusters} \uparrow
-\]</span></p>
+</span></p>
 <p>There is <strong>no single correct value</strong> and <strong>no true number of clusters</strong>. The “right” resolution depends on the biological question — do you want <em>T cells</em>, or <em>CD4 vs CD8 vs regulatory T cells</em>?</p>
 <p>Good practice: try a <strong>range</strong> of resolutions, and judge clusters by <strong>known marker genes</strong>, not by which value looks tidiest.</p>
 
@@ -713,7 +729,7 @@ g \approx \text{2000 genes}
 <p>Everything today is <strong>exploratory</strong>. It generates hypotheses; it does not test them.</p>
 <ul>
 <li><strong>UMAP is a cartoon.</strong> Local grouping is meaningful; axes, gaps, and island sizes are not.</li>
-<li><strong>Clusters are not ground truth.</strong> They depend on: which genes you kept, how many PCs, <span class="math inline">\(k\)</span>, the resolution, and the random seed.</li>
+<li><strong>Clusters are not ground truth.</strong> They depend on: which genes you kept, how many PCs, <span class="math inline">k</span>, the resolution, and the random seed.</li>
 <li><strong>The number of clusters is a choice, not a discovery.</strong> Validate against <strong>known marker genes</strong>, not visual tidiness.</li>
 <li><strong>A cluster is not yet a cell type.</strong> Assigning identities comes next, in cell-type annotation.</li>
 <li><strong>Reproducibility:</strong> fix and report the <strong>seed</strong> and every parameter, or your figure cannot be reproduced.</li>
@@ -825,7 +841,6 @@ g \approx \text{2000 genes}
   <script src="../site_libs/revealjs/plugin/notes/notes.js"></script>
   <script src="../site_libs/revealjs/plugin/search/search.js"></script>
   <script src="../site_libs/revealjs/plugin/zoom/zoom.js"></script>
-  <script src="../site_libs/revealjs/plugin/math/math.js"></script>
   <script>window.define = window.backupDefine; window.backupDefine = undefined;</script>
 
   <script>
@@ -993,27 +1008,9 @@ g \approx \text{2000 genes}
         // Factor of the display size that should remain empty around the content
         margin: 0.1,
 
-        math: {
-          mathjax: 'https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.9/MathJax.js',
-          config: 'TeX-AMS_HTML-full',
-          tex2jax: {
-            inlineMath: [['\\(','\\)']],
-            displayMath: [['\\[','\\]']],
-            balanceBraces: true,
-            processEscapes: false,
-            processRefs: true,
-            processEnvironments: true,
-            preview: 'TeX',
-            skipTags: ['script','noscript','style','textarea','pre','code'],
-            ignoreClass: 'tex2jax_ignore',
-            processClass: 'tex2jax_process'
-          },
-        },
-
         // reveal.js plugins
         plugins: [QuartoLineHighlight, PdfExport, RevealMenu, QuartoSupport,
 
-          RevealMath,
           RevealNotes,
           RevealSearch,
           RevealZoom

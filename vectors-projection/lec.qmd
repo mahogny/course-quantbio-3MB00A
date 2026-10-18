@@ -16,17 +16,18 @@ format:
     incremental: false
     chalkboard: false
     menu: true
+    html-math-method: katex
 ---
 
 ## About this lecture
 
-Today we stop *solving* systems and start *seeing* them. We build a geometric picture of the objects we have been pushing around.
+Here we will introduce a geometric interpretation of the equations. This will give a more intuitive interpretation of what is going on.
 
 - A **vector** is both an arrow and a row of numbers — and a gene-expression profile *is* a vector.
 - **Adding and scaling** vectors.
 - The **length (norm)** of a vector.
 - The **dot product**: one number that measures how two vectors line up.
-- The dot product gives the **angle** between vectors → **cosine similarity**, the workhorse of comparing samples.
+- The dot product gives the **angle** between vectors → **cosine similarity**, commonly used to compare high-dimensional samples (e.g. single-cell data later on)
 - **Orthogonality** (a right angle = zero dot product).
 - **Projection**: the shadow of one vector on another.
 
@@ -38,7 +39,7 @@ This is the conceptual heart of the linear-algebra block. Linear systems by hand
 
 Measure the expression of 3 genes in one tissue sample:
 
-$$\mathbf{x} = \begin{pmatrix} 12 \\ 0 \\ 7 \end{pmatrix} \quad \begin{array}{l}\text{(GeneA = 12)}\\\text{(GeneB = 0)}\\\text{(GeneC = 7)}\end{array}$$
+$$\mathbf{x} = \begin{pmatrix} 12 \\ 0 \\ 7 \end{pmatrix} \quad \begin{array}{l}\text{(Gene A = 12)}\\\text{(Gene B = 0)}\\\text{(Gene C = 7)}\end{array}$$
 
 - A **vector** is just an ordered list of numbers. Here, 3 numbers → one point/arrow in 3-D space.
 - A real RNA-seq sample has ~20 000 genes → a vector in 20 000-dimensional space. We cannot draw it, but every rule we learn in 2-D and 3-D still holds.
@@ -75,6 +76,8 @@ Draw the arrow on the chalkboard or refer to the slide figure. The point: compon
 
 ## Adding vectors = combining profiles
 
+:::: {.columns}
+::: {.column width="55%"}
 Add component by component:
 
 $$\begin{pmatrix} 3 \\ 2 \end{pmatrix} + \begin{pmatrix} 1 \\ 4 \end{pmatrix} = \begin{pmatrix} 4 \\ 6 \end{pmatrix}$$
@@ -82,12 +85,20 @@ $$\begin{pmatrix} 3 \\ 2 \end{pmatrix} + \begin{pmatrix} 1 \\ 4 \end{pmatrix} = 
 - Geometrically: place the tail of the second arrow at the head of the first ("tip-to-tail").
 - Biological reading: if $\mathbf{x}$ is a baseline profile and $\mathbf{d}$ is the change after a drug, then $\mathbf{x} + \mathbf{d}$ is the treated profile.
 
-![](fig04-vector-addition.svg){width="50%" fig-align="center"}
 
 ```r
 c(3, 2) + c(1, 4)
 # [1] 4 6
 ```
+:::
+::: {.column width="45%"}
+```{=html}
+<link rel="stylesheet" href="../demos/dist/demo.css">
+<div data-demo="vecmini" data-mode="add" data-layout="stack" data-a="3 1" data-b="1 2"></div>
+<script src="../demos/dist/vecmini.js"></script>
+```
+:::
+::::
 
 ::: notes
 Vector addition is the tip-to-tail rule. The drug example makes it concrete: differences of expression vectors are themselves vectors, and adding them moves you to a new sample. R adds vectors elementwise with plain +, which matches the math exactly — no special function needed.
@@ -95,6 +106,8 @@ Vector addition is the tip-to-tail rule. The drug example makes it concrete: dif
 
 ## Scaling a vector
 
+:::: {.columns}
+::: {.column width="55%"}
 Multiply every component by a scalar:
 
 $$2 \cdot \begin{pmatrix} 3 \\ 2 \end{pmatrix} = \begin{pmatrix} 6 \\ 4 \end{pmatrix}, \qquad -1 \cdot \begin{pmatrix} 3 \\ 2 \end{pmatrix} = \begin{pmatrix} -3 \\ -2 \end{pmatrix}$$
@@ -103,12 +116,20 @@ $$2 \cdot \begin{pmatrix} 3 \\ 2 \end{pmatrix} = \begin{pmatrix} 6 \\ 4 \end{pma
 - Scaling never changes the *direction* (except the flip) — only the length.
 - Biological reading: doubling a library's sequencing depth scales the whole count vector by ~2; **normalisation** is exactly choosing a scalar to make samples comparable.
 
-![](fig05-vector-scaling.svg){width="50%" fig-align="center"}
 
 ```r
 2 * c(3, 2)
 # [1] 6 4
 ```
+:::
+::: {.column width="45%"}
+```{=html}
+<link rel="stylesheet" href="../demos/dist/demo.css">
+<div data-demo="vecmini" data-mode="scale" data-layout="stack" data-a="2 1" data-k="2"></div>
+<script src="../demos/dist/vecmini.js"></script>
+```
+:::
+::::
 
 ::: notes
 Scaling stretches/shrinks along the same line. The normalisation point is important and previews later material: when we divide each sample by its total counts (or library size) we are rescaling each expression vector. Direction = "what genes are high relative to each other"; length = "overall magnitude / depth".
@@ -143,7 +164,7 @@ The **dot product** of two vectors multiplies matching components and sums:
 $$\mathbf{u} \cdot \mathbf{v} = u_1 v_1 + u_2 v_2 + \dots + u_n v_n = \sum_{i=1}^{n} u_i v_i$$
 
 Example: $\mathbf{u} = \begin{pmatrix} 3 \\ 2 \end{pmatrix}, \ \mathbf{v} = \begin{pmatrix} 1 \\ 4 \end{pmatrix}$
-$$\mathbf{u}\cdot\mathbf{v} = 3\cdot1 + 2\cdot4 = 3 + 8 = 11$$
+$$\mathbf{u}\cdot\mathbf{v} = 3{\cdot}1 \;+\; 2{\cdot}4 \;=\; 3 \;+\; 8 \;=\; 11$$
 
 - The output is a single **number** (a scalar), not a vector.
 - Note: $\mathbf{v}\cdot\mathbf{v} = v_1^2 + \dots + v_n^2 = \|\mathbf{v}\|^2$ — the dot product of a vector with itself is its length squared.
@@ -160,8 +181,10 @@ u %*% v           # 11 (as a 1x1 matrix)
 Define the dot product mechanically first (multiply-and-add) before any geometry. Make them compute the 11 by hand. Two key facts to plant: (1) the result is a scalar, (2) dotting a vector with itself recovers length-squared, linking back to the previous slide. In R both sum(u*v) and u %*% v work; %*% returns a 1x1 matrix, sum(u*v) returns a plain number.
 :::
 
-## What does the dot product *mean*?
+## What does the dot product *mean*? {.smaller}
 
+:::: {.columns}
+::: {.column width="55%"}
 The geometric identity (this is the key formula of the day):
 
 $$\boxed{\ \mathbf{u} \cdot \mathbf{v} = \|\mathbf{u}\|\,\|\mathbf{v}\|\cos\theta\ }$$
@@ -174,7 +197,16 @@ where $\theta$ is the angle between the two arrows.
 
 So the dot product measures **how much two vectors point the same way**, scaled by their lengths.
 
-![](fig08-dot-product-angle.svg){width="70%" fig-align="center"}
+![](fig08-dot-product-angle.svg){width="100%"}
+:::
+::: {.column width="45%"}
+```{=html}
+<link rel="stylesheet" href="../demos/dist/demo.css">
+<div data-demo="vecmini" data-mode="dot" data-layout="stack" data-u="3 2" data-v="1 4"></div>
+<script src="../demos/dist/vecmini.js"></script>
+```
+:::
+::::
 
 ::: notes
 This boxed identity is the conceptual climax. The two definitions — "multiply-and-add" and "lengths times cosine of angle" — are the same number, and that coincidence is what makes linear algebra powerful. Walk through the three cases (aligned, perpendicular, opposite) slowly. The sign of the dot product alone already tells you whether two profiles broadly agree or disagree.
@@ -188,9 +220,9 @@ $$\cos\theta = \frac{\mathbf{u}\cdot\mathbf{v}}{\|\mathbf{u}\|\,\|\mathbf{v}\|}$
 
 This is **cosine similarity** — it ranges from $-1$ to $1$ and ignores overall magnitude (it only cares about direction).
 
-- Why biologists love it: two samples of the same cell type have **similar shapes** of expression even if one was sequenced twice as deep. Cosine similarity sees them as nearly identical (close to 1); Euclidean distance would be fooled by the depth difference.
+- Commonly used in biology: two samples of the same cell type have **similar shapes** of expression, because the ratios of molecules are the same. This compensates for differences in sequencing depth in RNA-seq. Euclidean distance keeps the depth difference.
 
-![](fig09-cosine-similarity.svg){width="50%" fig-align="center"}
+![](fig09b-same-ratios.svg){width="38%"} ![](fig09-cosine-similarity.svg){width="50%"}
 
 ```r
 cos_sim <- function(u, v) sum(u*v) / (sqrt(sum(u^2)) * sqrt(sum(v^2)))
@@ -203,14 +235,14 @@ Cosine similarity is THE payoff of the dot product for omics. Emphasise the dept
 
 ## Orthogonality = a right angle
 
-Two vectors are **orthogonal** (perpendicular) exactly when their dot product is zero:
+Two vectors are **orthogonal** (perpendicular) when their dot product is zero:
 
 $$\mathbf{u}\cdot\mathbf{v} = 0 \iff \theta = 90^\circ$$
 
 Example: $\begin{pmatrix} 2 \\ 0 \end{pmatrix} \cdot \begin{pmatrix} 0 \\ 5 \end{pmatrix} = 2\cdot0 + 0\cdot5 = 0$. Orthogonal.
 
 - Orthogonal directions carry **independent information** — no overlap.
-- This idea returns in force when we build PCA: the principal components are orthogonal axes.
+- This idea is important for PCA later on (the principal components are orthogonal axes).
 
 ![](fig10-orthogonality.svg){width="45%" fig-align="center"}
 
@@ -231,6 +263,7 @@ $$\mathbf{p} = \frac{\mathbf{u}\cdot\mathbf{v}}{\mathbf{v}\cdot\mathbf{v}}\;\mat
 - The fraction $\dfrac{\mathbf{u}\cdot\mathbf{v}}{\mathbf{v}\cdot\mathbf{v}}$ is a **scalar**: "how many copies of $\mathbf{v}$".
 - Multiplying by $\mathbf{v}$ turns that scalar into a vector pointing along $\mathbf{v}$.
 - The leftover, $\mathbf{u} - \mathbf{p}$, is **orthogonal** to $\mathbf{v}$.
+- **Projections are super important in linear algebra, but in this course we will be glossing over it to avoid getting too deep into the math!**
 
 ![](fig11-projection.svg){width="45%" fig-align="center"}
 

@@ -30,6 +30,22 @@
     }
   </style>
   <link rel="stylesheet" href="../site_libs/revealjs/dist/theme/quarto-bf56578b9c06c165c166475cd19dbcd1.css">
+  <script>window.backupDefine = window.define; window.define = undefined;</script><script src="https://cdn.jsdelivr.net/npm/katex@latest/dist/katex.min.js"></script>
+  <script>document.addEventListener("DOMContentLoaded", function () {
+ var mathElements = document.getElementsByClassName("math");
+ var macros = [];
+ for (var i = 0; i < mathElements.length; i++) {
+  var texText = mathElements[i].firstChild;
+  if (mathElements[i].tagName == "SPAN") {
+   katex.render(texText.data, mathElements[i], {
+    displayMode: mathElements[i].classList.contains('display'),
+    throwOnError: false,
+    macros: macros,
+    fleqn: false
+   });
+}}});
+  </script>
+  <script>window.define = window.backupDefine; window.backupDefine = undefined;</script><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@latest/dist/katex.min.css">
   <link href="../site_libs/revealjs/plugin/quarto-line-highlight/line-highlight.css" rel="stylesheet">
   <link href="../site_libs/revealjs/plugin/reveal-menu/menu.css" rel="stylesheet">
   <link href="../site_libs/revealjs/plugin/reveal-menu/quarto-menu.css" rel="stylesheet">
@@ -149,7 +165,7 @@ Quantitative biology and integrative omics
 <li>State the <strong>three classic problems</strong> — likelihood, decoding, learning — and which algorithm solves each.</li>
 <li>Compute the probability of <strong>one specific path</strong> for a tiny 2-state HMM <strong>by hand</strong>.</li>
 </ul>
-<p>Notation: hidden states with transition matrix <span class="math inline">\(A\)</span>, emission matrix <span class="math inline">\(B\)</span>, initial distribution <span class="math inline">\(\boldsymbol{\pi}\)</span>; hidden sequence <span class="math inline">\(\mathbf{z}\)</span>, observations <span class="math inline">\(\mathbf{x}\)</span>.</p>
+<p>Notation: hidden states with transition matrix <span class="math inline">A</span>, emission matrix <span class="math inline">B</span>, initial distribution <span class="math inline">\boldsymbol{\pi}</span>; hidden sequence <span class="math inline">\mathbf{z}</span>, observations <span class="math inline">\mathbf{x}</span>.</p>
 <aside class="notes">
 <p>Welcome. This is the conceptual peak of the block, so we go slowly and lead with biology. Everything builds directly on Markov chains and Markov chains in R — the hidden layer of an HMM <em>is</em> exactly that chain. The only genuinely new idea today is that we do not get to see the states; we see noisy emissions instead. Today is concept and by-hand; Fitting HMMs in R fits them on real-looking genome data.</p>
 <style type="text/css">
@@ -166,9 +182,9 @@ Quantitative biology and integrative omics
 </section>
 <section id="recap-a-visible-markov-chain-markov-chains" class="slide level2 smaller">
 <h2>Recap: a visible Markov chain (Markov chains)</h2>
-<p>A Markov chain has <strong>states</strong> and a <strong>transition matrix</strong> <span class="math inline">\(A\)</span> whose rows sum to 1. The <strong>Markov property</strong>: the next state depends only on the current one.</p>
+<p>A Markov chain has <strong>states</strong> and a <strong>transition matrix</strong> <span class="math inline">A</span> whose rows sum to 1. The <strong>Markov property</strong>: the next state depends only on the current one.</p>
 <p>Example over DNA bases — suppose we modelled which base follows which:</p>
-<p><span class="math display">\[
+<p><span class="math display">
 A=\begin{array}{c c}
 &amp; \begin{array}{cccc} \ \ A\ \ &amp; \ \ C\ \ &amp; \ \ G\ \ &amp; \ \ T\ \ \end{array}\\
 \begin{array}{c} A\\ C\\ G\\ T \end{array} &amp;
@@ -179,7 +195,7 @@ A=\begin{array}{c c}
 0.3 &amp; 0.2 &amp; 0.2 &amp; 0.3
 \end{array}\right]
 \end{array}
-\]</span></p>
+</span></p>
 <p>Crucially, in this chain <strong>the state IS the letter you read</strong>. You observe the state directly.</p>
 
 <img data-src="fig02-visible-markov-bases.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:52.0%"><aside class="notes">
@@ -251,8 +267,8 @@ A=\begin{array}{c c}
            v       v       v       v
 visible:  x1      x2      x3      x4      (emitted bases: A C G T)</code></pre>
 <ul>
-<li>The <strong>hidden</strong> layer is a Markov chain over states (here: <code>GC-rich</code>, <code>normal</code>), governed by transition matrix <span class="math inline">\(A\)</span> — the same chain we built in Markov chains.</li>
-<li>At <strong>each</strong> hidden state, you draw one <strong>emission</strong> (a base) from that state’s emission distribution, governed by matrix <span class="math inline">\(B\)</span>.</li>
+<li>The <strong>hidden</strong> layer is a Markov chain over states (here: <code>GC-rich</code>, <code>normal</code>), governed by transition matrix <span class="math inline">A</span> — the same chain we built in Markov chains.</li>
+<li>At <strong>each</strong> hidden state, you draw one <strong>emission</strong> (a base) from that state’s emission distribution, governed by matrix <span class="math inline">B</span>.</li>
 </ul>
 <p>You only ever see the bottom row. The top row is hidden.</p>
 
@@ -273,12 +289,12 @@ visible:  x1      x2      x3      x4      (emitted bases: A C G T)</code></pre>
 <section id="the-four-ingredients-of-an-hmm" class="slide level2 smaller">
 <h2>The four ingredients of an HMM</h2>
 <ol type="1">
-<li><strong>Hidden states</strong> — the things you cannot observe. Here: <span class="math inline">\(\{\text{GC-rich},\ \text{normal}\}\)</span>.</li>
-<li><strong>Transition matrix <span class="math inline">\(A\)</span></strong> — how the hidden chain moves, rows sum to 1. <span class="math inline">\(A_{ij}=P(z_{t+1}=j \mid z_t=i)\)</span>. <em>This is the Markov chain from Markov chains.</em></li>
-<li><strong>Emission matrix <span class="math inline">\(B\)</span></strong> — what each hidden state emits, rows sum to 1. <span class="math inline">\(B_{ik}=P(x_t=k \mid z_t=i)\)</span> (one row per state, one column per symbol).</li>
-<li><strong>Initial distribution <span class="math inline">\(\boldsymbol{\pi}\)</span></strong> — where the chain starts, <span class="math inline">\(\pi_i=P(z_1=i)\)</span>, entries sum to 1.</li>
+<li><strong>Hidden states</strong> — the things you cannot observe. Here: <span class="math inline">\{\text{GC-rich},\ \text{normal}\}</span>.</li>
+<li><strong>Transition matrix <span class="math inline">A</span></strong> — how the hidden chain moves, rows sum to 1. <span class="math inline">A_{ij}=P(z_{t+1}=j \mid z_t=i)</span>. <em>This is the Markov chain from Markov chains.</em></li>
+<li><strong>Emission matrix <span class="math inline">B</span></strong> — what each hidden state emits, rows sum to 1. <span class="math inline">B_{ik}=P(x_t=k \mid z_t=i)</span> (one row per state, one column per symbol).</li>
+<li><strong>Initial distribution <span class="math inline">\boldsymbol{\pi}</span></strong> — where the chain starts, <span class="math inline">\pi_i=P(z_1=i)</span>, entries sum to 1.</li>
 </ol>
-<p>An HMM is the triple <span class="math inline">\((A, B, \boldsymbol{\pi})\)</span> plus the lists of states and symbols.</p>
+<p>An HMM is the triple <span class="math inline">(A, B, \boldsymbol{\pi})</span> plus the lists of states and symbols.</p>
 
 <img data-src="fig06-hmm-anatomy.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:60.0%"><aside class="notes">
 <p>List the four ingredients and keep emphasising which is old and which is new. A and pi are pure Markov-chain objects from Markov chains. The genuinely new piece is B, the emission matrix: for every hidden state, a probability distribution over the symbols you can observe. Note both A and B have rows that sum to one, but they are different shapes — A is states-by-states, B is states-by-symbols.</p>
@@ -296,16 +312,16 @@ visible:  x1      x2      x3      x4      (emitted bases: A C G T)</code></pre>
 </section>
 <section id="a-tiny-concrete-2-state-hmm" class="slide level2 smaller">
 <h2>A tiny concrete 2-state HMM</h2>
-<p>States <span class="math inline">\(\{H, L\}\)</span> — <strong>H</strong> = “GC-rich (high)”, <strong>L</strong> = “normal (low)”. Symbols: the bases <span class="math inline">\(\{A, C, G, T\}\)</span>.</p>
-<p><span class="math display">\[
+<p>States <span class="math inline">\{H, L\}</span> — <strong>H</strong> = “GC-rich (high)”, <strong>L</strong> = “normal (low)”. Symbols: the bases <span class="math inline">\{A, C, G, T\}</span>.</p>
+<p><span class="math display">
 \boldsymbol{\pi}=\begin{bmatrix} 0.5 \\ 0.5 \end{bmatrix}, \qquad
 A=\begin{array}{cc}
 &amp; \begin{array}{cc} H &amp; L \end{array}\\
 \begin{array}{c} H\\ L \end{array} &amp;
 \left[\begin{array}{cc} 0.8 &amp; 0.2 \\ 0.3 &amp; 0.7 \end{array}\right]
 \end{array}
-\]</span></p>
-<p><span class="math display">\[
+</span></p>
+<p><span class="math display">
 B=\begin{array}{c}
 \begin{array}{cccc} \ A\  &amp; \ C\  &amp; \ G\  &amp; \ T\  \end{array}\\
 \begin{array}{c} \end{array}
@@ -315,8 +331,8 @@ B=\begin{array}{c}
 \end{array}\right]
 \end{array}
 \begin{array}{c} H\\ L \end{array}
-\]</span></p>
-<p>Read <span class="math inline">\(B\)</span>: state <span class="math inline">\(H\)</span> emits C or G with prob 0.4 each (GC-rich!); state <span class="math inline">\(L\)</span> spreads probability more evenly.</p>
+</span></p>
+<p>Read <span class="math inline">B</span>: state <span class="math inline">H</span> emits C or G with prob 0.4 each (GC-rich!); state <span class="math inline">L</span> spreads probability more evenly.</p>
 
 <img data-src="fig07-concrete-2state.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:58.0%"><aside class="notes">
 <p>This is the example we will compute with by hand, and again in Fitting HMMs in R, so introduce it carefully. Pi says we start in either state with equal chance. A says both states are sticky — H stays H with probability 0.8, L stays L with 0.7 — which encodes that islands and background come in runs. B is the new object: the high state loves C and G, the low state is roughly uniform. Sanity check every row sums to one.</p>
@@ -336,14 +352,14 @@ B=\begin{array}{c}
 <h2>The generative story, step by step</h2>
 <p>To <strong>generate</strong> a sequence of length 3 from this HMM:</p>
 <ol type="1">
-<li>Draw <span class="math inline">\(z_1\)</span> from <span class="math inline">\(\boldsymbol{\pi}\)</span>. Say <span class="math inline">\(z_1 = H\)</span>.</li>
-<li>Emit <span class="math inline">\(x_1\)</span> from row <span class="math inline">\(H\)</span> of <span class="math inline">\(B\)</span>. Say <span class="math inline">\(x_1 = G\)</span> (prob 0.4).</li>
-<li>Move: draw <span class="math inline">\(z_2\)</span> from row <span class="math inline">\(H\)</span> of <span class="math inline">\(A\)</span>. Say <span class="math inline">\(z_2 = H\)</span> (prob 0.8).</li>
-<li>Emit <span class="math inline">\(x_2\)</span> from row <span class="math inline">\(H\)</span> of <span class="math inline">\(B\)</span>. Say <span class="math inline">\(x_2 = C\)</span> (prob 0.4).</li>
-<li>Move: draw <span class="math inline">\(z_3\)</span> from row <span class="math inline">\(H\)</span> of <span class="math inline">\(A\)</span>. Say <span class="math inline">\(z_3 = L\)</span> (prob 0.2).</li>
-<li>Emit <span class="math inline">\(x_3\)</span> from row <span class="math inline">\(L\)</span> of <span class="math inline">\(B\)</span>. Say <span class="math inline">\(x_3 = A\)</span> (prob 0.3).</li>
+<li>Draw <span class="math inline">z_1</span> from <span class="math inline">\boldsymbol{\pi}</span>. Say <span class="math inline">z_1 = H</span>.</li>
+<li>Emit <span class="math inline">x_1</span> from row <span class="math inline">H</span> of <span class="math inline">B</span>. Say <span class="math inline">x_1 = G</span> (prob 0.4).</li>
+<li>Move: draw <span class="math inline">z_2</span> from row <span class="math inline">H</span> of <span class="math inline">A</span>. Say <span class="math inline">z_2 = H</span> (prob 0.8).</li>
+<li>Emit <span class="math inline">x_2</span> from row <span class="math inline">H</span> of <span class="math inline">B</span>. Say <span class="math inline">x_2 = C</span> (prob 0.4).</li>
+<li>Move: draw <span class="math inline">z_3</span> from row <span class="math inline">H</span> of <span class="math inline">A</span>. Say <span class="math inline">z_3 = L</span> (prob 0.2).</li>
+<li>Emit <span class="math inline">x_3</span> from row <span class="math inline">L</span> of <span class="math inline">B</span>. Say <span class="math inline">x_3 = A</span> (prob 0.3).</li>
 </ol>
-<p>We <strong>observe</strong> only <span class="math inline">\(\mathbf{x} = (G, C, A)\)</span>. The path <span class="math inline">\(\mathbf{z} = (H, H, L)\)</span> is hidden.</p>
+<p>We <strong>observe</strong> only <span class="math inline">\mathbf{x} = (G, C, A)</span>. The path <span class="math inline">\mathbf{z} = (H, H, L)</span> is hidden.</p>
 
 <img data-src="fig08-generation-trace.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:70.0%"><aside class="notes">
 <p>Walk through generation as a recipe, alternating transition and emission. Start state from pi, emit, transition, emit, transition, emit. Each choice has a probability attached. The student sees only the emitted letters G C A; the path H H L is invisible. The next slide multiplies all those probabilities together, which is the single most important by-hand skill of this unit.</p>
@@ -361,8 +377,8 @@ B=\begin{array}{c}
 </section>
 <section id="probability-of-one-path-with-its-emissions" class="slide level2 smaller">
 <h2>Probability of ONE path with its emissions</h2>
-<p>The HMM is a product of independent choices, so multiply along the story. For path <span class="math inline">\(\mathbf{z}=(H,H,L)\)</span> and observations <span class="math inline">\(\mathbf{x}=(G,C,A)\)</span>:</p>
-<p><span class="math display">\[
+<p>The HMM is a product of independent choices, so multiply along the story. For path <span class="math inline">\mathbf{z}=(H,H,L)</span> and observations <span class="math inline">\mathbf{x}=(G,C,A)</span>:</p>
+<p><span class="math display">
 P(\mathbf{x},\mathbf{z})
 = \underbrace{\pi_H}_{\text{start}}\,
   \underbrace{B_{H,G}}_{\text{emit}}\,
@@ -370,11 +386,11 @@ P(\mathbf{x},\mathbf{z})
   \underbrace{B_{H,C}}_{\text{emit}}\,
   \underbrace{A_{H,L}}_{\text{move}}\,
   \underbrace{B_{L,A}}_{\text{emit}}
-\]</span></p>
-<p><span class="math display">\[
+</span></p>
+<p><span class="math display">
 = 0.5 \times 0.4 \times 0.8 \times 0.4 \times 0.2 \times 0.3 = 0.003840.
-\]</span></p>
-<p>The pattern: <strong>start prob → (emit, transition, emit, transition, …, emit)</strong>. One <span class="math inline">\(\boldsymbol{\pi}\)</span>, then alternate <span class="math inline">\(B\)</span> and <span class="math inline">\(A\)</span>, ending on an emission.</p>
+</span></p>
+<p>The pattern: <strong>start prob → (emit, transition, emit, transition, …, emit)</strong>. One <span class="math inline">\boldsymbol{\pi}</span>, then alternate <span class="math inline">B</span> and <span class="math inline">A</span>, ending on an emission.</p>
 <aside class="notes">
 <p>This is THE formula to memorise. The joint probability of a hidden path and its observations is just the product of: the initial probability, then for each position the emission probability, and between positions the transition probability. Count the factors: for length T you get one pi, T emissions, and T minus one transitions. Do this multiplication slowly; this is where mistakes creep in. Note the answer is small — products of probabilities shrink fast, which is why real implementations work in log space.</p>
 <style type="text/css">
@@ -391,11 +407,11 @@ P(\mathbf{x},\mathbf{z})
 </section>
 <section id="three-classic-problems" class="slide level2 smaller">
 <h2>Three classic problems</h2>
-<p>Given an HMM and an observed sequence <span class="math inline">\(\mathbf{x}\)</span>, three questions:</p>
+<p>Given an HMM and an observed sequence <span class="math inline">\mathbf{x}</span>, three questions:</p>
 <ol type="1">
-<li><strong>Likelihood</strong> — how probable is <span class="math inline">\(\mathbf{x}\)</span> under the model, <span class="math inline">\(P(\mathbf{x})\)</span>? Summed over <strong>all</strong> hidden paths. → <strong>Forward algorithm</strong>.</li>
-<li><strong>Decoding</strong> — what is the single <strong>most likely hidden path</strong> <span class="math inline">\(\mathbf{z}^\*\)</span>? → <strong>Viterbi algorithm</strong>. <em>(This is what predicts the islands.)</em></li>
-<li><strong>Learning</strong> — given only unlabelled <span class="math inline">\(\mathbf{x}\)</span>, estimate <span class="math inline">\((A, B, \boldsymbol{\pi})\)</span>. → <strong>Baum–Welch</strong> (an EM algorithm).</li>
+<li><strong>Likelihood</strong> — how probable is <span class="math inline">\mathbf{x}</span> under the model, <span class="math inline">P(\mathbf{x})</span>? Summed over <strong>all</strong> hidden paths. → <strong>Forward algorithm</strong>.</li>
+<li><strong>Decoding</strong> — what is the single <strong>most likely hidden path</strong> <span class="math inline">\mathbf{z}^\*</span>? → <strong>Viterbi algorithm</strong>. <em>(This is what predicts the islands.)</em></li>
+<li><strong>Learning</strong> — given only unlabelled <span class="math inline">\mathbf{x}</span>, estimate <span class="math inline">(A, B, \boldsymbol{\pi})</span>. → <strong>Baum–Welch</strong> (an EM algorithm).</li>
 </ol>
 <p>This unit: the concepts. Fitting HMMs in R: all three in R.</p>
 <aside class="notes">
@@ -414,12 +430,12 @@ P(\mathbf{x},\mathbf{z})
 </section>
 <section id="why-summing-over-paths-matters-likelihood" class="slide level2 smaller">
 <h2>Why summing over paths matters (likelihood)</h2>
-<p>The path <span class="math inline">\((H,H,L)\)</span> is <strong>one</strong> way to produce <span class="math inline">\(\mathbf{x}=(G,C,A)\)</span>. But <span class="math inline">\((H,H,H)\)</span>, <span class="math inline">\((L,H,L)\)</span>, … could also produce it.</p>
+<p>The path <span class="math inline">(H,H,L)</span> is <strong>one</strong> way to produce <span class="math inline">\mathbf{x}=(G,C,A)</span>. But <span class="math inline">(H,H,H)</span>, <span class="math inline">(L,H,L)</span>, … could also produce it.</p>
 <p>The <strong>likelihood</strong> of the data is the sum over <strong>every</strong> hidden path:</p>
-<p><span class="math display">\[
+<p><span class="math display">
 P(\mathbf{x}) = \sum_{\text{all paths } \mathbf{z}} P(\mathbf{x}, \mathbf{z}).
-\]</span></p>
-<p>For 2 states and length 3 that is <span class="math inline">\(2^3 = 8\)</span> paths — fine by hand. For a real chromosome (<span class="math inline">\(2^{\text{millions}}\)</span> paths) it is hopeless by brute force; the <strong>forward algorithm</strong> does it efficiently by reusing partial sums.</p>
+</span></p>
+<p>For 2 states and length 3 that is <span class="math inline">2^3 = 8</span> paths — fine by hand. For a real chromosome (<span class="math inline">2^{\text{millions}}</span> paths) it is hopeless by brute force; the <strong>forward algorithm</strong> does it efficiently by reusing partial sums.</p>
 
 <img data-src="fig11-likelihood-trellis-sum.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:66.0%"><aside class="notes">
 <p>Stress the distinction between the joint probability of a specific path, which we just computed, and the likelihood of the data, which marginalises over all possible paths. The naive sum has a number of terms exponential in the sequence length, so you cannot enumerate it for a genome. The forward algorithm is the clever bookkeeping that collapses this to a linear-time computation by carrying forward partial probabilities — conceptually like reusing work, not unlike the matrix iterations from Markov chains in R. We will only call it, not implement it.</p>
@@ -438,9 +454,9 @@ P(\mathbf{x}) = \sum_{\text{all paths } \mathbf{z}} P(\mathbf{x}, \mathbf{z}).
 <section id="decoding-the-most-likely-path-viterbi" class="slide level2 smaller">
 <h2>Decoding: the most likely path (Viterbi)</h2>
 <p>Decoding asks for the <strong>single best</strong> hidden path:</p>
-<p><span class="math display">\[
+<p><span class="math display">
 \mathbf{z}^\* = \arg\max_{\mathbf{z}} \; P(\mathbf{z}\mid \mathbf{x}).
-\]</span></p>
+</span></p>
 <p>The <strong>Viterbi algorithm</strong> finds it efficiently (same trick as forward, but keeping the best path instead of the total).</p>
 <p>For islands: run Viterbi, then <strong>read off the runs of <code>H</code></strong> — those are your <strong>predicted CpG islands</strong>. This turns a probabilistic model into a concrete genome annotation.</p>
 
@@ -479,7 +495,7 @@ P(\mathbf{x}) = \sum_{\text{all paths } \mathbf{z}} P(\mathbf{x}, \mathbf{z}).
 </section>
 <section id="learning-where-do-a-b-π-come-from" class="slide level2 smaller">
 <h2>Learning: where do A, B, π come from?</h2>
-<p>So far we <strong>assumed</strong> the numbers in <span class="math inline">\(A, B, \boldsymbol{\pi}\)</span>. Where do they come from?</p>
+<p>So far we <strong>assumed</strong> the numbers in <span class="math inline">A, B, \boldsymbol{\pi}</span>. Where do they come from?</p>
 <ul>
 <li><strong>If you have labelled data</strong> (sequences with known island annotations): just <strong>count</strong> transitions and emissions and normalise. Easy.</li>
 <li><strong>If you only have raw sequence</strong> (no labels — the usual case): <strong>Baum–Welch</strong> iterates “guess the hidden states, re-estimate the parameters, repeat” until it converges. It is the <strong>EM algorithm</strong> for HMMs.</li>
@@ -523,13 +539,13 @@ P(\mathbf{x}) = \sum_{\text{all paths } \mathbf{z}} P(\mathbf{x}, \mathbf{z}).
 </tr>
 <tr class="even">
 <td>Parameters</td>
-<td>transition matrix <span class="math inline">\(A\)</span></td>
-<td><span class="math inline">\(A\)</span> <strong>and</strong> emission matrix <span class="math inline">\(B\)</span></td>
+<td>transition matrix <span class="math inline">A</span></td>
+<td><span class="math inline">A</span> <strong>and</strong> emission matrix <span class="math inline">B</span></td>
 </tr>
 <tr class="odd">
 <td>You see</td>
 <td>the states</td>
-<td>only the <strong>emissions</strong> <span class="math inline">\(\mathbf{x}\)</span></td>
+<td>only the <strong>emissions</strong> <span class="math inline">\mathbf{x}</span></td>
 </tr>
 <tr class="even">
 <td>Core question</td>
@@ -562,8 +578,8 @@ P(\mathbf{x}) = \sum_{\text{all paths } \mathbf{z}} P(\mathbf{x}, \mathbf{z}).
 <h2>Summary</h2>
 <ul>
 <li>A genome’s <strong>island vs background</strong> label is <strong>hidden</strong>; you see only the <strong>bases</strong>. That is exactly an HMM.</li>
-<li>An HMM = <strong>hidden states</strong> + transition matrix <span class="math inline">\(A\)</span> (the chain from Markov chains) + <strong>emission matrix</strong> <span class="math inline">\(B\)</span> + initial distribution <span class="math inline">\(\boldsymbol{\pi}\)</span>.</li>
-<li><strong>Generative story:</strong> start from <span class="math inline">\(\boldsymbol{\pi}\)</span>, then alternate <em>emit</em> (<span class="math inline">\(B\)</span>) and <em>move</em> (<span class="math inline">\(A\)</span>). The probability of one path-with-emissions is the <strong>product</strong> of those factors.</li>
+<li>An HMM = <strong>hidden states</strong> + transition matrix <span class="math inline">A</span> (the chain from Markov chains) + <strong>emission matrix</strong> <span class="math inline">B</span> + initial distribution <span class="math inline">\boldsymbol{\pi}</span>.</li>
+<li><strong>Generative story:</strong> start from <span class="math inline">\boldsymbol{\pi}</span>, then alternate <em>emit</em> (<span class="math inline">B</span>) and <em>move</em> (<span class="math inline">A</span>). The probability of one path-with-emissions is the <strong>product</strong> of those factors.</li>
 <li><strong>Three problems:</strong> likelihood (<strong>forward</strong>), decoding (<strong>Viterbi</strong>), learning (<strong>Baum–Welch</strong>).</li>
 </ul>
 <p><strong>Fitting HMMs in R:</strong> fit and decode these HMMs in R with the <code>HMM</code> package on genome-like sequence.</p>
@@ -603,7 +619,6 @@ P(\mathbf{x}) = \sum_{\text{all paths } \mathbf{z}} P(\mathbf{x}, \mathbf{z}).
   <script src="../site_libs/revealjs/plugin/notes/notes.js"></script>
   <script src="../site_libs/revealjs/plugin/search/search.js"></script>
   <script src="../site_libs/revealjs/plugin/zoom/zoom.js"></script>
-  <script src="../site_libs/revealjs/plugin/math/math.js"></script>
   <script>window.define = window.backupDefine; window.backupDefine = undefined;</script>
 
   <script>
@@ -771,27 +786,9 @@ P(\mathbf{x}) = \sum_{\text{all paths } \mathbf{z}} P(\mathbf{x}, \mathbf{z}).
         // Factor of the display size that should remain empty around the content
         margin: 0.1,
 
-        math: {
-          mathjax: 'https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.9/MathJax.js',
-          config: 'TeX-AMS_HTML-full',
-          tex2jax: {
-            inlineMath: [['\\(','\\)']],
-            displayMath: [['\\[','\\]']],
-            balanceBraces: true,
-            processEscapes: false,
-            processRefs: true,
-            processEnvironments: true,
-            preview: 'TeX',
-            skipTags: ['script','noscript','style','textarea','pre','code'],
-            ignoreClass: 'tex2jax_ignore',
-            processClass: 'tex2jax_process'
-          },
-        },
-
         // reveal.js plugins
         plugins: [QuartoLineHighlight, PdfExport, RevealMenu, QuartoSupport,
 
-          RevealMath,
           RevealNotes,
           RevealSearch,
           RevealZoom

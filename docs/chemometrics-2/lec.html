@@ -96,6 +96,22 @@
     code span.wa { color: #ff5555; } /* Warning */
   </style>
   <link rel="stylesheet" href="../site_libs/revealjs/dist/theme/quarto-bf56578b9c06c165c166475cd19dbcd1.css">
+  <script>window.backupDefine = window.define; window.define = undefined;</script><script src="https://cdn.jsdelivr.net/npm/katex@latest/dist/katex.min.js"></script>
+  <script>document.addEventListener("DOMContentLoaded", function () {
+ var mathElements = document.getElementsByClassName("math");
+ var macros = [];
+ for (var i = 0; i < mathElements.length; i++) {
+  var texText = mathElements[i].firstChild;
+  if (mathElements[i].tagName == "SPAN") {
+   katex.render(texText.data, mathElements[i], {
+    displayMode: mathElements[i].classList.contains('display'),
+    throwOnError: false,
+    macros: macros,
+    fleqn: false
+   });
+}}});
+  </script>
+  <script>window.define = window.backupDefine; window.backupDefine = undefined;</script><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@latest/dist/katex.min.css">
   <link href="../site_libs/revealjs/plugin/quarto-line-highlight/line-highlight.css" rel="stylesheet">
   <link href="../site_libs/revealjs/plugin/reveal-menu/menu.css" rel="stylesheet">
   <link href="../site_libs/revealjs/plugin/reveal-menu/quarto-menu.css" rel="stylesheet">
@@ -295,14 +311,14 @@ Quantitative biology and integrative omics
 </section>
 <section id="the-data-shape-wide-and-collinear" class="slide level2 smaller">
 <h2>The data shape: wide and collinear</h2>
-<p>Stack <span class="math inline">\(n\)</span> samples, each measured at <span class="math inline">\(p\)</span> wavelengths, into a matrix <span class="math inline">\(X\)</span> (<span class="math inline">\(n \times p\)</span>), with a target <span class="math inline">\(\mathbf{y}\)</span> (a property to predict, or a class):</p>
-<p><span class="math display">\[X = \begin{pmatrix} x_{11} &amp; \cdots &amp; x_{1p} \\ \vdots &amp; &amp; \vdots \\ x_{n1} &amp; \cdots &amp; x_{np} \end{pmatrix}, \qquad \mathbf{y} = \begin{pmatrix} y_1 \\ \vdots \\ y_n \end{pmatrix}\]</span></p>
+<p>Stack <span class="math inline">n</span> samples, each measured at <span class="math inline">p</span> wavelengths, into a matrix <span class="math inline">X</span> (<span class="math inline">n \times p</span>), with a target <span class="math inline">\mathbf{y}</span> (a property to predict, or a class):</p>
+<p><span class="math display">X = \begin{pmatrix} x_{11} &amp; \cdots &amp; x_{1p} \\ \vdots &amp; &amp; \vdots \\ x_{n1} &amp; \cdots &amp; x_{np} \end{pmatrix}, \qquad \mathbf{y} = \begin{pmatrix} y_1 \\ \vdots \\ y_n \end{pmatrix}</span></p>
 <p>Two features dominate spectral data:</p>
 <ul>
-<li><strong>Wide:</strong> often <span class="math inline">\(p \gg n\)</span> (far more wavelengths than samples).</li>
+<li><strong>Wide:</strong> often <span class="math inline">p \gg n</span> (far more wavelengths than samples).</li>
 <li><strong>Collinear:</strong> neighbouring wavelengths are highly correlated — they carry nearly the same information.</li>
 </ul>
-<p>Ordinary least squares (<code>lm</code>) <strong>breaks</strong> here: with <span class="math inline">\(p \gg n\)</span> and collinear columns, <span class="math inline">\(X^\top X\)</span> is not invertible and the fit is unstable. This is exactly the problem the <em>latent-variable</em> methods from <em>PCA</em> and <em>The OPLS model</em> were built to solve.</p>
+<p>Ordinary least squares (<code>lm</code>) <strong>breaks</strong> here: with <span class="math inline">p \gg n</span> and collinear columns, <span class="math inline">X^\top X</span> is not invertible and the fit is unstable. This is exactly the problem the <em>latent-variable</em> methods from <em>PCA</em> and <em>The OPLS model</em> were built to solve.</p>
 
 <img data-src="fig04-wide-collinear-matrix.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:70.0%"><aside class="notes">
 <p>[REVIEW] Tie back explicitly to the singular / non-invertible discussion in the Linear systems and PCA units — students met “no unique solution” there. The punchline: chemometrics is largely the art of regressing/classifying when the classical assumptions (n &gt; p, independent predictors) fail. Verify the p &gt;&gt; n framing matches the datasets you plan to use; for some metabolomics setups n and p are closer.</p>
@@ -367,7 +383,7 @@ Quantitative biology and integrative omics
 <thead>
 <tr class="header">
 <th>Question</th>
-<th>Target <span class="math inline">\(\mathbf{y}\)</span></th>
+<th>Target <span class="math inline">\mathbf{y}</span></th>
 <th>“How much / which?”</th>
 <th>Typical methods</th>
 </tr>
@@ -383,11 +399,11 @@ Quantitative biology and integrative omics
 <td><strong>Classification</strong></td>
 <td>categorical</td>
 <td><em>Which group / is it OK?</em></td>
-<td>PLS-DA, LDA, SIMCA, <span class="math inline">\(k\)</span>-NN</td>
+<td>PLS-DA, LDA, SIMCA, <span class="math inline">k</span>-NN</td>
 </tr>
 </tbody>
 </table>
-<p>Both share the same trick learned earlier: <strong>project the wide, collinear <span class="math inline">\(X\)</span> onto a few latent components first</strong>, then model in that low-dimensional space.</p>
+<p>Both share the same trick learned earlier: <strong>project the wide, collinear <span class="math inline">X</span> onto a few latent components first</strong>, then model in that low-dimensional space.</p>
 <ul>
 <li><em>Regression</em> fits a line/plane in latent space (property vs components).</li>
 <li><em>Classification</em> separates groups in latent space.</li>
@@ -410,13 +426,13 @@ Quantitative biology and integrative omics
 </section>
 <section id="multivariate-calibration-regression" class="slide level2 smaller">
 <h2>Multivariate calibration (regression)</h2>
-<p><strong>Goal:</strong> predict a continuous property <span class="math inline">\(y\)</span> (e.g.&nbsp;concentration) from a spectrum <span class="math inline">\(\mathbf{x}\)</span>.</p>
+<p><strong>Goal:</strong> predict a continuous property <span class="math inline">y</span> (e.g.&nbsp;concentration) from a spectrum <span class="math inline">\mathbf{x}</span>.</p>
 <p>The physical motivation is roughly linear: by the <strong>Beer–Lambert</strong> idea, absorbance rises with concentration, so a linear model in the (preprocessed) spectrum is a sensible starting point:</p>
-<p><span class="math display">\[\hat{y} = b_0 + \mathbf{x}^\top \mathbf{b}\]</span></p>
-<p>But we cannot fit <span class="math inline">\(\mathbf{b}\)</span> directly by OLS (<span class="math inline">\(p \gg p\)</span>, collinear). Instead:</p>
+<p><span class="math display">\hat{y} = b_0 + \mathbf{x}^\top \mathbf{b}</span></p>
+<p>But we cannot fit <span class="math inline">\mathbf{b}</span> directly by OLS (<span class="math inline">p \gg p</span>, collinear). Instead:</p>
 <ul>
-<li><strong>PCR (Principal Component Regression):</strong> run PCA on <span class="math inline">\(X\)</span>, keep the top components, regress <span class="math inline">\(y\)</span> on the <strong>scores</strong>.</li>
-<li><strong>PLS regression:</strong> like PCR, but the components are chosen to align with <span class="math inline">\(y\)</span> — they explain variation in <span class="math inline">\(X\)</span> <strong>that is relevant to <span class="math inline">\(y\)</span></strong>, not just the largest variation in <span class="math inline">\(X\)</span>.</li>
+<li><strong>PCR (Principal Component Regression):</strong> run PCA on <span class="math inline">X</span>, keep the top components, regress <span class="math inline">y</span> on the <strong>scores</strong>.</li>
+<li><strong>PLS regression:</strong> like PCR, but the components are chosen to align with <span class="math inline">y</span> — they explain variation in <span class="math inline">X</span> <strong>that is relevant to <span class="math inline">y</span></strong>, not just the largest variation in <span class="math inline">X</span>.</li>
 </ul>
 <p>PLS is the standard chemometrics calibration tool for exactly this reason.</p>
 
@@ -526,15 +542,15 @@ Quantitative biology and integrative omics
 </section>
 <section id="cross-validation" class="slide level2 smaller">
 <h2>Cross-validation</h2>
-<p>When data are scarce, holding out one fixed test set wastes samples. <strong><span class="math inline">\(k\)</span>-fold cross-validation</strong> reuses them:</p>
+<p>When data are scarce, holding out one fixed test set wastes samples. <strong><span class="math inline">k</span>-fold cross-validation</strong> reuses them:</p>
 <ol type="1">
-<li>Split the samples into <span class="math inline">\(k\)</span> roughly equal <strong>folds</strong>.</li>
-<li>For each fold: <strong>train</strong> on the other <span class="math inline">\(k-1\)</span> folds, <strong>predict</strong> the held-out fold.</li>
+<li>Split the samples into <span class="math inline">k</span> roughly equal <strong>folds</strong>.</li>
+<li>For each fold: <strong>train</strong> on the other <span class="math inline">k-1</span> folds, <strong>predict</strong> the held-out fold.</li>
 <li>Every sample is predicted exactly once, by a model that <strong>did not see it</strong>.</li>
 <li>Combine the held-out predictions into one error estimate.</li>
 </ol>
 <ul>
-<li><strong>Leave-one-out (LOO):</strong> <span class="math inline">\(k = n\)</span> (each sample its own fold) — common for small spectral sets.</li>
+<li><strong>Leave-one-out (LOO):</strong> <span class="math inline">k = n</span> (each sample its own fold) — common for small spectral sets.</li>
 <li>In spectroscopy, samples measured together can be correlated; folds should respect that (e.g.&nbsp;<strong>do not</strong> split replicate scans of the same specimen across folds).</li>
 </ul>
 
@@ -555,15 +571,15 @@ Quantitative biology and integrative omics
 <section id="rmsep-and-friends" class="slide level2 smaller">
 <h2>RMSEP and friends</h2>
 <p>The standard regression error is the <strong>root-mean-square error of prediction</strong>:</p>
-<p><span class="math display">\[\mathrm{RMSEP} = \sqrt{\frac{1}{n}\sum_{i=1}^{n}\left(\hat{y}_i - y_i\right)^2}\]</span></p>
+<p><span class="math display">\mathrm{RMSEP} = \sqrt{\frac{1}{n}\sum_{i=1}^{n}\left(\hat{y}_i - y_i\right)^2}</span></p>
 <ul>
-<li>Same <strong>units as <span class="math inline">\(y\)</span></strong> (e.g.&nbsp;mg/mL) — directly interpretable.</li>
+<li>Same <strong>units as <span class="math inline">y</span></strong> (e.g.&nbsp;mg/mL) — directly interpretable.</li>
 <li>Computed on an <strong>independent</strong> set → <strong>RMSEP</strong>; from cross-validation → <strong>RMSECV</strong>; on the training set → <strong>RMSEC</strong> (optimistic).</li>
 </ul>
 <p>Report alongside it:</p>
 <ul>
-<li><strong>Bias:</strong> mean of <span class="math inline">\((\hat{y}_i - y_i)\)</span> — a systematic offset (ideally <span class="math inline">\(\approx 0\)</span>).</li>
-<li><strong><span class="math inline">\(R^2\)</span> / explained variance:</strong> fraction of variation in <span class="math inline">\(y\)</span> captured.</li>
+<li><strong>Bias:</strong> mean of <span class="math inline">(\hat{y}_i - y_i)</span> — a systematic offset (ideally <span class="math inline">\approx 0</span>).</li>
+<li><strong><span class="math inline">R^2</span> / explained variance:</strong> fraction of variation in <span class="math inline">y</span> captured.</li>
 </ul>
 <p>Pick the component count that <strong>minimises RMSECV</strong> (or the simplest model within noise of the minimum — the “one-standard-error” idea).</p>
 
@@ -587,9 +603,9 @@ Quantitative biology and integrative omics
 <p>Same latent-projection idea, now separating groups:</p>
 <ul>
 <li><strong>PLS-DA:</strong> encode the class as a numeric target and run PLS regression toward it; assign by the predicted value. The default chemometrics classifier.</li>
-<li><strong>LDA:</strong> find the direction that best separates classes (often applied <em>after</em> PCA to tame <span class="math inline">\(p \gg n\)</span>).</li>
+<li><strong>LDA:</strong> find the direction that best separates classes (often applied <em>after</em> PCA to tame <span class="math inline">p \gg n</span>).</li>
 <li><strong>SIMCA:</strong> build a separate PCA model per class; a new sample joins the class whose model it fits best (can also say <em>“none of them”</em>).</li>
-<li><strong><span class="math inline">\(k\)</span>-NN:</strong> classify by the nearest training spectra in (latent) space.</li>
+<li><strong><span class="math inline">k</span>-NN:</strong> classify by the nearest training spectra in (latent) space.</li>
 </ul>
 <p>Validate with the <strong>same discipline</strong>: cross-validated <strong>misclassification rate</strong>, sensitivity/specificity, or a confusion matrix on an <strong>independent</strong> test set — never the training accuracy.</p>
 
@@ -637,8 +653,8 @@ Quantitative biology and integrative omics
 <p>Once a good latent-variable model exists, use it to <strong>monitor</strong> a process or screen samples in real time — <em>multivariate statistical process control (MSPC)</em>.</p>
 <p>Two complementary alarms per new sample:</p>
 <ul>
-<li><strong>Hotelling’s <span class="math inline">\(T^2\)</span>:</strong> how far the sample sits from the centre <strong>inside</strong> the model’s latent space — unusual but of a <em>known</em> type of variation.</li>
-<li><strong><span class="math inline">\(Q\)</span> / SPE (squared prediction error):</strong> how far the sample lies <strong>off</strong> the model subspace — variation the model has <strong>never seen</strong> (a new, possibly out-of-spec state).</li>
+<li><strong>Hotelling’s <span class="math inline">T^2</span>:</strong> how far the sample sits from the centre <strong>inside</strong> the model’s latent space — unusual but of a <em>known</em> type of variation.</li>
+<li><strong><span class="math inline">Q</span> / SPE (squared prediction error):</strong> how far the sample lies <strong>off</strong> the model subspace — variation the model has <strong>never seen</strong> (a new, possibly out-of-spec state).</li>
 </ul>
 <p>Plot these on <strong>control charts</strong> with limits; a point past a limit flags a sample or batch for attention.</p>
 
@@ -705,7 +721,7 @@ Quantitative biology and integrative omics
 <li>keeps a <strong>truly independent test set</strong>, touched <strong>once</strong>, at the end;</li>
 <li>tunes complexity (components, variables) by <strong>cross-validation</strong>, respecting sample structure (replicates, batches);</li>
 <li>reports error in <strong>interpretable units</strong> (RMSEP) with <strong>bias</strong> and a class-appropriate metric;</li>
-<li>checks for <strong>outliers</strong> and <strong>applicability</strong> (<span class="math inline">\(T^2\)</span>, <span class="math inline">\(Q\)</span>) rather than blindly predicting;</li>
+<li>checks for <strong>outliers</strong> and <strong>applicability</strong> (<span class="math inline">T^2</span>, <span class="math inline">Q</span>) rather than blindly predicting;</li>
 <li>is <strong>honest about transfer</strong>: does it still work on a new instrument, day, or population?</li>
 </ul>
 <p>If a result cannot survive this checklist, it is not yet a result.</p>
@@ -739,7 +755,7 @@ Quantitative biology and integrative omics
 <tbody>
 <tr class="odd">
 <td>Data shape</td>
-<td>wide (<span class="math inline">\(p \gg n\)</span>), collinear → OLS fails, use latent variables</td>
+<td>wide (<span class="math inline">p \gg n</span>), collinear → OLS fails, use latent variables</td>
 </tr>
 <tr class="even">
 <td>Preprocessing</td>
@@ -751,7 +767,7 @@ Quantitative biology and integrative omics
 </tr>
 <tr class="even">
 <td>Classification</td>
-<td>which group?: <strong>PLS-DA</strong>, LDA, SIMCA, <span class="math inline">\(k\)</span>-NN</td>
+<td>which group?: <strong>PLS-DA</strong>, LDA, SIMCA, <span class="math inline">k</span>-NN</td>
 </tr>
 <tr class="odd">
 <td>Complexity</td>
@@ -767,7 +783,7 @@ Quantitative biology and integrative omics
 </tr>
 <tr class="even">
 <td>Monitoring</td>
-<td><strong>MSPC</strong>: <span class="math inline">\(T^2\)</span> (in-model) and <span class="math inline">\(Q\)</span>/SPE (off-model) control charts</td>
+<td><strong>MSPC</strong>: <span class="math inline">T^2</span> (in-model) and <span class="math inline">Q</span>/SPE (off-model) control charts</td>
 </tr>
 <tr class="odd">
 <td>Variable selection</td>
@@ -825,7 +841,6 @@ Quantitative biology and integrative omics
   <script src="../site_libs/revealjs/plugin/notes/notes.js"></script>
   <script src="../site_libs/revealjs/plugin/search/search.js"></script>
   <script src="../site_libs/revealjs/plugin/zoom/zoom.js"></script>
-  <script src="../site_libs/revealjs/plugin/math/math.js"></script>
   <script>window.define = window.backupDefine; window.backupDefine = undefined;</script>
 
   <script>
@@ -993,27 +1008,9 @@ Quantitative biology and integrative omics
         // Factor of the display size that should remain empty around the content
         margin: 0.1,
 
-        math: {
-          mathjax: 'https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.9/MathJax.js',
-          config: 'TeX-AMS_HTML-full',
-          tex2jax: {
-            inlineMath: [['\\(','\\)']],
-            displayMath: [['\\[','\\]']],
-            balanceBraces: true,
-            processEscapes: false,
-            processRefs: true,
-            processEnvironments: true,
-            preview: 'TeX',
-            skipTags: ['script','noscript','style','textarea','pre','code'],
-            ignoreClass: 'tex2jax_ignore',
-            processClass: 'tex2jax_process'
-          },
-        },
-
         // reveal.js plugins
         plugins: [QuartoLineHighlight, PdfExport, RevealMenu, QuartoSupport,
 
-          RevealMath,
           RevealNotes,
           RevealSearch,
           RevealZoom

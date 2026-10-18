@@ -96,6 +96,22 @@
     code span.wa { color: #ff5555; } /* Warning */
   </style>
   <link rel="stylesheet" href="../site_libs/revealjs/dist/theme/quarto-bf56578b9c06c165c166475cd19dbcd1.css">
+  <script>window.backupDefine = window.define; window.define = undefined;</script><script src="https://cdn.jsdelivr.net/npm/katex@latest/dist/katex.min.js"></script>
+  <script>document.addEventListener("DOMContentLoaded", function () {
+ var mathElements = document.getElementsByClassName("math");
+ var macros = [];
+ for (var i = 0; i < mathElements.length; i++) {
+  var texText = mathElements[i].firstChild;
+  if (mathElements[i].tagName == "SPAN") {
+   katex.render(texText.data, mathElements[i], {
+    displayMode: mathElements[i].classList.contains('display'),
+    throwOnError: false,
+    macros: macros,
+    fleqn: false
+   });
+}}});
+  </script>
+  <script>window.define = window.backupDefine; window.backupDefine = undefined;</script><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@latest/dist/katex.min.css">
   <link href="../site_libs/revealjs/plugin/quarto-line-highlight/line-highlight.css" rel="stylesheet">
   <link href="../site_libs/revealjs/plugin/reveal-menu/menu.css" rel="stylesheet">
   <link href="../site_libs/revealjs/plugin/reveal-menu/quarto-menu.css" rel="stylesheet">
@@ -210,8 +226,8 @@ Quantitative biology and integrative omics
 <p>Today we start the linear-algebra block. By the end you will be able to:</p>
 <ul>
 <li>Recognise when a biology problem is a <strong>system of linear equations</strong>.</li>
-<li>Write such a system in the standard form <span class="math inline">\(A\mathbf{x} = \mathbf{b}\)</span>.</li>
-<li>Solve small <span class="math inline">\(2\times 2\)</span> and <span class="math inline">\(3\times 3\)</span> systems <strong>by hand</strong> using <strong>substitution</strong> and <strong>Gaussian elimination</strong>.</li>
+<li>Write such a system in the standard form <span class="math inline">A\mathbf{x} = \mathbf{b}</span>.</li>
+<li>Solve small <span class="math inline">2\times 2</span> and <span class="math inline">3\times 3</span> systems <strong>by hand</strong> using <strong>substitution</strong> and <strong>Gaussian elimination</strong>.</li>
 <li><strong>Check</strong> a candidate solution by plugging it back in.</li>
 </ul>
 <p>No prior linear algebra is assumed. We build the ideas from a concrete example and keep all numbers small enough to do with pen and paper.</p>
@@ -253,8 +269,8 @@ Quantitative biology and integrative omics
 </tr>
 </tbody>
 </table>
-<p>We sequence a bulk sample and measure <strong>total</strong> signal: G1 <span class="math inline">\(= 8\)</span>, G2 <span class="math inline">\(= 9\)</span>.</p>
-<p><strong>Question:</strong> how many units of tumour cells (<span class="math inline">\(x\)</span>) and immune cells (<span class="math inline">\(y\)</span>) were in the sample?</p>
+<p>We sequence a bulk sample and measure <strong>total</strong> signal: G1 <span class="math inline">= 8</span>, G2 <span class="math inline">= 9</span>.</p>
+<p><strong>Question:</strong> how many units of tumour cells (<span class="math inline">x</span>) and immune cells (<span class="math inline">y</span>) were in the sample?</p>
 
 <img data-src="fig02-mixture-deconvolution.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:65.0%"><aside class="notes">
 <p>This is the motivating pairing for this unit and Linear systems in R: cell-type deconvolution. A bulk measurement is a sum over the cell types present. If we know the per-cell-type signature, recovering the amounts is exactly solving a linear system. Keep the numbers tiny here on purpose — we will make them realistic in Linear systems in R.</p>
@@ -273,14 +289,14 @@ Quantitative biology and integrative omics
 <section id="turning-the-biology-into-equations" class="slide level2">
 <h2>Turning the biology into equations</h2>
 <p>Each measured signal is the sum of contributions from each cell type:</p>
-<p><span class="math display">\[
+<p><span class="math display">
 \begin{aligned}
 \underbrace{2x + 1y}_{\text{total G1}} &amp;= 8\\[2pt]
 \underbrace{1x + 3y}_{\text{total G2}} &amp;= 9
 \end{aligned}
-\]</span></p>
-<p>Two unknowns (<span class="math inline">\(x\)</span> and <span class="math inline">\(y\)</span>), two equations. This is a <strong>system of linear equations</strong>.</p>
-<p>“Linear” means every unknown appears only to the first power — no <span class="math inline">\(x^2\)</span>, no <span class="math inline">\(xy\)</span>, no <span class="math inline">\(\sin x\)</span>. Just numbers times unknowns, added up. More formally, a function is linear if <span class="math inline">\(f(x+y)=f(x)+f(y)\)</span>. You can check that <span class="math inline">\(f(x)=2x\)</span> is linear.</p>
+</span></p>
+<p>Two unknowns (<span class="math inline">x</span> and <span class="math inline">y</span>), two equations. This is a <strong>system of linear equations</strong>.</p>
+<p>“Linear” means every unknown appears only to the first power — no <span class="math inline">x^2</span>, no <span class="math inline">xy</span>, no <span class="math inline">\sin x</span>. Just numbers times unknowns, added up. More formally, a function is linear if <span class="math inline">f(x+y)=f(x)+f(y)</span>. You can check that <span class="math inline">f(x)=2x</span> is linear.</p>
 
 <img data-src="fig03-two-lines.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:55.0%"><aside class="notes">
 <p>Stress what “linear” rules out: no squares, no products of unknowns, no nonlinear functions. Each equation is a weighted sum of the unknowns set equal to a number. Almost every method in this course reduces, at its core, to solving or approximately solving a system like this.</p>
@@ -297,22 +313,22 @@ Quantitative biology and integrative omics
       }</style></aside>
 </section>
 <section id="the-standard-form-amathbfx-mathbfb" class="slide level2 smaller">
-<h2>The standard form <span class="math inline">\(A\mathbf{x} = \mathbf{b}\)</span></h2>
+<h2>The standard form <span class="math inline">A\mathbf{x} = \mathbf{b}</span></h2>
 <p>We separate the <strong>known coefficients</strong> from the <strong>unknowns</strong> and the <strong>measurements</strong>:</p>
-<p><span class="math display">\[
+<p><span class="math display">
 \begin{bmatrix} 2 &amp; 1 \\ 1 &amp; 3 \end{bmatrix}
 \begin{bmatrix} x \\ y \end{bmatrix}
 =
 \begin{bmatrix} 8 \\ 9 \end{bmatrix}
 \qquad\text{that is}\qquad
 A\,\mathbf{x} = \mathbf{b}
-\]</span></p>
+</span></p>
 <ul>
-<li><span class="math inline">\(A\)</span> — the <strong>coefficient matrix</strong>. Here, the cell-type signatures (one column per cell type, one row per gene).</li>
-<li><span class="math inline">\(\mathbf{x}\)</span> — the <strong>unknowns</strong> we want (the cell-type amounts).</li>
-<li><span class="math inline">\(\mathbf{b}\)</span> — the <strong>right-hand side</strong>, our measurements.</li>
+<li><span class="math inline">A</span> — the <strong>coefficient matrix</strong>. Here, the cell-type signatures (one column per cell type, one row per gene).</li>
+<li><span class="math inline">\mathbf{x}</span> — the <strong>unknowns</strong> we want (the cell-type amounts).</li>
+<li><span class="math inline">\mathbf{b}</span> — the <strong>right-hand side</strong>, our measurements.</li>
 </ul>
-<p>The first row of <span class="math inline">\(A\)</span> times <span class="math inline">\(\mathbf{x}\)</span> reproduces the first equation; the second row gives the second. This packaging is what lets us scale to hundreds of genes later.</p>
+<p>The first row of <span class="math inline">A</span> times <span class="math inline">\mathbf{x}</span> reproduces the first equation; the second row gives the second. This packaging is what lets us scale to hundreds of genes later.</p>
 
 <img data-src="fig04-matrix-vector-mult.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:60.0%"><aside class="notes">
 <p>Introduce the names carefully: coefficient matrix A, unknown vector x, right-hand side b. Notation conventions for the course: uppercase for matrices, bold lowercase for vectors. Walk through how “row of A times x” rebuilds each equation — this is the first glimpse of matrix-vector multiplication, which we formalise in Matrices as transformations.</p>
@@ -333,12 +349,12 @@ A\,\mathbf{x} = \mathbf{b}
 <div class="columns">
 <div class="column" style="width:68%;">
 <p>Solve one equation for one unknown, then substitute into the other.</p>
-<p>From equation 1: <span class="math inline">\(\;2x + y = 8 \;\Rightarrow\; y = 8 - 2x\)</span>.</p>
+<p>From equation 1: <span class="math inline">\;2x + y = 8 \;\Rightarrow\; y = 8 - 2x</span>.</p>
 <p>Put that into equation 2:</p>
-<p><span class="math display">\[
+<p><span class="math display">
 x + 3(8 - 2x) = 9 \;\Rightarrow\; x + 24 - 6x = 9 \;\Rightarrow\; -5x = -15
-\]</span></p>
-<p>So <span class="math inline">\(x = 3\)</span>, and then <span class="math inline">\(y = 8 - 2(3) = 2\)</span>.</p>
+</span></p>
+<p>So <span class="math inline">x = 3</span>, and then <span class="math inline">y = 8 - 2(3) = 2</span>.</p>
 <p><strong>Answer:</strong> 3 units of tumour, 2 units of immune cells.</p>
 </div><div class="column" style="width:32%;">
 <div title="The system">
@@ -351,12 +367,12 @@ x + 3(8 - 2x) = 9 \;\Rightarrow\; x + 24 - 6x = 9 \;\Rightarrow\; -5x = -15
 <p><strong>The system</strong></p>
 </div>
 <div class="callout-content">
-<p><span class="math display">\[
+<p><span class="math display">
 \begin{aligned}
 2x + y &amp;= 8 \quad(1)\\
 x + 3y &amp;= 9 \quad(2)
 \end{aligned}
-\]</span></p>
+</span></p>
 </div>
 </div>
 </div>
@@ -380,13 +396,13 @@ x + 3y &amp;= 9 \quad(2)
 <h2>Always check your answer</h2>
 <div class="columns">
 <div class="column" style="width:68%;">
-<p>Plug <span class="math inline">\(x = 3,\; y = 2\)</span> back into the <strong>original</strong> equations:</p>
-<p><span class="math display">\[
+<p>Plug <span class="math inline">x = 3,\; y = 2</span> back into the <strong>original</strong> equations:</p>
+<p><span class="math display">
 \begin{aligned}
 2(3) + 1(2) &amp;= 6 + 2 = 8 \quad\checkmark\\
 1(3) + 3(2) &amp;= 3 + 6 = 9 \quad\checkmark
 \end{aligned}
-\]</span></p>
+</span></p>
 <p>Both hold, so the solution is correct.</p>
 </div><div class="column" style="width:32%;">
 <div title="The system">
@@ -399,12 +415,12 @@ x + 3y &amp;= 9 \quad(2)
 <p><strong>The system</strong></p>
 </div>
 <div class="callout-content">
-<p><span class="math display">\[
+<p><span class="math display">
 \begin{aligned}
 2x + y &amp;= 8 \quad(1)\\
 x + 3y &amp;= 9 \quad(2)
 \end{aligned}
-\]</span></p>
+</span></p>
 </div>
 </div>
 </div>
@@ -453,21 +469,21 @@ x + 3y &amp;= 9 \quad(2)
 <section id="gaussian-elimination-on-our-22" class="slide level2 smaller">
 <h2>Gaussian elimination on our 2×2</h2>
 <p>Start:</p>
-<p><span class="math display">\[
+<p><span class="math display">
 \begin{aligned}
 2x + 1y &amp;= 8 \quad(\text{R1})\\
 1x + 3y &amp;= 9 \quad(\text{R2})
 \end{aligned}
-\]</span></p>
-<p>Eliminate <span class="math inline">\(x\)</span> from R2. Replace R2 by <span class="math inline">\(\;\text{R2} - \tfrac{1}{2}\text{R1}\)</span>:</p>
-<p><span class="math display">\[
+</span></p>
+<p>Eliminate <span class="math inline">x</span> from R2. Replace R2 by <span class="math inline">\;\text{R2} - \tfrac{1}{2}\text{R1}</span>:</p>
+<p><span class="math display">
 \Big(1 - \tfrac{1}{2}\cdot 2\Big)x + \Big(3 - \tfrac{1}{2}\cdot 1\Big)y
 = 9 - \tfrac{1}{2}\cdot 8
 \;\Rightarrow\; 0\,x + 2.5\,y = 5
-\]</span></p>
-<p>Now R2 says <span class="math inline">\(2.5\,y = 5 \Rightarrow y = 2\)</span>.</p>
-<p><strong>Back-substitute</strong> into R1: <span class="math inline">\(2x + 2 = 8 \Rightarrow x = 3\)</span>.</p>
-<p>Same answer as before. <span class="math inline">\(\checkmark\)</span></p>
+</span></p>
+<p>Now R2 says <span class="math inline">2.5\,y = 5 \Rightarrow y = 2</span>.</p>
+<p><strong>Back-substitute</strong> into R1: <span class="math inline">2x + 2 = 8 \Rightarrow x = 3</span>.</p>
+<p>Same answer as before. <span class="math inline">\checkmark</span></p>
 <aside class="notes">
 <p>Show the multiplier choice: we want to kill x in R2, R2 has coefficient 1 and R1 has coefficient 2, so subtract half of R1. The x term vanishes by design. Then the last equation has a single unknown — solve it, then back-substitute upward. Reassure them it gives the same answer as substitution; it is the same maths, organised.</p>
 <style type="text/css">
@@ -484,7 +500,7 @@ x + 3y &amp;= 9 \quad(2)
 </section>
 <section id="try-it-two-equations-two-lines" class="slide level2">
 <h2>Try it: two equations, two lines</h2>
-<p>Write the equations as <span class="math inline">\(ax + by = c\)</span> and <span class="math inline">\(dx + ey = f\)</span>. Each is a line; a solution lies on both. Lines <strong>cross</strong> (one solution), are <strong>parallel</strong> (none: elimination leaves <span class="math inline">\(0 =\)</span> a non-zero number) or are <strong>the same line</strong> (infinitely many: <span class="math inline">\(0 = 0\)</span>).</p>
+<p>Write the equations as <span class="math inline">ax + by = c</span> and <span class="math inline">dx + ey = f</span>. Each is a line; a solution lies on both. Lines <strong>cross</strong> (one solution), are <strong>parallel</strong> (none: elimination leaves <span class="math inline">0 =</span> a non-zero number) or are <strong>the same line</strong> (infinitely many: <span class="math inline">0 = 0</span>).</p>
 <link rel="stylesheet" href="../demos/dist/demo.css">
 <div data-demo="twolines" data-eq1="2 1 8" data-eq2="1 3 9"></div>
 <script src="../demos/dist/twolines.js"></script>
@@ -504,13 +520,13 @@ x + 3y &amp;= 9 \quad(2)
 </section>
 <section id="the-augmented-matrix-shorthand" class="slide level2 smaller">
 <h2>The augmented matrix shorthand</h2>
-<p>We do not need to keep writing <span class="math inline">\(x\)</span> and <span class="math inline">\(y\)</span>. Track only the numbers in an <strong>augmented matrix</strong> <span class="math inline">\([\,A \mid \mathbf{b}\,]\)</span>:</p>
-<p><span class="math display">\[
+<p>We do not need to keep writing <span class="math inline">x</span> and <span class="math inline">y</span>. Track only the numbers in an <strong>augmented matrix</strong> <span class="math inline">[\,A \mid \mathbf{b}\,]</span>:</p>
+<p><span class="math display">
 \left[\begin{array}{cc|c} 2 &amp; 1 &amp; 8 \\ 1 &amp; 3 &amp; 9 \end{array}\right]
 \xrightarrow{\;\text{R2}\,-\,\frac12\text{R1}\;}
 \left[\begin{array}{cc|c} 2 &amp; 1 &amp; 8 \\ 0 &amp; 2.5 &amp; 5 \end{array}\right]
-\]</span></p>
-<p>The bottom row reads <span class="math inline">\(2.5\,y = 5\)</span>. The goal is this <strong>upper-triangular</strong> (“staircase”) shape: zeros below the diagonal. Then solve bottom-up.</p>
+</span></p>
+<p>The bottom row reads <span class="math inline">2.5\,y = 5</span>. The goal is this <strong>upper-triangular</strong> (“staircase”) shape: zeros below the diagonal. Then solve bottom-up.</p>
 
 <img data-src="fig09-augmented-triangular.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:65.0%"><aside class="notes">
 <p>The augmented matrix is bookkeeping: a vertical bar separates A from b, and we apply the same row operations to the whole row including the b entry. Target shape is upper triangular — once you are there, the last row is one equation in one unknown and you climb back up. This notation is essential for the 3x3 case.</p>
@@ -528,8 +544,8 @@ x + 3y &amp;= 9 \quad(2)
 </section>
 <section id="scaling-up-a-33-system" class="slide level2 smaller">
 <h2>Scaling up: a 3×3 system</h2>
-<p>Three cell types (tumour, immune, stroma) with amounts <span class="math inline">\(x\)</span>, <span class="math inline">\(y\)</span>, <span class="math inline">\(z\)</span>, three marker genes. Signatures and measurements give:</p>
-<p><span class="math display">\[
+<p>Three cell types (tumour, immune, stroma) with amounts <span class="math inline">x</span>, <span class="math inline">y</span>, <span class="math inline">z</span>, three marker genes. Signatures and measurements give:</p>
+<p><span class="math display">
 \begin{aligned}
 1x + 1y + 1z &amp;= 6\\
 0x + 2y + 1z &amp;= 7\\
@@ -541,7 +557,7 @@ x + 3y &amp;= 9 \quad(2)
 0 &amp; 2 &amp; 1 &amp; 7\\
 2 &amp; 1 &amp; 1 &amp; 8
 \end{array}\right]
-\]</span></p>
+</span></p>
 <p>We eliminate column by column, top-left to bottom-right.</p>
 <aside class="notes">
 <p>Now the payoff for systematic elimination. With three unknowns substitution becomes error-prone, but elimination is just “clear column 1, then clear column 2”. The first equation conveniently already has a 1 in the top-left, our pivot. Walk through the plan before doing the arithmetic.</p>
@@ -559,8 +575,8 @@ x + 3y &amp;= 9 \quad(2)
 </section>
 <section id="elimination-clear-column-1" class="slide level2">
 <h2>3×3 elimination — clear column 1</h2>
-<p>Pivot is the <span class="math inline">\(1\)</span> in the top-left. R2 already has a <span class="math inline">\(0\)</span> there. Clear R3 with <span class="math inline">\(\;\text{R3} - 2\,\text{R1}\)</span>:</p>
-<p><span class="math display">\[
+<p>Pivot is the <span class="math inline">1</span> in the top-left. R2 already has a <span class="math inline">0</span> there. Clear R3 with <span class="math inline">\;\text{R3} - 2\,\text{R1}</span>:</p>
+<p><span class="math display">
 \left[\begin{array}{ccc|c}
 1 &amp; 1 &amp; 1 &amp; 6\\
 0 &amp; 2 &amp; 1 &amp; 7\\
@@ -572,15 +588,15 @@ x + 3y &amp;= 9 \quad(2)
 0 &amp; 2 &amp; 1 &amp; 7\\
 0 &amp; -1 &amp; -1 &amp; -4
 \end{array}\right]
-\]</span></p>
-<p>Row by row, what <span class="math inline">\(\text{R3} - 2\,\text{R1}\)</span> means:</p>
-<p><span class="math display">\[
+</span></p>
+<p>Row by row, what <span class="math inline">\text{R3} - 2\,\text{R1}</span> means:</p>
+<p><span class="math display">
 \begin{array}{lrrrr}
 \text{R3} &amp; 2 &amp; 1 &amp; 1 &amp; 8\\
 2\,\text{R1} &amp; 2 &amp; 2 &amp; 2 &amp; 12\\ \hline
 \text{R3} - 2\,\text{R1} &amp; 0 &amp; -1 &amp; -1 &amp; -4
 \end{array}
-\]</span></p>
+</span></p>
 <p>Column 1 now has zeros below the pivot.</p>
 <aside class="notes">
 <p>R3 minus two times R1: 2 minus 2 is 0, 1 minus 2 is minus 1, 1 minus 2 is minus 1, and 8 minus 12 is minus 4. Do each subtraction out loud. The point is that the first unknown is now confined to the first equation only.</p>
@@ -598,8 +614,8 @@ x + 3y &amp;= 9 \quad(2)
 </section>
 <section id="elimination-clear-column-2" class="slide level2">
 <h2>3×3 elimination — clear column 2</h2>
-<p>Pivot is now the <span class="math inline">\(2\)</span> in R2. Clear R3 with <span class="math inline">\(\;\text{R3} + \tfrac{1}{2}\text{R2}\)</span>:</p>
-<p><span class="math display">\[
+<p>Pivot is now the <span class="math inline">2</span> in R2. Clear R3 with <span class="math inline">\;\text{R3} + \tfrac{1}{2}\text{R2}</span>:</p>
+<p><span class="math display">
 \left[\begin{array}{ccc|c}
 1 &amp; 1 &amp; 1 &amp; 6\\
 0 &amp; 2 &amp; 1 &amp; 7\\
@@ -611,16 +627,16 @@ x + 3y &amp;= 9 \quad(2)
 0 &amp; 2 &amp; 1 &amp; 7\\
 0 &amp; 0 &amp; -0.5 &amp; -0.5
 \end{array}\right]
-\]</span></p>
-<p>Row by row, what <span class="math inline">\(\text{R3} + \tfrac12\,\text{R2}\)</span> means:</p>
-<p><span class="math display">\[
+</span></p>
+<p>Row by row, what <span class="math inline">\text{R3} + \tfrac12\,\text{R2}</span> means:</p>
+<p><span class="math display">
 \begin{array}{lrrrr}
 \text{R3} &amp; 0 &amp; -1 &amp; -1 &amp; -4\\
 \tfrac12\,\text{R2} &amp; 0 &amp; 1 &amp; 0.5 &amp; 3.5\\ \hline
 \text{R3} + \tfrac12\,\text{R2} &amp; 0 &amp; 0 &amp; -0.5 &amp; -0.5
 \end{array}
-\]</span></p>
-<p>Now upper-triangular. The bottom row reads <span class="math inline">\(-0.5\,z = -0.5\)</span>.</p>
+</span></p>
+<p>Now upper-triangular. The bottom row reads <span class="math inline">-0.5\,z = -0.5</span>.</p>
 <aside class="notes">
 <p>R2 has minus 1 in column 2 below the pivot 2, so add half of R2 to R3 to kill it. Minus 1 plus 1 is 0; minus 1 plus a half is minus a half; minus 4 plus 3.5 is minus a half. We have reached the staircase shape. Now we read off and back- substitute.</p>
 <style type="text/css">
@@ -638,7 +654,7 @@ x + 3y &amp;= 9 \quad(2)
 <section id="back-substitution" class="slide level2">
 <h2>3×3 — back-substitution</h2>
 <p>The triangular form from the last slide, written as equations again:</p>
-<p><span class="math display">\[
+<p><span class="math display">
 \left[\begin{array}{ccc|c}
 1 &amp; 1 &amp; 1 &amp; 6\\
 0 &amp; 2 &amp; 1 &amp; 7\\
@@ -650,17 +666,17 @@ x + y + z &amp;= 6\\
 2y + z &amp;= 7\\
 -0.5\,z &amp;= -0.5
 \end{aligned}
-\]</span></p>
+</span></p>
 <p>From the bottom up:</p>
-<p><span class="math display">\[
+<p><span class="math display">
 \begin{aligned}
 -0.5\,z &amp;= -0.5 &amp;&amp;\Rightarrow\; z = 1\\
 2y + z &amp;= 7 &amp;&amp;\Rightarrow\; 2y + 1 = 7 \;\Rightarrow\; y = 3\\
 x + y + z &amp;= 6 &amp;&amp;\Rightarrow\; x + 3 + 1 = 6 \;\Rightarrow\; x = 2
 \end{aligned}
-\]</span></p>
-<p><strong>Solution:</strong> <span class="math inline">\(x = 2,\; y = 3,\; z = 1\)</span>.</p>
-<p><strong>Check</strong> in the original: <span class="math inline">\(2+3+1=6\,\checkmark\)</span>, <span class="math inline">\(0+6+1=7\,\checkmark\)</span>, <span class="math inline">\(4+3+1=8\,\checkmark\)</span>.</p>
+</span></p>
+<p><strong>Solution:</strong> <span class="math inline">x = 2,\; y = 3,\; z = 1</span>.</p>
+<p><strong>Check</strong> in the original: <span class="math inline">2+3+1=6\,\checkmark</span>, <span class="math inline">0+6+1=7\,\checkmark</span>, <span class="math inline">4+3+1=8\,\checkmark</span>.</p>
 <aside class="notes">
 <p>Back-substitution always starts at the last row, which has one unknown. Solve it, carry that value up into the second-last row which now has one remaining unknown, and so on. Then check all three original equations. This is the full recipe.</p>
 <style type="text/css">
@@ -676,12 +692,12 @@ x + y + z &amp;= 6 &amp;&amp;\Rightarrow\; x + 3 + 1 = 6 \;\Rightarrow\; x = 2
       }</style></aside>
 </section>
 <section id="the-inverse-one-matrix-that-undoes-a" class="slide level2">
-<h2>The inverse: one matrix that undoes <span class="math inline">\(A\)</span></h2>
-<p>The <strong>inverse</strong> <span class="math inline">\(A^{-1}\)</span> is the matrix with <span class="math inline">\(A^{-1}A = I\)</span>. Once you have it, every system with this <span class="math inline">\(A\)</span> is one multiplication:</p>
-<p><span class="math display">\[A\mathbf{x} = \mathbf{b} \quad\Rightarrow\quad \mathbf{x} = A^{-1}\mathbf{b}\]</span></p>
-<p>Why bother? In deconvolution the signatures <span class="math inline">\(A\)</span> stay the same and only the measurements <span class="math inline">\(\mathbf{b}\)</span> change from sample to sample. Invert once, reuse for every sample.</p>
-<p><strong>How:</strong> put the identity on the right, <span class="math inline">\([\,A \mid I\,]\)</span>, and keep doing row operations until the <strong>left</strong> side is <span class="math inline">\(I\)</span>. Then the right side is <span class="math inline">\(A^{-1}\)</span>:</p>
-<p><span class="math display">\[[\,A \mid I\,] \;\longrightarrow\; \cdots \;\longrightarrow\; [\,I \mid A^{-1}\,]\]</span></p>
+<h2>The inverse: one matrix that undoes <span class="math inline">A</span></h2>
+<p>The <strong>inverse</strong> <span class="math inline">A^{-1}</span> is the matrix with <span class="math inline">A^{-1}A = I</span>. Once you have it, every system with this <span class="math inline">A</span> is one multiplication:</p>
+<p><span class="math display">A\mathbf{x} = \mathbf{b} \quad\Rightarrow\quad \mathbf{x} = A^{-1}\mathbf{b}</span></p>
+<p>Why bother? In deconvolution the signatures <span class="math inline">A</span> stay the same and only the measurements <span class="math inline">\mathbf{b}</span> change from sample to sample. Invert once, reuse for every sample.</p>
+<p><strong>How:</strong> put the identity on the right, <span class="math inline">[\,A \mid I\,]</span>, and keep doing row operations until the <strong>left</strong> side is <span class="math inline">I</span>. Then the right side is <span class="math inline">A^{-1}</span>:</p>
+<p><span class="math display">[\,A \mid I\,] \;\longrightarrow\; \cdots \;\longrightarrow\; [\,I \mid A^{-1}\,]</span></p>
 <ul>
 <li>Same row operations as before, applied to the whole row.</li>
 <li>New: after reaching the staircase, also eliminate <strong>upwards</strong>, then divide each row by its diagonal number. (This is called Gauss–Jordan elimination.)</li>
@@ -702,22 +718,22 @@ x + y + z &amp;= 6 &amp;&amp;\Rightarrow\; x + 3 + 1 = 6 \;\Rightarrow\; x = 2
 </section>
 <section id="inverse-by-hand-our-22" class="slide level2">
 <h2>Inverse by hand: our 2×2</h2>
-<p><span class="math inline">\(A = \begin{pmatrix} 2 &amp; 1 \\ 1 &amp; 3 \end{pmatrix}\)</span> from before. Clear below the diagonal, then above it, then scale:</p>
-<p><span class="math display">\[
+<p><span class="math inline">A = \begin{pmatrix} 2 &amp; 1 \\ 1 &amp; 3 \end{pmatrix}</span> from before. Clear below the diagonal, then above it, then scale:</p>
+<p><span class="math display">
 \left[\begin{array}{cc|cc} 2 &amp; 1 &amp; 1 &amp; 0 \\ 1 &amp; 3 &amp; 0 &amp; 1 \end{array}\right]
 \xrightarrow{\;\text{R2}\,-\,\frac12\text{R1}\;}
 \left[\begin{array}{cc|cc} 2 &amp; 1 &amp; 1 &amp; 0 \\ 0 &amp; 2.5 &amp; -0.5 &amp; 1 \end{array}\right]
 \xrightarrow{\;\text{R2}\,\div\,2.5\;}
 \left[\begin{array}{cc|cc} 2 &amp; 1 &amp; 1 &amp; 0 \\ 0 &amp; 1 &amp; -0.2 &amp; 0.4 \end{array}\right]
-\]</span></p>
-<p><span class="math display">\[
+</span></p>
+<p><span class="math display">
 \xrightarrow{\;\text{R1}\,-\,\text{R2}\;}
 \left[\begin{array}{cc|cc} 2 &amp; 0 &amp; 1.2 &amp; -0.4 \\ 0 &amp; 1 &amp; -0.2 &amp; 0.4 \end{array}\right]
 \xrightarrow{\;\text{R1}\,\div\,2\;}
 \left[\begin{array}{cc|cc} 1 &amp; 0 &amp; 0.6 &amp; -0.2 \\ 0 &amp; 1 &amp; -0.2 &amp; 0.4 \end{array}\right]
-\]</span></p>
-<p>So <span class="math inline">\(A^{-1} = \begin{pmatrix} 0.6 &amp; -0.2 \\ -0.2 &amp; 0.4 \end{pmatrix}\)</span>. <strong>Check:</strong> <span class="math inline">\(A^{-1}\mathbf{b} = \begin{pmatrix} 0.6\cdot 8 - 0.2\cdot 9 \\ -0.2\cdot 8 + 0.4\cdot 9 \end{pmatrix} = \begin{pmatrix} 3 \\ 2 \end{pmatrix}\)</span>, the same answer as before. <span class="math inline">\(\checkmark\)</span></p>
-<p><strong>No inverse?</strong> If elimination leaves a row of <strong>zeros on the left</strong>, you can never reach <span class="math inline">\(I\)</span>: the matrix is <strong>singular</strong> (its columns point along the same line) and has no inverse.</p>
+</span></p>
+<p>So <span class="math inline">A^{-1} = \begin{pmatrix} 0.6 &amp; -0.2 \\ -0.2 &amp; 0.4 \end{pmatrix}</span>. <strong>Check:</strong> <span class="math inline">A^{-1}\mathbf{b} = \begin{pmatrix} 0.6\cdot 8 - 0.2\cdot 9 \\ -0.2\cdot 8 + 0.4\cdot 9 \end{pmatrix} = \begin{pmatrix} 3 \\ 2 \end{pmatrix}</span>, the same answer as before. <span class="math inline">\checkmark</span></p>
+<p><strong>No inverse?</strong> If elimination leaves a row of <strong>zeros on the left</strong>, you can never reach <span class="math inline">I</span>: the matrix is <strong>singular</strong> (its columns point along the same line) and has no inverse.</p>
 <aside class="notes">
 <p>Walk the four steps slowly: the first is exactly the elimination step from before, the second makes the pivot 1, the third clears the entry above the pivot, the fourth scales row 1. Every operation is applied to all four numbers in the row. Two checks students can always do: multiply A^{-1} b and compare with the earlier answer, or multiply A %*% A^{-1} and get I. The singular case connects to Linear systems in R: a zero row on the left is the same situation as “no unique solution”. (The ad - bc formula for 2x2 inverses is a bonus shortcut.)</p>
 <style type="text/css">
@@ -742,7 +758,7 @@ x + y + z &amp;= 6 &amp;&amp;\Rightarrow\; x + 3 + 1 = 6 \;\Rightarrow\; x = 2
 <span id="cb1-5"><a aria-hidden="true" tabindex="-1"></a><span class="fu">solve</span>(A, b)</span>
 <span id="cb1-6"><a aria-hidden="true" tabindex="-1"></a><span class="co"># [1] 2 3 1</span></span>
 <span id="cb1-7"><a aria-hidden="true" tabindex="-1"></a><span class="fu">solve</span>(A)       <span class="co"># one argument: the inverse</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<p><code>solve()</code> runs Gaussian elimination internally — exactly what you just did by hand, but on any size. With one argument it returns <span class="math inline">\(A^{-1}\)</span>.</p>
+<p><code>solve()</code> runs Gaussian elimination internally — exactly what you just did by hand, but on any size. With one argument it returns <span class="math inline">A^{-1}</span>.</p>
 <aside class="notes">
 <p>A quick reassurance and a hook into Linear systems in R. We will not type matrices by hand forever; solve does the elimination for us. But knowing what it does is what lets you trust it, debug it, and work without a computer. Note byrow = TRUE so the matrix reads like the page.</p>
 <style type="text/css">
@@ -761,9 +777,9 @@ x + y + z &amp;= 6 &amp;&amp;\Rightarrow\; x + 3 + 1 = 6 \;\Rightarrow\; x = 2
 <h2>Summary</h2>
 <ul>
 <li>A <strong>linear system</strong> = weighted sums of unknowns set equal to numbers.</li>
-<li>Standard form: <span class="math inline">\(A\mathbf{x} = \mathbf{b}\)</span> (<span class="math inline">\(A\)</span> coefficients, <span class="math inline">\(\mathbf{x}\)</span> unknowns, <span class="math inline">\(\mathbf{b}\)</span> measurements).</li>
+<li>Standard form: <span class="math inline">A\mathbf{x} = \mathbf{b}</span> (<span class="math inline">A</span> coefficients, <span class="math inline">\mathbf{x}</span> unknowns, <span class="math inline">\mathbf{b}</span> measurements).</li>
 <li><strong>Substitution</strong> for tiny systems; <strong>Gaussian elimination</strong> (via the augmented matrix) for anything bigger — eliminate to upper-triangular, then back-substitute.</li>
-<li><strong>Inverse:</strong> row-reduce <span class="math inline">\([\,A \mid I\,]\)</span> to <span class="math inline">\([\,I \mid A^{-1}\,]\)</span>; then <span class="math inline">\(\mathbf{x} = A^{-1}\mathbf{b}\)</span> for any <span class="math inline">\(\mathbf{b}\)</span>. A zero row on the left means no inverse.</li>
+<li><strong>Inverse:</strong> row-reduce <span class="math inline">[\,A \mid I\,]</span> to <span class="math inline">[\,I \mid A^{-1}\,]</span>; then <span class="math inline">\mathbf{x} = A^{-1}\mathbf{b}</span> for any <span class="math inline">\mathbf{b}</span>. A zero row on the left means no inverse.</li>
 <li><strong>Always check</strong> by substituting back into the original equations.</li>
 <li>Biology hook: recovering cell-type amounts from bulk measurements.</li>
 </ul>
@@ -804,7 +820,6 @@ x + y + z &amp;= 6 &amp;&amp;\Rightarrow\; x + 3 + 1 = 6 \;\Rightarrow\; x = 2
   <script src="../site_libs/revealjs/plugin/notes/notes.js"></script>
   <script src="../site_libs/revealjs/plugin/search/search.js"></script>
   <script src="../site_libs/revealjs/plugin/zoom/zoom.js"></script>
-  <script src="../site_libs/revealjs/plugin/math/math.js"></script>
   <script>window.define = window.backupDefine; window.backupDefine = undefined;</script>
 
   <script>
@@ -972,27 +987,9 @@ x + y + z &amp;= 6 &amp;&amp;\Rightarrow\; x + 3 + 1 = 6 \;\Rightarrow\; x = 2
         // Factor of the display size that should remain empty around the content
         margin: 0.1,
 
-        math: {
-          mathjax: 'https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.9/MathJax.js',
-          config: 'TeX-AMS_HTML-full',
-          tex2jax: {
-            inlineMath: [['\\(','\\)']],
-            displayMath: [['\\[','\\]']],
-            balanceBraces: true,
-            processEscapes: false,
-            processRefs: true,
-            processEnvironments: true,
-            preview: 'TeX',
-            skipTags: ['script','noscript','style','textarea','pre','code'],
-            ignoreClass: 'tex2jax_ignore',
-            processClass: 'tex2jax_process'
-          },
-        },
-
         // reveal.js plugins
         plugins: [QuartoLineHighlight, PdfExport, RevealMenu, QuartoSupport,
 
-          RevealMath,
           RevealNotes,
           RevealSearch,
           RevealZoom

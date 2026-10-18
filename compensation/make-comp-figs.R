@@ -135,9 +135,11 @@ fig("fig07-under-over.png", 1700, 850, mfrow = c(1, 2), {
 
 ## ---- fig09: similar dyes amplify noise --------------------------------------
 
-fig("fig09-similar-dyes.png", 1700, 850, mfrow = c(1, 2), {
-  cells(comp, "different dyes: det(S) = 0.995", xlab = "FITC", ylab = "PE", lim = c(-1500, 4500))
-  cells(comp2, "similar dyes: det(S2) = 0.19", xlab = "FITC", ylab = "PE", lim = c(-1500, 4500))
+fig("fig09-similar-dyes.png", 1700, 1600, mfrow = c(2, 2), {
+  cells(measured,  "different dyes: measured = S × true", lim = c(-1500, 6000))
+  cells(measured2, "similar dyes: measured = S2 × true", lim = c(-1500, 6000))
+  cells(comp,  "compensated: det(S) = 0.995", xlab = "FITC", ylab = "PE", lim = c(-1500, 6000))
+  cells(comp2, "compensated: det(S2) = 0.19", xlab = "FITC", ylab = "PE", lim = c(-1500, 6000))
 })
 
 ## ---- fig03: a real FCS file --------------------------------------------------

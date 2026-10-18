@@ -96,6 +96,22 @@
     code span.wa { color: #ff5555; } /* Warning */
   </style>
   <link rel="stylesheet" href="../site_libs/revealjs/dist/theme/quarto-bf56578b9c06c165c166475cd19dbcd1.css">
+  <script>window.backupDefine = window.define; window.define = undefined;</script><script src="https://cdn.jsdelivr.net/npm/katex@latest/dist/katex.min.js"></script>
+  <script>document.addEventListener("DOMContentLoaded", function () {
+ var mathElements = document.getElementsByClassName("math");
+ var macros = [];
+ for (var i = 0; i < mathElements.length; i++) {
+  var texText = mathElements[i].firstChild;
+  if (mathElements[i].tagName == "SPAN") {
+   katex.render(texText.data, mathElements[i], {
+    displayMode: mathElements[i].classList.contains('display'),
+    throwOnError: false,
+    macros: macros,
+    fleqn: false
+   });
+}}});
+  </script>
+  <script>window.define = window.backupDefine; window.backupDefine = undefined;</script><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@latest/dist/katex.min.css">
   <link href="../site_libs/revealjs/plugin/quarto-line-highlight/line-highlight.css" rel="stylesheet">
   <link href="../site_libs/revealjs/plugin/reveal-menu/menu.css" rel="stylesheet">
   <link href="../site_libs/revealjs/plugin/reveal-menu/quarto-menu.css" rel="stylesheet">
@@ -263,7 +279,7 @@ Quantitative biology and integrative omics
 <li>Each further PC is orthogonal to all the previous ones and captures the most remaining variance.</li>
 </ul>
 <p>PCA <strong>rotates</strong> the coordinate system so the new axes line up with the natural axes of the cloud. The data does not change — only the description of it.</p>
-<p><span class="math display">\[\text{principal components} = \text{eigenvectors of the covariance matrix}\]</span></p>
+<p><span class="math display">\text{principal components} = \text{eigenvectors of the covariance matrix}</span></p>
 
 <img data-src="fig03-tilted-cloud-pc-axes.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:55.0%"><aside class="notes">
 <p>Reuse the exact mental image from the eigen lecture — the tilted sausage-shaped cloud — because that is the bridge students already own. PCA just names the long axis PC1 and the perpendicular short axis PC2, and keeps going into higher dimensions. Stress two properties: the PCs are ordered by variance (PC1 captures the most), and they are mutually orthogonal (guaranteed because the covariance matrix is symmetric, per the spectral theorem from the eigen unit). Emphasise that PCA is a rotation, not a distortion: no information is lost if you keep all PCs; dimension reduction happens only when you choose to keep the first few.</p>
@@ -411,7 +427,7 @@ Quantitative biology and integrative omics
 <li>The <strong>PC1 scores</strong> increase steadily sample1 → sample4: PCA recovered the geneA-geneB trend we planted.</li>
 <li>These scores are what you <strong>plot</strong> to see sample structure.</li>
 </ul>
-<p>Scores are the projections of each (centered, scaled) sample onto the PC directions: <span class="math display">\[\text{scores} = X_{\text{centered, scaled}} \cdot \text{rotation}\]</span></p>
+<p>Scores are the projections of each (centered, scaled) sample onto the PC directions: <span class="math display">\text{scores} = X_{\text{centered, scaled}} \cdot \text{rotation}</span></p>
 <aside class="notes">
 <p>Scores answer where does each sample land on the new axes. Each sample’s PC1 score is its position along the direction of greatest variation. Here the PC1 scores march monotonically from sample1 to sample4, recovering exactly the trend built into the toy data. Make the projection explicit: scores equal the preprocessed data matrix times the rotation matrix — a change of basis, the same matrix-times-vector operation from the linear algebra block. This is the object we visualise: a plot of PC1 vs PC2 scores is the map that separates sample groups. Rotation is the legend (genes), scores are the map (samples); students should keep the two straight.</p>
 <style type="text/css">
@@ -494,7 +510,7 @@ Quantitative biology and integrative omics
 <span id="cb9-11"><a aria-hidden="true" tabindex="-1"></a>e<span class="sc">$</span>vectors        <span class="co"># eigenvectors == columns of pca$rotation (up to sign)</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p><strong>The eigenvalues are the per-PC variances; the eigenvectors are the loadings.</strong> PCA = eigen-decomposition of the covariance matrix. You built this engine already.</p>
 <aside class="notes">
-<p>This slide pays off the promise that PCA is not a new black box. Show the equivalence concretely: scale the data yourself, form the covariance matrix (which for scaled data equals the correlation matrix), and call eigen on it — the eigenvalues match pca<span class="math inline">\(sdev squared and the eigenvectors match pca\)</span>rotation up to sign. Emphasise that scale() and cov() reproduce exactly prcomp’s internal preprocessing. Two honest footnotes for the curious: prcomp actually uses the SVD of the data matrix rather than forming the covariance explicitly (numerically better), but the result is identical; and the eigenvalues here match sdev^2 exactly because cov uses the n-1 denominator, the same convention prcomp uses. The point for students: everything they proved by hand about symmetric matrices governs PCA.</p>
+<p>This slide pays off the promise that PCA is not a new black box. Show the equivalence concretely: scale the data yourself, form the covariance matrix (which for scaled data equals the correlation matrix), and call eigen on it — the eigenvalues match pca<span class="math inline">sdev squared and the eigenvectors match pca</span>rotation up to sign. Emphasise that scale() and cov() reproduce exactly prcomp’s internal preprocessing. Two honest footnotes for the curious: prcomp actually uses the SVD of the data matrix rather than forming the covariance explicitly (numerically better), but the result is identical; and the eigenvalues here match sdev^2 exactly because cov uses the n-1 denominator, the same convention prcomp uses. The point for students: everything they proved by hand about symmetric matrices governs PCA.</p>
 <style type="text/css">
         span.MJX_Assistive_MathML {
           position:absolute!important;
@@ -514,7 +530,7 @@ Quantitative biology and integrative omics
 <li>With genes on wildly different baseline levels (a housekeeping gene at 10,000 counts, a transcription factor at 5), the uncentered PC1 is dominated by the high-mean gene’s offset, telling you nothing.</li>
 <li><code>prcomp</code> centers by default (<code>center = TRUE</code>). Leave it on unless you have a specific reason.</li>
 </ul>
-<p><span class="math display">\[\text{centered value} = x_{ij} - \overline{x_{\cdot j}}\quad(\text{subtract gene } j\text{'s mean})\]</span></p>
+<p><span class="math display">\text{centered value} = x_{ij} - \overline{x_{\cdot j}}\quad(\text{subtract gene } j\text{'s mean})</span></p>
 
 <img data-src="fig12-centering-comparison.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:70.0%"><aside class="notes">
 <p>Centering is conceptually mandatory because variance is defined as spread about the mean; measuring spread about the origin conflates the mean with the variation and PC1 ends up pointing at the centroid. The count-data example makes it vivid: a highly expressed housekeeping gene sits far from zero, so an uncentered analysis wastes PC1 on that constant offset. prcomp defaults center to TRUE, so students rarely need to change it, but they must understand why it is there. Contrast with scaling, the next slide, which is a genuine judgement call. Keep the formula trivial: subtract each column’s mean.</p>
@@ -714,7 +730,6 @@ Quantitative biology and integrative omics
   <script src="../site_libs/revealjs/plugin/notes/notes.js"></script>
   <script src="../site_libs/revealjs/plugin/search/search.js"></script>
   <script src="../site_libs/revealjs/plugin/zoom/zoom.js"></script>
-  <script src="../site_libs/revealjs/plugin/math/math.js"></script>
   <script>window.define = window.backupDefine; window.backupDefine = undefined;</script>
 
   <script>
@@ -882,27 +897,9 @@ Quantitative biology and integrative omics
         // Factor of the display size that should remain empty around the content
         margin: 0.1,
 
-        math: {
-          mathjax: 'https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.9/MathJax.js',
-          config: 'TeX-AMS_HTML-full',
-          tex2jax: {
-            inlineMath: [['\\(','\\)']],
-            displayMath: [['\\[','\\]']],
-            balanceBraces: true,
-            processEscapes: false,
-            processRefs: true,
-            processEnvironments: true,
-            preview: 'TeX',
-            skipTags: ['script','noscript','style','textarea','pre','code'],
-            ignoreClass: 'tex2jax_ignore',
-            processClass: 'tex2jax_process'
-          },
-        },
-
         // reveal.js plugins
         plugins: [QuartoLineHighlight, PdfExport, RevealMenu, QuartoSupport,
 
-          RevealMath,
           RevealNotes,
           RevealSearch,
           RevealZoom

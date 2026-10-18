@@ -125,6 +125,7 @@ Each demo was checked by its author (node tests of the maths, scripted clicks in
 - [ ] `demos/build.sh`, `demos/tsconfig.json`, `demos/demo.css`, `demos/src/lib/ui.ts`
 - [ ] `demos/src/matrix2x2/` — matrix-transforms, matrix-images, eigen
 - [ ] `demos/src/dotproduct/` — vectors-projection
+- [ ] `demos/src/vecmini/` — minimal vector demos, `data-mode` add / scale / dot / rotate (added 2026-10-18; not yet embedded in any deck; needs audit)
 - [ ] `demos/src/twolines/` — solving-systems, solving-systems-r (added 2026-10-16; needs audit; classification by one elimination step R2 − m·R1 in `math.ts`, tolerance 1e-9 relative; drag snapping in `shiftTo`/`turnTo`)
 - [ ] `demos/src/compensation/` — compensation
 - [ ] `demos/src/markov/` — markov, markov-r (self-loop animation added 2026-10-16)

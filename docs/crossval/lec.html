@@ -96,6 +96,22 @@
     code span.wa { color: #ff5555; } /* Warning */
   </style>
   <link rel="stylesheet" href="../site_libs/revealjs/dist/theme/quarto-bf56578b9c06c165c166475cd19dbcd1.css">
+  <script>window.backupDefine = window.define; window.define = undefined;</script><script src="https://cdn.jsdelivr.net/npm/katex@latest/dist/katex.min.js"></script>
+  <script>document.addEventListener("DOMContentLoaded", function () {
+ var mathElements = document.getElementsByClassName("math");
+ var macros = [];
+ for (var i = 0; i < mathElements.length; i++) {
+  var texText = mathElements[i].firstChild;
+  if (mathElements[i].tagName == "SPAN") {
+   katex.render(texText.data, mathElements[i], {
+    displayMode: mathElements[i].classList.contains('display'),
+    throwOnError: false,
+    macros: macros,
+    fleqn: false
+   });
+}}});
+  </script>
+  <script>window.define = window.backupDefine; window.backupDefine = undefined;</script><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@latest/dist/katex.min.css">
   <link href="../site_libs/revealjs/plugin/quarto-line-highlight/line-highlight.css" rel="stylesheet">
   <link href="../site_libs/revealjs/plugin/reveal-menu/menu.css" rel="stylesheet">
   <link href="../site_libs/revealjs/plugin/reveal-menu/quarto-menu.css" rel="stylesheet">
@@ -207,14 +223,14 @@ Quantitative biology and integrative omics
 </section>
 <section id="about-this-lecture" class="slide level2">
 <h2>About this lecture</h2>
-<p>In the penalty units (<strong>L1, L2 and elastic-net penalties</strong>) we met a knob <span class="math inline">\(\lambda\)</span> that controls how hard a model is shrunk. This lecture answers two honest questions:</p>
+<p>In the penalty units (<strong>L1, L2 and elastic-net penalties</strong>) we met a knob <span class="math inline">\lambda</span> that controls how hard a model is shrunk. This lecture answers two honest questions:</p>
 <ul>
-<li><strong>How do we choose <span class="math inline">\(\lambda\)</span></strong> without just eyeballing it?</li>
+<li><strong>How do we choose <span class="math inline">\lambda</span></strong> without just eyeballing it?</li>
 <li><strong>How do we report a performance number</strong> we can actually trust on new samples?</li>
 </ul>
 <p>The single tool for both is <strong>cross-validation (CV)</strong>.</p>
 <aside class="notes">
-<p>The whole point today is honesty. In the penalty units students learned that <span class="math inline">\(\lambda\)</span> trades fit against simplicity, but we deliberately left “so what value do I use?” open. Today closes it. Frame CV as doing two distinct jobs — tuning (pick <span class="math inline">\(\lambda\)</span>) and estimation (how good is the final model) — and stress that muddling these two jobs is the most common mistake in applied omics. This is a methods day: the skills to practise are the by-hand fold arithmetic, computing MSE on held-out points, reading a CV curve, and spotting information leakage.</p>
+<p>The whole point today is honesty. In the penalty units students learned that <span class="math inline">\lambda</span> trades fit against simplicity, but we deliberately left “so what value do I use?” open. Today closes it. Frame CV as doing two distinct jobs — tuning (pick <span class="math inline">\lambda</span>) and estimation (how good is the final model) — and stress that muddling these two jobs is the most common mistake in applied omics. This is a methods day: the skills to practise are the by-hand fold arithmetic, computing MSE on held-out points, reading a CV curve, and spotting information leakage.</p>
 <style type="text/css">
         span.MJX_Assistive_MathML {
           position:absolute!important;
@@ -233,7 +249,7 @@ Quantitative biology and integrative omics
 <ul>
 <li>explain <strong>why training error is optimistic</strong> and what overfitting looks like,</li>
 <li>describe <strong>k-fold cross-validation</strong> and what each fold is for,</li>
-<li>use <strong><code>cv.glmnet</code></strong> to choose <span class="math inline">\(\lambda\)</span>, and read <code>lambda.min</code> vs <code>lambda.1se</code>,</li>
+<li>use <strong><code>cv.glmnet</code></strong> to choose <span class="math inline">\lambda</span>, and read <code>lambda.min</code> vs <code>lambda.1se</code>,</li>
 <li>separate the three roles <strong>train / validation / test</strong>,</li>
 <li>recognise <strong>information leakage</strong> and know why feature selection must live <em>inside</em> the CV loop,</li>
 <li>pick a sensible <strong>metric</strong> (MSE, deviance, AUC) for a given biological question.</li>
@@ -263,7 +279,7 @@ Quantitative biology and integrative omics
 <p>This lecture is the machinery that would have caught both problems <em>before</em> publication.</p>
 
 <img data-src="fig03-cohort-collapse.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:60.0%"><aside class="notes">
-<p>This <span class="math inline">\(p \gg n\)</span> setting (20,000 features, 80 samples) is the canonical omics trap and exactly where penalties matter. With far more genes than patients you can <em>always</em> fit the training data perfectly, so a good-looking fit means nothing on its own. Two failures are bundled here: (1) <span class="math inline">\(\lambda\)</span> chosen to look good on the training data, and (2) performance reported on training data. CV fixes the first; a held-out test set fixes the second. Keep coming back to this 80-patient example through the lecture.</p>
+<p>This <span class="math inline">p \gg n</span> setting (20,000 features, 80 samples) is the canonical omics trap and exactly where penalties matter. With far more genes than patients you can <em>always</em> fit the training data perfectly, so a good-looking fit means nothing on its own. Two failures are bundled here: (1) <span class="math inline">\lambda</span> chosen to look good on the training data, and (2) performance reported on training data. CV fixes the first; a held-out test set fixes the second. Keep coming back to this 80-patient example through the lecture.</p>
 <style type="text/css">
         span.MJX_Assistive_MathML {
           position:absolute!important;
@@ -278,17 +294,17 @@ Quantitative biology and integrative omics
 </section>
 <section id="training-error-always-lies" class="slide level2 smaller">
 <h2>Training error always lies</h2>
-<p>Fit flexibility (here: <em>less</em> shrinkage, smaller <span class="math inline">\(\lambda\)</span>) against error:</p>
+<p>Fit flexibility (here: <em>less</em> shrinkage, smaller <span class="math inline">\lambda</span>) against error:</p>
 <ul>
 <li><strong>Training error</strong> keeps dropping as the model grows more flexible — it can memorise.</li>
 <li><strong>Error on new data</strong> drops, bottoms out, then <strong>rises again</strong> as the model starts fitting noise.</li>
 </ul>
-<p>The gap between the two curves is <strong>overfitting</strong>. Training error is a biased, optimistic estimate of real performance, and the bias is worst exactly when <span class="math inline">\(p \gg n\)</span>.</p>
-<p><span class="math display">\[\text{test error} \;=\; \underbrace{\text{bias}^2}_{\text{too rigid}} \;+\; \underbrace{\text{variance}}_{\text{too flexible}} \;+\; \text{irreducible noise}\]</span></p>
+<p>The gap between the two curves is <strong>overfitting</strong>. Training error is a biased, optimistic estimate of real performance, and the bias is worst exactly when <span class="math inline">p \gg n</span>.</p>
+<p><span class="math display">\text{test error} \;=\; \underbrace{\text{bias}^2}_{\text{too rigid}} \;+\; \underbrace{\text{variance}}_{\text{too flexible}} \;+\; \text{irreducible noise}</span></p>
 <p>We cannot see the “new data” curve directly — so we <strong>simulate having new data</strong> by holding some out. That is cross-validation.</p>
 
 <img data-src="fig04-bias-variance-u.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:60.0%"><aside class="notes">
-<p>The bias–variance decomposition is the theoretical backbone; keep it light — one line, one picture. The message students must leave with: a number computed on the data you fit on is not evidence. The U-shape of test error is why there is an optimal <span class="math inline">\(\lambda\)</span> in the middle — too much shrinkage underfits (high bias), too little overfits (high variance). CV is literally a way to draw that U-shaped curve using only the data you have.</p>
+<p>The bias–variance decomposition is the theoretical backbone; keep it light — one line, one picture. The message students must leave with: a number computed on the data you fit on is not evidence. The U-shape of test error is why there is an optimal <span class="math inline">\lambda</span> in the middle — too much shrinkage underfits (high bias), too little overfits (high variance). CV is literally a way to draw that U-shaped curve using only the data you have.</p>
 <style type="text/css">
         span.MJX_Assistive_MathML {
           position:absolute!important;
@@ -336,7 +352,7 @@ Quantitative biology and integrative omics
 <p><strong>Fix:</strong> rotate the held-out part so <strong>every sample is tested exactly once</strong>, and average. That is <strong>k-fold cross-validation</strong>.</p>
 
 <img data-src="fig06-split-noise.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:65.0%"><aside class="notes">
-<p>Motivate k-fold as the cure for the two weaknesses of a single split. The small-<span class="math inline">\(n\)</span> point is deeply biological: recruiting 80 patients is expensive, so throwing away a quarter of them for one test is painful. Rotating the fold means every patient contributes to both training and testing (never simultaneously), so we use the data efficiently and average away the “unlucky split” noise.</p>
+<p>Motivate k-fold as the cure for the two weaknesses of a single split. The small-<span class="math inline">n</span> point is deeply biological: recruiting 80 patients is expensive, so throwing away a quarter of them for one test is painful. Rotating the fold means every patient contributes to both training and testing (never simultaneously), so we use the data efficiently and average away the “unlucky split” noise.</p>
 <style type="text/css">
         span.MJX_Assistive_MathML {
           position:absolute!important;
@@ -351,17 +367,17 @@ Quantitative biology and integrative omics
 </section>
 <section id="k-fold-cross-validation" class="slide level2 smaller">
 <h2>k-fold cross-validation</h2>
-<p>Split the samples into <span class="math inline">\(k\)</span> equal <strong>folds</strong> (typically <span class="math inline">\(k = 5\)</span> or <span class="math inline">\(10\)</span>). Then, <span class="math inline">\(k\)</span> times:</p>
+<p>Split the samples into <span class="math inline">k</span> equal <strong>folds</strong> (typically <span class="math inline">k = 5</span> or <span class="math inline">10</span>). Then, <span class="math inline">k</span> times:</p>
 <ul>
 <li>hold out <strong>one</strong> fold as the validation set,</li>
-<li>fit the model on the <strong>other <span class="math inline">\(k-1\)</span></strong> folds,</li>
+<li>fit the model on the <strong>other <span class="math inline">k-1</span></strong> folds,</li>
 <li>record the error on the held-out fold.</li>
 </ul>
-<p>Average the <span class="math inline">\(k\)</span> errors → the <strong>cross-validated error</strong>. Every sample is held out <strong>exactly once</strong>; every model is trained on a fraction <span class="math inline">\(\frac{k-1}{k}\)</span> of the data.</p>
-<p><span class="math display">\[\text{CV error} = \frac{1}{k}\sum_{f=1}^{k} \text{error on fold } f\]</span></p>
+<p>Average the <span class="math inline">k</span> errors → the <strong>cross-validated error</strong>. Every sample is held out <strong>exactly once</strong>; every model is trained on a fraction <span class="math inline">\frac{k-1}{k}</span> of the data.</p>
+<p><span class="math display">\text{CV error} = \frac{1}{k}\sum_{f=1}^{k} \text{error on fold } f</span></p>
 
 <img data-src="fig07-kfold-grid.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:60.0%"><aside class="notes">
-<p>Draw the classic k-fold grid on the board even though a figure is coming. Key numbers to make concrete with the 80-patient example: 10-fold means 10 folds of 8 patients; each model trains on 72, tests on 8; you fit 10 models and average 10 error estimates. Trade-off: larger <span class="math inline">\(k\)</span> = more data per fit (less bias) but more computation and higher variance between folds; <span class="math inline">\(k=10\)</span> is the standard compromise. <span class="math inline">\(k=n\)</span> is a special case (next mention: LOOCV in the exercise).</p>
+<p>Draw the classic k-fold grid on the board even though a figure is coming. Key numbers to make concrete with the 80-patient example: 10-fold means 10 folds of 8 patients; each model trains on 72, tests on 8; you fit 10 models and average 10 error estimates. Trade-off: larger <span class="math inline">k</span> = more data per fit (less bias) but more computation and higher variance between folds; <span class="math inline">k=10</span> is the standard compromise. <span class="math inline">k=n</span> is a special case (next mention: LOOCV in the exercise).</p>
 <style type="text/css">
         span.MJX_Assistive_MathML {
           position:absolute!important;
@@ -375,21 +391,21 @@ Quantitative biology and integrative omics
       }</style></aside>
 </section>
 <section id="using-cv-to-choose-lambda" class="slide level2 smaller">
-<h2>Using CV to choose <span class="math inline">\(\lambda\)</span></h2>
-<p>CV turns “pick <span class="math inline">\(\lambda\)</span>” into an experiment. Over a grid of candidate <span class="math inline">\(\lambda\)</span> values:</p>
+<h2>Using CV to choose <span class="math inline">\lambda</span></h2>
+<p>CV turns “pick <span class="math inline">\lambda</span>” into an experiment. Over a grid of candidate <span class="math inline">\lambda</span> values:</p>
 <ul>
-<li>run k-fold CV at <strong>each</strong> <span class="math inline">\(\lambda\)</span>,</li>
-<li>plot <strong>CV error vs <span class="math inline">\(\lambda\)</span></strong> — it is the U-shaped curve, now <em>measured</em>.</li>
+<li>run k-fold CV at <strong>each</strong> <span class="math inline">\lambda</span>,</li>
+<li>plot <strong>CV error vs <span class="math inline">\lambda</span></strong> — it is the U-shaped curve, now <em>measured</em>.</li>
 </ul>
 <p>Two standard choices come out:</p>
 <ul>
-<li><strong><code>lambda.min</code></strong> — the <span class="math inline">\(\lambda\)</span> with the lowest CV error (best raw performance).</li>
-<li><strong><code>lambda.1se</code></strong> — the <strong>largest</strong> <span class="math inline">\(\lambda\)</span> (simplest, most-shrunk model) whose CV error is within <strong>one standard error</strong> of the minimum.</li>
+<li><strong><code>lambda.min</code></strong> — the <span class="math inline">\lambda</span> with the lowest CV error (best raw performance).</li>
+<li><strong><code>lambda.1se</code></strong> — the <strong>largest</strong> <span class="math inline">\lambda</span> (simplest, most-shrunk model) whose CV error is within <strong>one standard error</strong> of the minimum.</li>
 </ul>
 <p><code>lambda.1se</code> deliberately trades a hair of accuracy for a <strong>simpler, more reproducible</strong> signature — often the better scientific choice.</p>
 
 <img data-src="fig08-cv-lambda-curve.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:55.0%"><aside class="notes">
-<p>This is where penalties and CV meet. The 1se rule is worth dwelling on: the CV error has uncertainty (the error bars = standard error across folds), so many <span class="math inline">\(\lambda\)</span> values are statistically indistinguishable from the best. Among those, pick the simplest (largest <span class="math inline">\(\lambda\)</span>, fewest genes). Biologically this gives a shorter, more robust gene list that is likelier to replicate — which is usually what a biomarker paper actually wants. lambda.min is fine when raw predictive accuracy is the only goal.</p>
+<p>This is where penalties and CV meet. The 1se rule is worth dwelling on: the CV error has uncertainty (the error bars = standard error across folds), so many <span class="math inline">\lambda</span> values are statistically indistinguishable from the best. Among those, pick the simplest (largest <span class="math inline">\lambda</span>, fewest genes). Biologically this gives a shorter, more robust gene list that is likelier to replicate — which is usually what a biomarker paper actually wants. lambda.min is fine when raw predictive accuracy is the only goal.</p>
 <style type="text/css">
         span.MJX_Assistive_MathML {
           position:absolute!important;
@@ -404,7 +420,7 @@ Quantitative biology and integrative omics
 </section>
 <section id="cv.glmnet-in-r" class="slide level2 smaller">
 <h2><code>cv.glmnet</code> in R</h2>
-<p><code>cv.glmnet</code> does the whole loop for you: it builds the <span class="math inline">\(\lambda\)</span> grid, runs k-fold CV, and stores both choices.</p>
+<p><code>cv.glmnet</code> does the whole loop for you: it builds the <span class="math inline">\lambda</span> grid, runs k-fold CV, and stores both choices.</p>
 <div class="sourceCode" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(glmnet)</span>
 <span id="cb1-2"><a aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb1-3"><a aria-hidden="true" tabindex="-1"></a>x <span class="ot">&lt;-</span> <span class="fu">as.matrix</span>(expr)     <span class="co"># 80 patients x 20000 genes</span></span>
@@ -423,7 +439,7 @@ Quantitative biology and integrative omics
 <span id="cb1-16"><a aria-hidden="true" tabindex="-1"></a>cvfit<span class="sc">$</span>lambda<span class="fl">.1</span>se   <span class="co"># simplest lambda within 1 SE of the best</span></span>
 <span id="cb1-17"><a aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(cvfit)        <span class="co"># the CV curve with error bars</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <aside class="notes">
-<p>This is static code — nothing runs at render time. Walk the arguments: <code>family</code> selects the error model (gaussian / binomial / poisson), <code>alpha</code> selects the penalty type from the earlier units, <code>nfolds</code> sets <span class="math inline">\(k\)</span>, <code>type.measure</code> picks the scoring metric. Stress <code>set.seed</code>: the folds are assigned at random, so results shift run to run without a seed — a reproducibility gotcha. Note glmnet standardises the predictors internally on each training fold, so you do not standardise by hand (and standardising by hand on the full data would itself leak).</p>
+<p>This is static code — nothing runs at render time. Walk the arguments: <code>family</code> selects the error model (gaussian / binomial / poisson), <code>alpha</code> selects the penalty type from the earlier units, <code>nfolds</code> sets <span class="math inline">k</span>, <code>type.measure</code> picks the scoring metric. Stress <code>set.seed</code>: the folds are assigned at random, so results shift run to run without a seed — a reproducibility gotcha. Note glmnet standardises the predictors internally on each training fold, so you do not standardise by hand (and standardising by hand on the full data would itself leak).</p>
 <style type="text/css">
         span.MJX_Assistive_MathML {
           position:absolute!important;
@@ -438,7 +454,7 @@ Quantitative biology and integrative omics
 </section>
 <section id="extracting-the-chosen-model" class="slide level2 smaller">
 <h2>Extracting the chosen model</h2>
-<p>Once CV has picked a <span class="math inline">\(\lambda\)</span>, read off the coefficients and predict:</p>
+<p>Once CV has picked a <span class="math inline">\lambda</span>, read off the coefficients and predict:</p>
 <div class="sourceCode" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a aria-hidden="true" tabindex="-1"></a><span class="co"># sparse coefficient vector at the simpler lambda</span></span>
 <span id="cb2-2"><a aria-hidden="true" tabindex="-1"></a><span class="fu">coef</span>(cvfit, <span class="at">s =</span> <span class="st">"lambda.1se"</span>)     <span class="co"># most genes are exactly 0 (lasso)</span></span>
 <span id="cb2-3"><a aria-hidden="true" tabindex="-1"></a></span>
@@ -447,11 +463,11 @@ Quantitative biology and integrative omics
 <span id="cb2-6"><a aria-hidden="true" tabindex="-1"></a>                 <span class="at">s =</span> <span class="st">"lambda.1se"</span>, <span class="at">type =</span> <span class="st">"response"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <ul>
 <li>The non-zero coefficients <strong>are</strong> your signature — the selected genes.</li>
-<li><code>s = "lambda.1se"</code> tells <code>predict</code>/<code>coef</code> which <span class="math inline">\(\lambda\)</span> to use.</li>
+<li><code>s = "lambda.1se"</code> tells <code>predict</code>/<code>coef</code> which <span class="math inline">\lambda</span> to use.</li>
 <li><code>x_new</code> must have the <strong>same genes, in the same order</strong> as the training <code>x</code>.</li>
 </ul>
 <aside class="notes">
-<p>Tie back to the disease-signature story: the lasso zeroes out almost every gene, and the survivors are the candidate biomarkers. This is where penalized regression doubles as feature selection. Remind them that <code>x_new</code> must be matched columns — a silent reordering of genes is a common and disastrous bug. But note this predicted performance is still not an honest estimate if <span class="math inline">\(\lambda\)</span> was tuned by CV on the same data — which motivates the next slide.</p>
+<p>Tie back to the disease-signature story: the lasso zeroes out almost every gene, and the survivors are the candidate biomarkers. This is where penalized regression doubles as feature selection. Remind them that <code>x_new</code> must be matched columns — a silent reordering of genes is a common and disastrous bug. But note this predicted performance is still not an honest estimate if <span class="math inline">\lambda</span> was tuned by CV on the same data — which motivates the next slide.</p>
 <style type="text/css">
         span.MJX_Assistive_MathML {
           position:absolute!important;
@@ -466,7 +482,7 @@ Quantitative biology and integrative omics
 </section>
 <section id="train-validation-test-three-jobs" class="slide level2 smaller">
 <h2>Train / validation / test: three jobs</h2>
-<p>CV that chooses <span class="math inline">\(\lambda\)</span> has already <em>used up</em> the held-out folds to make a decision. So its error is a mildly <strong>optimistic</strong> estimate of the final model. Three distinct roles:</p>
+<p>CV that chooses <span class="math inline">\lambda</span> has already <em>used up</em> the held-out folds to make a decision. So its error is a mildly <strong>optimistic</strong> estimate of the final model. Three distinct roles:</p>
 <table class="caption-top">
 <thead>
 <tr class="header">
@@ -478,12 +494,12 @@ Quantitative biology and integrative omics
 <tbody>
 <tr class="odd">
 <td><strong>Training</strong></td>
-<td>fit coefficients for a given <span class="math inline">\(\lambda\)</span></td>
+<td>fit coefficients for a given <span class="math inline">\lambda</span></td>
 <td>yes</td>
 </tr>
 <tr class="even">
 <td><strong>Validation</strong> (the CV folds)</td>
-<td>choose <span class="math inline">\(\lambda\)</span></td>
+<td>choose <span class="math inline">\lambda</span></td>
 <td>yes</td>
 </tr>
 <tr class="odd">
@@ -496,7 +512,7 @@ Quantitative biology and integrative omics
 <p>The <strong>test set</strong> is locked away until the very end and used <strong>exactly once</strong>. If you peek at it to make any choice, it stops being a test set.</p>
 
 <img data-src="fig11-train-val-test.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:70.0%"><aside class="notes">
-<p>The subtlety: because CV picked <span class="math inline">\(\lambda\)</span> to minimise the CV error, that minimum is slightly better than reality — you optimised against it. For a truly honest headline number you need data that took part in <em>no</em> decision. Practical recipe: hold out a test set first; do all CV/tuning on the rest; report the test-set number once. The gold-standard alternative is nested CV (outer loop for estimation, inner loop for tuning) — name it, and the exercise sketches it. With only 80 patients an external validation cohort is ideal but rarely available.</p>
+<p>The subtlety: because CV picked <span class="math inline">\lambda</span> to minimise the CV error, that minimum is slightly better than reality — you optimised against it. For a truly honest headline number you need data that took part in <em>no</em> decision. Practical recipe: hold out a test set first; do all CV/tuning on the rest; report the test-set number once. The gold-standard alternative is nested CV (outer loop for estimation, inner loop for tuning) — name it, and the exercise sketches it. With only 80 patients an external validation cohort is ideal but rarely available.</p>
 <style type="text/css">
         span.MJX_Assistive_MathML {
           position:absolute!important;
@@ -520,7 +536,7 @@ Quantitative biology and integrative omics
 <p><strong>Rule:</strong> feature selection is part of the model. It must happen <strong>inside</strong> each CV fold, on the training portion only.</p>
 
 <img data-src="fig12-leakage-schematic.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:65.0%"><aside class="notes">
-<p>This is the most important slide of the day (Ambroise &amp; McLachlan 2002 documented exactly this selection bias in microarray classifiers). The trap is seductive because prefiltering genes feels like harmless preprocessing, not modelling. But any step that uses <span class="math inline">\(y\)</span> — supervised filtering, choosing a threshold, even scaling using the outcome — is part of fitting and must be redone inside every fold. Give the intuition: if the held-out fold helped choose the genes, it already “leaked” into the model and can no longer test it.</p>
+<p>This is the most important slide of the day (Ambroise &amp; McLachlan 2002 documented exactly this selection bias in microarray classifiers). The trap is seductive because prefiltering genes feels like harmless preprocessing, not modelling. But any step that uses <span class="math inline">y</span> — supervised filtering, choosing a threshold, even scaling using the outcome — is part of fitting and must be redone inside every fold. Give the intuition: if the held-out fold helped choose the genes, it already “leaked” into the model and can no longer test it.</p>
 <style type="text/css">
         span.MJX_Assistive_MathML {
           position:absolute!important;
@@ -585,7 +601,7 @@ Quantitative biology and integrative omics
 <tr class="odd">
 <td>Continuous</td>
 <td>predict age from methylation</td>
-<td><strong>MSE / RMSE</strong>, <span class="math inline">\(R^2\)</span></td>
+<td><strong>MSE / RMSE</strong>, <span class="math inline">R^2</span></td>
 </tr>
 <tr class="even">
 <td>Count</td>
@@ -600,7 +616,7 @@ Quantitative biology and integrative omics
 </tbody>
 </table>
 <ul>
-<li><strong>MSE</strong> <span class="math inline">\(= \frac{1}{n}\sum (y_i - \hat y_i)^2\)</span> — average squared error; <strong>RMSE</strong> <span class="math inline">\(= \sqrt{\text{MSE}}\)</span> is back in the original units.</li>
+<li><strong>MSE</strong> <span class="math inline">= \frac{1}{n}\sum (y_i - \hat y_i)^2</span> — average squared error; <strong>RMSE</strong> <span class="math inline">= \sqrt{\text{MSE}}</span> is back in the original units.</li>
 <li><strong>Deviance</strong> generalises MSE to GLMs — the natural loss when the error model is Poisson or binomial.</li>
 <li><strong>AUC</strong> measures <strong>ranking</strong> (does the model score sick patients above healthy ones?) and is robust to class imbalance and threshold choice.</li>
 </ul>
@@ -626,10 +642,10 @@ Quantitative biology and integrative omics
 <li><strong>Train vs CV gap.</strong> Near-perfect training error with much worse CV error = overfitting. A healthy model has a <em>small</em> gap.</li>
 <li><strong>Fold-to-fold spread.</strong> If CV error swings wildly between folds, the estimate is unstable — often too few samples, or correlated/grouped samples split across folds.</li>
 </ul>
-<p>Responses: <strong>increase <span class="math inline">\(\lambda\)</span></strong> (shrink harder), reduce the feature set honestly, or get more samples.</p>
+<p>Responses: <strong>increase <span class="math inline">\lambda</span></strong> (shrink harder), reduce the feature set honestly, or get more samples.</p>
 
 <img data-src="fig15-overfit-bars.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:60.0%"><aside class="notes">
-<p>Give them a reflex: always compare training error to CV error. A large gap is the fingerprint of overfitting and the direct signal to turn <span class="math inline">\(\lambda\)</span> up. Unstable folds point to a data problem — most often that related samples (technical replicates, multiple cells from one patient, batches) are split across the train/test boundary, which leaks and inflates performance. That motivates the grouping pitfall next.</p>
+<p>Give them a reflex: always compare training error to CV error. A large gap is the fingerprint of overfitting and the direct signal to turn <span class="math inline">\lambda</span> up. Unstable folds point to a data problem — most often that related samples (technical replicates, multiple cells from one patient, batches) are split across the train/test boundary, which leaks and inflates performance. That motivates the grouping pitfall next.</p>
 <style type="text/css">
         span.MJX_Assistive_MathML {
           position:absolute!important;
@@ -647,7 +663,7 @@ Quantitative biology and integrative omics
 <ul>
 <li><strong>Grouped samples.</strong> Cells from the same patient, technical replicates, or batches must stay <strong>together</strong> in one fold (grouped CV). Splitting them leaks and inflates performance.</li>
 <li><strong>Class imbalance.</strong> With few cases, use <strong>stratified</strong> folds so each fold has both classes; prefer AUC over accuracy.</li>
-<li><strong>Small <span class="math inline">\(n\)</span>.</strong> CV estimates are themselves noisy when <span class="math inline">\(n\)</span> is small — report them with their spread, do not over-interpret the third decimal.</li>
+<li><strong>Small <span class="math inline">n</span>.</strong> CV estimates are themselves noisy when <span class="math inline">n</span> is small — report them with their spread, do not over-interpret the third decimal.</li>
 <li><strong>Batch effects.</strong> A model can “predict” disease by detecting the batch it was run in. CV will not catch this if batch is confounded with outcome.</li>
 </ul>
 
@@ -692,8 +708,8 @@ Quantitative biology and integrative omics
 <td>rotate folds; every sample tested once; average</td>
 </tr>
 <tr class="even">
-<td>Choosing <span class="math inline">\(\lambda\)</span></td>
-<td>CV error vs <span class="math inline">\(\lambda\)</span>; <code>lambda.min</code> vs <code>lambda.1se</code></td>
+<td>Choosing <span class="math inline">\lambda</span></td>
+<td>CV error vs <span class="math inline">\lambda</span>; <code>lambda.min</code> vs <code>lambda.1se</code></td>
 </tr>
 <tr class="odd">
 <td><code>cv.glmnet</code></td>
@@ -705,7 +721,7 @@ Quantitative biology and integrative omics
 </tr>
 <tr class="odd">
 <td>Leakage</td>
-<td>any <span class="math inline">\(y\)</span>-using step goes <strong>inside</strong> the CV loop</td>
+<td>any <span class="math inline">y</span>-using step goes <strong>inside</strong> the CV loop</td>
 </tr>
 <tr class="even">
 <td>Metric</td>
@@ -715,7 +731,7 @@ Quantitative biology and integrative omics
 </table>
 <p><strong>Where this leads:</strong> these same folds are how one compares <strong>lasso vs ridge vs elastic net</strong>, and how chemometrics models (<strong>PLS / OPLS</strong>) are validated. Cross-validation is the common ruler for every penalized and latent-variable model in the course.</p>
 <aside class="notes">
-<p>The one-line summary: CV is how we choose <span class="math inline">\(\lambda\)</span> honestly and estimate performance honestly, and the two jobs must not contaminate each other. Drill the leakage rule and the fold arithmetic. Preview that the same machinery generalises: comparing penalty types (the elastic-net unit) and validating chemometrics/PLS models all rest on exactly this cross-validation scaffolding.</p>
+<p>The one-line summary: CV is how we choose <span class="math inline">\lambda</span> honestly and estimate performance honestly, and the two jobs must not contaminate each other. Drill the leakage rule and the fold arithmetic. Preview that the same machinery generalises: comparing penalty types (the elastic-net unit) and validating chemometrics/PLS models all rest on exactly this cross-validation scaffolding.</p>
 <style type="text/css">
         span.MJX_Assistive_MathML {
           position:absolute!important;
@@ -750,7 +766,6 @@ Quantitative biology and integrative omics
   <script src="../site_libs/revealjs/plugin/notes/notes.js"></script>
   <script src="../site_libs/revealjs/plugin/search/search.js"></script>
   <script src="../site_libs/revealjs/plugin/zoom/zoom.js"></script>
-  <script src="../site_libs/revealjs/plugin/math/math.js"></script>
   <script>window.define = window.backupDefine; window.backupDefine = undefined;</script>
 
   <script>
@@ -918,27 +933,9 @@ Quantitative biology and integrative omics
         // Factor of the display size that should remain empty around the content
         margin: 0.1,
 
-        math: {
-          mathjax: 'https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.9/MathJax.js',
-          config: 'TeX-AMS_HTML-full',
-          tex2jax: {
-            inlineMath: [['\\(','\\)']],
-            displayMath: [['\\[','\\]']],
-            balanceBraces: true,
-            processEscapes: false,
-            processRefs: true,
-            processEnvironments: true,
-            preview: 'TeX',
-            skipTags: ['script','noscript','style','textarea','pre','code'],
-            ignoreClass: 'tex2jax_ignore',
-            processClass: 'tex2jax_process'
-          },
-        },
-
         // reveal.js plugins
         plugins: [QuartoLineHighlight, PdfExport, RevealMenu, QuartoSupport,
 
-          RevealMath,
           RevealNotes,
           RevealSearch,
           RevealZoom

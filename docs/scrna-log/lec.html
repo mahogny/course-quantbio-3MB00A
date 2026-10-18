@@ -96,6 +96,22 @@
     code span.wa { color: #ff5555; } /* Warning */
   </style>
   <link rel="stylesheet" href="../site_libs/revealjs/dist/theme/quarto-bf56578b9c06c165c166475cd19dbcd1.css">
+  <script>window.backupDefine = window.define; window.define = undefined;</script><script src="https://cdn.jsdelivr.net/npm/katex@latest/dist/katex.min.js"></script>
+  <script>document.addEventListener("DOMContentLoaded", function () {
+ var mathElements = document.getElementsByClassName("math");
+ var macros = [];
+ for (var i = 0; i < mathElements.length; i++) {
+  var texText = mathElements[i].firstChild;
+  if (mathElements[i].tagName == "SPAN") {
+   katex.render(texText.data, mathElements[i], {
+    displayMode: mathElements[i].classList.contains('display'),
+    throwOnError: false,
+    macros: macros,
+    fleqn: false
+   });
+}}});
+  </script>
+  <script>window.define = window.backupDefine; window.backupDefine = undefined;</script><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@latest/dist/katex.min.css">
   <link href="../site_libs/revealjs/plugin/quarto-line-highlight/line-highlight.css" rel="stylesheet">
   <link href="../site_libs/revealjs/plugin/reveal-menu/menu.css" rel="stylesheet">
   <link href="../site_libs/revealjs/plugin/reveal-menu/quarto-menu.css" rel="stylesheet">
@@ -211,7 +227,7 @@ Quantitative biology and integrative omics
 <ul>
 <li><strong>Why transform:</strong> expression spans orders of magnitude, changes are fold changes, and the variance of a count grows with its mean.</li>
 <li><strong>Log:</strong> turns fold changes into differences. It is <strong>nonlinear</strong>, which has consequences.</li>
-<li><strong>Pseudolog</strong> <span class="math inline">\(\log(1 + x)\)</span>: the log with a pseudocount, so that zeros survive. The pseudocount is a <strong>choice</strong>.</li>
+<li><strong>Pseudolog</strong> <span class="math inline">\log(1 + x)</span>: the log with a pseudocount, so that zeros survive. The pseudocount is a <strong>choice</strong>.</li>
 <li><strong>Plotting:</strong> a log axis is not the same as plotting log values.</li>
 </ul>
 <p>All data today are simulated <strong>single-cell</strong> counts: 400 cells (200 T cells, 200 B cells), 300 genes. Each count is a number of <strong>UMIs</strong>, tagged RNA molecules. The same reasoning applies to bulk RNA-seq, and to the limma analysis later this week.</p>
@@ -299,7 +315,7 @@ Quantitative biology and integrative omics
 <section id="log-turns-fold-changes-into-differences" class="slide level2">
 <h2>Log turns fold changes into differences</h2>
 <p>The one rule that makes logs useful:</p>
-<p><span class="math display">\[\log(a \cdot b) = \log a + \log b, \qquad \log\frac{a}{b} = \log a - \log b\]</span></p>
+<p><span class="math display">\log(a \cdot b) = \log a + \log b, \qquad \log\frac{a}{b} = \log a - \log b</span></p>
 <p>So a <strong>fold change</strong> (a ratio) becomes a <strong>difference</strong> of logs. With base 2:</p>
 <table class="caption-top">
 <thead>
@@ -307,7 +323,7 @@ Quantitative biology and integrative omics
 <th>Control</th>
 <th>Treated</th>
 <th>Fold change</th>
-<th><span class="math inline">\(\log_2\)</span> fold change</th>
+<th><span class="math inline">\log_2</span> fold change</th>
 </tr>
 </thead>
 <tbody>
@@ -315,13 +331,13 @@ Quantitative biology and integrative omics
 <td>50</td>
 <td>200</td>
 <td>4</td>
-<td><span class="math inline">\(\log_2 200 - \log_2 50 = 2\)</span></td>
+<td><span class="math inline">\log_2 200 - \log_2 50 = 2</span></td>
 </tr>
 <tr class="even">
 <td>40</td>
 <td>10</td>
 <td>0.25</td>
-<td><span class="math inline">\(-2\)</span></td>
+<td><span class="math inline">-2</span></td>
 </tr>
 <tr class="odd">
 <td>100</td>
@@ -331,8 +347,8 @@ Quantitative biology and integrative omics
 </tr>
 </tbody>
 </table>
-<p><span class="math inline">\(\log_2\)</span> FC = 1 means doubling, <span class="math inline">\(-1\)</span> halving, 0 no change. Up and down are now symmetric: 4× up is <span class="math inline">\(+2\)</span>, 4× down is <span class="math inline">\(-2\)</span>.</p>
-<p>The base only rescales: <span class="math inline">\(\log_{10} x = \log_2 x / \log_2 10\)</span>. R’s <code>log()</code> is natural log; <code>log1p()</code> too.</p>
+<p><span class="math inline">\log_2</span> FC = 1 means doubling, <span class="math inline">-1</span> halving, 0 no change. Up and down are now symmetric: 4× up is <span class="math inline">+2</span>, 4× down is <span class="math inline">-2</span>.</p>
+<p>The base only rescales: <span class="math inline">\log_{10} x = \log_2 x / \log_2 10</span>. R’s <code>log()</code> is natural log; <code>log1p()</code> too.</p>
 <aside class="notes">
 <p>This is why differential expression results are reported as log2 fold changes: a 4-fold increase and a 4-fold decrease are +2 and -2, equal and opposite, instead of 4 and 0.25. It also means that a multiplicative effect (a cell captures twice as much RNA, so every gene is doubled) becomes an additive shift of log 2 on every gene, which is easy to remove. Natural log versus log2 versus log10 only changes the units, like centimetres and inches. Seurat and scanpy use natural log for log1p; fold changes are usually reported in log2.</p>
 <style type="text/css">
@@ -349,11 +365,11 @@ Quantitative biology and integrative omics
 </section>
 <section id="log-is-not-linear" class="slide level2">
 <h2>Log is not linear</h2>
-<p>The linear test from <a href="../polar/lec.html">Polar coordinates</a>: <span class="math inline">\(f\)</span> is linear if <span class="math inline">\(f(a + b) = f(a) + f(b)\)</span> and <span class="math inline">\(f(c\,a) = c\,f(a)\)</span>. The log fails both:</p>
-<p><span class="math display">\[\log_{10}(10 + 1000) = 3.004 \quad\text{but}\quad \log_{10} 10 + \log_{10} 1000 = 1 + 3 = 4\]</span></p>
-<p><span class="math display">\[\log_{10}(2 \cdot 1000) = 3.30 \quad\text{but}\quad 2 \cdot \log_{10} 1000 = 6\]</span></p>
+<p>The linear test from <a href="../polar/lec.html">Polar coordinates</a>: <span class="math inline">f</span> is linear if <span class="math inline">f(a + b) = f(a) + f(b)</span> and <span class="math inline">f(c\,a) = c\,f(a)</span>. The log fails both:</p>
+<p><span class="math display">\log_{10}(10 + 1000) = 3.004 \quad\text{but}\quad \log_{10} 10 + \log_{10} 1000 = 1 + 3 = 4</span></p>
+<p><span class="math display">\log_{10}(2 \cdot 1000) = 3.30 \quad\text{but}\quad 2 \cdot \log_{10} 1000 = 6</span></p>
 <ul>
-<li>The log turns <strong>products</strong> into sums, not <strong>sums</strong> into sums. Scaling by <span class="math inline">\(c\)</span> becomes <strong>adding</strong> <span class="math inline">\(\log c\)</span>.</li>
+<li>The log turns <strong>products</strong> into sums, not <strong>sums</strong> into sums. Scaling by <span class="math inline">c</span> becomes <strong>adding</strong> <span class="math inline">\log c</span>.</li>
 <li>So there is no matrix for it, and the order of operations matters: anything linear (summing counts, averaging, library-size scaling, compensation in flow cytometry) must be done <strong>before</strong> the log, on the original scale.</li>
 </ul>
 <aside class="notes">
@@ -372,25 +388,25 @@ Quantitative biology and integrative omics
 </section>
 <section id="average-then-log-log-then-average" class="slide level2">
 <h2>Average, then log ≠ log, then average</h2>
-<p>Four cells of one cluster, counts for one gene: <span class="math inline">\(0, 1, 3, 15\)</span>.</p>
+<p>Four cells of one cluster, counts for one gene: <span class="math inline">0, 1, 3, 15</span>.</p>
 <table class="caption-top">
 <thead>
 <tr class="header">
 <th></th>
-<th><span class="math inline">\(\log_2(1 + x)\)</span> per cell</th>
+<th><span class="math inline">\log_2(1 + x)</span> per cell</th>
 <th>Average</th>
 </tr>
 </thead>
 <tbody>
 <tr class="odd">
 <td>Log, then average</td>
-<td><span class="math inline">\(0, 1, 2, 4\)</span></td>
+<td><span class="math inline">0, 1, 2, 4</span></td>
 <td><strong>1.75</strong></td>
 </tr>
 <tr class="even">
 <td>Average, then log</td>
-<td>mean count <span class="math inline">\(= 4.75\)</span></td>
-<td><span class="math inline">\(\log_2(5.75) =\)</span> <strong>2.52</strong></td>
+<td>mean count <span class="math inline">= 4.75</span></td>
+<td><span class="math inline">\log_2(5.75) =</span> <strong>2.52</strong></td>
 </tr>
 </tbody>
 </table>
@@ -415,16 +431,16 @@ Quantitative biology and integrative omics
 </section>
 <section id="the-zero-problem-and-the-pseudolog" class="slide level2">
 <h2>The zero problem, and the pseudolog</h2>
-<p>Half the entries in our matrix are 0 (real datasets: 90% or more), and <span class="math inline">\(\log 0 = -\infty\)</span>.</p>
-<p>The fix: add a <strong>pseudocount</strong> <span class="math inline">\(c\)</span> before taking the log. With <span class="math inline">\(c = 1\)</span> this is the <strong>pseudolog</strong>:</p>
-<p><span class="math display">\[\text{pseudolog}(x) = \log(1 + x)\]</span></p>
+<p>Half the entries in our matrix are 0 (real datasets: 90% or more), and <span class="math inline">\log 0 = -\infty</span>.</p>
+<p>The fix: add a <strong>pseudocount</strong> <span class="math inline">c</span> before taking the log. With <span class="math inline">c = 1</span> this is the <strong>pseudolog</strong>:</p>
+<p><span class="math display">\text{pseudolog}(x) = \log(1 + x)</span></p>
 <p>In R: <code>log1p(x)</code>.</p>
 <ul>
-<li><span class="math inline">\(0 \mapsto 0\)</span>: zeros stay zeros, so the matrix stays sparse.</li>
-<li>For large <span class="math inline">\(x\)</span>, <span class="math inline">\(\log(1 + x) \approx \log x\)</span>: the +1 does not matter.</li>
-<li>For small <span class="math inline">\(x\)</span> it matters a lot: <span class="math inline">\(\log(1 + x) \approx x\)</span>, the transform is almost linear near 0.</li>
+<li><span class="math inline">0 \mapsto 0</span>: zeros stay zeros, so the matrix stays sparse.</li>
+<li>For large <span class="math inline">x</span>, <span class="math inline">\log(1 + x) \approx \log x</span>: the +1 does not matter.</li>
+<li>For small <span class="math inline">x</span> it matters a lot: <span class="math inline">\log(1 + x) \approx x</span>, the transform is almost linear near 0.</li>
 </ul>
-<p>In general, <span class="math inline">\(\log(x + c)\)</span> with any pseudocount <span class="math inline">\(c &gt; 0\)</span>. Our 0, 1, 3, 15 example used <span class="math inline">\(c = 1\)</span> in base 2.</p>
+<p>In general, <span class="math inline">\log(x + c)</span> with any pseudocount <span class="math inline">c &gt; 0</span>. Our 0, 1, 3, 15 example used <span class="math inline">c = 1</span> in base 2.</p>
 <aside class="notes">
 <p>Pseudolog is our name for log(1 + x), the log with a pseudocount of 1. The pseudocount is not a correction derived from a model; it is a practical choice to make the log defined at zero. Two properties make c = 1 popular: zero maps to zero (so sparse storage still works), and near zero log(1+x) is approximately x, so tiny values are not blown up to large negative numbers. log1p in R also computes log(1 + x) accurately when x is very small, which is where the name comes from. For x = 1000, log(1001) and log(1000) differ by 0.001.</p>
 <style type="text/css">
@@ -445,14 +461,14 @@ Quantitative biology and integrative omics
 <div class="column" style="width:50%;">
 <p><img data-src="fig05-pseudocount.png" style="width:100.0%"></p>
 </div><div class="column" style="width:50%;">
-<p><span class="math inline">\(\log_2\)</span> fold change <span class="math inline">\(\log_2\frac{b + c}{a + c}\)</span> for counts <span class="math inline">\(a \to b\)</span>:</p>
+<p><span class="math inline">\log_2</span> fold change <span class="math inline">\log_2\frac{b + c}{a + c}</span> for counts <span class="math inline">a \to b</span>:</p>
 <table class="caption-top">
 <thead>
 <tr class="header">
-<th><span class="math inline">\(a \to b\)</span></th>
-<th><span class="math inline">\(c = 0.1\)</span></th>
-<th><span class="math inline">\(c = 1\)</span></th>
-<th><span class="math inline">\(c = 10\)</span></th>
+<th><span class="math inline">a \to b</span></th>
+<th><span class="math inline">c = 0.1</span></th>
+<th><span class="math inline">c = 1</span></th>
+<th><span class="math inline">c = 10</span></th>
 </tr>
 </thead>
 <tbody>
@@ -482,12 +498,12 @@ Quantitative biology and integrative omics
 </tr>
 </tbody>
 </table>
-<p>True fold change for the last three rows: 3, i.e.&nbsp;<span class="math inline">\(\log_2 3 = 1.58\)</span>.</p>
+<p>True fold change for the last three rows: 3, i.e.&nbsp;<span class="math inline">\log_2 3 = 1.58</span>.</p>
 </div></div>
 <ul>
-<li><strong>Small <span class="math inline">\(c\)</span>:</strong> the gap between 0 and 1 count is huge; noise at low counts is blown up.</li>
-<li><strong>Large <span class="math inline">\(c\)</span>:</strong> low counts are <strong>squashed</strong> together; fold changes between small values shrink towards 0.</li>
-<li>Values well above <span class="math inline">\(c\)</span> are hardly affected.</li>
+<li><strong>Small <span class="math inline">c</span>:</strong> the gap between 0 and 1 count is huge; noise at low counts is blown up.</li>
+<li><strong>Large <span class="math inline">c</span>:</strong> low counts are <strong>squashed</strong> together; fold changes between small values shrink towards 0.</li>
+<li>Values well above <span class="math inline">c</span> are hardly affected.</li>
 </ul>
 <aside class="notes">
 <p>Read the figure first: with c = 0.1, the step from 0 to 1 count is 3.5 log2 units, larger than the step from 1 to 10. With c = 10 everything below about 10 counts is squashed into a narrow band. Then the table: the same true 3-fold change gives anything from 0.24 to 1.58 depending on c and on how many counts the gene has. A difference of 0 versus 1 UMI, which is mostly sampling noise, gets log2 FC 3.46 with c = 0.1. So the pseudocount sets the count level below which differences are treated as noise. There is no single right value; c = 1 is a convention.</p>
@@ -524,13 +540,13 @@ Quantitative biology and integrative omics
 </section>
 <section id="the-pseudocount-meets-the-scale-factor" class="slide level2">
 <h2>The pseudocount meets the scale factor</h2>
-<p>Seurat’s <code>NormalizeData</code> computes <span class="math inline">\(\log\!\big(1 + \tfrac{x}{n} \cdot 10{,}000\big)\)</span> for a cell with <span class="math inline">\(n\)</span> UMIs. Rewrite it:</p>
-<p><span class="math display">\[\log\!\Big(1 + \tfrac{10{,}000}{n}\, x\Big) = \log\tfrac{10{,}000}{n} + \log\!\Big(x + \tfrac{n}{10{,}000}\Big)\]</span></p>
-<p>So in <strong>raw counts</strong>, the pseudocount is <span class="math inline">\(n / 10{,}000\)</span>, and it differs per cell:</p>
+<p>Seurat’s <code>NormalizeData</code> computes <span class="math inline">\log\!\big(1 + \tfrac{x}{n} \cdot 10{,}000\big)</span> for a cell with <span class="math inline">n</span> UMIs. Rewrite it:</p>
+<p><span class="math display">\log\!\Big(1 + \tfrac{10{,}000}{n}\, x\Big) = \log\tfrac{10{,}000}{n} + \log\!\Big(x + \tfrac{n}{10{,}000}\Big)</span></p>
+<p>So in <strong>raw counts</strong>, the pseudocount is <span class="math inline">n / 10{,}000</span>, and it differs per cell:</p>
 <table class="caption-top">
 <thead>
 <tr class="header">
-<th>UMIs in the cell, <span class="math inline">\(n\)</span></th>
+<th>UMIs in the cell, <span class="math inline">n</span></th>
 <th>1,000</th>
 <th>5,000</th>
 <th>20,000</th>
@@ -551,7 +567,7 @@ Quantitative biology and integrative omics
 </tr>
 </tbody>
 </table>
-<p>Changing the scale factor (10,000 vs <span class="math inline">\(10^6\)</span> for CPM) changes the pseudocount. Ahlmann-Eltze &amp; Huber (2023, <em>Nature Methods</em> 20:665) show the pseudocount acts like an assumed <strong>overdispersion</strong> <span class="math inline">\(\alpha\)</span>, with <span class="math inline">\(c \approx 1/(4\alpha)\)</span>: 10,000 is a reasonable choice for typical droplet data; CPM (<span class="math inline">\(10^6\)</span>) is not.</p>
+<p>Changing the scale factor (10,000 vs <span class="math inline">10^6</span> for CPM) changes the pseudocount. Ahlmann-Eltze &amp; Huber (2023, <em>Nature Methods</em> 20:665) show the pseudocount acts like an assumed <strong>overdispersion</strong> <span class="math inline">\alpha</span>, with <span class="math inline">c \approx 1/(4\alpha)</span>: 10,000 is a reasonable choice for typical droplet data; CPM (<span class="math inline">10^6</span>) is not.</p>
 <aside class="notes">
 <p>The first term, log(10000 / n), is a per-cell shift that is the same for every gene; the second is a log with pseudocount n / 10000 in raw counts. So a single UMI in a small cell becomes a large value (2.40), and in a big cell a small one (0.41). Ahlmann-Eltze and Huber, “Comparison of transformations for single-cell RNA-seq data”, Nature Methods 20, 665-672 (2023): they write the shifted logarithm log(y/s + y0) and show it approximates the variance-stabilising transform of the negative binomial when y0 = 1/(4 alpha). With the 10,000 scale factor and about 5,000 UMIs per cell the pseudocount is 0.5, i.e.&nbsp;alpha = 0.5, close to real data; CPM gives a pseudocount around 0.005, i.e.&nbsp;alpha = 50, far too large. They also found that this simple shifted log followed by PCA performed as well as or better than more sophisticated transforms in their benchmarks.</p>
 <style type="text/css">
@@ -570,7 +586,7 @@ Quantitative biology and integrative omics
 <h2>Log axis, or log values?</h2>
 
 <img data-src="fig06-plot-zeros.png" class="quarto-figure quarto-figure-center r-stretch" style="width:78.0%"><ul>
-<li><code>scale_y_log10()</code> takes the log of 0, which is <span class="math inline">\(-\infty\)</span>: the boxplot <strong>drops the zeros</strong>, with only a console warning. 161 of 200 B cells are 0, so the true median is <strong>0</strong>; the log-axis boxplot shows <strong>3.82</strong>.</li>
+<li><code>scale_y_log10()</code> takes the log of 0, which is <span class="math inline">-\infty</span>: the boxplot <strong>drops the zeros</strong>, with only a console warning. 161 of 200 B cells are 0, so the true median is <strong>0</strong>; the log-axis boxplot shows <strong>3.82</strong>.</li>
 <li>Plotting <code>log1p(expr)</code> keeps every cell; the axis can still be labelled in counts (code on the next slide).</li>
 </ul>
 <aside class="notes">
@@ -644,12 +660,12 @@ Quantitative biology and integrative omics
 </tr>
 <tr class="even">
 <td>Log</td>
-<td>fold changes become differences; <span class="math inline">\(\log_2\)</span> FC 1 = doubling</td>
+<td>fold changes become differences; <span class="math inline">\log_2</span> FC 1 = doubling</td>
 <td><code>log2(b / a)</code></td>
 </tr>
 <tr class="odd">
 <td>Not linear</td>
-<td><span class="math inline">\(\log(a + b) \ne \log a + \log b\)</span>; scaling becomes a shift</td>
+<td><span class="math inline">\log(a + b) \ne \log a + \log b</span>; scaling becomes a shift</td>
 <td>—</td>
 </tr>
 <tr class="even">
@@ -659,17 +675,17 @@ Quantitative biology and integrative omics
 </tr>
 <tr class="odd">
 <td>Pseudolog</td>
-<td><span class="math inline">\(\log(1 + x)\)</span>: 0 stays 0, ≈ <span class="math inline">\(x\)</span> near 0, ≈ <span class="math inline">\(\log x\)</span> for large <span class="math inline">\(x\)</span></td>
+<td><span class="math inline">\log(1 + x)</span>: 0 stays 0, ≈ <span class="math inline">x</span> near 0, ≈ <span class="math inline">\log x</span> for large <span class="math inline">x</span></td>
 <td><code>log1p(x)</code></td>
 </tr>
 <tr class="even">
-<td>Pseudocount <span class="math inline">\(c\)</span></td>
-<td>small <span class="math inline">\(c\)</span> blows up low-count noise; large <span class="math inline">\(c\)</span> squashes fold changes</td>
+<td>Pseudocount <span class="math inline">c</span></td>
+<td>small <span class="math inline">c</span> blows up low-count noise; large <span class="math inline">c</span> squashes fold changes</td>
 <td><code>log(x + c)</code></td>
 </tr>
 <tr class="odd">
 <td>Scale factor</td>
-<td>pseudocount in counts is <span class="math inline">\(n / 10{,}000\)</span> per cell</td>
+<td>pseudocount in counts is <span class="math inline">n / 10{,}000</span> per cell</td>
 <td><code>NormalizeData()</code></td>
 </tr>
 <tr class="even">
@@ -716,7 +732,6 @@ Quantitative biology and integrative omics
   <script src="../site_libs/revealjs/plugin/notes/notes.js"></script>
   <script src="../site_libs/revealjs/plugin/search/search.js"></script>
   <script src="../site_libs/revealjs/plugin/zoom/zoom.js"></script>
-  <script src="../site_libs/revealjs/plugin/math/math.js"></script>
   <script>window.define = window.backupDefine; window.backupDefine = undefined;</script>
 
   <script>
@@ -884,27 +899,9 @@ Quantitative biology and integrative omics
         // Factor of the display size that should remain empty around the content
         margin: 0.1,
 
-        math: {
-          mathjax: 'https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.9/MathJax.js',
-          config: 'TeX-AMS_HTML-full',
-          tex2jax: {
-            inlineMath: [['\\(','\\)']],
-            displayMath: [['\\[','\\]']],
-            balanceBraces: true,
-            processEscapes: false,
-            processRefs: true,
-            processEnvironments: true,
-            preview: 'TeX',
-            skipTags: ['script','noscript','style','textarea','pre','code'],
-            ignoreClass: 'tex2jax_ignore',
-            processClass: 'tex2jax_process'
-          },
-        },
-
         // reveal.js plugins
         plugins: [QuartoLineHighlight, PdfExport, RevealMenu, QuartoSupport,
 
-          RevealMath,
           RevealNotes,
           RevealSearch,
           RevealZoom

@@ -96,6 +96,22 @@
     code span.wa { color: #ff5555; } /* Warning */
   </style>
   <link rel="stylesheet" href="../site_libs/revealjs/dist/theme/quarto-bf56578b9c06c165c166475cd19dbcd1.css">
+  <script>window.backupDefine = window.define; window.define = undefined;</script><script src="https://cdn.jsdelivr.net/npm/katex@latest/dist/katex.min.js"></script>
+  <script>document.addEventListener("DOMContentLoaded", function () {
+ var mathElements = document.getElementsByClassName("math");
+ var macros = [];
+ for (var i = 0; i < mathElements.length; i++) {
+  var texText = mathElements[i].firstChild;
+  if (mathElements[i].tagName == "SPAN") {
+   katex.render(texText.data, mathElements[i], {
+    displayMode: mathElements[i].classList.contains('display'),
+    throwOnError: false,
+    macros: macros,
+    fleqn: false
+   });
+}}});
+  </script>
+  <script>window.define = window.backupDefine; window.backupDefine = undefined;</script><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@latest/dist/katex.min.css">
   <link href="../site_libs/revealjs/plugin/quarto-line-highlight/line-highlight.css" rel="stylesheet">
   <link href="../site_libs/revealjs/plugin/reveal-menu/menu.css" rel="stylesheet">
   <link href="../site_libs/revealjs/plugin/reveal-menu/quarto-menu.css" rel="stylesheet">
@@ -291,9 +307,9 @@ Quantitative biology and integrative omics
 <h2>Why not a Gaussian linear model?</h2>
 <p>A <code>lm(count ~ treatment)</code> assumes the response is <strong>continuous, symmetric, and constant-variance</strong>. Counts violate all three:</p>
 <ul>
-<li>counts are <strong>non-negative integers</strong> — a Gaussian puts probability on <span class="math inline">\(-3.7\)</span> cells;</li>
+<li>counts are <strong>non-negative integers</strong> — a Gaussian puts probability on <span class="math inline">-3.7</span> cells;</li>
 <li>their spread <strong>grows with the mean</strong> — big-count samples are noisier in absolute terms;</li>
-<li>they are often <strong>overdispersed</strong>: variance <span class="math inline">\(&gt;\)</span> mean, more than Poisson allows.</li>
+<li>they are often <strong>overdispersed</strong>: variance <span class="math inline">&gt;</span> mean, more than Poisson allows.</li>
 </ul>
 <p>We met these facts in the count-distributions unit (Poisson and the negative binomial). The fix is to choose an <strong>error model that generates counts</strong>, and let the mean depend on covariates through a <strong>log link</strong>.</p>
 
@@ -314,13 +330,13 @@ Quantitative biology and integrative omics
 <section id="building-block-1-the-error-model" class="slide level2 smaller">
 <h2>Building block 1 — the error model</h2>
 <p>Model each count with a <strong>negative binomial</strong>, the overdispersed cousin of the Poisson:</p>
-<p><span class="math display">\[y_i \sim \text{NegBinomial}(\mu_i, \phi), \qquad \operatorname{Var}(y_i) = \mu_i + \frac{\mu_i^2}{\phi}.\]</span></p>
+<p><span class="math display">y_i \sim \text{NegBinomial}(\mu_i, \phi), \qquad \operatorname{Var}(y_i) = \mu_i + \frac{\mu_i^2}{\phi}.</span></p>
 <ul>
-<li><span class="math inline">\(\mu_i\)</span> is the expected count; <span class="math inline">\(\phi\)</span> (the <strong>shape</strong> / dispersion) controls the extra spread.</li>
-<li>As <span class="math inline">\(\phi \to \infty\)</span> the extra term vanishes and we recover the <strong>Poisson</strong> (<span class="math inline">\(\operatorname{Var}=\mu\)</span>).</li>
-<li>Small <span class="math inline">\(\phi\)</span> = strong <strong>overdispersion</strong>: biological heterogeneity between samples beyond pure counting noise.</li>
+<li><span class="math inline">\mu_i</span> is the expected count; <span class="math inline">\phi</span> (the <strong>shape</strong> / dispersion) controls the extra spread.</li>
+<li>As <span class="math inline">\phi \to \infty</span> the extra term vanishes and we recover the <strong>Poisson</strong> (<span class="math inline">\operatorname{Var}=\mu</span>).</li>
+<li>Small <span class="math inline">\phi</span> = strong <strong>overdispersion</strong>: biological heterogeneity between samples beyond pure counting noise.</li>
 </ul>
-<p>Letting the data estimate <span class="math inline">\(\phi\)</span> means we <em>test</em> whether Poisson would have been enough, rather than assuming it.</p>
+<p>Letting the data estimate <span class="math inline">\phi</span> means we <em>test</em> whether Poisson would have been enough, rather than assuming it.</p>
 
 <img data-src="fig05-poisson-vs-negbinom.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:65.0%"><aside class="notes">
 <p>This is the NB2 parameterisation used by brms and most count-modelling tools: mean mu, variance mu + mu^2/phi. The key teaching point is that phi is not a nuisance to be hidden — it is a biologically meaningful quantity measuring sample-to-sample heterogeneity, and by putting a prior on it and estimating it we let the data tell us how far from Poisson we are. Reassure students that if the data really were Poisson, phi would be estimated large and the model would reduce to Poisson automatically. Overdispersion in immune counts is the rule, not the exception.</p>
@@ -339,11 +355,11 @@ Quantitative biology and integrative omics
 <section id="building-block-2-covariates-and-exposure" class="slide level2 smaller">
 <h2>Building block 2 — covariates and exposure</h2>
 <p>Let the log of the mean be a <strong>linear predictor</strong> — the same additive structure as a linear model, on the log scale:</p>
-<p><span class="math display">\[\log \mu_i = \underbrace{\log(\text{n\_cells}_i)}_{\text{offset (exposure)}} + \alpha + \beta_{\text{drug}}\,x_i + \beta_{\text{age}}\,(\text{age}_i - \overline{\text{age}})\]</span></p>
+<p><span class="math display">\log \mu_i = \underbrace{\log(\text{n\_cells}_i)}_{\text{offset (exposure)}} + \alpha + \beta_{\text{drug}}\,x_i + \beta_{\text{age}}\,(\text{age}_i - \overline{\text{age}})</span></p>
 <ul>
 <li>The <strong>offset</strong> (coefficient fixed at 1) turns counts into <strong>rates per cell assayed</strong> — the standard fix for library size / sequencing depth.</li>
-<li><span class="math inline">\(x_i = 1\)</span> for drug, <span class="math inline">\(0\)</span> for placebo, so <span class="math inline">\(\beta_{\text{drug}}\)</span> is the drug effect <em>on the log scale</em>.</li>
-<li><span class="math inline">\(e^{\beta_{\text{drug}}}\)</span> is a <strong>rate ratio</strong>: a multiplicative fold-change in activated T cells. Centring age makes <span class="math inline">\(\alpha\)</span> interpretable at the mean age.</li>
+<li><span class="math inline">x_i = 1</span> for drug, <span class="math inline">0</span> for placebo, so <span class="math inline">\beta_{\text{drug}}</span> is the drug effect <em>on the log scale</em>.</li>
+<li><span class="math inline">e^{\beta_{\text{drug}}}</span> is a <strong>rate ratio</strong>: a multiplicative fold-change in activated T cells. Centring age makes <span class="math inline">\alpha</span> interpretable at the mean age.</li>
 </ul>
 
 <img data-src="fig06-linear-predictor-stack.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:80.0%"><aside class="notes">
@@ -363,10 +379,10 @@ Quantitative biology and integrative omics
 <section id="building-block-3-hierarchy" class="slide level2 smaller">
 <h2>Building block 3 — hierarchy</h2>
 <p>Two samples from the same patient share that patient’s biology. Give each patient a <strong>random intercept</strong>:</p>
-<p><span class="math display">\[\log \mu_i = \dots + u_{\text{patient}[i]}, \qquad u_p \sim \text{Normal}(0,\ \sigma_{\text{patient}}).\]</span></p>
+<p><span class="math display">\log \mu_i = \dots + u_{\text{patient}[i]}, \qquad u_p \sim \text{Normal}(0,\ \sigma_{\text{patient}}).</span></p>
 <ul>
-<li><span class="math inline">\(u_p\)</span> shifts a patient up or down; <span class="math inline">\(\sigma_{\text{patient}}\)</span> is the <strong>between-patient</strong> spread (the <em>biological replicate</em> variance).</li>
-<li>The remaining scatter within a patient is <strong>technical / residual</strong> — captured by <span class="math inline">\(\phi\)</span>.</li>
+<li><span class="math inline">u_p</span> shifts a patient up or down; <span class="math inline">\sigma_{\text{patient}}</span> is the <strong>between-patient</strong> spread (the <em>biological replicate</em> variance).</li>
+<li>The remaining scatter within a patient is <strong>technical / residual</strong> — captured by <span class="math inline">\phi</span>.</li>
 <li>Hierarchy gives <strong>partial pooling</strong>: noisy patients are shrunk toward the group, borrowing strength across the cohort.</li>
 </ul>
 <p>This is the hierarchical-models unit (biological vs technical replicates) applied to our cohort.</p>
@@ -387,7 +403,7 @@ Quantitative biology and integrative omics
 </section>
 <section id="try-it-shrinking-the-patients" class="slide level2 smaller">
 <h2>Try it: shrinking the patients</h2>
-<p>A Gaussian sketch on the log scale: a patient with <span class="math inline">\(c\)</span> activated cells counted has a raw log-rate with noise variance <span class="math inline">\(\approx 1/c\)</span>, so its weight is <span class="math inline">\(w_p = c/(c + 1/\sigma_{\text{patient}}^2)\)</span>.</p>
+<p>A Gaussian sketch on the log scale: a patient with <span class="math inline">c</span> activated cells counted has a raw log-rate with noise variance <span class="math inline">\approx 1/c</span>, so its weight is <span class="math inline">w_p = c/(c + 1/\sigma_{\text{patient}}^2)</span>.</p>
 <link rel="stylesheet" href="../demos/dist/demo.css">
 <div data-demo="shrinkage" data-n="8 12 15 20 25 30 40 50 60 80 110 150" data-mu="0" data-sigma2="1" data-tau2="0.1" data-prefix="P" data-nunit=" cells" data-tauname="σ²ₚ" data-xlabel="patient effect uₚ (log-rate)"></div>
 <script src="../demos/dist/shrinkage.js"></script>
@@ -415,7 +431,7 @@ Quantitative biology and integrative omics
 <span id="cb2-5"><a aria-hidden="true" tabindex="-1"></a>  <span class="fu">prior</span>(<span class="fu">gamma</span>(<span class="fl">0.01</span>, <span class="fl">0.01</span>), <span class="at">class =</span> <span class="st">"shape"</span>)     <span class="co"># NB dispersion phi, very diffuse</span></span>
 <span id="cb2-6"><a aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <ul>
-<li><code>normal(0, 1)</code> on a log-scale coefficient says: effects near zero are most plausible, but a rate ratio of <span class="math inline">\(e^{\pm 2}\approx 0.14\)</span>–<span class="math inline">\(7.4\)</span> is easily allowed. Sceptical, not restrictive.</li>
+<li><code>normal(0, 1)</code> on a log-scale coefficient says: effects near zero are most plausible, but a rate ratio of <span class="math inline">e^{\pm 2}\approx 0.14</span>–<span class="math inline">7.4</span> is easily allowed. Sceptical, not restrictive.</li>
 <li>Priors here play the role that <strong>regularisation</strong> will play in the penalized-models block: they tame the fit without dictating the answer.</li>
 </ul>
 
@@ -436,15 +452,15 @@ Quantitative biology and integrative omics
 <section id="the-full-model-on-one-slide" class="slide level2 smaller">
 <h2>The full model on one slide</h2>
 <p>The generative story, read top to bottom — <em>how a count is born</em>:</p>
-<p><span class="math display">\[
+<p><span class="math display">
 \begin{aligned}
 y_i &amp;\sim \text{NegBinomial}(\mu_i,\ \phi) &amp;&amp;\text{(error model)}\\
 \log \mu_i &amp;= \log(\text{n\_cells}_i) + \alpha + \beta_{\text{drug}} x_i + \beta_{\text{age}}\,\widetilde{\text{age}}_i + u_{\text{patient}[i]} &amp;&amp;\text{(covariates + hierarchy)}\\
 u_p &amp;\sim \text{Normal}(0,\ \sigma_{\text{patient}}) &amp;&amp;\text{(between-patient)}\\
 \alpha \sim \text{N}(0,2),\ \ \beta &amp;\sim \text{N}(0,1),\ \ \sigma_{\text{patient}} \sim \text{Exp}(1),\ \ \phi \sim \text{Gamma}(0.01,0.01) &amp;&amp;\text{(priors)}
 \end{aligned}
-\]</span></p>
-<p>Bayes’ theorem ties it together: <span class="math inline">\(\;p(\text{parameters}\mid\text{data}) \propto \underbrace{p(\text{data}\mid\text{parameters})}_{\text{likelihood (NB)}}\;\underbrace{p(\text{parameters})}_{\text{priors}}.\)</span></p>
+</span></p>
+<p>Bayes’ theorem ties it together: <span class="math inline">\;p(\text{parameters}\mid\text{data}) \propto \underbrace{p(\text{data}\mid\text{parameters})}_{\text{likelihood (NB)}}\;\underbrace{p(\text{parameters})}_{\text{priors}}.</span></p>
 
 <img data-src="fig09-generative-dag.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:55.0%"><aside class="notes">
 <p>This is the whole model in one place: read it as a recipe that manufactures a count. Every line is a building block from earlier slides. The final proportionality is Bayes’ theorem from the opening unit of the block — posterior proportional to likelihood times prior — now instantiated with a negative-binomial likelihood and the priors we just chose. Emphasise that “fitting” means characterising that posterior distribution over alpha, the betas, sigma_patient, phi, and the twelve u_p, not finding a single best value. This slide is the one to photograph.</p>
@@ -507,7 +523,7 @@ u_p &amp;\sim \text{Normal}(0,\ \sigma_{\text{patient}}) &amp;&amp;\text{(betwee
 <span id="cb4-6"><a aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; treatmentdrug     0.47      0.09       0.29      0.65    1.00     4100      3200</span></span>
 <span id="cb4-7"><a aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; age_c            -0.012     0.010     -0.031     0.008   1.00     3500      3000</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <ul>
-<li><strong><code>Rhat</code> <span class="math inline">\(\approx 1.00\)</span></strong> (want <span class="math inline">\(&lt; 1.01\)</span>): the chains agree — they mixed.</li>
+<li><strong><code>Rhat</code> <span class="math inline">\approx 1.00</span></strong> (want <span class="math inline">&lt; 1.01</span>): the chains agree — they mixed.</li>
 <li><strong><code>ESS</code> in the thousands</strong>: enough effectively-independent draws to trust the summaries.</li>
 <li>Also check <strong>0 divergent transitions</strong> (a Stan-specific warning); divergences mean the geometry was too hard and the fit is untrustworthy.</li>
 </ul>
@@ -540,9 +556,9 @@ u_p &amp;\sim \text{Normal}(0,\ \sigma_{\text{patient}}) &amp;&amp;\text{(betwee
 <span id="cb5-9"><a aria-hidden="true" tabindex="-1"></a><span class="fu">mean</span>(post<span class="sc">$</span>b_treatmentdrug <span class="sc">&gt;</span> <span class="dv">0</span>)</span>
 <span id="cb5-10"><a aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; [1] 0.9998</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <ul>
-<li>Point estimate: the drug <strong>multiplies</strong> activated T cells by <span class="math inline">\(\approx 1.6\)</span>.</li>
-<li><strong>95% credible interval</strong> <span class="math inline">\([1.34,\ 1.92]\)</span>: a plausible range for the true effect — a statement about the <em>parameter</em>, unlike a confidence interval.</li>
-<li><span class="math inline">\(P(\beta_{\text{drug}} &gt; 0 \mid \text{data}) \approx 0.9998\)</span>: an answer to the actual question, no null hypothesis needed.</li>
+<li>Point estimate: the drug <strong>multiplies</strong> activated T cells by <span class="math inline">\approx 1.6</span>.</li>
+<li><strong>95% credible interval</strong> <span class="math inline">[1.34,\ 1.92]</span>: a plausible range for the true effect — a statement about the <em>parameter</em>, unlike a confidence interval.</li>
+<li><span class="math inline">P(\beta_{\text{drug}} &gt; 0 \mid \text{data}) \approx 0.9998</span>: an answer to the actual question, no null hypothesis needed.</li>
 </ul>
 
 <img data-src="fig12-posterior-rate-ratio.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:65.0%"><aside class="notes">
@@ -562,9 +578,9 @@ u_p &amp;\sim \text{Normal}(0,\ \sigma_{\text{patient}}) &amp;&amp;\text{(betwee
 <section id="model-checking-the-idea" class="slide level2 smaller">
 <h2>Model checking — the idea</h2>
 <p>A converged sampler only means we fitted <em>the model we wrote</em>. Is that model any good? <strong>Posterior predictive checking</strong> asks: if the model is right, would it generate data that look like ours?</p>
-<p><span class="math display">\[y^{\text{rep}} \sim p(y^{\text{rep}} \mid \text{data}) = \int p(y^{\text{rep}}\mid\theta)\,p(\theta\mid\text{data})\,d\theta\]</span></p>
+<p><span class="math display">y^{\text{rep}} \sim p(y^{\text{rep}} \mid \text{data}) = \int p(y^{\text{rep}}\mid\theta)\,p(\theta\mid\text{data})\,d\theta</span></p>
 <ul>
-<li>Draw parameters from the <strong>posterior</strong>, then simulate <strong>new datasets</strong> <span class="math inline">\(y^{\text{rep}}\)</span> from the error model.</li>
+<li>Draw parameters from the <strong>posterior</strong>, then simulate <strong>new datasets</strong> <span class="math inline">y^{\text{rep}}</span> from the error model.</li>
 <li>Compare those simulated datasets to the <strong>real</strong> data. Systematic mismatch = the model is missing something.</li>
 </ul>
 <p>This is the Bayesian analogue of residual plots — but it checks the <em>whole</em> generative story, counts and all.</p>
@@ -631,8 +647,8 @@ u_p &amp;\sim \text{Normal}(0,\ \sigma_{\text{patient}}) &amp;&amp;\text{(betwee
 <tbody>
 <tr class="odd">
 <td>Effect size</td>
-<td>coefficient <span class="math inline">\(\pm\)</span> SE from a GLM</td>
-<td>full <strong>posterior</strong> for <span class="math inline">\(\beta_{\text{drug}}\)</span></td>
+<td>coefficient <span class="math inline">\pm</span> SE from a GLM</td>
+<td>full <strong>posterior</strong> for <span class="math inline">\beta_{\text{drug}}</span></td>
 </tr>
 <tr class="even">
 <td>Uncertainty</td>
@@ -642,7 +658,7 @@ u_p &amp;\sim \text{Normal}(0,\ \sigma_{\text{patient}}) &amp;&amp;\text{(betwee
 <tr class="odd">
 <td>“Is there an effect?”</td>
 <td>p-value vs a null</td>
-<td><span class="math inline">\(P(\beta_{\text{drug}}&gt;0\mid\text{data})\)</span> directly</td>
+<td><span class="math inline">P(\beta_{\text{drug}}&gt;0\mid\text{data})</span> directly</td>
 </tr>
 <tr class="even">
 <td>Patient structure</td>
@@ -696,11 +712,11 @@ u_p &amp;\sim \text{Normal}(0,\ \sigma_{\text{patient}}) &amp;&amp;\text{(betwee
 </tr>
 <tr class="even">
 <td>Error model</td>
-<td><strong>negative binomial</strong> — counts, mean-variance link, overdispersion <span class="math inline">\(\phi\)</span></td>
+<td><strong>negative binomial</strong> — counts, mean-variance link, overdispersion <span class="math inline">\phi</span></td>
 </tr>
 <tr class="odd">
 <td>Covariates</td>
-<td>log link; <strong>offset</strong> for exposure; <span class="math inline">\(e^{\beta}\)</span> = <strong>rate ratio</strong></td>
+<td>log link; <strong>offset</strong> for exposure; <span class="math inline">e^{\beta}</span> = <strong>rate ratio</strong></td>
 </tr>
 <tr class="even">
 <td>Hierarchy</td>
@@ -720,7 +736,7 @@ u_p &amp;\sim \text{Normal}(0,\ \sigma_{\text{patient}}) &amp;&amp;\text{(betwee
 </tr>
 <tr class="even">
 <td>Read it</td>
-<td>posterior, <strong>credible interval</strong>, <span class="math inline">\(P(\text{effect}&gt;0\mid\text{data})\)</span></td>
+<td>posterior, <strong>credible interval</strong>, <span class="math inline">P(\text{effect}&gt;0\mid\text{data})</span></td>
 </tr>
 <tr class="odd">
 <td>Check it</td>
@@ -765,7 +781,6 @@ u_p &amp;\sim \text{Normal}(0,\ \sigma_{\text{patient}}) &amp;&amp;\text{(betwee
   <script src="../site_libs/revealjs/plugin/notes/notes.js"></script>
   <script src="../site_libs/revealjs/plugin/search/search.js"></script>
   <script src="../site_libs/revealjs/plugin/zoom/zoom.js"></script>
-  <script src="../site_libs/revealjs/plugin/math/math.js"></script>
   <script>window.define = window.backupDefine; window.backupDefine = undefined;</script>
 
   <script>
@@ -933,27 +948,9 @@ u_p &amp;\sim \text{Normal}(0,\ \sigma_{\text{patient}}) &amp;&amp;\text{(betwee
         // Factor of the display size that should remain empty around the content
         margin: 0.1,
 
-        math: {
-          mathjax: 'https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.9/MathJax.js',
-          config: 'TeX-AMS_HTML-full',
-          tex2jax: {
-            inlineMath: [['\\(','\\)']],
-            displayMath: [['\\[','\\]']],
-            balanceBraces: true,
-            processEscapes: false,
-            processRefs: true,
-            processEnvironments: true,
-            preview: 'TeX',
-            skipTags: ['script','noscript','style','textarea','pre','code'],
-            ignoreClass: 'tex2jax_ignore',
-            processClass: 'tex2jax_process'
-          },
-        },
-
         // reveal.js plugins
         plugins: [QuartoLineHighlight, PdfExport, RevealMenu, QuartoSupport,
 
-          RevealMath,
           RevealNotes,
           RevealSearch,
           RevealZoom

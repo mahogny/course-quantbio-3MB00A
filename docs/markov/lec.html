@@ -30,6 +30,22 @@
     }
   </style>
   <link rel="stylesheet" href="../site_libs/revealjs/dist/theme/quarto-bf56578b9c06c165c166475cd19dbcd1.css">
+  <script>window.backupDefine = window.define; window.define = undefined;</script><script src="https://cdn.jsdelivr.net/npm/katex@latest/dist/katex.min.js"></script>
+  <script>document.addEventListener("DOMContentLoaded", function () {
+ var mathElements = document.getElementsByClassName("math");
+ var macros = [];
+ for (var i = 0; i < mathElements.length; i++) {
+  var texText = mathElements[i].firstChild;
+  if (mathElements[i].tagName == "SPAN") {
+   katex.render(texText.data, mathElements[i], {
+    displayMode: mathElements[i].classList.contains('display'),
+    throwOnError: false,
+    macros: macros,
+    fleqn: false
+   });
+}}});
+  </script>
+  <script>window.define = window.backupDefine; window.backupDefine = undefined;</script><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@latest/dist/katex.min.css">
   <link href="../site_libs/revealjs/plugin/quarto-line-highlight/line-highlight.css" rel="stylesheet">
   <link href="../site_libs/revealjs/plugin/reveal-menu/menu.css" rel="stylesheet">
   <link href="../site_libs/revealjs/plugin/reveal-menu/quarto-menu.css" rel="stylesheet">
@@ -144,10 +160,10 @@ Quantitative biology and integrative omics
 <p>A DNA sequence reads <code>...A C G T A A C ...</code>. What is the probability the <strong>next</strong> base is a <code>G</code>, given the current base is a <code>C</code>? A model that answers this is a <strong>Markov chain</strong>.</p>
 <ul>
 <li><strong>States</strong> and the <strong>Markov property</strong> (the future depends only on the present).</li>
-<li>The <strong>transition matrix</strong> <span class="math inline">\(P\)</span> — and why its rows sum to 1.</li>
+<li>The <strong>transition matrix</strong> <span class="math inline">P</span> — and why its rows sum to 1.</li>
 <li>Drawing the <strong>state diagram</strong>.</li>
-<li>One step as a matrix–vector product <span class="math inline">\(\mathbf{x}_{t+1} = \mathbf{x}_t P\)</span>; many steps as <strong>powers</strong> of <span class="math inline">\(P\)</span>.</li>
-<li>How to <strong>estimate</strong> <span class="math inline">\(P\)</span> from a real sequence by <strong>counting transitions</strong>.</li>
+<li>One step as a matrix–vector product <span class="math inline">\mathbf{x}_{t+1} = \mathbf{x}_t P</span>; many steps as <strong>powers</strong> of <span class="math inline">P</span>.</li>
+<li>How to <strong>estimate</strong> <span class="math inline">P</span> from a real sequence by <strong>counting transitions</strong>.</li>
 </ul>
 <p>Today is concept + formulation. In Markov chains in R we solve these chains in R and find their long-run behaviour.</p>
 <aside class="notes">
@@ -166,7 +182,7 @@ Quantitative biology and integrative omics
 </section>
 <section id="a-biological-process-that-forgets" class="slide level2 smaller">
 <h2>A biological process that “forgets”</h2>
-<p>Imagine walking along a genome one base at a time. At each position you are in one of four <strong>states</strong>: <span class="math display">\[\{\,\mathtt{A},\ \mathtt{C},\ \mathtt{G},\ \mathtt{T}\,\}\]</span></p>
+<p>Imagine walking along a genome one base at a time. At each position you are in one of four <strong>states</strong>: <span class="math display">\{\,\mathtt{A},\ \mathtt{C},\ \mathtt{G},\ \mathtt{T}\,\}</span></p>
 <p>A <strong>first-order Markov model</strong> of the sequence says:</p>
 <blockquote>
 <p>the probability of the next base depends <strong>only</strong> on the current base — not on the whole history before it.</p>
@@ -193,13 +209,13 @@ Quantitative biology and integrative omics
 </section>
 <section id="states-and-the-markov-property" class="slide level2 smaller">
 <h2>States and the Markov property</h2>
-<p>A <strong>Markov chain</strong> is a sequence of random states <span class="math inline">\(X_0, X_1, X_2, \dots\)</span> over a finite set of states, where</p>
-<p><span class="math display">\[P(X_{t+1} = j \mid X_t = i,\ X_{t-1}, \dots, X_0) = P(X_{t+1} = j \mid X_t = i).\]</span></p>
-<p>In words: <strong>only the present state matters.</strong> The number <span class="math inline">\(P(X_{t+1}=j \mid X_t=i)\)</span> is the <strong>transition probability</strong> from state <span class="math inline">\(i\)</span> to state <span class="math inline">\(j\)</span>, written <span class="math inline">\(p_{ij}\)</span>.</p>
-<p>A second biology example — <strong>cell states</strong>: <span class="math display">\[\{\,\text{stem},\ \text{progenitor},\ \text{differentiated}\,\}\]</span> At each time step a cell may stay or move to another state, depending only on where it is now.</p>
+<p>A <strong>Markov chain</strong> is a sequence of random states <span class="math inline">X_0, X_1, X_2, \dots</span> over a finite set of states, where</p>
+<p><span class="math display">P(X_{t+1} = j \mid X_t = i,\ X_{t-1}, \dots, X_0) = P(X_{t+1} = j \mid X_t = i).</span></p>
+<p>In words: <strong>only the present state matters.</strong> The number <span class="math inline">P(X_{t+1}=j \mid X_t=i)</span> is the <strong>transition probability</strong> from state <span class="math inline">i</span> to state <span class="math inline">j</span>, written <span class="math inline">p_{ij}</span>.</p>
+<p>A second biology example — <strong>cell states</strong>: <span class="math display">\{\,\text{stem},\ \text{progenitor},\ \text{differentiated}\,\}</span> At each time step a cell may stay or move to another state, depending only on where it is now.</p>
 
 <img data-src="fig03-markov-chain-graph.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:65.0%"><aside class="notes">
-<p>Now formalise. The conditional-probability line is the definition; read it aloud in plain English. Introduce the notation <span class="math inline">\(p_{ij}\)</span> = probability of going FROM i TO j — the from/to direction is a recurring source of confusion, so fix it now. The cell-state example shows the same framework applies to discrete biological state transitions, which is where single-cell trajectory ideas live.</p>
+<p>Now formalise. The conditional-probability line is the definition; read it aloud in plain English. Introduce the notation <span class="math inline">p_{ij}</span> = probability of going FROM i TO j — the from/to direction is a recurring source of confusion, so fix it now. The cell-state example shows the same framework applies to discrete biological state transitions, which is where single-cell trajectory ideas live.</p>
 <style type="text/css">
         span.MJX_Assistive_MathML {
           position:absolute!important;
@@ -213,9 +229,9 @@ Quantitative biology and integrative omics
       }</style></aside>
 </section>
 <section id="the-transition-matrix-p" class="slide level2 smaller">
-<h2>The transition matrix <span class="math inline">\(P\)</span></h2>
-<p>Collect every <span class="math inline">\(p_{ij}\)</span> into a square matrix. For DNA, <span class="math inline">\(P\)</span> is <span class="math inline">\(4\times4\)</span> over <code>A,C,G,T</code>:</p>
-<p><span class="math display">\[
+<h2>The transition matrix <span class="math inline">P</span></h2>
+<p>Collect every <span class="math inline">p_{ij}</span> into a square matrix. For DNA, <span class="math inline">P</span> is <span class="math inline">4\times4</span> over <code>A,C,G,T</code>:</p>
+<p><span class="math display">
 P = \begin{array}{c c}
 &amp; \begin{array}{cccc}\ \mathtt{A} &amp; \ \mathtt{C} &amp; \ \mathtt{G} &amp; \ \mathtt{T}\end{array}\\
 \begin{array}{c}\mathtt{A}\\ \mathtt{C}\\ \mathtt{G}\\ \mathtt{T}\end{array} &amp;
@@ -226,8 +242,8 @@ p_{GA} &amp; p_{GC} &amp; p_{GG} &amp; p_{GT}\\
 p_{TA} &amp; p_{TC} &amp; p_{TG} &amp; p_{TT}
 \end{array}\right)
 \end{array}
-\]</span></p>
-<p><strong>Our convention:</strong> entry in <strong>row <span class="math inline">\(i\)</span>, column <span class="math inline">\(j\)</span></strong> is <span class="math inline">\(p_{ij}\)</span> = probability of going <strong>from <span class="math inline">\(i\)</span> (row) to <span class="math inline">\(j\)</span> (column)</strong>.</p>
+</span></p>
+<p><strong>Our convention:</strong> entry in <strong>row <span class="math inline">i</span>, column <span class="math inline">j</span></strong> is <span class="math inline">p_{ij}</span> = probability of going <strong>from <span class="math inline">i</span> (row) to <span class="math inline">j</span> (column)</strong>.</p>
 
 <img data-src="fig04-from-row-to-col.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:50.0%"><aside class="notes">
 <p>This is the central object of this unit and Markov chains in R. The labelled matrix makes the from-row / to-column convention visual. State the convention explicitly and commit to it — we use ROW vectors and right-multiplication throughout, so rows are “from” and columns are “to”. Warn that some textbooks use the transpose; consistency within our course matters more than matching any one book.</p>
@@ -245,10 +261,10 @@ p_{TA} &amp; p_{TC} &amp; p_{TG} &amp; p_{TT}
 </section>
 <section id="rows-sum-to-1" class="slide level2 smaller">
 <h2>Rows sum to 1</h2>
-<p>From the current state <span class="math inline">\(i\)</span>, the next base <strong>must</strong> be one of <code>A, C, G, T</code>. So the probabilities leaving state <span class="math inline">\(i\)</span> are a complete probability distribution:</p>
-<p><span class="math display">\[\sum_{j} p_{ij} = 1 \qquad \text{for every row } i.\]</span></p>
+<p>From the current state <span class="math inline">i</span>, the next base <strong>must</strong> be one of <code>A, C, G, T</code>. So the probabilities leaving state <span class="math inline">i</span> are a complete probability distribution:</p>
+<p><span class="math display">\sum_{j} p_{ij} = 1 \qquad \text{for every row } i.</span></p>
 <p>A matrix that is (i) non-negative and (ii) has every <strong>row</strong> summing to 1 is called a <strong>stochastic matrix</strong> (or row-stochastic).</p>
-<p><span class="math display">\[
+<p><span class="math display">
 P = \begin{pmatrix}
 0.3 &amp; 0.2 &amp; 0.2 &amp; 0.3\\
 0.1 &amp; 0.4 &amp; 0.4 &amp; 0.1\\
@@ -256,7 +272,7 @@ P = \begin{pmatrix}
 0.3 &amp; 0.2 &amp; 0.2 &amp; 0.3
 \end{pmatrix}
 \quad\leftarrow\ \text{each row adds to } 1
-\]</span></p>
+</span></p>
 
 <img data-src="fig05-rows-sum-to-one.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:60.0%"><aside class="notes">
 <p>The row-sum-to-1 rule is both a definition and a sanity check students will use constantly: if a row does not sum to 1, the matrix is wrong. Tie it to total probability: you leave each state with certainty, you just don’t know to where. Columns do NOT generally sum to 1 — a frequent confusion under our row convention. The example matrix has a built-in CpG-like dip we can revisit.</p>
@@ -276,14 +292,14 @@ P = \begin{pmatrix}
 <h2>The state diagram</h2>
 <p>A Markov chain is often drawn as a <strong>directed graph</strong>: one node per state, one arrow per non-zero transition, labelled with its probability.</p>
 <p>A tiny 2-state weather-style example for cells — <strong>resting (R)</strong> vs <strong>dividing (D)</strong>:</p>
-<p><span class="math display">\[P = \begin{pmatrix} 0.9 &amp; 0.1\\ 0.5 &amp; 0.5 \end{pmatrix}\]</span></p>
+<p><span class="math display">P = \begin{pmatrix} 0.9 &amp; 0.1\\ 0.5 &amp; 0.5 \end{pmatrix}</span></p>
 <pre class="text"><code>        0.1
      ┌────────►
  (R) 0.9⟲      ⟲0.5 (D)
      ◄────────┘
         0.5</code></pre>
 <ul>
-<li>Arrow R→D has weight <span class="math inline">\(0.1\)</span>; the self-loop R→R has weight <span class="math inline">\(0.9\)</span>. Row R: <span class="math inline">\(0.9+0.1=1\)</span>. ✓</li>
+<li>Arrow R→D has weight <span class="math inline">0.1</span>; the self-loop R→R has weight <span class="math inline">0.9</span>. Row R: <span class="math inline">0.9+0.1=1</span>. ✓</li>
 <li>The diagram and the matrix carry <strong>exactly the same information</strong>.</li>
 </ul>
 
@@ -304,15 +320,15 @@ P = \begin{pmatrix}
 <section id="state-as-a-distribution-vector" class="slide level2 smaller">
 <h2>State as a distribution vector</h2>
 <p>Instead of tracking one walker, track a <strong>probability distribution</strong> over states. Write it as a <strong>row vector</strong>:</p>
-<p><span class="math display">\[\mathbf{x}_t = \big(\,x_t^{A},\ x_t^{C},\ x_t^{G},\ x_t^{T}\,\big), \qquad \sum_k x_t^{k} = 1.\]</span></p>
+<p><span class="math display">\mathbf{x}_t = \big(\,x_t^{A},\ x_t^{C},\ x_t^{G},\ x_t^{T}\,\big), \qquad \sum_k x_t^{k} = 1.</span></p>
 <ul>
-<li><span class="math inline">\(\mathbf{x}_t = (1,0,0,0)\)</span> means “currently in state <code>A</code> for sure.”</li>
-<li><span class="math inline">\(\mathbf{x}_t = (0.25,0.25,0.25,0.25)\)</span> means “equally likely to be any base.”</li>
+<li><span class="math inline">\mathbf{x}_t = (1,0,0,0)</span> means “currently in state <code>A</code> for sure.”</li>
+<li><span class="math inline">\mathbf{x}_t = (0.25,0.25,0.25,0.25)</span> means “equally likely to be any base.”</li>
 </ul>
 <p>Think of it as the composition of a huge pool of independent walkers: the fraction in each state.</p>
 
 <img data-src="fig07-distribution-vector.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:70.0%"><aside class="notes">
-<p>The shift from a single walker to a distribution over states is what makes the linear algebra work. Emphasise the row-vector choice (it pairs with right-multiplication on the next slide) and that entries are non-negative and sum to 1. The “fraction of a big pool” picture is the bridge to the biology: <span class="math inline">\(\mathbf{x}_t\)</span> is the expected nucleotide composition, or the fraction of cells in each state.</p>
+<p>The shift from a single walker to a distribution over states is what makes the linear algebra work. Emphasise the row-vector choice (it pairs with right-multiplication on the next slide) and that entries are non-negative and sum to 1. The “fraction of a big pool” picture is the bridge to the biology: <span class="math inline">\mathbf{x}_t</span> is the expected nucleotide composition, or the fraction of cells in each state.</p>
 <style type="text/css">
         span.MJX_Assistive_MathML {
           position:absolute!important;
@@ -326,16 +342,16 @@ P = \begin{pmatrix}
       }</style></aside>
 </section>
 <section id="one-step-mathbfx_t1-mathbfx_t-p" class="slide level2 smaller">
-<h2>One step: <span class="math inline">\(\mathbf{x}_{t+1} = \mathbf{x}_t P\)</span></h2>
-<p>To advance one step, <strong>multiply the state row vector by <span class="math inline">\(P\)</span></strong> (vector on the left):</p>
-<p><span class="math display">\[\mathbf{x}_{t+1} = \mathbf{x}_t\, P.\]</span></p>
-<p>Each new entry is a dot product (Matrices as transformations) — the chance of <em>landing</em> in state <span class="math inline">\(j\)</span>, summed over where you came from:</p>
-<p><span class="math display">\[x_{t+1}^{\,j} = \sum_i x_t^{\,i}\, p_{ij}.\]</span></p>
-<p>Worked 2-state step with <span class="math inline">\(P=\begin{pmatrix}0.9&amp;0.1\\0.5&amp;0.5\end{pmatrix}\)</span> and <span class="math inline">\(\mathbf{x}_0=(1,0)\)</span> (start resting):</p>
-<p><span class="math display">\[\mathbf{x}_1 = (1,0)P = \big(1\cdot0.9 + 0\cdot0.5,\ \ 1\cdot0.1 + 0\cdot0.5\big) = (0.9,\ 0.1).\]</span></p>
+<h2>One step: <span class="math inline">\mathbf{x}_{t+1} = \mathbf{x}_t P</span></h2>
+<p>To advance one step, <strong>multiply the state row vector by <span class="math inline">P</span></strong> (vector on the left):</p>
+<p><span class="math display">\mathbf{x}_{t+1} = \mathbf{x}_t\, P.</span></p>
+<p>Each new entry is a dot product (Matrices as transformations) — the chance of <em>landing</em> in state <span class="math inline">j</span>, summed over where you came from:</p>
+<p><span class="math display">x_{t+1}^{\,j} = \sum_i x_t^{\,i}\, p_{ij}.</span></p>
+<p>Worked 2-state step with <span class="math inline">P=\begin{pmatrix}0.9&amp;0.1\\0.5&amp;0.5\end{pmatrix}</span> and <span class="math inline">\mathbf{x}_0=(1,0)</span> (start resting):</p>
+<p><span class="math display">\mathbf{x}_1 = (1,0)P = \big(1\cdot0.9 + 0\cdot0.5,\ \ 1\cdot0.1 + 0\cdot0.5\big) = (0.9,\ 0.1).</span></p>
 
 <img data-src="fig08-vector-matrix-step.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:70.0%"><aside class="notes">
-<p>This is THE computation of the whole week. Connect to Matrices as transformations: <span class="math inline">\(\mathbf{x}_t P\)</span> is a row vector times a matrix, each output entry a dot of the row vector with a COLUMN of P. The summation form makes the “landing in j” interpretation explicit — sum over all origins i weighted by how likely you were there. Make students reproduce the (0.9, 0.1) step by hand. Note that because we use row vectors, the vector goes on the LEFT.</p>
+<p>This is THE computation of the whole week. Connect to Matrices as transformations: <span class="math inline">\mathbf{x}_t P</span> is a row vector times a matrix, each output entry a dot of the row vector with a COLUMN of P. The summation form makes the “landing in j” interpretation explicit — sum over all origins i weighted by how likely you were there. Make students reproduce the (0.9, 0.1) step by hand. Note that because we use row vectors, the vector goes on the LEFT.</p>
 <style type="text/css">
         span.MJX_Assistive_MathML {
           position:absolute!important;
@@ -349,15 +365,15 @@ P = \begin{pmatrix}
       }</style></aside>
 </section>
 <section id="many-steps-powers-of-p" class="slide level2 smaller">
-<h2>Many steps: powers of <span class="math inline">\(P\)</span></h2>
+<h2>Many steps: powers of <span class="math inline">P</span></h2>
 <p>Apply the rule repeatedly:</p>
-<p><span class="math display">\[\mathbf{x}_2 = \mathbf{x}_1 P = (\mathbf{x}_0 P)P = \mathbf{x}_0 P^2, \qquad \mathbf{x}_t = \mathbf{x}_0\, P^{t}.\]</span></p>
-<p>So <strong><span class="math inline">\(t\)</span> steps = the <span class="math inline">\(t\)</span>-th power of <span class="math inline">\(P\)</span></strong>. Continuing the example:</p>
-<p><span class="math display">\[\mathbf{x}_2 = (0.9,0.1)P = (0.9\cdot0.9 + 0.1\cdot0.5,\ \ 0.9\cdot0.1 + 0.1\cdot0.5) = (0.86,\ 0.14).\]</span></p>
-<p>The entry <span class="math inline">\((P^t)_{ij}\)</span> is the probability of going from state <span class="math inline">\(i\)</span> to state <span class="math inline">\(j\)</span> in <strong>exactly <span class="math inline">\(t\)</span> steps</strong>.</p>
+<p><span class="math display">\mathbf{x}_2 = \mathbf{x}_1 P = (\mathbf{x}_0 P)P = \mathbf{x}_0 P^2, \qquad \mathbf{x}_t = \mathbf{x}_0\, P^{t}.</span></p>
+<p>So <strong><span class="math inline">t</span> steps = the <span class="math inline">t</span>-th power of <span class="math inline">P</span></strong>. Continuing the example:</p>
+<p><span class="math display">\mathbf{x}_2 = (0.9,0.1)P = (0.9\cdot0.9 + 0.1\cdot0.5,\ \ 0.9\cdot0.1 + 0.1\cdot0.5) = (0.86,\ 0.14).</span></p>
+<p>The entry <span class="math inline">(P^t)_{ij}</span> is the probability of going from state <span class="math inline">i</span> to state <span class="math inline">j</span> in <strong>exactly <span class="math inline">t</span> steps</strong>.</p>
 
 <img data-src="fig09-powers-chain.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:72.0%"><aside class="notes">
-<p>Powers of P are just “do one step, then another” — composition of transformations from Matrices as transformations. Two readings: multiply the distribution forward step by step, OR raise P to a power and read off multi-step transition probabilities directly. Both give the same answer. Hint at Markov chains in R without proving it: as t grows, <span class="math inline">\(\mathbf{x}_t\)</span> tends to settle down toward a fixed distribution regardless of where it started — that limit is the stationary distribution.</p>
+<p>Powers of P are just “do one step, then another” — composition of transformations from Matrices as transformations. Two readings: multiply the distribution forward step by step, OR raise P to a power and read off multi-step transition probabilities directly. Both give the same answer. Hint at Markov chains in R without proving it: as t grows, <span class="math inline">\mathbf{x}_t</span> tends to settle down toward a fixed distribution regardless of where it started — that limit is the stationary distribution.</p>
 <style type="text/css">
         span.MJX_Assistive_MathML {
           position:absolute!important;
@@ -390,8 +406,8 @@ P = \begin{pmatrix}
       }</style></aside>
 </section>
 <section id="estimating-p-from-data-count-transitions" class="slide level2 smaller">
-<h2>Estimating <span class="math inline">\(P\)</span> from data: count transitions</h2>
-<p>Where does <span class="math inline">\(P\)</span> come from? <strong>Count</strong> consecutive pairs in an observed sequence. For <code>A C G T A A C</code>:</p>
+<h2>Estimating <span class="math inline">P</span> from data: count transitions</h2>
+<p>Where does <span class="math inline">P</span> come from? <strong>Count</strong> consecutive pairs in an observed sequence. For <code>A C G T A A C</code>:</p>
 <table class="caption-top">
 <thead>
 <tr class="header">
@@ -407,8 +423,8 @@ P = \begin{pmatrix}
 <tbody>
 </tbody>
 </table>
-<p>Tally each ordered pair into a <span class="math inline">\(4\times4\)</span> <strong>count matrix</strong> <span class="math inline">\(N\)</span>, where <span class="math inline">\(N_{ij}\)</span> = number of times <code>i</code> is immediately followed by <code>j</code>. Then <strong>normalise each row</strong>:</p>
-<p><span class="math display">\[\hat p_{ij} = \frac{N_{ij}}{\sum_k N_{ik}}.\]</span></p>
+<p>Tally each ordered pair into a <span class="math inline">4\times4</span> <strong>count matrix</strong> <span class="math inline">N</span>, where <span class="math inline">N_{ij}</span> = number of times <code>i</code> is immediately followed by <code>j</code>. Then <strong>normalise each row</strong>:</p>
+<p><span class="math display">\hat p_{ij} = \frac{N_{ij}}{\sum_k N_{ik}}.</span></p>
 <p>This is the <strong>maximum-likelihood estimate</strong>: the observed fraction of <code>i</code>-followed-by-<code>j</code> among all transitions out of <code>i</code>.</p>
 
 <img data-src="fig10-count-transitions.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:70.0%"><aside class="notes">
@@ -426,11 +442,11 @@ P = \begin{pmatrix}
       }</style></aside>
 </section>
 <section id="estimating-p-a-tiny-worked-count" class="slide level2 smaller">
-<h2>Estimating <span class="math inline">\(P\)</span>: a tiny worked count</h2>
+<h2>Estimating <span class="math inline">P</span>: a tiny worked count</h2>
 <p>Sequence <code>A C G T A A C</code> has 6 transitions (one per adjacent pair):</p>
 <p><code>A→C</code>, <code>C→G</code>, <code>G→T</code>, <code>T→A</code>, <code>A→A</code>, <code>A→C</code></p>
-<p>Count matrix <span class="math inline">\(N\)</span> (rows = from, cols = to):</p>
-<p><span class="math display">\[
+<p>Count matrix <span class="math inline">N</span> (rows = from, cols = to):</p>
+<p><span class="math display">
 N = \begin{array}{cc}
 &amp; \begin{array}{cccc}\mathtt{A}&amp;\mathtt{C}&amp;\mathtt{G}&amp;\mathtt{T}\end{array}\\
 \begin{array}{c}\mathtt{A}\\\mathtt{C}\\\mathtt{G}\\\mathtt{T}\end{array}
@@ -441,8 +457,8 @@ N = \begin{array}{cc}
 1 &amp; 0 &amp; 0 &amp; 0
 \end{array}\right)
 \end{array}
-\]</span></p>
-<p>Row <code>A</code> has total 3 → <span class="math inline">\(\hat p_{A\bullet} = (1/3,\ 2/3,\ 0,\ 0)\)</span>. Rows <code>C</code>, <code>G</code>, <code>T</code> each have a single count → those rows are <span class="math inline">\((0,0,1,0)\)</span>, <span class="math inline">\((0,0,0,1)\)</span>, <span class="math inline">\((1,0,0,0)\)</span>.</p>
+</span></p>
+<p>Row <code>A</code> has total 3 → <span class="math inline">\hat p_{A\bullet} = (1/3,\ 2/3,\ 0,\ 0)</span>. Rows <code>C</code>, <code>G</code>, <code>T</code> each have a single count → those rows are <span class="math inline">(0,0,1,0)</span>, <span class="math inline">(0,0,0,1)</span>, <span class="math inline">(1,0,0,0)</span>.</p>
 <aside class="notes">
 <p>Walk through this slowly on the board. List the 6 transitions, tally into N, confirm the A-row got A→A once and A→C twice. Then normalise: only the A row has a choice (divide 1,2 by 3); the other rows have a single observed transition so they become deterministic. Point out the obvious caveat: with so little data the estimates are unreliable and some rows are undefined when a base is never seen — real estimates use long sequences and sometimes pseudocounts.</p>
 <style type="text/css">
@@ -481,38 +497,38 @@ N = \begin{array}{cc}
 <tr class="even">
 <td>Markov property</td>
 <td>future depends only on present</td>
-<td><span class="math inline">\(P(X_{t+1}\mid X_t,\dots)=P(X_{t+1}\mid X_t)\)</span></td>
+<td><span class="math inline">P(X_{t+1}\mid X_t,\dots)=P(X_{t+1}\mid X_t)</span></td>
 </tr>
 <tr class="odd">
 <td>Transition prob.</td>
-<td><span class="math inline">\(p_{ij}\)</span> = from <span class="math inline">\(i\)</span> to <span class="math inline">\(j\)</span></td>
-<td>row <span class="math inline">\(i\)</span>, column <span class="math inline">\(j\)</span></td>
+<td><span class="math inline">p_{ij}</span> = from <span class="math inline">i</span> to <span class="math inline">j</span></td>
+<td>row <span class="math inline">i</span>, column <span class="math inline">j</span></td>
 </tr>
 <tr class="even">
 <td>Stochastic matrix</td>
 <td>every <strong>row</strong> sums to 1</td>
-<td><span class="math inline">\(\sum_j p_{ij}=1\)</span></td>
+<td><span class="math inline">\sum_j p_{ij}=1</span></td>
 </tr>
 <tr class="odd">
 <td>One step</td>
-<td><span class="math inline">\(\mathbf{x}_{t+1}=\mathbf{x}_t P\)</span></td>
+<td><span class="math inline">\mathbf{x}_{t+1}=\mathbf{x}_t P</span></td>
 <td>row vector on the <strong>left</strong></td>
 </tr>
 <tr class="even">
-<td><span class="math inline">\(t\)</span> steps</td>
-<td><span class="math inline">\(\mathbf{x}_t = \mathbf{x}_0 P^t\)</span></td>
-<td>powers of <span class="math inline">\(P\)</span></td>
+<td><span class="math inline">t</span> steps</td>
+<td><span class="math inline">\mathbf{x}_t = \mathbf{x}_0 P^t</span></td>
+<td>powers of <span class="math inline">P</span></td>
 </tr>
 <tr class="odd">
-<td>Estimate <span class="math inline">\(P\)</span></td>
+<td>Estimate <span class="math inline">P</span></td>
 <td>count pairs, normalise rows</td>
-<td><span class="math inline">\(\hat p_{ij}=N_{ij}/\sum_k N_{ik}\)</span></td>
+<td><span class="math inline">\hat p_{ij}=N_{ij}/\sum_k N_{ik}</span></td>
 </tr>
 </tbody>
 </table>
-<p><strong>Next (Markov chains in R):</strong> build <span class="math inline">\(P\)</span> in R, take powers, and find the <strong>stationary distribution</strong> <span class="math inline">\(\boldsymbol\pi\)</span> where <span class="math inline">\(\boldsymbol\pi P = \boldsymbol\pi\)</span>.</p>
+<p><strong>Next (Markov chains in R):</strong> build <span class="math inline">P</span> in R, take powers, and find the <strong>stationary distribution</strong> <span class="math inline">\boldsymbol\pi</span> where <span class="math inline">\boldsymbol\pi P = \boldsymbol\pi</span>.</p>
 <aside class="notes">
-<p>The table is the cheat sheet. Re-emphasise the three things students most often get wrong: from=row/to=column, rows (not columns) sum to 1, and the vector multiplies on the LEFT. Preview Markov chains in R: the repeated multiplication settles to a fixed <span class="math inline">\(\boldsymbol\pi\)</span>, which we will find two ways — power iteration and as the eigenvector of P-transpose for eigenvalue 1, directly reusing Eigenvalues in R’s eigen(). For students who want more: the extra-material unit on continuous-time Markov chains replaces the per-step probabilities by rates (a promoter switching ON/OFF at random moments), with P ≈ I + QΔt as the link back to today’s P.</p>
+<p>The table is the cheat sheet. Re-emphasise the three things students most often get wrong: from=row/to=column, rows (not columns) sum to 1, and the vector multiplies on the LEFT. Preview Markov chains in R: the repeated multiplication settles to a fixed <span class="math inline">\boldsymbol\pi</span>, which we will find two ways — power iteration and as the eigenvector of P-transpose for eigenvalue 1, directly reusing Eigenvalues in R’s eigen(). For students who want more: the extra-material unit on continuous-time Markov chains replaces the per-step probabilities by rates (a promoter switching ON/OFF at random moments), with P ≈ I + QΔt as the link back to today’s P.</p>
 <style type="text/css">
         span.MJX_Assistive_MathML {
           position:absolute!important;
@@ -547,7 +563,6 @@ N = \begin{array}{cc}
   <script src="../site_libs/revealjs/plugin/notes/notes.js"></script>
   <script src="../site_libs/revealjs/plugin/search/search.js"></script>
   <script src="../site_libs/revealjs/plugin/zoom/zoom.js"></script>
-  <script src="../site_libs/revealjs/plugin/math/math.js"></script>
   <script>window.define = window.backupDefine; window.backupDefine = undefined;</script>
 
   <script>
@@ -715,27 +730,9 @@ N = \begin{array}{cc}
         // Factor of the display size that should remain empty around the content
         margin: 0.1,
 
-        math: {
-          mathjax: 'https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.9/MathJax.js',
-          config: 'TeX-AMS_HTML-full',
-          tex2jax: {
-            inlineMath: [['\\(','\\)']],
-            displayMath: [['\\[','\\]']],
-            balanceBraces: true,
-            processEscapes: false,
-            processRefs: true,
-            processEnvironments: true,
-            preview: 'TeX',
-            skipTags: ['script','noscript','style','textarea','pre','code'],
-            ignoreClass: 'tex2jax_ignore',
-            processClass: 'tex2jax_process'
-          },
-        },
-
         // reveal.js plugins
         plugins: [QuartoLineHighlight, PdfExport, RevealMenu, QuartoSupport,
 
-          RevealMath,
           RevealNotes,
           RevealSearch,
           RevealZoom

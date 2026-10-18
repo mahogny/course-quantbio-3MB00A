@@ -96,6 +96,22 @@
     code span.wa { color: #ff5555; } /* Warning */
   </style>
   <link rel="stylesheet" href="../site_libs/revealjs/dist/theme/quarto-bf56578b9c06c165c166475cd19dbcd1.css">
+  <script>window.backupDefine = window.define; window.define = undefined;</script><script src="https://cdn.jsdelivr.net/npm/katex@latest/dist/katex.min.js"></script>
+  <script>document.addEventListener("DOMContentLoaded", function () {
+ var mathElements = document.getElementsByClassName("math");
+ var macros = [];
+ for (var i = 0; i < mathElements.length; i++) {
+  var texText = mathElements[i].firstChild;
+  if (mathElements[i].tagName == "SPAN") {
+   katex.render(texText.data, mathElements[i], {
+    displayMode: mathElements[i].classList.contains('display'),
+    throwOnError: false,
+    macros: macros,
+    fleqn: false
+   });
+}}});
+  </script>
+  <script>window.define = window.backupDefine; window.backupDefine = undefined;</script><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@latest/dist/katex.min.css">
   <link href="../site_libs/revealjs/plugin/quarto-line-highlight/line-highlight.css" rel="stylesheet">
   <link href="../site_libs/revealjs/plugin/reveal-menu/menu.css" rel="stylesheet">
   <link href="../site_libs/revealjs/plugin/reveal-menu/quarto-menu.css" rel="stylesheet">
@@ -209,13 +225,13 @@ Quantitative biology and integrative omics
 <h2>About this lecture</h2>
 <p>This is an <strong>extra-material</strong> unit following Hidden Markov models. There you built HMMs by hand; today we let R do the heavy lifting on genome-like data. By the end you will be able to:</p>
 <ul>
-<li>Build an HMM in R with the CRAN <a href="https://cran.r-project.org/package=HMM"><code>HMM</code></a> package via <code>initHMM</code> (states, symbols, <span class="math inline">\(\boldsymbol{\pi}\)</span>, <span class="math inline">\(A\)</span>, <span class="math inline">\(B\)</span>).</li>
+<li>Build an HMM in R with the CRAN <a href="https://cran.r-project.org/package=HMM"><code>HMM</code></a> package via <code>initHMM</code> (states, symbols, <span class="math inline">\boldsymbol{\pi}</span>, <span class="math inline">A</span>, <span class="math inline">B</span>).</li>
 <li><strong>Simulate</strong> sequence with <code>simHMM</code> and recover its likelihood with <code>forward</code>.</li>
 <li><strong>Decode</strong> the most likely hidden-state path with <code>viterbi</code> and read it as a predicted <strong>CpG-island map</strong>.</li>
-<li><strong>Learn</strong> the parameters <span class="math inline">\(A\)</span>, <span class="math inline">\(B\)</span>, <span class="math inline">\(\boldsymbol{\pi}\)</span> from <em>unlabelled</em> sequence with <code>baumWelch</code>.</li>
+<li><strong>Learn</strong> the parameters <span class="math inline">A</span>, <span class="math inline">B</span>, <span class="math inline">\boldsymbol{\pi}</span> from <em>unlabelled</em> sequence with <code>baumWelch</code>.</li>
 <li>Discuss <strong>how many states</strong> to use and the main <strong>pitfalls</strong>.</li>
 </ul>
-<p>Notation as in Hidden Markov models: transition matrix <span class="math inline">\(A\)</span>, emission matrix <span class="math inline">\(B\)</span>, initial distribution <span class="math inline">\(\boldsymbol{\pi}\)</span>, hidden states <span class="math inline">\(\mathbf{z}\)</span>, observations <span class="math inline">\(\mathbf{x}\)</span>.</p>
+<p>Notation as in Hidden Markov models: transition matrix <span class="math inline">A</span>, emission matrix <span class="math inline">B</span>, initial distribution <span class="math inline">\boldsymbol{\pi}</span>, hidden states <span class="math inline">\mathbf{z}</span>, observations <span class="math inline">\mathbf{x}</span>.</p>
 <aside class="notes">
 <p>Welcome to the second HMM unit (candidate material). Hidden Markov models was all concept and pen-and-paper; today is hands-on R. We use the same two-state GC-rich versus normal model so nothing about the biology is new — only the tooling. The HMM package gives us one function per task: build, simulate, score, decode, and learn. Code on these slides is illustrative, not executable; the exercise is where you run it.</p>
 <style type="text/css">
@@ -232,7 +248,7 @@ Quantitative biology and integrative omics
 </section>
 <section id="recap-and-todays-tool" class="slide level2 smaller">
 <h2>Recap and today’s tool</h2>
-<p>Hidden Markov models: an HMM = hidden states + transition matrix <span class="math inline">\(A\)</span> + emission matrix <span class="math inline">\(B\)</span> + initial distribution <span class="math inline">\(\boldsymbol{\pi}\)</span>, with three problems — <strong>likelihood</strong> (forward), <strong>decoding</strong> (Viterbi), <strong>learning</strong> (Baum–Welch).</p>
+<p>Hidden Markov models: an HMM = hidden states + transition matrix <span class="math inline">A</span> + emission matrix <span class="math inline">B</span> + initial distribution <span class="math inline">\boldsymbol{\pi}</span>, with three problems — <strong>likelihood</strong> (forward), <strong>decoding</strong> (Viterbi), <strong>learning</strong> (Baum–Welch).</p>
 <p>The CRAN <a href="https://cran.r-project.org/package=HMM"><code>HMM</code></a> package gives one function for each:</p>
 <table class="caption-top">
 <thead>
@@ -251,15 +267,15 @@ Quantitative biology and integrative omics
 <td><code>simHMM</code></td>
 </tr>
 <tr class="odd">
-<td>likelihood <span class="math inline">\(P(\mathbf{x})\)</span></td>
+<td>likelihood <span class="math inline">P(\mathbf{x})</span></td>
 <td><code>forward</code> (and <code>backward</code>)</td>
 </tr>
 <tr class="even">
-<td>decode best path <span class="math inline">\(\mathbf{z}^\*\)</span></td>
+<td>decode best path <span class="math inline">\mathbf{z}^\*</span></td>
 <td><code>viterbi</code></td>
 </tr>
 <tr class="odd">
-<td>learn <span class="math inline">\(A, B, \boldsymbol{\pi}\)</span></td>
+<td>learn <span class="math inline">A, B, \boldsymbol{\pi}</span></td>
 <td><code>baumWelch</code></td>
 </tr>
 </tbody>
@@ -283,7 +299,7 @@ Quantitative biology and integrative omics
 </section>
 <section id="building-the-model-with-inithmm" class="slide level2 smaller">
 <h2>Building the model with <code>initHMM</code></h2>
-<p>The same 2-state model as in Hidden Markov models. States <span class="math inline">\(H\)</span> (GC-rich), <span class="math inline">\(L\)</span> (normal); symbols the bases.</p>
+<p>The same 2-state model as in Hidden Markov models. States <span class="math inline">H</span> (GC-rich), <span class="math inline">L</span> (normal); symbols the bases.</p>
 <div class="sourceCode" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(HMM)</span>
 <span id="cb2-2"><a aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb2-3"><a aria-hidden="true" tabindex="-1"></a>states  <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">"H"</span>, <span class="st">"L"</span>)</span>
@@ -350,7 +366,7 @@ Quantitative biology and integrative omics
 </section>
 <section id="likelihood-with-forward" class="slide level2 smaller">
 <h2>Likelihood with <code>forward</code></h2>
-<p><code>forward</code> returns a matrix of <strong>log</strong> forward probabilities, states × position. The likelihood <span class="math inline">\(P(\mathbf{x})\)</span> is recovered from the <strong>last column</strong>.</p>
+<p><code>forward</code> returns a matrix of <strong>log</strong> forward probabilities, states × position. The likelihood <span class="math inline">P(\mathbf{x})</span> is recovered from the <strong>last column</strong>.</p>
 <div class="sourceCode" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a aria-hidden="true" tabindex="-1"></a>obs <span class="ot">&lt;-</span> sim<span class="sc">$</span>observation</span>
 <span id="cb4-2"><a aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb4-3"><a aria-hidden="true" tabindex="-1"></a>f <span class="ot">&lt;-</span> <span class="fu">forward</span>(hmm, obs)        <span class="co"># log alpha values, rows = states, cols = positions</span></span>
@@ -411,7 +427,7 @@ Quantitative biology and integrative omics
 </section>
 <section id="learning-with-baumwelch" class="slide level2 smaller">
 <h2>Learning with <code>baumWelch</code></h2>
-<p>So far we <strong>supplied</strong> <span class="math inline">\(A, B, \boldsymbol{\pi}\)</span>. The realistic case: only raw sequence, no labels. <code>baumWelch</code> learns the parameters by EM.</p>
+<p>So far we <strong>supplied</strong> <span class="math inline">A, B, \boldsymbol{\pi}</span>. The realistic case: only raw sequence, no labels. <code>baumWelch</code> learns the parameters by EM.</p>
 <div class="sourceCode" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a aria-hidden="true" tabindex="-1"></a><span class="co"># Start from an imperfect, asymmetric guess. Identical state rows would remain</span></span>
 <span id="cb6-2"><a aria-hidden="true" tabindex="-1"></a><span class="co"># identical under EM, so they cannot teach the algorithm to distinguish states.</span></span>
 <span id="cb6-3"><a aria-hidden="true" tabindex="-1"></a>guess <span class="ot">&lt;-</span> <span class="fu">initHMM</span>(states, symbols,</span>
@@ -512,7 +528,7 @@ Quantitative biology and integrative omics
 <li><strong>Symbols.</strong> Use the 4 bases, or richer features (dinucleotides like <code>CpG</code>, or k-mers) for sharper islands.</li>
 <li><strong>Scale.</strong> Real sequences are megabases long; <code>forward</code>/<code>viterbi</code> are linear in length, so this is fine — but <strong>work in logs</strong> (the package does).</li>
 <li><strong>Validation.</strong> Compare decoded islands against annotated CpG islands (e.g.&nbsp;UCSC tracks) to judge the model.</li>
-<li><strong>Beyond 2 states.</strong> Gene-finding HMMs (e.g.&nbsp;GENSCAN-style) use many states for exons, introns, splice sites — same machinery, bigger <span class="math inline">\(A\)</span> and <span class="math inline">\(B\)</span>.</li>
+<li><strong>Beyond 2 states.</strong> Gene-finding HMMs (e.g.&nbsp;GENSCAN-style) use many states for exons, introns, splice sites — same machinery, bigger <span class="math inline">A</span> and <span class="math inline">B</span>.</li>
 </ul>
 <aside class="notes">
 <p>Bridge from the toy to practice. The biggest real-world refinement is the emission alphabet: modelling dinucleotides captures CpG depletion far better than single bases. Reassure them that scale is not a problem because the algorithms are linear in sequence length. Stress validation against known annotations, and note that serious gene finders are just large HMMs with the identical forward, Viterbi, and Baum-Welch underneath.</p>
@@ -596,7 +612,6 @@ Quantitative biology and integrative omics
   <script src="../site_libs/revealjs/plugin/notes/notes.js"></script>
   <script src="../site_libs/revealjs/plugin/search/search.js"></script>
   <script src="../site_libs/revealjs/plugin/zoom/zoom.js"></script>
-  <script src="../site_libs/revealjs/plugin/math/math.js"></script>
   <script>window.define = window.backupDefine; window.backupDefine = undefined;</script>
 
   <script>
@@ -764,27 +779,9 @@ Quantitative biology and integrative omics
         // Factor of the display size that should remain empty around the content
         margin: 0.1,
 
-        math: {
-          mathjax: 'https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.9/MathJax.js',
-          config: 'TeX-AMS_HTML-full',
-          tex2jax: {
-            inlineMath: [['\\(','\\)']],
-            displayMath: [['\\[','\\]']],
-            balanceBraces: true,
-            processEscapes: false,
-            processRefs: true,
-            processEnvironments: true,
-            preview: 'TeX',
-            skipTags: ['script','noscript','style','textarea','pre','code'],
-            ignoreClass: 'tex2jax_ignore',
-            processClass: 'tex2jax_process'
-          },
-        },
-
         // reveal.js plugins
         plugins: [QuartoLineHighlight, PdfExport, RevealMenu, QuartoSupport,
 
-          RevealMath,
           RevealNotes,
           RevealSearch,
           RevealZoom

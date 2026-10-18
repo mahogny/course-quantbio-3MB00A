@@ -96,6 +96,22 @@
     code span.wa { color: #ff5555; } /* Warning */
   </style>
   <link rel="stylesheet" href="../site_libs/revealjs/dist/theme/quarto-bf56578b9c06c165c166475cd19dbcd1.css">
+  <script>window.backupDefine = window.define; window.define = undefined;</script><script src="https://cdn.jsdelivr.net/npm/katex@latest/dist/katex.min.js"></script>
+  <script>document.addEventListener("DOMContentLoaded", function () {
+ var mathElements = document.getElementsByClassName("math");
+ var macros = [];
+ for (var i = 0; i < mathElements.length; i++) {
+  var texText = mathElements[i].firstChild;
+  if (mathElements[i].tagName == "SPAN") {
+   katex.render(texText.data, mathElements[i], {
+    displayMode: mathElements[i].classList.contains('display'),
+    throwOnError: false,
+    macros: macros,
+    fleqn: false
+   });
+}}});
+  </script>
+  <script>window.define = window.backupDefine; window.backupDefine = undefined;</script><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@latest/dist/katex.min.css">
   <link href="../site_libs/revealjs/plugin/quarto-line-highlight/line-highlight.css" rel="stylesheet">
   <link href="../site_libs/revealjs/plugin/reveal-menu/menu.css" rel="stylesheet">
   <link href="../site_libs/revealjs/plugin/reveal-menu/quarto-menu.css" rel="stylesheet">
@@ -207,13 +223,13 @@ Quantitative biology and integrative omics
 </section>
 <section id="about-this-lecture" class="slide level2">
 <h2>About this lecture</h2>
-<p>Every linear model you fit, with <a href="https://rdrr.io/r/stats/lm.html"><code>lm</code></a>, limma or DESeq2, has to find the coefficients <span class="math inline">\(\boldsymbol\beta\)</span> somehow. Today: <strong>how</strong>, and why it is the Week 1 projection in disguise.</p>
+<p>Every linear model you fit, with <a href="https://rdrr.io/r/stats/lm.html"><code>lm</code></a>, limma or DESeq2, has to find the coefficients <span class="math inline">\boldsymbol\beta</span> somehow. Today: <strong>how</strong>, and why it is the Week 1 projection in disguise.</p>
 <ul>
 <li>Fitting a line to a few points gives <strong>more equations than unknowns</strong>: no exact solution.</li>
 <li><strong>Least squares</strong>: pick the line with the smallest sum of squared residuals.</li>
-<li>The geometry: the fitted values are the <strong>projection</strong> of the data onto the columns of <span class="math inline">\(X\)</span>, and the residual is <strong>orthogonal</strong> to every column.</li>
-<li>That gives the <strong>normal equations</strong> <span class="math inline">\(X^\mathsf{T}X\boldsymbol\beta = X^\mathsf{T}\mathbf{y}\)</span>, which is what <code>lm</code> solves.</li>
-<li>When <span class="math inline">\(X^\mathsf{T}X\)</span> <strong>cannot be inverted</strong>, there is no unique <span class="math inline">\(\boldsymbol\beta\)</span>.</li>
+<li>The geometry: the fitted values are the <strong>projection</strong> of the data onto the columns of <span class="math inline">X</span>, and the residual is <strong>orthogonal</strong> to every column.</li>
+<li>That gives the <strong>normal equations</strong> <span class="math inline">X^\mathsf{T}X\boldsymbol\beta = X^\mathsf{T}\mathbf{y}</span>, which is what <code>lm</code> solves.</li>
+<li>When <span class="math inline">X^\mathsf{T}X</span> <strong>cannot be inverted</strong>, there is no unique <span class="math inline">\boldsymbol\beta</span>.</li>
 </ul>
 <aside class="notes">
 <p>A short bridge deck. Students have seen three separate pieces: the least-squares slide in Linear systems in R (qr.solve and lm give “the best x”), projection in Vectors, dot product &amp; projection (the shadow, the leftover is orthogonal), and they are about to build design matrices in Design matrices for covariates. This deck glues them together: least squares is projection, and the normal equations are just “the residual is orthogonal to every column of X” written as a matrix equation. Keep it concrete: one tiny data set with three points runs through the whole deck. No calculus needed.</p>
@@ -231,15 +247,15 @@ Quantitative biology and integrative omics
 </section>
 <section id="recap-the-shadow-is-the-closest-point" class="slide level2 smaller">
 <h2>Recap: the shadow is the closest point</h2>
-<p>From <em>Vectors, dot product &amp; projection</em>: the shadow of <span class="math inline">\(\mathbf{u}\)</span> on the line through <span class="math inline">\(\mathbf{v}\)</span> is</p>
-<p><span class="math display">\[
+<p>From <em>Vectors, dot product &amp; projection</em>: the shadow of <span class="math inline">\mathbf{u}</span> on the line through <span class="math inline">\mathbf{v}</span> is</p>
+<p><span class="math display">
 \mathbf{p} = \frac{\mathbf{u}\cdot\mathbf{v}}{\mathbf{v}\cdot\mathbf{v}}\,\mathbf{v},
 \qquad
 (\mathbf{u} - \mathbf{p})\cdot\mathbf{v} = 0 .
-\]</span></p>
+</span></p>
 <ul>
-<li>The leftover <span class="math inline">\(\mathbf{u} - \mathbf{p}\)</span> meets the line at a <strong>right angle</strong>.</li>
-<li>Because of that right angle, <span class="math inline">\(\mathbf{p}\)</span> is the point on the line <strong>closest</strong> to <span class="math inline">\(\mathbf{u}\)</span>: any other point is farther away (Pythagoras).</li>
+<li>The leftover <span class="math inline">\mathbf{u} - \mathbf{p}</span> meets the line at a <strong>right angle</strong>.</li>
+<li>Because of that right angle, <span class="math inline">\mathbf{p}</span> is the point on the line <strong>closest</strong> to <span class="math inline">\mathbf{u}</span>: any other point is farther away (Pythagoras).</li>
 </ul>
 
 <img data-src="fig01-recap-projection.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:36.0%"><p>Today we project onto a <strong>plane</strong> instead of a line. The idea is the same: drop a perpendicular.</p>
@@ -263,7 +279,7 @@ Quantitative biology and integrative omics
 <table class="caption-top">
 <thead>
 <tr class="header">
-<th>hours <span class="math inline">\(x\)</span></th>
+<th>hours <span class="math inline">x</span></th>
 <th>0</th>
 <th>1</th>
 <th>2</th>
@@ -271,17 +287,17 @@ Quantitative biology and integrative omics
 </thead>
 <tbody>
 <tr class="odd">
-<td>log2 expression <span class="math inline">\(y\)</span></td>
+<td>log2 expression <span class="math inline">y</span></td>
 <td>1</td>
 <td>2</td>
 <td>6</td>
 </tr>
 </tbody>
 </table>
-<p>We want a line <span class="math inline">\(y = a + bx\)</span>. Each point gives one equation:</p>
-<p><span class="math display">\[
+<p>We want a line <span class="math inline">y = a + bx</span>. Each point gives one equation:</p>
+<p><span class="math display">
 a + 0b = 1, \qquad a + 1b = 2, \qquad a + 2b = 6 .
-\]</span></p>
+</span></p>
 
 <img data-src="fig02-three-points.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:50.0%"><aside class="notes">
 <p>The unknowns are now a and b, not x and y: x and y are the data. Three equations, two unknowns. Ask the room: which line goes through all three points? None. The first two equations give a = 1, b = 1, and then the third says 1 + 2 = 6, which is false. Any two points fix a line, and the third point disagrees. With real measurements this is the normal situation, not a mistake: noise means points never lie exactly on a line.</p>
@@ -299,19 +315,19 @@ a + 0b = 1, \qquad a + 1b = 2, \qquad a + 2b = 6 .
 </section>
 <section id="too-many-equations-case-2-again" class="slide level2 smaller">
 <h2>Too many equations: Case 2 again</h2>
-<p>The same three equations as a matrix system <span class="math inline">\(X\boldsymbol\beta = \mathbf{y}\)</span>:</p>
-<p><span class="math display">\[
+<p>The same three equations as a matrix system <span class="math inline">X\boldsymbol\beta = \mathbf{y}</span>:</p>
+<p><span class="math display">
 \underbrace{\begin{pmatrix} 1 &amp; 0 \\ 1 &amp; 1 \\ 1 &amp; 2 \end{pmatrix}}_{X}
 \underbrace{\begin{pmatrix} a \\ b \end{pmatrix}}_{\boldsymbol\beta}
 =
 \underbrace{\begin{pmatrix} 1 \\ 2 \\ 6 \end{pmatrix}}_{\mathbf{y}}
-\]</span></p>
+</span></p>
 <ul>
-<li>Column 1 of <span class="math inline">\(X\)</span> is all 1’s (the <strong>intercept</strong>); column 2 is the hours <span class="math inline">\(\mathbf{x}\)</span>. This is the <strong>design matrix</strong> of <code>y ~ x</code>.</li>
+<li>Column 1 of <span class="math inline">X</span> is all 1’s (the <strong>intercept</strong>); column 2 is the hours <span class="math inline">\mathbf{x}</span>. This is the <strong>design matrix</strong> of <code>y ~ x</code>.</li>
 <li>3 rows (samples) and 2 columns (coefficients): <strong>over-determined</strong>, Case 2 from <em>Linear systems in R</em>. No exact solution.</li>
-<li><code>solve(X, y)</code> refuses: <span class="math inline">\(X\)</span> is not square.</li>
+<li><code>solve(X, y)</code> refuses: <span class="math inline">X</span> is not square.</li>
 </ul>
-<p>So we change the question: not “which <span class="math inline">\(\boldsymbol\beta\)</span> fits exactly?” but “which <span class="math inline">\(\boldsymbol\beta\)</span> fits <strong>best</strong>?”</p>
+<p>So we change the question: not “which <span class="math inline">\boldsymbol\beta</span> fits exactly?” but “which <span class="math inline">\boldsymbol\beta</span> fits <strong>best</strong>?”</p>
 <aside class="notes">
 <p>Point out that this X is exactly what model.matrix(~ x) prints; the next deck, Design matrices for covariates, is all about building X for more complicated experiments. Here we only care about how beta is found once X is given. Connect to the three solution spaces: one, none, infinitely many. We are in “none”. At the end of today we meet “infinitely many” again.</p>
 <style type="text/css">
@@ -328,10 +344,10 @@ a + 0b = 1, \qquad a + 1b = 2, \qquad a + 2b = 6 .
 </section>
 <section id="best-smallest-sum-of-squared-residuals" class="slide level2 smaller">
 <h2>“Best” = smallest sum of squared residuals</h2>
-<p>For any line, the <strong>residuals</strong> are data minus fitted: <span class="math inline">\(\mathbf{r} = \mathbf{y} - X\boldsymbol\beta\)</span>.</p>
-<p><strong>Least squares</strong> picks the <span class="math inline">\(\boldsymbol\beta\)</span> that makes <span class="math inline">\(\lVert\mathbf{r}\rVert^2 = \mathbf{r}\cdot\mathbf{r}\)</span>, the sum of squared residuals, as small as possible.</p>
+<p>For any line, the <strong>residuals</strong> are data minus fitted: <span class="math inline">\mathbf{r} = \mathbf{y} - X\boldsymbol\beta</span>.</p>
+<p><strong>Least squares</strong> picks the <span class="math inline">\boldsymbol\beta</span> that makes <span class="math inline">\lVert\mathbf{r}\rVert^2 = \mathbf{r}\cdot\mathbf{r}</span>, the sum of squared residuals, as small as possible.</p>
 
-<img data-src="fig03-residuals.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:56.0%"><p>The best line is <span class="math inline">\(y = 0.5 + 2.5x\)</span>: residuals <span class="math inline">\((0.5, -1, 0.5)\)</span>, sum of squares <span class="math inline">\(0.25 + 1 + 0.25 = 1.5\)</span>. The line through the first and last point misses the middle one by <span class="math inline">\(1.5\)</span>: sum of squares <span class="math inline">\(2.25\)</span>.</p>
+<img data-src="fig03-residuals.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:56.0%"><p>The best line is <span class="math inline">y = 0.5 + 2.5x</span>: residuals <span class="math inline">(0.5, -1, 0.5)</span>, sum of squares <span class="math inline">0.25 + 1 + 0.25 = 1.5</span>. The line through the first and last point misses the middle one by <span class="math inline">1.5</span>: sum of squares <span class="math inline">2.25</span>.</p>
 <aside class="notes">
 <p>Residuals are vertical gaps, data minus fitted value, one per sample. Squaring makes positive and negative misses count the same and punishes big misses more. The sum of squared residuals is the squared length of the residual vector, the norm from Week 1. Ask: can you find a line with sum of squares below 1.5? They cannot. The next two slides explain why 0.5 + 2.5x is the winner without trying every line.</p>
 <style type="text/css">
@@ -347,12 +363,12 @@ a + 0b = 1, \qquad a + 1b = 2, \qquad a + 2b = 6 .
       }</style></aside>
 </section>
 <section id="the-picture-project-mathbfy-onto-a-plane" class="slide level2 smaller">
-<h2>The picture: project <span class="math inline">\(\mathbf{y}\)</span> onto a plane</h2>
-<p>Think of <span class="math inline">\(\mathbf{y} = (1, 2, 6)\)</span> as <strong>one vector</strong> in 3-D, one axis per sample.</p>
+<h2>The picture: project <span class="math inline">\mathbf{y}</span> onto a plane</h2>
+<p>Think of <span class="math inline">\mathbf{y} = (1, 2, 6)</span> as <strong>one vector</strong> in 3-D, one axis per sample.</p>
 <ul>
-<li>Every possible fit <span class="math inline">\(X\boldsymbol\beta = a\,\mathbf{1} + b\,\mathbf{x}\)</span> is a combination of the two columns of <span class="math inline">\(X\)</span>. All of them together form a <strong>plane</strong>: the <strong>column space</strong> of <span class="math inline">\(X\)</span>.</li>
-<li><span class="math inline">\(\mathbf{y}\)</span> is not in the plane (no exact solution).</li>
-<li>The closest point of the plane to <span class="math inline">\(\mathbf{y}\)</span> is the <strong>projection</strong> <span class="math inline">\(\hat{\mathbf{y}}\)</span>, and the residual <span class="math inline">\(\mathbf{r} = \mathbf{y} - \hat{\mathbf{y}}\)</span> is <strong>orthogonal</strong> to the plane.</li>
+<li>Every possible fit <span class="math inline">X\boldsymbol\beta = a\,\mathbf{1} + b\,\mathbf{x}</span> is a combination of the two columns of <span class="math inline">X</span>. All of them together form a <strong>plane</strong>: the <strong>column space</strong> of <span class="math inline">X</span>.</li>
+<li><span class="math inline">\mathbf{y}</span> is not in the plane (no exact solution).</li>
+<li>The closest point of the plane to <span class="math inline">\mathbf{y}</span> is the <strong>projection</strong> <span class="math inline">\hat{\mathbf{y}}</span>, and the residual <span class="math inline">\mathbf{r} = \mathbf{y} - \hat{\mathbf{y}}</span> is <strong>orthogonal</strong> to the plane.</li>
 </ul>
 
 <img data-src="fig04-projection-plane.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:56.0%"><aside class="notes">
@@ -371,17 +387,17 @@ a + 0b = 1, \qquad a + 1b = 2, \qquad a + 2b = 6 .
 </section>
 <section id="the-residual-is-orthogonal-to-every-column" class="slide level2 smaller">
 <h2>The residual is orthogonal to every column</h2>
-<p>“Orthogonal to the plane” means orthogonal to <strong>both</strong> columns of <span class="math inline">\(X\)</span>. Check with the best fit, <span class="math inline">\(\mathbf{r} = (0.5, -1, 0.5)\)</span>:</p>
-<p><span class="math display">\[
+<p>“Orthogonal to the plane” means orthogonal to <strong>both</strong> columns of <span class="math inline">X</span>. Check with the best fit, <span class="math inline">\mathbf{r} = (0.5, -1, 0.5)</span>:</p>
+<p><span class="math display">
 \mathbf{1}\cdot\mathbf{r} = 0.5 - 1 + 0.5 = 0,
 \qquad
 \mathbf{x}\cdot\mathbf{r} = 0\cdot0.5 + 1\cdot(-1) + 2\cdot0.5 = 0 .
-\]</span></p>
+</span></p>
 <ul>
-<li><span class="math inline">\(\mathbf{1}\cdot\mathbf{r} = 0\)</span>: the residuals <strong>sum to zero</strong>; the line passes through the average point.</li>
-<li><span class="math inline">\(\mathbf{x}\cdot\mathbf{r} = 0\)</span>: what is left over has no trend with <span class="math inline">\(x\)</span>; nothing more the slope can explain.</li>
+<li><span class="math inline">\mathbf{1}\cdot\mathbf{r} = 0</span>: the residuals <strong>sum to zero</strong>; the line passes through the average point.</li>
+<li><span class="math inline">\mathbf{x}\cdot\mathbf{r} = 0</span>: what is left over has no trend with <span class="math inline">x</span>; nothing more the slope can explain.</li>
 </ul>
-<p>For the other line, <span class="math inline">\(y = 1 + 2.5x\)</span>, the residuals are <span class="math inline">\((0, -1.5, 0)\)</span> and <span class="math inline">\(\mathbf{1}\cdot\mathbf{r} = -1.5 \ne 0\)</span>: not orthogonal, so not the best.</p>
+<p>For the other line, <span class="math inline">y = 1 + 2.5x</span>, the residuals are <span class="math inline">(0, -1.5, 0)</span> and <span class="math inline">\mathbf{1}\cdot\mathbf{r} = -1.5 \ne 0</span>: not orthogonal, so not the best.</p>
 <aside class="notes">
 <p>This turns the geometry into a test you can do with pen and paper: a fit is the least-squares fit exactly when the residual vector has dot product zero with every column of X. Give the biological reading of each condition. Residuals summing to zero is the intercept’s job; zero dot product with x is the slope’s job. With more columns (sex, batch, age) there is one such condition per column.</p>
 <style type="text/css">
@@ -398,20 +414,20 @@ a + 0b = 1, \qquad a + 1b = 2, \qquad a + 2b = 6 .
 </section>
 <section id="the-normal-equations" class="slide level2 smaller">
 <h2>The normal equations</h2>
-<p>Write the “dot product with every column” in one go. <span class="math inline">\(X^\mathsf{T}\)</span> (<strong>transpose</strong>, <code>t(X)</code> in R) is <span class="math inline">\(X\)</span> with rows and columns swapped, so its rows are the columns of <span class="math inline">\(X\)</span>, and <span class="math inline">\(X^\mathsf{T}\mathbf{r}\)</span> stacks the dot products <span class="math inline">\(\mathbf{1}\cdot\mathbf{r}\)</span> and <span class="math inline">\(\mathbf{x}\cdot\mathbf{r}\)</span>:</p>
-<p><span class="math display">\[
+<p>Write the “dot product with every column” in one go. <span class="math inline">X^\mathsf{T}</span> (<strong>transpose</strong>, <code>t(X)</code> in R) is <span class="math inline">X</span> with rows and columns swapped, so its rows are the columns of <span class="math inline">X</span>, and <span class="math inline">X^\mathsf{T}\mathbf{r}</span> stacks the dot products <span class="math inline">\mathbf{1}\cdot\mathbf{r}</span> and <span class="math inline">\mathbf{x}\cdot\mathbf{r}</span>:</p>
+<p><span class="math display">
 X^\mathsf{T}(\mathbf{y} - X\boldsymbol\beta) = \mathbf{0}
 \quad\Longrightarrow\quad
 \boxed{X^\mathsf{T}X\,\boldsymbol\beta = X^\mathsf{T}\mathbf{y}}
-\]</span></p>
+</span></p>
 <p>For our three points:</p>
-<p><span class="math display">\[
+<p><span class="math display">
 X^\mathsf{T}X = \begin{pmatrix} 3 &amp; 3 \\ 3 &amp; 5 \end{pmatrix},\quad
 X^\mathsf{T}\mathbf{y} = \begin{pmatrix} 9 \\ 14 \end{pmatrix}
 \quad\Longrightarrow\quad
 \begin{aligned} 3a + 3b &amp;= 9 \\ 3a + 5b &amp;= 14 \end{aligned}
-\]</span></p>
-<p>Subtract: <span class="math inline">\(2b = 5\)</span>, so <span class="math inline">\(b = 2.5\)</span> and <span class="math inline">\(a = 0.5\)</span>. A <strong>square</strong> 2 × 2 system: solvable with Week 1 tools.</p>
+</span></p>
+<p>Subtract: <span class="math inline">2b = 5</span>, so <span class="math inline">b = 2.5</span> and <span class="math inline">a = 0.5</span>. A <strong>square</strong> 2 × 2 system: solvable with Week 1 tools.</p>
 <aside class="notes">
 <p>The normal equations are named for “normal” in the sense of perpendicular. Walk through the entries: the top-left 3 is 1·1 (the number of samples), the off-diagonal 3 is 1·x (the sum of the hours), the 5 is x·x (0 + 1 + 4). On the right, 9 is the sum of y and 14 is x·y = 0 + 2 + 12. The trick: we started with 3 equations and 2 unknowns, multiplying by X transpose leaves 2 equations and 2 unknowns, always square, one equation per coefficient. Solve by elimination as in Solving linear equation systems.</p>
 <style type="text/css">
@@ -442,7 +458,7 @@ X^\mathsf{T}\mathbf{y} = \begin{pmatrix} 9 \\ 14 \end{pmatrix}
 <span id="cb1-12"><a aria-hidden="true" tabindex="-1"></a><span class="fu">fitted</span>(fit)                           <span class="co"># 0.5 3.0 5.5  = X %*% beta, the projection</span></span>
 <span id="cb1-13"><a aria-hidden="true" tabindex="-1"></a><span class="fu">resid</span>(fit)                            <span class="co"># 0.5 -1.0 0.5</span></span>
 <span id="cb1-14"><a aria-hidden="true" tabindex="-1"></a><span class="fu">t</span>(X) <span class="sc">%*%</span> <span class="fu">resid</span>(fit)                   <span class="co"># 0 0  (up to rounding): orthogonal</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<p><code>lm</code> gives the same <span class="math inline">\(\boldsymbol\beta\)</span>. (Inside, it uses a QR decomposition, <code>qr.solve</code>, which is more accurate on a computer but solves the same problem.)</p>
+<p><code>lm</code> gives the same <span class="math inline">\boldsymbol\beta</span>. (Inside, it uses a QR decomposition, <code>qr.solve</code>, which is more accurate on a computer but solves the same problem.)</p>
 <aside class="notes">
 <p>Have them type this. The point: the formula y ~ x builds X, and lm returns the solution of the normal equations. fitted(fit) is X beta, the projection of y onto the column space; resid(fit) is the orthogonal leftover. The orthogonality check prints numbers like 2e-16, which is zero up to floating point. Mention that lm does not literally form t(X) %*% X, because that loses accuracy when columns are nearly dependent, but the answer is the same; that is why qr.solve appeared in Linear systems in R.</p>
 <style type="text/css">
@@ -459,14 +475,14 @@ X^\mathsf{T}\mathbf{y} = \begin{pmatrix} 9 \\ 14 \end{pmatrix}
 </section>
 <section id="intercept-only-the-best-constant-is-the-mean" class="slide level2 smaller">
 <h2>Intercept only: the best constant is the mean</h2>
-<p>The smallest model, <code>y ~ 1</code>, has one column <span class="math inline">\(\mathbf{1} = (1, 1, 1)\)</span>. Projecting <span class="math inline">\(\mathbf{y}\)</span> onto a single vector is exactly the Week 1 formula:</p>
-<p><span class="math display">\[
+<p>The smallest model, <code>y ~ 1</code>, has one column <span class="math inline">\mathbf{1} = (1, 1, 1)</span>. Projecting <span class="math inline">\mathbf{y}</span> onto a single vector is exactly the Week 1 formula:</p>
+<p><span class="math display">
 \hat{\mathbf{y}} = \frac{\mathbf{y}\cdot\mathbf{1}}{\mathbf{1}\cdot\mathbf{1}}\,\mathbf{1}
 = \frac{1 + 2 + 6}{3}\,\mathbf{1} = 3\cdot\mathbf{1} = (3, 3, 3).
-\]</span></p>
+</span></p>
 <ul>
-<li>The coefficient <span class="math inline">\(\frac{\mathbf{y}\cdot\mathbf{1}}{\mathbf{1}\cdot\mathbf{1}}\)</span> is the <strong>sum divided by the count</strong>: the <strong>mean</strong>.</li>
-<li>The residuals <span class="math inline">\(\mathbf{y} - \bar{y}\,\mathbf{1}\)</span> are the deviations from the mean, and their squared length is what the variance is built from.</li>
+<li>The coefficient <span class="math inline">\frac{\mathbf{y}\cdot\mathbf{1}}{\mathbf{1}\cdot\mathbf{1}}</span> is the <strong>sum divided by the count</strong>: the <strong>mean</strong>.</li>
+<li>The residuals <span class="math inline">\mathbf{y} - \bar{y}\,\mathbf{1}</span> are the deviations from the mean, and their squared length is what the variance is built from.</li>
 </ul>
 <div class="sourceCode" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a aria-hidden="true" tabindex="-1"></a><span class="fu">coef</span>(<span class="fu">lm</span>(y <span class="sc">~</span> <span class="dv">1</span>))   <span class="co"># 3</span></span>
 <span id="cb2-2"><a aria-hidden="true" tabindex="-1"></a><span class="fu">mean</span>(y)           <span class="co"># 3</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
@@ -485,10 +501,10 @@ X^\mathsf{T}\mathbf{y} = \begin{pmatrix} 9 \\ 14 \end{pmatrix}
       }</style></aside>
 </section>
 <section id="when-xmathsftx-cannot-be-inverted" class="slide level2 smaller">
-<h2>When <span class="math inline">\(X^\mathsf{T}X\)</span> cannot be inverted</h2>
-<p>The projection <span class="math inline">\(\hat{\mathbf{y}}\)</span> always exists. But <span class="math inline">\(\boldsymbol\beta\)</span> is <strong>unique</strong> only when the columns of <span class="math inline">\(X\)</span> are <strong>independent</strong>.</p>
+<h2>When <span class="math inline">X^\mathsf{T}X</span> cannot be inverted</h2>
+<p>The projection <span class="math inline">\hat{\mathbf{y}}</span> always exists. But <span class="math inline">\boldsymbol\beta</span> is <strong>unique</strong> only when the columns of <span class="math inline">X</span> are <strong>independent</strong>.</p>
 <ul>
-<li>All samples measured at the same time, <span class="math inline">\(\mathbf{x} = (1, 1, 1)\)</span>: the two columns are identical, the “plane” is only a line.</li>
+<li>All samples measured at the same time, <span class="math inline">\mathbf{x} = (1, 1, 1)</span>: the two columns are identical, the “plane” is only a line.</li>
 </ul>
 <div class="sourceCode" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a aria-hidden="true" tabindex="-1"></a>x <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="dv">1</span>, <span class="dv">1</span>, <span class="dv">1</span>)</span>
 <span id="cb3-2"><a aria-hidden="true" tabindex="-1"></a>X <span class="ot">&lt;-</span> <span class="fu">cbind</span>(<span class="dv">1</span>, x)</span>
@@ -497,8 +513,8 @@ X^\mathsf{T}\mathbf{y} = \begin{pmatrix} 9 \\ 14 \end{pmatrix}
 <span id="cb3-5"><a aria-hidden="true" tabindex="-1"></a><span class="co"># Error ... system is exactly singular</span></span>
 <span id="cb3-6"><a aria-hidden="true" tabindex="-1"></a><span class="fu">coef</span>(<span class="fu">lm</span>(y <span class="sc">~</span> x))             <span class="co"># (Intercept) 3   x NA</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <ul>
-<li>Any <span class="math inline">\(a + b = 3\)</span> gives the <strong>same</strong> fitted values: Case 3, infinitely many <span class="math inline">\(\boldsymbol\beta\)</span>.</li>
-<li>Dependent columns in real designs (batch = treatment, the dummy trap) and <strong>more columns than samples</strong> are next in <em>Design matrices for covariates</em>. Fixing <span class="math inline">\(p &gt; n\)</span> with a penalty comes in the penalized-models block.</li>
+<li>Any <span class="math inline">a + b = 3</span> gives the <strong>same</strong> fitted values: Case 3, infinitely many <span class="math inline">\boldsymbol\beta</span>.</li>
+<li>Dependent columns in real designs (batch = treatment, the dummy trap) and <strong>more columns than samples</strong> are next in <em>Design matrices for covariates</em>. Fixing <span class="math inline">p &gt; n</span> with a penalty comes in the penalized-models block.</li>
 </ul>
 <aside class="notes">
 <p>Same three cases as in Linear systems in R, one more time. The fitted values are still well defined: the shadow on a line is the shadow on a line, however you describe the line. What breaks is the split between a and b. lm handles this by dropping the redundant column and printing NA, which students will meet again in the covariates deck. The penalized-models block adds a penalty to make X transpose X invertible again (ridge literally adds a number to its diagonal). Just plant the seed here.</p>
@@ -532,27 +548,27 @@ X^\mathsf{T}\mathbf{y} = \begin{pmatrix} 9 \\ 14 \end{pmatrix}
 <tbody>
 <tr class="odd">
 <td>Over-determined</td>
-<td>more samples than coefficients: no exact <span class="math inline">\(\boldsymbol\beta\)</span></td>
+<td>more samples than coefficients: no exact <span class="math inline">\boldsymbol\beta</span></td>
 <td><code>solve(X, y)</code> fails</td>
 </tr>
 <tr class="even">
 <td>Least squares</td>
-<td>minimise the sum of squared residuals <span class="math inline">\(\lVert\mathbf{y} - X\boldsymbol\beta\rVert^2\)</span></td>
+<td>minimise the sum of squared residuals <span class="math inline">\lVert\mathbf{y} - X\boldsymbol\beta\rVert^2</span></td>
 <td><code>lm(y ~ x)</code></td>
 </tr>
 <tr class="odd">
 <td>Geometry</td>
-<td>fitted values <span class="math inline">\(\hat{\mathbf{y}} = X\boldsymbol\beta\)</span> = <strong>projection</strong> of <span class="math inline">\(\mathbf{y}\)</span> onto the column space of <span class="math inline">\(X\)</span></td>
+<td>fitted values <span class="math inline">\hat{\mathbf{y}} = X\boldsymbol\beta</span> = <strong>projection</strong> of <span class="math inline">\mathbf{y}</span> onto the column space of <span class="math inline">X</span></td>
 <td><code>fitted(fit)</code></td>
 </tr>
 <tr class="even">
 <td>Orthogonality</td>
-<td>residual has dot product 0 with <strong>every column</strong> of <span class="math inline">\(X\)</span></td>
+<td>residual has dot product 0 with <strong>every column</strong> of <span class="math inline">X</span></td>
 <td><code>t(X) %*% resid(fit)</code></td>
 </tr>
 <tr class="odd">
 <td>Normal equations</td>
-<td><span class="math inline">\(X^\mathsf{T}X\boldsymbol\beta = X^\mathsf{T}\mathbf{y}\)</span>: square, one equation per coefficient</td>
+<td><span class="math inline">X^\mathsf{T}X\boldsymbol\beta = X^\mathsf{T}\mathbf{y}</span>: square, one equation per coefficient</td>
 <td><code>solve(t(X) %*% X, t(X) %*% y)</code></td>
 </tr>
 <tr class="even">
@@ -562,12 +578,12 @@ X^\mathsf{T}\mathbf{y} = \begin{pmatrix} 9 \\ 14 \end{pmatrix}
 </tr>
 <tr class="odd">
 <td>Not unique</td>
-<td>dependent columns: <span class="math inline">\(X^\mathsf{T}X\)</span> singular, <code>lm</code> reports <code>NA</code></td>
+<td>dependent columns: <span class="math inline">X^\mathsf{T}X</span> singular, <code>lm</code> reports <code>NA</code></td>
 <td><code>qr(X)$rank</code></td>
 </tr>
 </tbody>
 </table>
-<p><strong>Next:</strong> <em>Design matrices for covariates</em>: building <span class="math inline">\(X\)</span> for real experiments (treatment, sex, age, batch). The fitting step is always the one from today.</p>
+<p><strong>Next:</strong> <em>Design matrices for covariates</em>: building <span class="math inline">X</span> for real experiments (treatment, sex, age, batch). The fitting step is always the one from today.</p>
 <aside class="notes">
 <p>The one-line takeaway: lm finds beta by projecting the data onto the columns of the design matrix, and the normal equations are just “the residual is orthogonal to every column”. From now on, every model in the course (covariates, limma, DESeq2’s starting point, ridge) only changes what goes into X or what is added to the sum of squares; the projection picture stays.</p>
 <style type="text/css">
@@ -604,7 +620,6 @@ X^\mathsf{T}\mathbf{y} = \begin{pmatrix} 9 \\ 14 \end{pmatrix}
   <script src="../site_libs/revealjs/plugin/notes/notes.js"></script>
   <script src="../site_libs/revealjs/plugin/search/search.js"></script>
   <script src="../site_libs/revealjs/plugin/zoom/zoom.js"></script>
-  <script src="../site_libs/revealjs/plugin/math/math.js"></script>
   <script>window.define = window.backupDefine; window.backupDefine = undefined;</script>
 
   <script>
@@ -772,27 +787,9 @@ X^\mathsf{T}\mathbf{y} = \begin{pmatrix} 9 \\ 14 \end{pmatrix}
         // Factor of the display size that should remain empty around the content
         margin: 0.1,
 
-        math: {
-          mathjax: 'https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.9/MathJax.js',
-          config: 'TeX-AMS_HTML-full',
-          tex2jax: {
-            inlineMath: [['\\(','\\)']],
-            displayMath: [['\\[','\\]']],
-            balanceBraces: true,
-            processEscapes: false,
-            processRefs: true,
-            processEnvironments: true,
-            preview: 'TeX',
-            skipTags: ['script','noscript','style','textarea','pre','code'],
-            ignoreClass: 'tex2jax_ignore',
-            processClass: 'tex2jax_process'
-          },
-        },
-
         // reveal.js plugins
         plugins: [QuartoLineHighlight, PdfExport, RevealMenu, QuartoSupport,
 
-          RevealMath,
           RevealNotes,
           RevealSearch,
           RevealZoom

@@ -96,6 +96,22 @@
     code span.wa { color: #ff5555; } /* Warning */
   </style>
   <link rel="stylesheet" href="../site_libs/revealjs/dist/theme/quarto-bf56578b9c06c165c166475cd19dbcd1.css">
+  <script>window.backupDefine = window.define; window.define = undefined;</script><script src="https://cdn.jsdelivr.net/npm/katex@latest/dist/katex.min.js"></script>
+  <script>document.addEventListener("DOMContentLoaded", function () {
+ var mathElements = document.getElementsByClassName("math");
+ var macros = [];
+ for (var i = 0; i < mathElements.length; i++) {
+  var texText = mathElements[i].firstChild;
+  if (mathElements[i].tagName == "SPAN") {
+   katex.render(texText.data, mathElements[i], {
+    displayMode: mathElements[i].classList.contains('display'),
+    throwOnError: false,
+    macros: macros,
+    fleqn: false
+   });
+}}});
+  </script>
+  <script>window.define = window.backupDefine; window.backupDefine = undefined;</script><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@latest/dist/katex.min.css">
   <link href="../site_libs/revealjs/plugin/quarto-line-highlight/line-highlight.css" rel="stylesheet">
   <link href="../site_libs/revealjs/plugin/reveal-menu/menu.css" rel="stylesheet">
   <link href="../site_libs/revealjs/plugin/reveal-menu/quarto-menu.css" rel="stylesheet">
@@ -207,9 +223,9 @@ Quantitative biology and integrative omics
 </section>
 <section id="about-this-lecture" class="slide level2">
 <h2>About this lecture</h2>
-<p>So far almost every model in the course was <strong>linear</strong>: <span class="math inline">\(\mathbf{y} = X\boldsymbol\beta\)</span>, solved by least squares, limma or a penalty. This week is about what lies beyond.</p>
+<p>So far almost every model in the course was <strong>linear</strong>: <span class="math inline">\mathbf{y} = X\boldsymbol\beta</span>, solved by least squares, limma or a penalty. This week is about what lies beyond.</p>
 <ul>
-<li>“Linear” means <strong>linear in the parameters</strong> <span class="math inline">\(\boldsymbol\beta\)</span>. A curve can still be a linear model.</li>
+<li>“Linear” means <strong>linear in the parameters</strong> <span class="math inline">\boldsymbol\beta</span>. A curve can still be a linear model.</li>
 <li>Some biology is <strong>truly nonlinear</strong>: a dose–response curve. We fit it with <code>nls()</code>, which has to <strong>search</strong>.</li>
 <li>A <strong>neural network</strong> is matrix × vector, then a bend, repeated. Without the bend it collapses to one matrix.</li>
 <li><strong>Flat vs curved latent spaces</strong>: PCA gives a flat map of the cells; some data need a curved one. That sets up UMAP and variational autoencoders.</li>
@@ -236,11 +252,11 @@ Quantitative biology and integrative omics
 <p><img data-src="fig01-poly-fit.svg" style="width:100.0%"></p>
 </div><div class="column" style="width:48%;">
 <p>Growth rate of a bacterium peaks at some temperature: a <strong>curve</strong>. Yet</p>
-<p><span class="math display">\[\text{growth} = a + b\cdot\text{temp} + c\cdot\text{temp}^2\]</span></p>
-<p>is a linear model. <span class="math inline">\(\text{temp}^2\)</span> is just <strong>one more column</strong> of <span class="math inline">\(X\)</span>:</p>
-<p><span class="math display">\[X = \begin{pmatrix} 1 &amp; 22 &amp; 484 \\ 1 &amp; 24 &amp; 576 \\ 1 &amp; 26 &amp; 676 \\ \vdots &amp; \vdots &amp; \vdots \end{pmatrix}, \qquad \boldsymbol\beta = \begin{pmatrix} a \\ b \\ c \end{pmatrix}\]</span></p>
-<p><code>lm(growth ~ temp + I(temp^2))</code> gives <span class="math inline">\(c = -0.0064\)</span>, optimum at <span class="math inline">\(33.0\,^\circ\)</span>C.</p>
-<p>“Linear” is about <span class="math inline">\(a, b, c\)</span>, not about the shape in temp.</p>
+<p><span class="math display">\text{growth} = a + b\cdot\text{temp} + c\cdot\text{temp}^2</span></p>
+<p>is a linear model. <span class="math inline">\text{temp}^2</span> is just <strong>one more column</strong> of <span class="math inline">X</span>:</p>
+<p><span class="math display">X = \begin{pmatrix} 1 &amp; 22 &amp; 484 \\ 1 &amp; 24 &amp; 576 \\ 1 &amp; 26 &amp; 676 \\ \vdots &amp; \vdots &amp; \vdots \end{pmatrix}, \qquad \boldsymbol\beta = \begin{pmatrix} a \\ b \\ c \end{pmatrix}</span></p>
+<p><code>lm(growth ~ temp + I(temp^2))</code> gives <span class="math inline">c = -0.0064</span>, optimum at <span class="math inline">33.0\,^\circ</span>C.</p>
+<p>“Linear” is about <span class="math inline">a, b, c</span>, not about the shape in temp.</p>
 </div></div>
 <aside class="notes">
 <p>The single most useful idea of the first half: lm only needs the prediction to be a weighted sum of columns that you can compute from the data. What the columns are is up to you: temp, temp squared, log of dose, a dummy for treatment. The curve is curved in temp, but the prediction is still X times beta, so everything from Design matrices for covariates and least squares applies unchanged, including the exact solution in one step. The I() in the formula tells R to square temp arithmetically instead of reading ^ as formula syntax. The data are simulated (script make-nonlinear-figs.R); the optimum is at minus b over 2c.</p>
@@ -272,32 +288,32 @@ Quantitative biology and integrative omics
 </thead>
 <tbody>
 <tr class="odd">
-<td><span class="math inline">\(y = a + b x + c x^2\)</span></td>
-<td>yes: columns <span class="math inline">\(1, x, x^2\)</span></td>
+<td><span class="math inline">y = a + b x + c x^2</span></td>
+<td>yes: columns <span class="math inline">1, x, x^2</span></td>
 </tr>
 <tr class="even">
-<td><span class="math inline">\(y = a + b \log(x)\)</span></td>
-<td>yes: column <span class="math inline">\(\log(x)\)</span></td>
+<td><span class="math inline">y = a + b \log(x)</span></td>
+<td>yes: column <span class="math inline">\log(x)</span></td>
 </tr>
 <tr class="odd">
-<td><span class="math inline">\(y = a + b\sin(2\pi t/24) + c\cos(2\pi t/24)\)</span></td>
+<td><span class="math inline">y = a + b\sin(2\pi t/24) + c\cos(2\pi t/24)</span></td>
 <td>yes: a <strong>Fourier basis</strong> with a known period</td>
 </tr>
 <tr class="even">
-<td><span class="math inline">\(y = a + b x + c\, x z\)</span></td>
+<td><span class="math inline">y = a + b x + c\, x z</span></td>
 <td>yes: an interaction column</td>
 </tr>
 <tr class="odd">
-<td><span class="math inline">\(y = \dfrac{a\, x}{b + x}\)</span> (Michaelis–Menten)</td>
-<td><strong>no</strong>: <span class="math inline">\(b\)</span> sits in the denominator</td>
+<td><span class="math inline">y = \dfrac{a\, x}{b + x}</span> (Michaelis–Menten)</td>
+<td><strong>no</strong>: <span class="math inline">b</span> sits in the denominator</td>
 </tr>
 <tr class="even">
-<td><span class="math inline">\(y = a\, e^{b x}\)</span></td>
-<td><strong>no</strong>: <span class="math inline">\(b\)</span> sits in the exponent</td>
+<td><span class="math inline">y = a\, e^{b x}</span></td>
+<td><strong>no</strong>: <span class="math inline">b</span> sits in the exponent</td>
 </tr>
 <tr class="odd">
-<td><span class="math inline">\(y = a\sin(2\pi t / P)\)</span>, <span class="math inline">\(P\)</span> unknown</td>
-<td><strong>no</strong>: <span class="math inline">\(P\)</span> sits inside the sine</td>
+<td><span class="math inline">y = a\sin(2\pi t / P)</span>, <span class="math inline">P</span> unknown</td>
+<td><strong>no</strong>: <span class="math inline">P</span> sits inside the sine</td>
 </tr>
 </tbody>
 </table>
@@ -323,13 +339,13 @@ Quantitative biology and integrative omics
 <p><img data-src="fig02-dose-response.svg" style="width:100.0%"></p>
 </div><div class="column" style="width:45%;">
 <p>Cells treated with a drug at 8 concentrations, in duplicate. Viability falls along an S-shaped curve (the <strong>Hill</strong> or <strong>four-parameter logistic</strong> curve):</p>
-<p><span class="math display">\[\text{viable} = \text{bottom} + \frac{\text{top} - \text{bottom}}{1 + (\text{dose}/\text{EC50})^{h}}\]</span></p>
+<p><span class="math display">\text{viable} = \text{bottom} + \frac{\text{top} - \text{bottom}}{1 + (\text{dose}/\text{EC50})^{h}}</span></p>
 <ul>
 <li><strong>top, bottom</strong>: the plateaus.</li>
 <li><strong>EC50</strong>: the dose that gives half the effect. The number a pharmacologist wants.</li>
 <li><strong>h</strong>: how steep the drop is.</li>
 </ul>
-<p>EC50 and <span class="math inline">\(h\)</span> sit <strong>inside</strong> the curve, so no design matrix can hold them.</p>
+<p>EC50 and <span class="math inline">h</span> sit <strong>inside</strong> the curve, so no design matrix can hold them.</p>
 </div></div>
 <aside class="notes">
 <p>This is one of the most common curve fits in biology: drug screens, toxicity, receptor binding, enzyme kinetics. Every parameter means something, which is exactly why people want this model and not a polynomial. Point out that a polynomial could also follow the points, but none of its coefficients would be the EC50, and it does silly things outside the data (the exercise shows a cubic predicting 164% viable cells at 1000 µM). The data are simulated with true EC50 0.8 µM and h 1.2.</p>
@@ -408,10 +424,10 @@ Quantitative biology and integrative omics
 <section id="local-minima-where-you-start-matters" class="slide level2 smaller">
 <h2>Local minima: where you start matters</h2>
 
-<img data-src="fig04-local-minima.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:96.0%"><p>A clock reporter, measured every 2 h. Fit <span class="math inline">\(\text{signal} = m + a\cos(2\pi t/P) + b\sin(2\pi t/P)\)</span> with the <strong>period</strong> <span class="math inline">\(P\)</span> unknown.</p>
+<img data-src="fig04-local-minima.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:96.0%"><p>A clock reporter, measured every 2 h. Fit <span class="math inline">\text{signal} = m + a\cos(2\pi t/P) + b\sin(2\pi t/P)</span> with the <strong>period</strong> <span class="math inline">P</span> unknown.</p>
 <ul>
-<li>Start at <span class="math inline">\(P = 20\)</span> h → <span class="math inline">\(P = 23.6\)</span> h, SSE 18: the circadian rhythm.</li>
-<li>Start at <span class="math inline">\(P = 12\)</span> h → <span class="math inline">\(P = 10.7\)</span> h, SSE 97: a dip in the SSE curve, but not the lowest. A <strong>local minimum</strong>.</li>
+<li>Start at <span class="math inline">P = 20</span> h → <span class="math inline">P = 23.6</span> h, SSE 18: the circadian rhythm.</li>
+<li>Start at <span class="math inline">P = 12</span> h → <span class="math inline">P = 10.7</span> h, SSE 97: a dip in the SSE curve, but not the lowest. A <strong>local minimum</strong>.</li>
 </ul>
 <p>R reports success both times. Plot the fit, and try several starts.</p>
 <aside class="notes">
@@ -431,8 +447,8 @@ Quantitative biology and integrative omics
 <section id="a-neural-network-matrix-bend-matrix" class="slide level2 smaller">
 <h2>A neural network: matrix, bend, matrix</h2>
 
-<img data-src="fig05-network.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:70.0%"><p><span class="math display">\[\begin{pmatrix} u \\ v \\ w \end{pmatrix} = \text{ReLU}\!\left(A\begin{pmatrix} x \\ y \end{pmatrix} + \mathbf{b}\right), \qquad \text{out} = C\begin{pmatrix} u \\ v \\ w \end{pmatrix} + d, \qquad \text{ReLU}(s) = \max(0, s)\]</span></p>
-<p>Every line is one number in <span class="math inline">\(A\)</span> or <span class="math inline">\(C\)</span>. <strong>Training</strong> = searching for all of them at once, as <code>nls()</code> does.</p>
+<img data-src="fig05-network.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:70.0%"><p><span class="math display">\begin{pmatrix} u \\ v \\ w \end{pmatrix} = \text{ReLU}\!\left(A\begin{pmatrix} x \\ y \end{pmatrix} + \mathbf{b}\right), \qquad \text{out} = C\begin{pmatrix} u \\ v \\ w \end{pmatrix} + d, \qquad \text{ReLU}(s) = \max(0, s)</span></p>
+<p>Every line is one number in <span class="math inline">A</span> or <span class="math inline">C</span>. <strong>Training</strong> = searching for all of them at once, as <code>nls()</code> does.</p>
 <aside class="notes">
 <p>Demystify the word. A layer is exactly what students have done since week 1: multiply a vector by a matrix (and add a shift). The only new part is ReLU, applied to each number separately: negative numbers become 0, positive numbers pass through. “Hidden units” are just the entries of the intermediate vector. A network for cells would have thousands of inputs (genes) and more hidden units, but the same structure. The weights are found by the same idea as nls: start somewhere (random), step downhill on the error, repeat. The VAE lecture uses one hidden layer of 32 units in each direction.</p>
 <style type="text/css">
@@ -449,13 +465,13 @@ Quantitative biology and integrative omics
 </section>
 <section id="one-input-through-the-network-by-hand" class="slide level2 smaller">
 <h2>One input through the network, by hand</h2>
-<p><span class="math inline">\(A = \begin{pmatrix} 1 &amp; 1 \\ 1 &amp; -1 \\ -1 &amp; 2 \end{pmatrix}\)</span>, <span class="math inline">\(\mathbf{b} = \mathbf{0}\)</span>, <span class="math inline">\(C = \begin{pmatrix} 1 &amp; 2 &amp; 1 \end{pmatrix}\)</span>, <span class="math inline">\(d = 0\)</span>, input <span class="math inline">\((x, y) = (1, 2)\)</span>.</p>
+<p><span class="math inline">A = \begin{pmatrix} 1 &amp; 1 \\ 1 &amp; -1 \\ -1 &amp; 2 \end{pmatrix}</span>, <span class="math inline">\mathbf{b} = \mathbf{0}</span>, <span class="math inline">C = \begin{pmatrix} 1 &amp; 2 &amp; 1 \end{pmatrix}</span>, <span class="math inline">d = 0</span>, input <span class="math inline">(x, y) = (1, 2)</span>.</p>
 <ol type="1">
-<li><strong>Matrix</strong>: <span class="math inline">\(A\begin{pmatrix} 1 \\ 2 \end{pmatrix} = \begin{pmatrix} 1 + 2 \\ 1 - 2 \\ -1 + 4 \end{pmatrix} = \begin{pmatrix} 3 \\ -1 \\ 3 \end{pmatrix}\)</span></li>
-<li><strong>Bend</strong> (ReLU): <span class="math inline">\(\begin{pmatrix} 3 \\ 0 \\ 3 \end{pmatrix}\)</span>: the negative number becomes 0.</li>
-<li><strong>Matrix</strong>: <span class="math inline">\(\text{out} = 1\cdot 3 + 2\cdot 0 + 1\cdot 3 = 6\)</span>.</li>
+<li><strong>Matrix</strong>: <span class="math inline">A\begin{pmatrix} 1 \\ 2 \end{pmatrix} = \begin{pmatrix} 1 + 2 \\ 1 - 2 \\ -1 + 4 \end{pmatrix} = \begin{pmatrix} 3 \\ -1 \\ 3 \end{pmatrix}</span></li>
+<li><strong>Bend</strong> (ReLU): <span class="math inline">\begin{pmatrix} 3 \\ 0 \\ 3 \end{pmatrix}</span>: the negative number becomes 0.</li>
+<li><strong>Matrix</strong>: <span class="math inline">\text{out} = 1\cdot 3 + 2\cdot 0 + 1\cdot 3 = 6</span>.</li>
 </ol>
-<p>Without the bend: <span class="math inline">\(1\cdot 3 + 2\cdot(-1) + 1\cdot 3 = 4\)</span>. The bend changed the answer.</p>
+<p>Without the bend: <span class="math inline">1\cdot 3 + 2\cdot(-1) + 1\cdot 3 = 4</span>. The bend changed the answer.</p>
 <aside class="notes">
 <p>Do this live on the board. Every step is a row-times-column dot product from Vectors, dot product &amp; projection, except step 2, which just clips negatives. The exercise has a similar network with shifts b and d, and asks for the same calculation for a second input where ReLU happens to change nothing, to show that a ReLU network is a straight-line map within each region and bends only at the borders.</p>
 <style type="text/css">
@@ -472,11 +488,11 @@ Quantitative biology and integrative omics
 </section>
 <section id="without-the-bend-layers-collapse-to-one-matrix" class="slide level2 smaller">
 <h2>Without the bend, layers collapse to one matrix</h2>
-<p>From Matrices as transformations: <strong>applying <span class="math inline">\(A\)</span> then <span class="math inline">\(C\)</span> is the same as applying the single matrix <span class="math inline">\(CA\)</span></strong>.</p>
-<p><span class="math display">\[C(A\mathbf{x}) = (CA)\,\mathbf{x}, \qquad CA = \begin{pmatrix} 1 &amp; 2 &amp; 1 \end{pmatrix}\begin{pmatrix} 1 &amp; 1 \\ 1 &amp; -1 \\ -1 &amp; 2 \end{pmatrix} = \begin{pmatrix} 2 &amp; 1 \end{pmatrix}\]</span></p>
-<p>Check: <span class="math inline">\((2, 1)\cdot(1, 2) = 4\)</span>, the “without the bend” answer.</p>
+<p>From Matrices as transformations: <strong>applying <span class="math inline">A</span> then <span class="math inline">C</span> is the same as applying the single matrix <span class="math inline">CA</span></strong>.</p>
+<p><span class="math display">C(A\mathbf{x}) = (CA)\,\mathbf{x}, \qquad CA = \begin{pmatrix} 1 &amp; 2 &amp; 1 \end{pmatrix}\begin{pmatrix} 1 &amp; 1 \\ 1 &amp; -1 \\ -1 &amp; 2 \end{pmatrix} = \begin{pmatrix} 2 &amp; 1 \end{pmatrix}</span></p>
+<p>Check: <span class="math inline">(2, 1)\cdot(1, 2) = 4</span>, the “without the bend” answer.</p>
 <ul>
-<li>2 layers, or 100 layers, of matrices with no bend in between = <strong>one matrix</strong>. Shifts <span class="math inline">\(\mathbf{b}, d\)</span> do not help: still a straight-line map.</li>
+<li>2 layers, or 100 layers, of matrices with no bend in between = <strong>one matrix</strong>. Shifts <span class="math inline">\mathbf{b}, d</span> do not help: still a straight-line map.</li>
 <li>So a deep network <strong>without</strong> nonlinearities is just a linear model, however big.</li>
 <li>The bend between the matrices is what lets a network draw <strong>curves</strong>.</li>
 </ul>
@@ -500,7 +516,7 @@ Quantitative biology and integrative omics
 <img data-src="fig06-relu-hinges.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:96.0%"><p>One input (log dose), three hidden units. Each unit is a <strong>hinge</strong>: flat, then rising. The output adds the hinges with weights: a bent line that follows the dose–response data.</p>
 <ul>
 <li>More hidden units → more hinges → any smooth curve, as closely as you like.</li>
-<li>With the hinges fixed, the output weights are an ordinary <code>lm()</code>: the hinges are just columns of <span class="math inline">\(X\)</span>.</li>
+<li>With the hinges fixed, the output weights are an ordinary <code>lm()</code>: the hinges are just columns of <span class="math inline">X</span>.</li>
 <li>The price: many weights with no biological meaning, which need lots of data, a penalty or cross-validation, and a search with local minima.</li>
 </ul>
 <aside class="notes">
@@ -606,7 +622,7 @@ Quantitative biology and integrative omics
 <tbody>
 <tr class="odd">
 <td>Linear model</td>
-<td>linear in the <strong>parameters</strong>: <span class="math inline">\(x^2\)</span>, <span class="math inline">\(\log x\)</span>, sines and interactions are just columns of <span class="math inline">\(X\)</span></td>
+<td>linear in the <strong>parameters</strong>: <span class="math inline">x^2</span>, <span class="math inline">\log x</span>, sines and interactions are just columns of <span class="math inline">X</span></td>
 </tr>
 <tr class="even">
 <td>Nonlinear model</td>
@@ -626,7 +642,7 @@ Quantitative biology and integrative omics
 </tr>
 <tr class="even">
 <td>No bend</td>
-<td>stacked matrices collapse to one matrix (<span class="math inline">\(CA\)</span>): a linear model</td>
+<td>stacked matrices collapse to one matrix (<span class="math inline">CA</span>): a linear model</td>
 </tr>
 <tr class="odd">
 <td>Latent space</td>
@@ -670,7 +686,6 @@ Quantitative biology and integrative omics
   <script src="../site_libs/revealjs/plugin/notes/notes.js"></script>
   <script src="../site_libs/revealjs/plugin/search/search.js"></script>
   <script src="../site_libs/revealjs/plugin/zoom/zoom.js"></script>
-  <script src="../site_libs/revealjs/plugin/math/math.js"></script>
   <script>window.define = window.backupDefine; window.backupDefine = undefined;</script>
 
   <script>
@@ -838,27 +853,9 @@ Quantitative biology and integrative omics
         // Factor of the display size that should remain empty around the content
         margin: 0.1,
 
-        math: {
-          mathjax: 'https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.9/MathJax.js',
-          config: 'TeX-AMS_HTML-full',
-          tex2jax: {
-            inlineMath: [['\\(','\\)']],
-            displayMath: [['\\[','\\]']],
-            balanceBraces: true,
-            processEscapes: false,
-            processRefs: true,
-            processEnvironments: true,
-            preview: 'TeX',
-            skipTags: ['script','noscript','style','textarea','pre','code'],
-            ignoreClass: 'tex2jax_ignore',
-            processClass: 'tex2jax_process'
-          },
-        },
-
         // reveal.js plugins
         plugins: [QuartoLineHighlight, PdfExport, RevealMenu, QuartoSupport,
 
-          RevealMath,
           RevealNotes,
           RevealSearch,
           RevealZoom

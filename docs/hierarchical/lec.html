@@ -96,6 +96,22 @@
     code span.wa { color: #ff5555; } /* Warning */
   </style>
   <link rel="stylesheet" href="../site_libs/revealjs/dist/theme/quarto-bf56578b9c06c165c166475cd19dbcd1.css">
+  <script>window.backupDefine = window.define; window.define = undefined;</script><script src="https://cdn.jsdelivr.net/npm/katex@latest/dist/katex.min.js"></script>
+  <script>document.addEventListener("DOMContentLoaded", function () {
+ var mathElements = document.getElementsByClassName("math");
+ var macros = [];
+ for (var i = 0; i < mathElements.length; i++) {
+  var texText = mathElements[i].firstChild;
+  if (mathElements[i].tagName == "SPAN") {
+   katex.render(texText.data, mathElements[i], {
+    displayMode: mathElements[i].classList.contains('display'),
+    throwOnError: false,
+    macros: macros,
+    fleqn: false
+   });
+}}});
+  </script>
+  <script>window.define = window.backupDefine; window.backupDefine = undefined;</script><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@latest/dist/katex.min.css">
   <link href="../site_libs/revealjs/plugin/quarto-line-highlight/line-highlight.css" rel="stylesheet">
   <link href="../site_libs/revealjs/plugin/reveal-menu/menu.css" rel="stylesheet">
   <link href="../site_libs/revealjs/plugin/reveal-menu/quarto-menu.css" rel="stylesheet">
@@ -316,11 +332,11 @@ Quantitative biology and integrative omics
 </section>
 <section id="three-ways-to-handle-grouped-data" class="slide level2 smaller">
 <h2>Three ways to handle grouped data</h2>
-<p>Say each patient <span class="math inline">\(i\)</span> has a true mean <span class="math inline">\(\mu_i\)</span> and you want to describe them.</p>
+<p>Say each patient <span class="math inline">i</span> has a true mean <span class="math inline">\mu_i</span> and you want to describe them.</p>
 <ol type="1">
-<li><strong>Complete pooling</strong> — ignore patients; one grand mean <span class="math inline">\(\mu\)</span> for everyone. <em>Throws away real between-patient variation.</em></li>
+<li><strong>Complete pooling</strong> — ignore patients; one grand mean <span class="math inline">\mu</span> for everyone. <em>Throws away real between-patient variation.</em></li>
 <li><strong>No pooling</strong> — a separate, independent mean for each patient, estimated from that patient’s data alone. <em>Noisy for patients with few measurements; can’t borrow strength.</em></li>
-<li><strong>Partial pooling</strong> — each <span class="math inline">\(\hat\mu_i\)</span> is a <strong>compromise</strong> between the patient’s own mean and the grand mean. <em>The hierarchical model.</em></li>
+<li><strong>Partial pooling</strong> — each <span class="math inline">\hat\mu_i</span> is a <strong>compromise</strong> between the patient’s own mean and the grand mean. <em>The hierarchical model.</em></li>
 </ol>
 <p>Partial pooling is the “have your cake and eat it”: patient-specific, but stabilised by the group.</p>
 
@@ -341,17 +357,17 @@ Quantitative biology and integrative omics
 <section id="partial-pooling-and-shrinkage" class="slide level2 smaller">
 <h2>Partial pooling and shrinkage</h2>
 <p>The partial-pooling estimate for a group is a <strong>precision-weighted average</strong> of its own mean and the grand mean:</p>
-<p><span class="math display">\[
+<p><span class="math display">
 \hat\mu_i \;=\; w_i\,\bar y_i \;+\; (1-w_i)\,\hat\mu,
 \qquad
 w_i \;=\; \frac{n_i/\sigma^2}{\,n_i/\sigma^2 + 1/\tau^2\,}
-\]</span></p>
+</span></p>
 <ul>
-<li><span class="math inline">\(\bar y_i\)</span> = patient <span class="math inline">\(i\)</span>’s own sample mean, from <span class="math inline">\(n_i\)</span> measurements.</li>
-<li><span class="math inline">\(\hat\mu\)</span> = grand mean; <span class="math inline">\(\sigma^2\)</span> = within-patient noise; <span class="math inline">\(\tau^2\)</span> = between-patient spread.</li>
-<li>Every group estimate is pulled toward <span class="math inline">\(\hat\mu\)</span> — this pull is called <strong>shrinkage</strong>.</li>
+<li><span class="math inline">\bar y_i</span> = patient <span class="math inline">i</span>’s own sample mean, from <span class="math inline">n_i</span> measurements.</li>
+<li><span class="math inline">\hat\mu</span> = grand mean; <span class="math inline">\sigma^2</span> = within-patient noise; <span class="math inline">\tau^2</span> = between-patient spread.</li>
+<li>Every group estimate is pulled toward <span class="math inline">\hat\mu</span> — this pull is called <strong>shrinkage</strong>.</li>
 </ul>
-<p>More shrinkage when a group is <strong>small</strong> (<span class="math inline">\(n_i\)</span> tiny) or when groups are <strong>truly alike</strong> (<span class="math inline">\(\tau^2\)</span> small).</p>
+<p>More shrinkage when a group is <strong>small</strong> (<span class="math inline">n_i</span> tiny) or when groups are <strong>truly alike</strong> (<span class="math inline">\tau^2</span> small).</p>
 
 <img data-src="fig06-precision-weight-balance.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:70.0%"><aside class="notes">
 <p>This one formula carries the whole idea, so read the weights slowly. The weight on a group’s own mean grows with how much information that group carries (n_i / sigma^2, its precision) relative to the between-group spread (1 / tau^2). A data-rich group leans on itself; a data-poor group leans on the crowd. Two limiting cases recover the previous slide: tau^2 -&gt; 0 forces w_i -&gt; 0, complete pooling; tau^2 -&gt; infinity forces w_i -&gt; 1, no pooling. Shrinkage is not a fudge — it is the estimate that minimises expected error when groups genuinely share a distribution, echoing the Bayesian posterior-mean idea from earlier in this block.</p>
@@ -392,7 +408,7 @@ w_i \;=\; \frac{n_i/\sigma^2}{\,n_i/\sigma^2 + 1/\tau^2\,}
       }</style></aside>
 </section>
 <section id="try-it-shrinkage-with-tau2" class="slide level2 smaller">
-<h2>Try it: shrinkage with <span class="math inline">\(\tau^2\)</span></h2>
+<h2>Try it: shrinkage with <span class="math inline">\tau^2</span></h2>
 <link rel="stylesheet" href="../demos/dist/demo.css">
 <div data-demo="shrinkage" data-n="1 2 2 3 5 8 12 20" data-mu="6" data-sigma2="8" data-tau2="2" data-xlabel="biomarker (patient mean)"></div>
 <script src="../demos/dist/shrinkage.js"></script>
@@ -412,20 +428,20 @@ w_i \;=\; \frac{n_i/\sigma^2}{\,n_i/\sigma^2 + 1/\tau^2\,}
 </section>
 <section id="random-effects-the-two-level-model" class="slide level2 smaller">
 <h2>Random effects: the two-level model</h2>
-<p>Write the biomarker for measurement <span class="math inline">\(j\)</span> in patient <span class="math inline">\(i\)</span> as a sum of levels:</p>
-<p><span class="math display">\[
+<p>Write the biomarker for measurement <span class="math inline">j</span> in patient <span class="math inline">i</span> as a sum of levels:</p>
+<p><span class="math display">
 y_{ij} \;=\; \mu \;+\; b_i \;+\; \varepsilon_{ij},
 \qquad
 b_i \sim \mathcal N(0,\tau^2),
 \quad
 \varepsilon_{ij} \sim \mathcal N(0,\sigma^2)
-\]</span></p>
+</span></p>
 <ul>
-<li><span class="math inline">\(\mu\)</span> — the overall mean (a <strong>fixed effect</strong>).</li>
-<li><span class="math inline">\(b_i\)</span> — how patient <span class="math inline">\(i\)</span> deviates from it (a <strong>random effect</strong>), drawn from a shared distribution.</li>
-<li><span class="math inline">\(\varepsilon_{ij}\)</span> — measurement noise within a patient.</li>
+<li><span class="math inline">\mu</span> — the overall mean (a <strong>fixed effect</strong>).</li>
+<li><span class="math inline">b_i</span> — how patient <span class="math inline">i</span> deviates from it (a <strong>random effect</strong>), drawn from a shared distribution.</li>
+<li><span class="math inline">\varepsilon_{ij}</span> — measurement noise within a patient.</li>
 </ul>
-<p>The move that makes it <em>hierarchical</em>: the <span class="math inline">\(b_i\)</span> are not free parameters — they share a distribution <span class="math inline">\(\mathcal N(0,\tau^2)\)</span> whose spread <span class="math inline">\(\tau\)</span> is <strong>estimated from the data</strong>.</p>
+<p>The move that makes it <em>hierarchical</em>: the <span class="math inline">b_i</span> are not free parameters — they share a distribution <span class="math inline">\mathcal N(0,\tau^2)</span> whose spread <span class="math inline">\tau</span> is <strong>estimated from the data</strong>.</p>
 
 <img data-src="fig08-two-level-random-effects.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:70.0%"><aside class="notes">
 <p>Two levels, two variances: sigma^2 lives between measurements of one patient (technical), tau^2 lives between patients (biological). This is exactly the biological/technical distinction from earlier, now written as an equation. The crucial and initially strange idea is that b_i are treated as draws from a distribution rather than as ordinary parameters we estimate freely — that shared distribution is what couples the patients together and produces partial pooling automatically. Because tau is learned from the data, the model discovers how much to pool. Contrast “fixed effect” (one number for the whole dataset) with “random effect” (one draw per group from a common pool).</p>
@@ -444,9 +460,9 @@ b_i \sim \mathcal N(0,\tau^2),
 <section id="the-variance-partition-icc" class="slide level2 smaller">
 <h2>The variance partition (ICC)</h2>
 <p>The two variances answer “how correlated are two measurements from the <em>same</em> patient?”</p>
-<p><span class="math display">\[
+<p><span class="math display">
 \text{ICC} \;=\; \frac{\tau^2}{\tau^2 + \sigma^2}
-\]</span></p>
+</span></p>
 <ul>
 <li><strong>ICC near 1</strong> — patients differ a lot, measurements within a patient are tight. Grouping matters enormously; your effective sample size is close to the <strong>number of patients</strong>.</li>
 <li><strong>ICC near 0</strong> — patients are basically interchangeable; grouping barely matters and complete pooling is nearly fine.</li>
@@ -469,11 +485,11 @@ b_i \sim \mathcal N(0,\tau^2),
 </section>
 <section id="why-hierarchy-gives-correct-uncertainty" class="slide level2 smaller">
 <h2>Why hierarchy gives correct uncertainty</h2>
-<p>A flat model that ignores grouping assumes all <span class="math inline">\(N\)</span> measurements are independent, so its uncertainty scales like <span class="math inline">\(1/\sqrt{N}\)</span> — <strong>too optimistic</strong> when measurements cluster.</p>
+<p>A flat model that ignores grouping assumes all <span class="math inline">N</span> measurements are independent, so its uncertainty scales like <span class="math inline">1/\sqrt{N}</span> — <strong>too optimistic</strong> when measurements cluster.</p>
 <p>The hierarchical model instead:</p>
 <ul>
-<li>separates <strong>within-patient</strong> noise (<span class="math inline">\(\sigma\)</span>) from <strong>between-patient</strong> variation (<span class="math inline">\(\tau\)</span>),</li>
-<li>propagates <strong>both</strong> into the uncertainty of the group means and of <span class="math inline">\(\mu\)</span>,</li>
+<li>separates <strong>within-patient</strong> noise (<span class="math inline">\sigma</span>) from <strong>between-patient</strong> variation (<span class="math inline">\tau</span>),</li>
+<li>propagates <strong>both</strong> into the uncertainty of the group means and of <span class="math inline">\mu</span>,</li>
 <li>so the confidence interval on the treatment effect reflects the number of <strong>patients</strong>, not the raw count of measurements.</li>
 </ul>
 <p><strong>Same data, honest error bars.</strong> You are no longer fooled by measuring one patient a thousand times.</p>
@@ -511,7 +527,7 @@ b_i \sim \mathcal N(0,\tau^2),
 <span id="cb1-13"><a aria-hidden="true" tabindex="-1"></a><span class="fu">ranef</span>(fit)       <span class="co"># the shrunken per-patient deviations b_i</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <ul>
 <li><code>treatment</code> — a <strong>fixed</strong> effect (the population-level question).</li>
-<li><code>(1 | patient)</code> — a <strong>random</strong> intercept: one <span class="math inline">\(b_i\)</span> per patient, from a shared <span class="math inline">\(\mathcal N(0,\tau^2)\)</span>.</li>
+<li><code>(1 | patient)</code> — a <strong>random</strong> intercept: one <span class="math inline">b_i</span> per patient, from a shared <span class="math inline">\mathcal N(0,\tau^2)</span>.</li>
 </ul>
 <aside class="notes">
 <p>Keep this static — nothing is installed at render time — and read the formula syntax aloud because it is the part students actually reuse. Everything left of the bar is what varies by group (here just 1, the intercept); everything right of the bar is the grouping factor. summary() reports the two variance components, which are tau^2 and sigma^2 from our equations, plus the fixed-effect estimate and its (correctly widened) standard error. ranef() returns the partially pooled b_i — those are the shrunken estimates from the dumbbell picture. lme4 is the standard non-Bayesian entry point; the next slide gives the Bayesian version.</p>
@@ -537,7 +553,7 @@ b_i \sim \mathcal N(0,\tau^2),
 <span id="cb2-5"><a aria-hidden="true" tabindex="-1"></a>           <span class="at">family =</span> <span class="fu">gaussian</span>())      <span class="co"># brms writes and runs the Stan model for you</span></span>
 <span id="cb2-6"><a aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb2-7"><a aria-hidden="true" tabindex="-1"></a><span class="fu">summary</span>(fit)                          <span class="co"># posterior means + credible intervals</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<p>The hierarchy is Bayesian at heart: the line <span class="math inline">\(b_i \sim \mathcal N(0,\tau^2)\)</span> <strong>is</strong> a prior on the patient effects — an <strong>adaptive prior</strong> whose width <span class="math inline">\(\tau\)</span> is itself estimated (given its own hyperprior).</p>
+<p>The hierarchy is Bayesian at heart: the line <span class="math inline">b_i \sim \mathcal N(0,\tau^2)</span> <strong>is</strong> a prior on the patient effects — an <strong>adaptive prior</strong> whose width <span class="math inline">\tau</span> is itself estimated (given its own hyperprior).</p>
 <aside class="notes">
 <p>The punchline that ties the block together: a random effect is literally a prior on the group-level parameters, and because tau is learned, it is an <em>adaptive</em> or <em>hierarchical</em> prior — the data tell you how strongly to pool. This is why hierarchical models feel so natural in the Bayesian framework and why brms uses the identical (1 | patient) syntax on top of Stan. Everything from the prior/likelihood/posterior lectures applies unchanged; we’ve just added a layer where a parameter’s prior has parameters of its own. Don’t dwell on MCMC mechanics here — the point is conceptual continuity, not sampler details.</p>
 <style type="text/css">
@@ -557,10 +573,10 @@ b_i \sim \mathcal N(0,\tau^2),
 <p>Whichever engine you use, the workflow is the same:</p>
 <ul>
 <li>Report the <strong>fixed effect</strong> (e.g.&nbsp;treatment difference) with its interval — this is your scientific answer.</li>
-<li>Report the <strong>variance components</strong>: <span class="math inline">\(\hat\tau\)</span> (between patients) and <span class="math inline">\(\hat\sigma\)</span> (within patients); their ratio gives the ICC.</li>
+<li>Report the <strong>variance components</strong>: <span class="math inline">\hat\tau</span> (between patients) and <span class="math inline">\hat\sigma</span> (within patients); their ratio gives the ICC.</li>
 <li>Use the <strong>shrunken</strong> per-group estimates (<code>ranef</code> / posterior) when you need patient-level values, never the raw per-patient means.</li>
 </ul>
-<p>A one-line sanity check: if <span class="math inline">\(\hat\tau \approx 0\)</span> the data say patients are alike (near complete pooling); if <span class="math inline">\(\hat\tau \gg \hat\sigma\)</span> grouping dominates.</p>
+<p>A one-line sanity check: if <span class="math inline">\hat\tau \approx 0</span> the data say patients are alike (near complete pooling); if <span class="math inline">\hat\tau \gg \hat\sigma</span> grouping dominates.</p>
 <aside class="notes">
 <p>Give them a concrete reporting checklist so the model output isn’t opaque. The fixed effect answers the biology; the variance components describe the structure and let a reader compute the ICC and judge how much pooling happened. Warn them not to grab raw group means after fitting a hierarchical model — the whole point was to improve those via shrinkage. The tau-hat sanity check connects the fitted numbers back to the three-ways slide: the model chose its own spot on the pooling spectrum, and tau-hat tells you where.</p>
 <style type="text/css">
@@ -578,10 +594,10 @@ b_i \sim \mathcal N(0,\tau^2),
 <section id="pitfalls-and-good-practice" class="slide level2 smaller">
 <h2>Pitfalls and good practice</h2>
 <ul>
-<li><strong>Too few groups.</strong> You cannot estimate <span class="math inline">\(\tau\)</span> from 2–3 patients; the between-group variance is barely identified. Rule of thumb: aim for <strong>more groups</strong>, not just more measurements per group.</li>
+<li><strong>Too few groups.</strong> You cannot estimate <span class="math inline">\tau</span> from 2–3 patients; the between-group variance is barely identified. Rule of thumb: aim for <strong>more groups</strong>, not just more measurements per group.</li>
 <li><strong>Crossed vs nested grouping.</strong> Cells within patients within hospitals <em>nest</em>; but batch and patient may <em>cross</em>. Write the grouping to match the design.</li>
 <li><strong>Don’t model the treatment as random</strong> if it’s the effect you care about and has few, deliberately chosen levels — that’s a fixed effect.</li>
-<li><strong>Balance isn’t required.</strong> Unequal <span class="math inline">\(n_i\)</span> is fine and handled automatically — that’s a strength over averaging.</li>
+<li><strong>Balance isn’t required.</strong> Unequal <span class="math inline">n_i</span> is fine and handled automatically — that’s a strength over averaging.</li>
 </ul>
 
 <img data-src="fig14-nested-vs-crossed.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:70.0%"><aside class="notes">
@@ -634,11 +650,11 @@ b_i \sim \mathcal N(0,\tau^2),
 </tr>
 <tr class="even">
 <td>Random effect</td>
-<td><span class="math inline">\(b_i \sim \mathcal N(0,\tau^2)\)</span>; a group deviation from a shared pool</td>
+<td><span class="math inline">b_i \sim \mathcal N(0,\tau^2)</span>; a group deviation from a shared pool</td>
 </tr>
 <tr class="odd">
 <td>Two variances</td>
-<td><span class="math inline">\(\sigma^2\)</span> within, <span class="math inline">\(\tau^2\)</span> between; <span class="math inline">\(\text{ICC}=\tau^2/(\tau^2+\sigma^2)\)</span></td>
+<td><span class="math inline">\sigma^2</span> within, <span class="math inline">\tau^2</span> between; <span class="math inline">\text{ICC}=\tau^2/(\tau^2+\sigma^2)</span></td>
 </tr>
 <tr class="even">
 <td>Correct uncertainty</td>
@@ -690,7 +706,6 @@ b_i \sim \mathcal N(0,\tau^2),
   <script src="../site_libs/revealjs/plugin/notes/notes.js"></script>
   <script src="../site_libs/revealjs/plugin/search/search.js"></script>
   <script src="../site_libs/revealjs/plugin/zoom/zoom.js"></script>
-  <script src="../site_libs/revealjs/plugin/math/math.js"></script>
   <script>window.define = window.backupDefine; window.backupDefine = undefined;</script>
 
   <script>
@@ -858,27 +873,9 @@ b_i \sim \mathcal N(0,\tau^2),
         // Factor of the display size that should remain empty around the content
         margin: 0.1,
 
-        math: {
-          mathjax: 'https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.9/MathJax.js',
-          config: 'TeX-AMS_HTML-full',
-          tex2jax: {
-            inlineMath: [['\\(','\\)']],
-            displayMath: [['\\[','\\]']],
-            balanceBraces: true,
-            processEscapes: false,
-            processRefs: true,
-            processEnvironments: true,
-            preview: 'TeX',
-            skipTags: ['script','noscript','style','textarea','pre','code'],
-            ignoreClass: 'tex2jax_ignore',
-            processClass: 'tex2jax_process'
-          },
-        },
-
         // reveal.js plugins
         plugins: [QuartoLineHighlight, PdfExport, RevealMenu, QuartoSupport,
 
-          RevealMath,
           RevealNotes,
           RevealSearch,
           RevealZoom

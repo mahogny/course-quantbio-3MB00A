@@ -96,6 +96,22 @@
     code span.wa { color: #ff5555; } /* Warning */
   </style>
   <link rel="stylesheet" href="../site_libs/revealjs/dist/theme/quarto-bf56578b9c06c165c166475cd19dbcd1.css">
+  <script>window.backupDefine = window.define; window.define = undefined;</script><script src="https://cdn.jsdelivr.net/npm/katex@latest/dist/katex.min.js"></script>
+  <script>document.addEventListener("DOMContentLoaded", function () {
+ var mathElements = document.getElementsByClassName("math");
+ var macros = [];
+ for (var i = 0; i < mathElements.length; i++) {
+  var texText = mathElements[i].firstChild;
+  if (mathElements[i].tagName == "SPAN") {
+   katex.render(texText.data, mathElements[i], {
+    displayMode: mathElements[i].classList.contains('display'),
+    throwOnError: false,
+    macros: macros,
+    fleqn: false
+   });
+}}});
+  </script>
+  <script>window.define = window.backupDefine; window.backupDefine = undefined;</script><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@latest/dist/katex.min.css">
   <link href="../site_libs/revealjs/plugin/quarto-line-highlight/line-highlight.css" rel="stylesheet">
   <link href="../site_libs/revealjs/plugin/reveal-menu/menu.css" rel="stylesheet">
   <link href="../site_libs/revealjs/plugin/reveal-menu/quarto-menu.css" rel="stylesheet">
@@ -329,13 +345,13 @@ Quantitative biology and integrative omics
 <h2>Blurring: box and Gaussian</h2>
 <div class="columns">
 <div class="column" style="width:50%;">
-<p><strong>Box blur</strong>: the plain average of the 9 pixels. <span class="math display">\[\tfrac19\begin{bmatrix} 1 &amp; 1 &amp; 1\\ 1 &amp; 1 &amp; 1\\ 1 &amp; 1 &amp; 1 \end{bmatrix}\]</span></p>
+<p><strong>Box blur</strong>: the plain average of the 9 pixels. <span class="math display">\tfrac19\begin{bmatrix} 1 &amp; 1 &amp; 1\\ 1 &amp; 1 &amp; 1\\ 1 &amp; 1 &amp; 1 \end{bmatrix}</span></p>
 </div><div class="column" style="width:50%;">
-<p><strong>Gaussian blur</strong>: a weighted average, with most weight in the centre. <span class="math display">\[\tfrac1{16}\begin{bmatrix} 1 &amp; 2 &amp; 1\\ 2 &amp; 4 &amp; 2\\ 1 &amp; 2 &amp; 1 \end{bmatrix}\]</span></p>
+<p><strong>Gaussian blur</strong>: a weighted average, with most weight in the centre. <span class="math display">\tfrac1{16}\begin{bmatrix} 1 &amp; 2 &amp; 1\\ 2 &amp; 4 &amp; 2\\ 1 &amp; 2 &amp; 1 \end{bmatrix}</span></p>
 </div></div>
 <ul>
 <li>Each pixel becomes more like its neighbours: <strong>noise is averaged away</strong>, and sharp steps become ramps.</li>
-<li>The Gaussian is gentler and looks more natural: it is a small version of the bell curve <span class="math inline">\(e^{-\text{distance}^2}\)</span>, the same shape in every direction.</li>
+<li>The Gaussian is gentler and looks more natural: it is a small version of the bell curve <span class="math inline">e^{-\text{distance}^2}</span>, the same shape in every direction.</li>
 <li>Want <strong>more</strong> blur? Apply the kernel again. Two Gaussian passes act like one larger, wider Gaussian.</li>
 </ul>
 <aside class="notes">
@@ -354,9 +370,9 @@ Quantitative biology and integrative omics
 </section>
 <section id="sharpening-the-original-plus-its-edges" class="slide level2">
 <h2>Sharpening: the original plus its edges</h2>
-<p><span class="math display">\[\underbrace{\begin{bmatrix} 0 &amp; -1 &amp; 0\\ -1 &amp; 5 &amp; -1\\ 0 &amp; -1 &amp; 0 \end{bmatrix}}_{\text{sharpen}}
+<p><span class="math display">\underbrace{\begin{bmatrix} 0 &amp; -1 &amp; 0\\ -1 &amp; 5 &amp; -1\\ 0 &amp; -1 &amp; 0 \end{bmatrix}}_{\text{sharpen}}
 = \underbrace{\begin{bmatrix} 0 &amp; 0 &amp; 0\\ 0 &amp; 1 &amp; 0\\ 0 &amp; 0 &amp; 0 \end{bmatrix}}_{\text{identity: the original}}
-- \underbrace{\begin{bmatrix} 0 &amp; 1 &amp; 0\\ 1 &amp; -4 &amp; 1\\ 0 &amp; 1 &amp; 0 \end{bmatrix}}_{\text{Laplacian: the edges}}\]</span></p>
+- \underbrace{\begin{bmatrix} 0 &amp; 1 &amp; 0\\ 1 &amp; -4 &amp; 1\\ 0 &amp; 1 &amp; 0 \end{bmatrix}}_{\text{Laplacian: the edges}}</span></p>
 <ul>
 <li>The <strong>identity</strong> kernel copies the image unchanged: only the centre weight is 1.</li>
 <li>Sharpening takes the original and <strong>removes a bit of the local average</strong>: where a pixel differs from its neighbours, the difference is made larger.</li>
@@ -381,16 +397,16 @@ Quantitative biology and integrative omics
 <h2>Finding edges: Laplacian and Sobel</h2>
 <div class="columns">
 <div class="column" style="width:33%;">
-<p><strong>Laplacian</strong> <span class="math display">\[\begin{bmatrix} 0 &amp; 1 &amp; 0\\ 1 &amp; -4 &amp; 1\\ 0 &amp; 1 &amp; 0 \end{bmatrix}\]</span> neighbours minus centre: spots and outlines, in <strong>any</strong> direction</p>
+<p><strong>Laplacian</strong> <span class="math display">\begin{bmatrix} 0 &amp; 1 &amp; 0\\ 1 &amp; -4 &amp; 1\\ 0 &amp; 1 &amp; 0 \end{bmatrix}</span> neighbours minus centre: spots and outlines, in <strong>any</strong> direction</p>
 </div><div class="column" style="width:33%;">
-<p><strong>Sobel x</strong> <span class="math display">\[\begin{bmatrix} -1 &amp; 0 &amp; 1\\ -2 &amp; 0 &amp; 2\\ -1 &amp; 0 &amp; 1 \end{bmatrix}\]</span> right minus left: <strong>vertical</strong> edges</p>
+<p><strong>Sobel x</strong> <span class="math display">\begin{bmatrix} -1 &amp; 0 &amp; 1\\ -2 &amp; 0 &amp; 2\\ -1 &amp; 0 &amp; 1 \end{bmatrix}</span> right minus left: <strong>vertical</strong> edges</p>
 </div><div class="column" style="width:34%;">
-<p><strong>Sobel y</strong> <span class="math display">\[\begin{bmatrix} -1 &amp; -2 &amp; -1\\ 0 &amp; 0 &amp; 0\\ 1 &amp; 2 &amp; 1 \end{bmatrix}\]</span> below minus above: <strong>horizontal</strong> edges</p>
+<p><strong>Sobel y</strong> <span class="math display">\begin{bmatrix} -1 &amp; -2 &amp; -1\\ 0 &amp; 0 &amp; 0\\ 1 &amp; 2 &amp; 1 \end{bmatrix}</span> below minus above: <strong>horizontal</strong> edges</p>
 </div></div>
 <ul>
 <li>On a flat region all three give <strong>0</strong>. They answer only where the brightness <strong>changes</strong>.</li>
 <li>The <strong>sign</strong> says which way: Sobel x is positive where the image gets brighter to the right, negative where it gets darker.</li>
-<li><strong>Edge strength</strong> in any direction: combine both Sobels like the length of a vector, <span class="math inline">\(\sqrt{(\text{Sobel x})^2 + (\text{Sobel y})^2}\)</span>.</li>
+<li><strong>Edge strength</strong> in any direction: combine both Sobels like the length of a vector, <span class="math inline">\sqrt{(\text{Sobel x})^2 + (\text{Sobel y})^2}</span>.</li>
 </ul>
 <aside class="notes">
 <p>Read each kernel as a comparison. The Laplacian compares the centre with its four direct neighbours. Sobel x compares the column on the right with the column on the left; the middle row counts double, which is a little built-in smoothing along the edge. Sobel x therefore finds vertical edges, because a vertical edge is a change from left to right. That naming often confuses students: x is the direction of the change, not the direction of the edge line. The edge strength formula is the length of the vector (Sobel x, Sobel y), exactly as in the vectors unit. It is not a 3 by 3 kernel itself, because of the square root, but it is built from two of them.</p>
@@ -411,8 +427,8 @@ Quantitative biology and integrative omics
 
 <img data-src="fig05-preset-gallery.png" class="quarto-figure quarto-figure-center r-stretch" style="width:74.0%"><ul>
 <li>Edge kernels give negative numbers, so they are shown with <strong>0 as mid-grey</strong>: darker = negative, brighter = positive.</li>
-<li><strong>Emboss</strong> <span class="math inline">\(\begin{bmatrix} -2 &amp; -1 &amp; 0\\ -1 &amp; 1 &amp; 1\\ 0 &amp; 1 &amp; 2 \end{bmatrix}\)</span> is the original plus a diagonal edge detector: the cell looks lit from one corner.</li>
-<li><strong>Shift</strong> <span class="math inline">\(\begin{bmatrix} 0 &amp; 0 &amp; 0\\ 1 &amp; 0 &amp; 0\\ 0 &amp; 0 &amp; 0 \end{bmatrix}\)</span> copies each pixel’s <strong>left</strong> neighbour, so the image moves one pixel to the right. The weights decide where information comes from.</li>
+<li><strong>Emboss</strong> <span class="math inline">\begin{bmatrix} -2 &amp; -1 &amp; 0\\ -1 &amp; 1 &amp; 1\\ 0 &amp; 1 &amp; 2 \end{bmatrix}</span> is the original plus a diagonal edge detector: the cell looks lit from one corner.</li>
+<li><strong>Shift</strong> <span class="math inline">\begin{bmatrix} 0 &amp; 0 &amp; 0\\ 1 &amp; 0 &amp; 0\\ 0 &amp; 0 &amp; 0 \end{bmatrix}</span> copies each pixel’s <strong>left</strong> neighbour, so the image moves one pixel to the right. The weights decide where information comes from.</li>
 </ul>
 <aside class="notes">
 <p>This gallery is also the printable version of the demo. Walk through the rows. Top: the identity, then the two blurs (the nucleus texture softens, the outline survives), then sharpen, which brings out the texture but also the grain. Bottom: the Laplacian responds to every fine speck, so it looks like noise with a faint outline; Sobel x lights up the left and right sides of the nucleus, Sobel y the top and bottom; emboss gives a relief effect. The output ranges are far outside 0..255: sharpen goes from −325 to 514, Sobel x from −631 to 624. So any display of these needs a decision about how to map numbers to grey; the demo lets students switch between three choices. The shift kernel is not in the gallery (the picture would look unchanged); try it in the demo with “apply ×” at 5. A note on the name: image software calls this operation “filtering” or “convolution”. Strictly, mathematical convolution turns the kernel upside down and left to right before sliding it; what we compute, without the flip, is called correlation. For symmetric kernels (box, Gaussian, Laplacian, sharpen) the two are identical. For asymmetric ones the flip matters: with a true convolution the shift kernel moves the image to the left, and Sobel x changes sign. Libraries differ in which one they call “filter”, so check when the sign or direction matters. In a neural network the distinction is irrelevant, since the weights are learned.</p>
@@ -715,7 +731,6 @@ Quantitative biology and integrative omics
   <script src="../site_libs/revealjs/plugin/notes/notes.js"></script>
   <script src="../site_libs/revealjs/plugin/search/search.js"></script>
   <script src="../site_libs/revealjs/plugin/zoom/zoom.js"></script>
-  <script src="../site_libs/revealjs/plugin/math/math.js"></script>
   <script>window.define = window.backupDefine; window.backupDefine = undefined;</script>
 
   <script>
@@ -883,27 +898,9 @@ Quantitative biology and integrative omics
         // Factor of the display size that should remain empty around the content
         margin: 0.1,
 
-        math: {
-          mathjax: 'https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.9/MathJax.js',
-          config: 'TeX-AMS_HTML-full',
-          tex2jax: {
-            inlineMath: [['\\(','\\)']],
-            displayMath: [['\\[','\\]']],
-            balanceBraces: true,
-            processEscapes: false,
-            processRefs: true,
-            processEnvironments: true,
-            preview: 'TeX',
-            skipTags: ['script','noscript','style','textarea','pre','code'],
-            ignoreClass: 'tex2jax_ignore',
-            processClass: 'tex2jax_process'
-          },
-        },
-
         // reveal.js plugins
         plugins: [QuartoLineHighlight, PdfExport, RevealMenu, QuartoSupport,
 
-          RevealMath,
           RevealNotes,
           RevealSearch,
           RevealZoom

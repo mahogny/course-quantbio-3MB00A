@@ -16,6 +16,7 @@ format:
     incremental: false
     chalkboard: false
     menu: true
+    html-math-method: katex
 ---
 
 ## About this lecture
@@ -77,12 +78,12 @@ There is a second, equally important way to read $A\mathbf{x}$: as a **linear co
 $$\begin{pmatrix} 1 & 2 \\ 0 & 1 \end{pmatrix}\begin{pmatrix} 3 \\ 4 \end{pmatrix} = 3\begin{pmatrix} 1 \\ 0 \end{pmatrix} + 4\begin{pmatrix} 2 \\ 1 \end{pmatrix} = \begin{pmatrix} 3 \\ 0 \end{pmatrix} + \begin{pmatrix} 8 \\ 4 \end{pmatrix} = \begin{pmatrix} 11 \\ 4 \end{pmatrix}$$
 
 - "3 units of column 1, plus 4 units of column 2."
-- This view explains why the output can only ever be a blend of the columns — the **column space**.
+- So the output is always a **blend of the columns** of $A$.
 
 ![](fig04-columns-view.svg){width="60%" fig-align="center"}
 
 ::: notes
-The columns view is conceptually deeper than the rows view and pays off later (column space, rank, PCA loadings). Same answer (11,4), different story: the input vector's entries are mixing weights for the columns. Both views are worth memorising; rows are easier for hand computation, columns are better for understanding what outputs are reachable.
+The columns view is conceptually deeper than the rows view and pays off later (rank, PCA loadings). Same answer (11,4), different story: the input vector's entries are mixing weights for the columns. Both views are worth memorising; rows are easier for hand computation, columns are better for understanding what outputs are reachable.
 :::
 
 ## Matrix–vector product in R
@@ -108,7 +109,11 @@ The single most common beginner mistake: using * instead of %*%. Hammer this. Al
 
 $$I = \begin{pmatrix} 1 & 0 \\ 0 & 1 \end{pmatrix}, \qquad I\mathbf{x} = \mathbf{x} \ \text{for every } \mathbf{x}$$
 
-The identity leaves every vector unchanged — the matrix version of multiplying by 1.
+Written out for $\mathbf{x} = \begin{pmatrix} a \\ b \end{pmatrix}$:
+
+$$I\mathbf{x} = \begin{pmatrix} 1 & 0 \\ 0 & 1 \end{pmatrix}\begin{pmatrix} a \\ b \end{pmatrix} = \begin{pmatrix} 1\cdot a + 0\cdot b \\ 0\cdot a + 1\cdot b \end{pmatrix} = \begin{pmatrix} a \\ b \end{pmatrix}$$
+
+The 1s pick out each entry and the 0s ignore the other one. The identity leaves every vector unchanged — the matrix version of multiplying by 1.
 
 ```r
 I <- diag(2)      # 2x2 identity
@@ -127,7 +132,9 @@ The identity is the reference point for all transformations: it does nothing. di
 
 A **diagonal** matrix stretches each axis independently:
 
-$$S = \begin{pmatrix} 2 & 0 \\ 0 & 0.5 \end{pmatrix} \ \Rightarrow\ \text{double the x-axis, halve the y-axis}$$
+$$S\begin{pmatrix} a \\ b \end{pmatrix} = \begin{pmatrix} 2 & 0 \\ 0 & 0.5 \end{pmatrix}\begin{pmatrix} a \\ b \end{pmatrix} = \begin{pmatrix} 2\cdot a + 0\cdot b \\ 0\cdot a + 0.5\cdot b \end{pmatrix} = \begin{pmatrix} 2a \\ 0.5\,b \end{pmatrix}$$
+
+The 0s mean the new x depends only on the old x, and the new y only on the old y: double the x-axis, halve the y-axis.
 
 ```r
 S <- diag(c(2, 0.5))
@@ -151,6 +158,8 @@ Scaling is the most intuitive non-trivial transformation. The key practical patt
 
 ## Rotation matrices {.smaller}
 
+:::: {.columns}
+::: {.column width="55%"}
 To rotate every point by angle $\theta$ (counter-clockwise) about the origin:
 
 $$R(\theta) = \begin{pmatrix} \cos\theta & -\sin\theta \\ \sin\theta & \cos\theta \end{pmatrix}$$
@@ -164,8 +173,15 @@ round(R %*% c(1, 0))                # 0 1  -> x-axis rotates onto y-axis
 
 - A rotation changes **direction** but never **length** (it is *rigid*).
 - The columns of $R$ are where the old axes land — a recurring theme.
-
-![](fig08-rotation-90.svg){width="55%" fig-align="center"}
+:::
+::: {.column width="45%"}
+```{=html}
+<link rel="stylesheet" href="../demos/dist/demo.css">
+<div data-demo="vecmini" data-mode="rotate" data-layout="stack" data-theta="30"></div>
+<script src="../demos/dist/vecmini.js"></script>
+```
+:::
+::::
 
 ::: notes
 Rotation introduces a transformation that mixes the axes (off-diagonal entries). The check round(R %*% c(1,0)) == c(0,1) makes the geometry tangible: the x-axis swings up onto the y-axis under a 90-degree turn. Emphasise that rotations preserve length and angles — useful intuition for later when we talk about orthogonal matrices and PCA's rotation of the data cloud.
@@ -188,25 +204,16 @@ To *design* a transformation: decide where the axes should land, then write thos
 This is a powerful shortcut: to understand or build a matrix, just ask where the unit axes go. Multiplying A by (1,0) selects column 1; by (0,1) selects column 2. This reframes "what does this matrix do?" as "look at its columns", and reframes "build a matrix that does X" as "place the target axis images in the columns".
 :::
 
-## Bonus: the determinant is an area {.smaller}
+## Order matters: an everyday example
 
-The two columns of $A$ span a parallelogram: the image of the unit square. Its area is the **determinant** $\det A = ad - bc$.
+Seen from above, a person stands on a grid, facing up. Two instructions: **turn left** and **step forward**.
 
-![](fig09b-determinant-area.svg){width="88%" fig-align="center"}
+![](fig10a-turn-then-step.svg){width="85%" fig-align="center"}
 
-- $\lvert \det A \rvert$: how much $A$ scales **areas** (here 3 times).
-- Sign: **negative** means the picture is **flipped** (the turn from column 1 to column 2 goes clockwise).
-- **Zero**: the columns are parallel, so everything collapses onto a line, and $A$ cannot be undone.
-
-```r
-det(matrix(c(2, 1,
-             1, 2), nrow = 2, byrow = TRUE))   # 3
-```
-
-[Bonus material.]{style="font-size: 0.8em; color: #bc4749;"}
+Same two instructions, different order, different place. Transformations are the same: doing $B$ then $A$ is usually not the same as $A$ then $B$.
 
 ::: notes
-Bonus slide. It gives a picture for a number that otherwise looks like an arbitrary formula. Middle panel: the same columns as the left panel, swapped, so the same parallelogram, but the turn from red to blue is now clockwise, and the determinant changes sign. Right panel: column 2 is half of column 1, so the "parallelogram" is a line segment with area 0. This is the singular case from Linear systems: no inverse. It comes back in Transforming images with matrices (the gallery), and the formula ad - bc is used again in Eigenvalues & eigenvectors.
+An everyday warm-up before the matrices. Turn-then-step ends one square to the left; step-then-turn ends one square up. Both face left, but they stand in different places. Strictly, a step is a shift, not a matrix (a matrix always keeps the origin in place), so this is only the intuition; the next slide shows the same effect with two real matrices, a rotation and a scaling.
 :::
 
 ## Composing transformations = multiplying matrices {.smaller}
@@ -275,14 +282,14 @@ This capstone block is what students should reproduce and stare at: a rotation t
 
 ## Design / contrast matrices: a biology aside {.smaller}
 
-In differential-expression analysis (e.g. `limma`, `DESeq2`) a **design matrix** $X$ encodes which samples are control vs treated. The model is
+In differential-expression analysis a **design matrix** $X$ encodes which samples are control vs treated. The model is
 
 $$\mathbf{y} \approx X\boldsymbol\beta$$
 
 - $X$ is a matrix that maps coefficients $\boldsymbol\beta$ (e.g. baseline, treatment effect) to predicted expression $\mathbf{y}$.
 - Same machinery as today: a matrix takes one vector and produces another, as a linear combination of its columns.
 
-You will not build these by hand in this course — but recognise that the matrix-as-transformation idea is *exactly* what powers the statistics you already use.
+You will build these yourself in week 3 — for now, recognise that the matrix-as-transformation idea is *exactly* what powers these statistics.
 
 ::: notes
 This slide grounds the abstraction in tools the students likely already touch. A design matrix is just a transformation mapping effect sizes to expected measurements; fitting the model is "solving" that relationship (Linear systems by hand and Linear systems in R). The aim is recognition, not mastery: when they next see model.matrix() output, they should think "ah, a transformation, columns are the predictors".

@@ -96,6 +96,22 @@
     code span.wa { color: #ff5555; } /* Warning */
   </style>
   <link rel="stylesheet" href="../site_libs/revealjs/dist/theme/quarto-bf56578b9c06c165c166475cd19dbcd1.css">
+  <script>window.backupDefine = window.define; window.define = undefined;</script><script src="https://cdn.jsdelivr.net/npm/katex@latest/dist/katex.min.js"></script>
+  <script>document.addEventListener("DOMContentLoaded", function () {
+ var mathElements = document.getElementsByClassName("math");
+ var macros = [];
+ for (var i = 0; i < mathElements.length; i++) {
+  var texText = mathElements[i].firstChild;
+  if (mathElements[i].tagName == "SPAN") {
+   katex.render(texText.data, mathElements[i], {
+    displayMode: mathElements[i].classList.contains('display'),
+    throwOnError: false,
+    macros: macros,
+    fleqn: false
+   });
+}}});
+  </script>
+  <script>window.define = window.backupDefine; window.backupDefine = undefined;</script><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@latest/dist/katex.min.css">
   <link href="../site_libs/revealjs/plugin/quarto-line-highlight/line-highlight.css" rel="stylesheet">
   <link href="../site_libs/revealjs/plugin/reveal-menu/menu.css" rel="stylesheet">
   <link href="../site_libs/revealjs/plugin/reveal-menu/quarto-menu.css" rel="stylesheet">
@@ -207,13 +223,13 @@ Quantitative biology and integrative omics
 </section>
 <section id="about-this-lecture" class="slide level2">
 <h2>About this lecture</h2>
-<p>In Linear models we fit <span class="math inline">\(\mathbf{y} = X\boldsymbol\beta\)</span> by <strong>least squares</strong> — the best straight-line predictor. That works beautifully when we have many samples and few predictors. In genomics we usually have the <strong>opposite</strong>: thousands of genes, a few dozen samples. Ordinary least squares breaks. Today we fix it by <strong>penalizing</strong> large coefficients.</p>
+<p>In Linear models we fit <span class="math inline">\mathbf{y} = X\boldsymbol\beta</span> by <strong>least squares</strong> — the best straight-line predictor. That works beautifully when we have many samples and few predictors. In genomics we usually have the <strong>opposite</strong>: thousands of genes, a few dozen samples. Ordinary least squares breaks. Today we fix it by <strong>penalizing</strong> large coefficients.</p>
 <ul>
 <li><strong>Ridge (L2):</strong> shrink all coefficients toward zero — tames collinearity, keeps every predictor.</li>
 <li><strong>Lasso (L1):</strong> shrink <em>and</em> set some coefficients <strong>exactly to zero</strong> — automatic feature selection (a sparse model).</li>
 <li><strong>Elastic net:</strong> a tunable <strong>mix</strong> of the two.</li>
 <li>The <strong>geometry</strong> behind why lasso zeros coefficients but ridge does not (a diamond vs.&nbsp;a circle).</li>
-<li>The tuning parameter <span class="math inline">\(\lambda\)</span>, and how to choose it by <strong>cross-validation</strong>.</li>
+<li>The tuning parameter <span class="math inline">\lambda</span>, and how to choose it by <strong>cross-validation</strong>.</li>
 <li>In R: the <code>glmnet</code> package. Biology: <strong>selecting a handful of predictive genes</strong> from a whole transcriptome.</li>
 </ul>
 <aside class="notes">
@@ -233,9 +249,9 @@ Quantitative biology and integrative omics
 <section id="biology-first-too-many-genes-too-few-samples" class="slide level2 smaller">
 <h2>Biology first: too many genes, too few samples</h2>
 <p>You measure expression of <strong>20 000 genes</strong> in <strong>40 patients</strong> and want to predict a phenotype (drug response, tumour subtype, survival). You would like a model</p>
-<p><span class="math display">\[\text{phenotype} \approx \beta_1\,\text{gene}_1 + \beta_2\,\text{gene}_2 + \dots + \beta_p\,\text{gene}_p.\]</span></p>
+<p><span class="math display">\text{phenotype} \approx \beta_1\,\text{gene}_1 + \beta_2\,\text{gene}_2 + \dots + \beta_p\,\text{gene}_p.</span></p>
 <ul>
-<li>Predictors <span class="math inline">\(p = 20\,000\)</span> hugely exceeds samples <span class="math inline">\(n = 40\)</span>. This is the <strong><span class="math inline">\(p \gg n\)</span></strong> regime — the normal situation in omics.</li>
+<li>Predictors <span class="math inline">p = 20\,000</span> hugely exceeds samples <span class="math inline">n = 40</span>. This is the <strong><span class="math inline">p \gg n</span></strong> regime — the normal situation in omics.</li>
 <li>Ordinary least squares has <strong>infinitely many</strong> perfect fits and picks nonsense: huge, unstable coefficients that memorise noise.</li>
 <li>Many genes are <strong>co-regulated</strong> (collinear), so their coefficients trade off wildly.</li>
 </ul>
@@ -257,10 +273,10 @@ Quantitative biology and integrative omics
 </section>
 <section id="recall-least-squares-and-where-it-breaks" class="slide level2 smaller">
 <h2>Recall: least squares and where it breaks</h2>
-<p>Ordinary least squares (OLS) chooses <span class="math inline">\(\boldsymbol\beta\)</span> to make the <strong>residual sum of squares</strong> as small as possible:</p>
-<p><span class="math display">\[\hat{\boldsymbol\beta}_{\text{OLS}} = \arg\min_{\boldsymbol\beta}\ \underbrace{\sum_{i=1}^{n}\big(y_i - \mathbf{x}_i^\top\boldsymbol\beta\big)^2}_{\text{RSS} \,=\, \lVert \mathbf{y} - X\boldsymbol\beta \rVert^2}, \qquad \hat{\boldsymbol\beta}_{\text{OLS}} = (X^\top X)^{-1}X^\top \mathbf{y}.\]</span></p>
+<p>Ordinary least squares (OLS) chooses <span class="math inline">\boldsymbol\beta</span> to make the <strong>residual sum of squares</strong> as small as possible:</p>
+<p><span class="math display">\hat{\boldsymbol\beta}_{\text{OLS}} = \arg\min_{\boldsymbol\beta}\ \underbrace{\sum_{i=1}^{n}\big(y_i - \mathbf{x}_i^\top\boldsymbol\beta\big)^2}_{\text{RSS} \,=\, \lVert \mathbf{y} - X\boldsymbol\beta \rVert^2}, \qquad \hat{\boldsymbol\beta}_{\text{OLS}} = (X^\top X)^{-1}X^\top \mathbf{y}.</span></p>
 <ul>
-<li>The formula needs <span class="math inline">\(X^\top X\)</span> to be <strong>invertible</strong>. When <span class="math inline">\(p &gt; n\)</span>, or when predictors are collinear, <span class="math inline">\(X^\top X\)</span> is <strong>singular</strong> (or nearly so) — no stable inverse.</li>
+<li>The formula needs <span class="math inline">X^\top X</span> to be <strong>invertible</strong>. When <span class="math inline">p &gt; n</span>, or when predictors are collinear, <span class="math inline">X^\top X</span> is <strong>singular</strong> (or nearly so) — no stable inverse.</li>
 <li>OLS has only one goal: fit the training data. With enough predictors it fits it <strong>perfectly</strong>, including the noise — <strong>overfitting</strong>.</li>
 </ul>
 <p>We need a second goal that competes with “fit the data”: <em>keep the coefficients small.</em></p>
@@ -281,28 +297,28 @@ Quantitative biology and integrative omics
 <section id="the-idea-add-a-penalty-for-big-coefficients" class="slide level2 smaller">
 <h2>The idea: add a penalty for big coefficients</h2>
 <p>Keep the fit term, but <strong>add a cost</strong> that grows with the size of the coefficients:</p>
-<p><span class="math display">\[\hat{\boldsymbol\beta} = \arg\min_{\boldsymbol\beta}\ \Big\{\ \underbrace{\lVert \mathbf{y} - X\boldsymbol\beta \rVert^2}_{\text{fit the data}} \ +\ \underbrace{\lambda \cdot \text{penalty}(\boldsymbol\beta)}_{\text{keep }\boldsymbol\beta\text{ small}}\ \Big\}\]</span></p>
+<p><span class="math display">\hat{\boldsymbol\beta} = \arg\min_{\boldsymbol\beta}\ \Big\{\ \underbrace{\lVert \mathbf{y} - X\boldsymbol\beta \rVert^2}_{\text{fit the data}} \ +\ \underbrace{\lambda \cdot \text{penalty}(\boldsymbol\beta)}_{\text{keep }\boldsymbol\beta\text{ small}}\ \Big\}</span></p>
 <ul>
-<li><span class="math inline">\(\lambda \ge 0\)</span> sets the <strong>exchange rate</strong> between the two goals. <span class="math inline">\(\lambda = 0\)</span> gives plain OLS; larger <span class="math inline">\(\lambda\)</span> buys smaller coefficients at the price of some fit.</li>
+<li><span class="math inline">\lambda \ge 0</span> sets the <strong>exchange rate</strong> between the two goals. <span class="math inline">\lambda = 0</span> gives plain OLS; larger <span class="math inline">\lambda</span> buys smaller coefficients at the price of some fit.</li>
 <li>The <strong>shape</strong> of the penalty is what distinguishes the three methods:</li>
 </ul>
 <table class="caption-top">
 <thead>
 <tr class="header">
 <th>Method</th>
-<th>penalty<span class="math inline">\((\boldsymbol\beta)\)</span></th>
+<th>penalty<span class="math inline">(\boldsymbol\beta)</span></th>
 <th>name</th>
 </tr>
 </thead>
 <tbody>
 <tr class="odd">
 <td>Ridge</td>
-<td><span class="math inline">\(\sum_j \beta_j^2\)</span></td>
+<td><span class="math inline">\sum_j \beta_j^2</span></td>
 <td>L2 (squared)</td>
 </tr>
 <tr class="even">
 <td>Lasso</td>
-<td><span class="math inline">\(\sum_j \lvert\beta_j\rvert\)</span></td>
+<td><span class="math inline">\sum_j \lvert\beta_j\rvert</span></td>
 <td>L1 (absolute)</td>
 </tr>
 <tr class="odd">
@@ -329,11 +345,11 @@ Quantitative biology and integrative omics
 </section>
 <section id="first-put-predictors-on-a-common-scale" class="slide level2 smaller">
 <h2>First: put predictors on a common scale</h2>
-<p>The penalty <span class="math inline">\(\sum_j \beta_j^2\)</span> (or <span class="math inline">\(\sum_j |\beta_j|\)</span>) adds up coefficients across <strong>all</strong> predictors. That only makes sense if the predictors are <strong>comparable in scale</strong>.</p>
+<p>The penalty <span class="math inline">\sum_j \beta_j^2</span> (or <span class="math inline">\sum_j |\beta_j|</span>) adds up coefficients across <strong>all</strong> predictors. That only makes sense if the predictors are <strong>comparable in scale</strong>.</p>
 <ul>
 <li>A gene measured in large units gets an artificially <strong>small</strong> coefficient and is under-penalized; a gene in small units is over-penalized. The penalty would depend on your <strong>units</strong>, which is unacceptable.</li>
 <li><strong>Fix:</strong> standardize each predictor to mean 0 and standard deviation 1 before fitting. Then a coefficient’s size reflects <strong>importance</strong>, not units.</li>
-<li>The <strong>intercept is never penalized</strong> — it just anchors the overall level of <span class="math inline">\(\mathbf{y}\)</span>.</li>
+<li>The <strong>intercept is never penalized</strong> — it just anchors the overall level of <span class="math inline">\mathbf{y}</span>.</li>
 </ul>
 <p><code>glmnet</code> does this standardization <strong>for you</strong> (<code>standardize = TRUE</code> by default) and reports coefficients back on the <strong>original</strong> scale.</p>
 <aside class="notes">
@@ -353,11 +369,11 @@ Quantitative biology and integrative omics
 <section id="ridge-regression-l2-penalty" class="slide level2 smaller">
 <h2>Ridge regression (L2 penalty)</h2>
 <p>Penalize the <strong>sum of squared</strong> coefficients:</p>
-<p><span class="math display">\[\hat{\boldsymbol\beta}_{\text{ridge}} = \arg\min_{\boldsymbol\beta}\ \lVert \mathbf{y} - X\boldsymbol\beta \rVert^2 + \lambda \sum_{j=1}^{p}\beta_j^2\]</span></p>
-<p>This has a clean closed form — just add <span class="math inline">\(\lambda\)</span> to the diagonal of <span class="math inline">\(X^\top X\)</span>:</p>
-<p><span class="math display">\[\hat{\boldsymbol\beta}_{\text{ridge}} = (X^\top X + \lambda I)^{-1} X^\top \mathbf{y}\]</span></p>
+<p><span class="math display">\hat{\boldsymbol\beta}_{\text{ridge}} = \arg\min_{\boldsymbol\beta}\ \lVert \mathbf{y} - X\boldsymbol\beta \rVert^2 + \lambda \sum_{j=1}^{p}\beta_j^2</span></p>
+<p>This has a clean closed form — just add <span class="math inline">\lambda</span> to the diagonal of <span class="math inline">X^\top X</span>:</p>
+<p><span class="math display">\hat{\boldsymbol\beta}_{\text{ridge}} = (X^\top X + \lambda I)^{-1} X^\top \mathbf{y}</span></p>
 <ul>
-<li>Adding <span class="math inline">\(\lambda I\)</span> makes the matrix <strong>invertible again</strong>, even when <span class="math inline">\(X^\top X\)</span> alone is singular (<span class="math inline">\(p&gt;n\)</span> or collinear). This is why ridge <strong>tames collinearity</strong>.</li>
+<li>Adding <span class="math inline">\lambda I</span> makes the matrix <strong>invertible again</strong>, even when <span class="math inline">X^\top X</span> alone is singular (<span class="math inline">p&gt;n</span> or collinear). This is why ridge <strong>tames collinearity</strong>.</li>
 <li>Every coefficient is <strong>shrunk toward zero</strong>, but essentially <strong>none becomes exactly zero</strong> — ridge <strong>keeps all predictors</strong>.</li>
 </ul>
 
@@ -377,11 +393,11 @@ Quantitative biology and integrative omics
 </section>
 <section id="when-collinear-predictors-fight" class="slide level2 smaller">
 <h2>When collinear predictors fight</h2>
-<p>Two co-regulated genes <span class="math inline">\(g_1, g_2\)</span> carry almost the <strong>same</strong> signal. OLS is free to write</p>
-<p><span class="math display">\[100\,g_1 - 98\,g_2, \quad\text{or}\quad -50\,g_1 + 52\,g_2, \quad\text{or}\dots\]</span></p>
+<p>Two co-regulated genes <span class="math inline">g_1, g_2</span> carry almost the <strong>same</strong> signal. OLS is free to write</p>
+<p><span class="math display">100\,g_1 - 98\,g_2, \quad\text{or}\quad -50\,g_1 + 52\,g_2, \quad\text{or}\dots</span></p>
 <p>— wildly different coefficients that predict almost identically. The coefficients are <strong>unstable</strong>: a tiny change in the data flips them.</p>
 <ul>
-<li><strong>Ridge</strong> dislikes large coefficients (they cost <span class="math inline">\(\beta^2\)</span>), so it <strong>spreads</strong> the weight smoothly and roughly <strong>equally</strong> between <span class="math inline">\(g_1\)</span> and <span class="math inline">\(g_2\)</span> — small, stable, sensible values.</li>
+<li><strong>Ridge</strong> dislikes large coefficients (they cost <span class="math inline">\beta^2</span>), so it <strong>spreads</strong> the weight smoothly and roughly <strong>equally</strong> between <span class="math inline">g_1</span> and <span class="math inline">g_2</span> — small, stable, sensible values.</li>
 <li>This “sharing” behaviour is a hallmark of the L2 penalty and is often <strong>desirable</strong> in biology, where truly co-regulated genes <em>should</em> share credit.</li>
 </ul>
 
@@ -402,11 +418,11 @@ Quantitative biology and integrative omics
 <section id="lasso-regression-l1-penalty" class="slide level2 smaller">
 <h2>Lasso regression (L1 penalty)</h2>
 <p>Penalize the <strong>sum of absolute values</strong> instead:</p>
-<p><span class="math display">\[\hat{\boldsymbol\beta}_{\text{lasso}} = \arg\min_{\boldsymbol\beta}\ \lVert \mathbf{y} - X\boldsymbol\beta \rVert^2 + \lambda \sum_{j=1}^{p}\lvert\beta_j\rvert\]</span></p>
+<p><span class="math display">\hat{\boldsymbol\beta}_{\text{lasso}} = \arg\min_{\boldsymbol\beta}\ \lVert \mathbf{y} - X\boldsymbol\beta \rVert^2 + \lambda \sum_{j=1}^{p}\lvert\beta_j\rvert</span></p>
 <ul>
-<li>One small change — squares become absolute values — has a dramatic effect: as <span class="math inline">\(\lambda\)</span> grows, coefficients are driven <strong>exactly to zero</strong>, one after another.</li>
+<li>One small change — squares become absolute values — has a dramatic effect: as <span class="math inline">\lambda</span> grows, coefficients are driven <strong>exactly to zero</strong>, one after another.</li>
 <li>A coefficient of exactly zero means the predictor is <strong>dropped</strong>. Lasso therefore performs <strong>automatic feature selection</strong>: it returns a <strong>sparse</strong> model using only a subset of the genes.</li>
-<li>No closed form (the <span class="math inline">\(|\beta|\)</span> kink is not differentiable at <span class="math inline">\(0\)</span>); solved numerically — which is what <code>glmnet</code> does.</li>
+<li>No closed form (the <span class="math inline">|\beta|</span> kink is not differentiable at <span class="math inline">0</span>); solved numerically — which is what <code>glmnet</code> does.</li>
 </ul>
 
 <img data-src="fig09-lasso-coefficient-paths.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:60.0%"><aside class="notes">
@@ -426,11 +442,11 @@ Quantitative biology and integrative omics
 <section id="why-lasso-zeros-coefficients-the-geometry" class="slide level2 smaller">
 <h2>Why lasso zeros coefficients: the geometry</h2>
 <p>Equivalent view: minimize RSS <strong>subject to a budget</strong> on the coefficients.</p>
-<p><span class="math display">\[\text{Ridge: } \sum_j \beta_j^2 \le t \qquad\qquad \text{Lasso: } \sum_j \lvert\beta_j\rvert \le t\]</span></p>
-<p>In two dimensions (<span class="math inline">\(\beta_1,\beta_2\)</span>) the budget region is:</p>
+<p><span class="math display">\text{Ridge: } \sum_j \beta_j^2 \le t \qquad\qquad \text{Lasso: } \sum_j \lvert\beta_j\rvert \le t</span></p>
+<p>In two dimensions (<span class="math inline">\beta_1,\beta_2</span>) the budget region is:</p>
 <ul>
-<li><strong>Ridge → a circle</strong> (disk): <span class="math inline">\(\beta_1^2 + \beta_2^2 \le t\)</span> — smooth, round, no special points.</li>
-<li><strong>Lasso → a diamond</strong> (square on its corner): <span class="math inline">\(\lvert\beta_1\rvert + \lvert\beta_2\rvert \le t\)</span> — with <strong>sharp corners sitting on the axes</strong>.</li>
+<li><strong>Ridge → a circle</strong> (disk): <span class="math inline">\beta_1^2 + \beta_2^2 \le t</span> — smooth, round, no special points.</li>
+<li><strong>Lasso → a diamond</strong> (square on its corner): <span class="math inline">\lvert\beta_1\rvert + \lvert\beta_2\rvert \le t</span> — with <strong>sharp corners sitting on the axes</strong>.</li>
 </ul>
 <p>The RSS forms <strong>elliptical contours</strong> around the OLS solution. The penalized estimate is where the <strong>smallest ellipse first touches</strong> the budget region.</p>
 
@@ -451,7 +467,7 @@ Quantitative biology and integrative omics
 <section id="the-corner-is-on-the-axis-a-zero-coefficient" class="slide level2 smaller">
 <h2>The corner is on the axis = a zero coefficient</h2>
 <ul>
-<li>A <strong>corner</strong> of the diamond sits <strong>on an axis</strong>: at that point one of the coordinates is <strong>exactly zero</strong> (e.g.&nbsp;<span class="math inline">\(\beta_2 = 0\)</span>).</li>
+<li>A <strong>corner</strong> of the diamond sits <strong>on an axis</strong>: at that point one of the coordinates is <strong>exactly zero</strong> (e.g.&nbsp;<span class="math inline">\beta_2 = 0</span>).</li>
 <li>Expanding ellipses are very likely to first touch a <strong>pointy corner</strong> rather than a flat edge — so the lasso solution often lands with some coefficients <strong>exactly zero</strong>.</li>
 <li>The <strong>circle</strong> has no corners, so the touch point almost never sits exactly on an axis — ridge coefficients get small but stay <strong>nonzero</strong>.</li>
 </ul>
@@ -474,14 +490,14 @@ Quantitative biology and integrative omics
 </section>
 <section id="elastic-net-the-best-of-both" class="slide level2 smaller">
 <h2>Elastic net: the best of both</h2>
-<p>Combine <strong>both</strong> penalties, with a mixing parameter <span class="math inline">\(\alpha \in [0,1]\)</span>:</p>
-<p><span class="math display">\[\hat{\boldsymbol\beta}_{\text{enet}} = \arg\min_{\boldsymbol\beta}\ \lVert \mathbf{y} - X\boldsymbol\beta \rVert^2 + \lambda\Big[\, \alpha\sum_j \lvert\beta_j\rvert \;+\; (1-\alpha)\sum_j \beta_j^2 \,\Big]\]</span></p>
+<p>Combine <strong>both</strong> penalties, with a mixing parameter <span class="math inline">\alpha \in [0,1]</span>:</p>
+<p><span class="math display">\hat{\boldsymbol\beta}_{\text{enet}} = \arg\min_{\boldsymbol\beta}\ \lVert \mathbf{y} - X\boldsymbol\beta \rVert^2 + \lambda\Big[\, \alpha\sum_j \lvert\beta_j\rvert \;+\; (1-\alpha)\sum_j \beta_j^2 \,\Big]</span></p>
 <ul>
-<li><span class="math inline">\(\alpha = 1\)</span> → pure <strong>lasso</strong>; <span class="math inline">\(\alpha = 0\)</span> → pure <strong>ridge</strong>; in between → a <strong>blend</strong>.</li>
+<li><span class="math inline">\alpha = 1</span> → pure <strong>lasso</strong>; <span class="math inline">\alpha = 0</span> → pure <strong>ridge</strong>; in between → a <strong>blend</strong>.</li>
 <li>Fixes a real lasso weakness: among a group of <strong>correlated</strong> genes, lasso tends to pick <strong>one arbitrarily</strong> and zero the rest. Elastic net’s L2 part encourages <strong>grouping</strong> — correlated genes are selected (or dropped) <strong>together</strong>.</li>
-<li>Also lets lasso select <strong>more than <span class="math inline">\(n\)</span></strong> predictors (pure lasso caps at <span class="math inline">\(n\)</span> when <span class="math inline">\(p&gt;n\)</span>).</li>
+<li>Also lets lasso select <strong>more than <span class="math inline">n</span></strong> predictors (pure lasso caps at <span class="math inline">n</span> when <span class="math inline">p&gt;n</span>).</li>
 </ul>
-<p>A common recipe: keep some sparsity (<span class="math inline">\(\alpha\)</span> around <span class="math inline">\(0.5\)</span>) so you still get a short gene list, but with stabler, group-aware selection.</p>
+<p>A common recipe: keep some sparsity (<span class="math inline">\alpha</span> around <span class="math inline">0.5</span>) so you still get a short gene list, but with stabler, group-aware selection.</p>
 
 <img data-src="fig12-elastic-net-constraint-region.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:50.0%"><aside class="notes">
 <p>Elastic net is the pragmatic default for genomics. It literally adds the two penalties with a knob alpha that dials from pure ridge (0) to pure lasso (1). The reason it matters biologically: pure lasso, faced with a cluster of co-regulated genes, arbitrarily keeps one and discards its neighbours, which is unstable and biologically misleading — the whole pathway is relevant, not one gene. The ridge component makes elastic net keep or drop such correlated groups together (the grouping effect). It also lifts lasso’s technical ceiling of at most n selected variables when p exceeds n.&nbsp;Note glmnet uses exactly this alpha parameterisation, so the code will feel natural. Suggest alpha around 0.5 as a sensible starting point, to be tuned.</p>
@@ -498,14 +514,14 @@ Quantitative biology and integrative omics
       }</style></aside>
 </section>
 <section id="the-tuning-parameter-lambda" class="slide level2 smaller">
-<h2>The tuning parameter <span class="math inline">\(\lambda\)</span></h2>
-<p><span class="math inline">\(\lambda\)</span> controls <strong>how hard we shrink</strong> — it trades bias against variance.</p>
+<h2>The tuning parameter <span class="math inline">\lambda</span></h2>
+<p><span class="math inline">\lambda</span> controls <strong>how hard we shrink</strong> — it trades bias against variance.</p>
 <ul>
-<li><span class="math inline">\(\lambda \to 0\)</span>: back to <strong>OLS</strong> — low bias, high variance, <strong>overfits</strong>.</li>
-<li><span class="math inline">\(\lambda \to \infty\)</span>: all coefficients <span class="math inline">\(\to 0\)</span> — the model becomes a flat line at <span class="math inline">\(\bar y\)</span>: high bias, low variance, <strong>underfits</strong>.</li>
-<li>Somewhere in between is the <span class="math inline">\(\lambda\)</span> that predicts <strong>new</strong> data best.</li>
+<li><span class="math inline">\lambda \to 0</span>: back to <strong>OLS</strong> — low bias, high variance, <strong>overfits</strong>.</li>
+<li><span class="math inline">\lambda \to \infty</span>: all coefficients <span class="math inline">\to 0</span> — the model becomes a flat line at <span class="math inline">\bar y</span>: high bias, low variance, <strong>underfits</strong>.</li>
+<li>Somewhere in between is the <span class="math inline">\lambda</span> that predicts <strong>new</strong> data best.</li>
 </ul>
-<p>We cannot read the best <span class="math inline">\(\lambda\)</span> off the <strong>training</strong> fit — training error just keeps dropping as <span class="math inline">\(\lambda\to0\)</span>. We must estimate performance on data the model <strong>did not see</strong>.</p>
+<p>We cannot read the best <span class="math inline">\lambda</span> off the <strong>training</strong> fit — training error just keeps dropping as <span class="math inline">\lambda\to0</span>. We must estimate performance on data the model <strong>did not see</strong>.</p>
 
 <img data-src="fig13-bias-variance-u-curve.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:60.0%"><aside class="notes">
 <p>Lambda is the single most important knob and it embodies the bias-variance trade-off, which for many students is the first time they meet that idea explicitly. Too small: essentially OLS, fits noise, great on training data and poor on new data. Too large: crushes all signal, predicts the mean. The sweet spot minimises error on <em>unseen</em> data. Crucial pedagogical warning: you cannot choose lambda by minimising training error, because training error falls monotonically as lambda shrinks toward zero — it would always pick the overfit model. You need an honest estimate of out-of-sample error, which is what cross-validation provides on the next slide. This is a first look at the idea; the full ML treatment lives elsewhere.</p>
@@ -522,18 +538,18 @@ Quantitative biology and integrative omics
       }</style></aside>
 </section>
 <section id="choosing-lambda-by-cross-validation" class="slide level2 smaller">
-<h2>Choosing <span class="math inline">\(\lambda\)</span> by cross-validation</h2>
-<p><strong><span class="math inline">\(k\)</span>-fold cross-validation</strong> estimates out-of-sample error honestly:</p>
+<h2>Choosing <span class="math inline">\lambda</span> by cross-validation</h2>
+<p><strong><span class="math inline">k</span>-fold cross-validation</strong> estimates out-of-sample error honestly:</p>
 <ol type="1">
-<li>Split the samples into <span class="math inline">\(k\)</span> groups (folds), e.g.&nbsp;<span class="math inline">\(k = 10\)</span>.</li>
-<li>For each fold: <strong>train</strong> on the other <span class="math inline">\(k-1\)</span> folds, <strong>predict</strong> the held-out fold, record the error.</li>
-<li>Average the errors across folds → a <strong>cross-validated error</strong> for that <span class="math inline">\(\lambda\)</span>.</li>
-<li>Repeat over a grid of <span class="math inline">\(\lambda\)</span> values; pick the <span class="math inline">\(\lambda\)</span> with the <strong>lowest CV error</strong>.</li>
+<li>Split the samples into <span class="math inline">k</span> groups (folds), e.g.&nbsp;<span class="math inline">k = 10</span>.</li>
+<li>For each fold: <strong>train</strong> on the other <span class="math inline">k-1</span> folds, <strong>predict</strong> the held-out fold, record the error.</li>
+<li>Average the errors across folds → a <strong>cross-validated error</strong> for that <span class="math inline">\lambda</span>.</li>
+<li>Repeat over a grid of <span class="math inline">\lambda</span> values; pick the <span class="math inline">\lambda</span> with the <strong>lowest CV error</strong>.</li>
 </ol>
 <p>Two standard choices <code>glmnet</code> reports:</p>
 <ul>
-<li><code>lambda.min</code> — the <span class="math inline">\(\lambda\)</span> with <strong>minimum</strong> CV error.</li>
-<li><code>lambda.1se</code> — the <strong>largest</strong> <span class="math inline">\(\lambda\)</span> within <strong>one standard error</strong> of that minimum: a <strong>simpler, sparser</strong> model that performs about as well. Often preferred for a <strong>short gene list</strong>.</li>
+<li><code>lambda.min</code> — the <span class="math inline">\lambda</span> with <strong>minimum</strong> CV error.</li>
+<li><code>lambda.1se</code> — the <strong>largest</strong> <span class="math inline">\lambda</span> within <strong>one standard error</strong> of that minimum: a <strong>simpler, sparser</strong> model that performs about as well. Often preferred for a <strong>short gene list</strong>.</li>
 </ul>
 
 <img data-src="fig14-kfold-cross-validation.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:65.0%"><aside class="notes">
@@ -552,7 +568,7 @@ Quantitative biology and integrative omics
 </section>
 <section id="in-r-glmnet" class="slide level2 smaller">
 <h2>In R: <code>glmnet</code></h2>
-<p>The <code>glmnet</code> package fits ridge, lasso, and elastic net over a whole grid of <span class="math inline">\(\lambda\)</span> efficiently.</p>
+<p>The <code>glmnet</code> package fits ridge, lasso, and elastic net over a whole grid of <span class="math inline">\lambda</span> efficiently.</p>
 <div class="sourceCode" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(glmnet)</span>
 <span id="cb1-2"><a aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb1-3"><a aria-hidden="true" tabindex="-1"></a><span class="co"># x: samples x genes matrix (n rows, p columns); y: the phenotype vector</span></span>
@@ -566,7 +582,7 @@ Quantitative biology and integrative omics
 <span id="cb1-11"><a aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(fit)                          <span class="co"># Df (# nonzero), %Dev, Lambda per step</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <ul>
 <li><code>glmnet</code> <strong>standardizes</strong> predictors internally (<code>standardize = TRUE</code>) and returns coefficients on the <strong>original</strong> scale.</li>
-<li>It does <strong>not</strong> fit a single <span class="math inline">\(\lambda\)</span> — it returns the whole <strong>path</strong>, so you see how coefficients enter and leave as <span class="math inline">\(\lambda\)</span> changes.</li>
+<li>It does <strong>not</strong> fit a single <span class="math inline">\lambda</span> — it returns the whole <strong>path</strong>, so you see how coefficients enter and leave as <span class="math inline">\lambda</span> changes.</li>
 </ul>
 <aside class="notes">
 <p>Keep this practical and reassuring: one function, one alpha argument, and you have all three methods. glmnet is fast because it solves the entire lambda path at once using warm starts, so the coefficient-path plot comes essentially for free — and that plot is the best way to <em>see</em> shrinkage and selection happening. Remind them the code here is illustrative and not executed at render time; they will run it in the exercise. Point out the Df column in print(fit) is the number of nonzero coefficients, i.e.&nbsp;how many genes the model currently uses — the sparsity, made visible. Reiterate the internal standardisation so they do not double-scale.</p>
@@ -620,7 +636,7 @@ Quantitative biology and integrative omics
 <ul>
 <li><strong>Predictive gene signatures.</strong> Lasso / elastic net on expression + drug response returns a <strong>small panel</strong> of genes that predict response — a candidate <strong>biomarker</strong> you can take to a targeted assay.</li>
 <li><strong>Interpretability &amp; cost.</strong> A 20-gene panel can be run cheaply in the clinic; a 20 000-gene model cannot. Sparsity is not just statistics — it is <strong>assay design</strong>.</li>
-<li><strong>Stability matters.</strong> With <span class="math inline">\(n \approx 40\)</span>, different CV splits can select somewhat different genes. Report a <strong>stable core</strong>, prefer <code>lambda.1se</code>, and consider elastic net so <strong>correlated pathway members</strong> are kept together.</li>
+<li><strong>Stability matters.</strong> With <span class="math inline">n \approx 40</span>, different CV splits can select somewhat different genes. Report a <strong>stable core</strong>, prefer <code>lambda.1se</code>, and consider elastic net so <strong>correlated pathway members</strong> are kept together.</li>
 <li><strong>Not causal.</strong> A selected gene is <strong>predictive</strong>, not proven <strong>causal</strong> — collinearity means a dropped gene may be just as relevant as the one kept. Validate on the bench.</li>
 </ul>
 <aside class="notes">
@@ -660,7 +676,7 @@ Quantitative biology and integrative omics
 <td><strong>Lasso</strong></td>
 </tr>
 <tr class="odd">
-<td><span class="math inline">\(p \gg n\)</span> <strong>and</strong> correlated groups of predictors</td>
+<td><span class="math inline">p \gg n</span> <strong>and</strong> correlated groups of predictors</td>
 <td><strong>Elastic net</strong></td>
 </tr>
 <tr class="even">
@@ -675,7 +691,7 @@ Quantitative biology and integrative omics
 </table>
 <ul>
 <li>All three <strong>reduce variance / overfitting</strong> relative to OLS; they differ in <strong>whether and how</strong> they zero coefficients.</li>
-<li>Always <strong>standardize</strong> (glmnet does it), never penalize the <strong>intercept</strong>, and choose <span class="math inline">\(\lambda\)</span> by <strong>cross-validation</strong>.</li>
+<li>Always <strong>standardize</strong> (glmnet does it), never penalize the <strong>intercept</strong>, and choose <span class="math inline">\lambda</span> by <strong>cross-validation</strong>.</li>
 </ul>
 <aside class="notes">
 <p>A decision table to consolidate. The one-line summary: ridge shrinks and keeps everything and is often the best pure predictor; lasso shrinks and selects, giving interpretability; elastic net blends them and is the safe default for wide, correlated omics matrices. All three beat OLS on new data whenever p is large or predictors collinear, because they trade a little bias for a lot less variance. End on the three non-negotiables: standardise predictors, leave the intercept unpenalised, and pick lambda by cross-validation rather than by eye or by training error. These are the habits that keep the analysis honest.</p>
@@ -707,19 +723,19 @@ Quantitative biology and integrative omics
 <tbody>
 <tr class="odd">
 <td>Problem</td>
-<td><span class="math inline">\(p \gg n\)</span> or collinearity → OLS unstable / overfits</td>
+<td><span class="math inline">p \gg n</span> or collinearity → OLS unstable / overfits</td>
 </tr>
 <tr class="even">
 <td>General form</td>
-<td>minimize <span class="math inline">\(\lVert \mathbf{y}-X\boldsymbol\beta\rVert^2 + \lambda\,\text{penalty}(\boldsymbol\beta)\)</span></td>
+<td>minimize <span class="math inline">\lVert \mathbf{y}-X\boldsymbol\beta\rVert^2 + \lambda\,\text{penalty}(\boldsymbol\beta)</span></td>
 </tr>
 <tr class="odd">
 <td>Ridge (L2)</td>
-<td>penalty <span class="math inline">\(\sum\beta_j^2\)</span>; shrinks all, keeps all; <span class="math inline">\((X^\top X+\lambda I)^{-1}X^\top\mathbf{y}\)</span></td>
+<td>penalty <span class="math inline">\sum\beta_j^2</span>; shrinks all, keeps all; <span class="math inline">(X^\top X+\lambda I)^{-1}X^\top\mathbf{y}</span></td>
 </tr>
 <tr class="even">
 <td>Lasso (L1)</td>
-<td>penalty <span class="math inline">\(\sum\lvert\beta_j\rvert\)</span>; sets some <span class="math inline">\(\beta_j = 0\)</span> → <strong>feature selection</strong></td>
+<td>penalty <span class="math inline">\sum\lvert\beta_j\rvert</span>; sets some <span class="math inline">\beta_j = 0</span> → <strong>feature selection</strong></td>
 </tr>
 <tr class="odd">
 <td>Geometry</td>
@@ -727,10 +743,10 @@ Quantitative biology and integrative omics
 </tr>
 <tr class="even">
 <td>Elastic net</td>
-<td><span class="math inline">\(\alpha\sum\lvert\beta_j\rvert + (1-\alpha)\sum\beta_j^2\)</span>; grouped selection</td>
+<td><span class="math inline">\alpha\sum\lvert\beta_j\rvert + (1-\alpha)\sum\beta_j^2</span>; grouped selection</td>
 </tr>
 <tr class="odd">
-<td><span class="math inline">\(\lambda\)</span></td>
+<td><span class="math inline">\lambda</span></td>
 <td>shrinkage dial; bias–variance trade-off; choose by <strong>cross-validation</strong></td>
 </tr>
 <tr class="even">
@@ -739,7 +755,7 @@ Quantitative biology and integrative omics
 </tr>
 <tr class="odd">
 <td>Biology</td>
-<td>short, testable <strong>gene signatures</strong>; predictive <span class="math inline">\(\neq\)</span> causal</td>
+<td>short, testable <strong>gene signatures</strong>; predictive <span class="math inline">\neq</span> causal</td>
 </tr>
 </tbody>
 </table>
@@ -780,7 +796,6 @@ Quantitative biology and integrative omics
   <script src="../site_libs/revealjs/plugin/notes/notes.js"></script>
   <script src="../site_libs/revealjs/plugin/search/search.js"></script>
   <script src="../site_libs/revealjs/plugin/zoom/zoom.js"></script>
-  <script src="../site_libs/revealjs/plugin/math/math.js"></script>
   <script>window.define = window.backupDefine; window.backupDefine = undefined;</script>
 
   <script>
@@ -948,27 +963,9 @@ Quantitative biology and integrative omics
         // Factor of the display size that should remain empty around the content
         margin: 0.1,
 
-        math: {
-          mathjax: 'https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.9/MathJax.js',
-          config: 'TeX-AMS_HTML-full',
-          tex2jax: {
-            inlineMath: [['\\(','\\)']],
-            displayMath: [['\\[','\\]']],
-            balanceBraces: true,
-            processEscapes: false,
-            processRefs: true,
-            processEnvironments: true,
-            preview: 'TeX',
-            skipTags: ['script','noscript','style','textarea','pre','code'],
-            ignoreClass: 'tex2jax_ignore',
-            processClass: 'tex2jax_process'
-          },
-        },
-
         // reveal.js plugins
         plugins: [QuartoLineHighlight, PdfExport, RevealMenu, QuartoSupport,
 
-          RevealMath,
           RevealNotes,
           RevealSearch,
           RevealZoom

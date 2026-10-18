@@ -96,6 +96,22 @@
     code span.wa { color: #ff5555; } /* Warning */
   </style>
   <link rel="stylesheet" href="../site_libs/revealjs/dist/theme/quarto-bf56578b9c06c165c166475cd19dbcd1.css">
+  <script>window.backupDefine = window.define; window.define = undefined;</script><script src="https://cdn.jsdelivr.net/npm/katex@latest/dist/katex.min.js"></script>
+  <script>document.addEventListener("DOMContentLoaded", function () {
+ var mathElements = document.getElementsByClassName("math");
+ var macros = [];
+ for (var i = 0; i < mathElements.length; i++) {
+  var texText = mathElements[i].firstChild;
+  if (mathElements[i].tagName == "SPAN") {
+   katex.render(texText.data, mathElements[i], {
+    displayMode: mathElements[i].classList.contains('display'),
+    throwOnError: false,
+    macros: macros,
+    fleqn: false
+   });
+}}});
+  </script>
+  <script>window.define = window.backupDefine; window.backupDefine = undefined;</script><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@latest/dist/katex.min.css">
   <link href="../site_libs/revealjs/plugin/quarto-line-highlight/line-highlight.css" rel="stylesheet">
   <link href="../site_libs/revealjs/plugin/reveal-menu/menu.css" rel="stylesheet">
   <link href="../site_libs/revealjs/plugin/reveal-menu/quarto-menu.css" rel="stylesheet">
@@ -259,9 +275,9 @@ Quantitative biology and integrative omics
 <ul>
 <li><strong>rows = cells</strong> (often 1,000–50,000+),</li>
 <li><strong>columns = genes</strong> (often ~20,000 for human/mouse),</li>
-<li><strong>entry <span class="math inline">\(X_{cg}\)</span></strong> = the number of RNA molecules of gene <span class="math inline">\(g\)</span> detected in cell <span class="math inline">\(c\)</span> (a non-negative <strong>integer count</strong>).</li>
+<li><strong>entry <span class="math inline">X_{cg}</span></strong> = the number of RNA molecules of gene <span class="math inline">g</span> detected in cell <span class="math inline">c</span> (a non-negative <strong>integer count</strong>).</li>
 </ul>
-<p><span class="math display">\[X = \begin{pmatrix} X_{11} &amp; X_{12} &amp; \cdots &amp; X_{1G} \\ X_{21} &amp; X_{22} &amp; \cdots &amp; X_{2G} \\ \vdots &amp; &amp; \ddots &amp; \vdots \\ X_{C1} &amp; X_{C2} &amp; \cdots &amp; X_{CG} \end{pmatrix}\]</span></p>
+<p><span class="math display">X = \begin{pmatrix} X_{11} &amp; X_{12} &amp; \cdots &amp; X_{1G} \\ X_{21} &amp; X_{22} &amp; \cdots &amp; X_{2G} \\ \vdots &amp; &amp; \ddots &amp; \vdots \\ X_{C1} &amp; X_{C2} &amp; \cdots &amp; X_{CG} \end{pmatrix}</span></p>
 <p>Same <strong>sample × feature</strong> shape you met with bulk expression tables — just with <em>cells</em> as the samples, and a lot more rows.</p>
 
 <img data-src="fig03-count-matrix.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:60.0%"><aside class="notes">
@@ -287,7 +303,7 @@ Quantitative biology and integrative omics
 <li><strong>Technical (“dropout”):</strong> the gene <em>is</em> expressed, but its few molecules were not captured or sequenced — a <strong>false zero</strong> from limited sensitivity.</li>
 </ul>
 <p>We usually cannot tell the two apart from the count alone. Because so few molecules are sampled per cell, single-cell data is <strong>sparse</strong> and <strong>noisy</strong> by nature.</p>
-<p>Practically, we store it as a <strong>sparse matrix</strong> (only the non-zero entries) — a dense <span class="math inline">\(20{,}000 \times 50{,}000\)</span> table of doubles would be tens of gigabytes.</p>
+<p>Practically, we store it as a <strong>sparse matrix</strong> (only the non-zero entries) — a dense <span class="math inline">20{,}000 \times 50{,}000</span> table of doubles would be tens of gigabytes.</p>
 
 <img data-src="fig04-sparsity-heatmap.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:70.0%"><aside class="notes">
 <p>Two key ideas here. First, sparsity is real and large (order 90%+ zeros), which is why we store the data in a sparse format — record only non-zeros. This is a genuine memory necessity, not an optimisation. Second, a zero is ambiguous: it can be true absence or a technical dropout caused by capturing only a tiny fraction of each cell’s mRNA. Do not overclaim exact percentages of dropout; the honest statement is that low capture efficiency produces many false zeros and we generally cannot distinguish them per-entry. This ambiguity is why downstream methods are built to tolerate noise rather than trust individual counts.</p>
@@ -378,8 +394,8 @@ Quantitative biology and integrative omics
 <h2>QC signature 1: counts and genes per cell</h2>
 <p>For each cell we compute two simple numbers:</p>
 <ul>
-<li><strong>total counts</strong> (library size): <span class="math inline">\(n_c = \sum_g X_{cg}\)</span> — total UMIs in the cell.</li>
-<li><strong>number of genes detected:</strong> <span class="math inline">\(\#\{g : X_{cg} &gt; 0\}\)</span> — how many distinct genes are non-zero.</li>
+<li><strong>total counts</strong> (library size): <span class="math inline">n_c = \sum_g X_{cg}</span> — total UMIs in the cell.</li>
+<li><strong>number of genes detected:</strong> <span class="math inline">\#\{g : X_{cg} &gt; 0\}</span> — how many distinct genes are non-zero.</li>
 </ul>
 <p>Interpreting the extremes:</p>
 <ul>
@@ -405,7 +421,7 @@ Quantitative biology and integrative omics
 <section id="qc-signature-2-mitochondrial-fraction" class="slide level2 smaller">
 <h2>QC signature 2: mitochondrial fraction</h2>
 <p>Compute the fraction of each cell’s counts coming from <strong>mitochondrial genes</strong> (in human, gene symbols starting <code>MT-</code>):</p>
-<p><span class="math display">\[\text{pct.mt}_c = 100 \times \frac{\sum_{g \in \text{MT}} X_{cg}}{\sum_g X_{cg}}\]</span></p>
+<p><span class="math display">\text{pct.mt}_c = 100 \times \frac{\sum_{g \in \text{MT}} X_{cg}}{\sum_g X_{cg}}</span></p>
 <ul>
 <li>When a cell’s membrane is <strong>compromised</strong> (dying/stressed), cytoplasmic mRNA <strong>leaks out</strong>, but mitochondrial mRNA stays trapped in mitochondria.</li>
 <li>So a <strong>high mitochondrial fraction</strong> is a hallmark of a <strong>low-quality / dying cell</strong>. <em>Filter cells above a threshold.</em></li>
@@ -477,7 +493,7 @@ Quantitative biology and integrative omics
 <h2>After filtering: normalization</h2>
 <p>Cells differ in <strong>total counts</strong> just from technical capture efficiency, not biology — one cell might have 2,000 UMIs and another 20,000. Comparing raw counts across cells is unfair.</p>
 <p><strong>Library-size normalization:</strong> divide each cell’s counts by its total, then rescale to a common size (a “scale factor”, e.g.&nbsp;10,000):</p>
-<p><span class="math display">\[\tilde{X}_{cg} = \frac{X_{cg}}{\sum_{g'} X_{cg'}} \times s\]</span></p>
+<p><span class="math display">\tilde{X}_{cg} = \frac{X_{cg}}{\sum_{g'} X_{cg'}} \times s</span></p>
 <p>This makes cells comparable — it converts counts into <strong>relative expression</strong> per cell. It is the single-cell cousin of CPM/TPM from bulk RNA-seq.</p>
 
 <img data-src="fig12-library-size-norm.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:70.0%"><aside class="notes">
@@ -496,13 +512,13 @@ Quantitative biology and integrative omics
 </section>
 <section id="then-the-pseudolog-transform" class="slide level2 smaller">
 <h2>Then the pseudolog transform</h2>
-<p>After scaling we apply <span class="math inline">\(\log(1+x)\)</span> (often written <code>log1p</code>):</p>
-<p><span class="math display">\[Y_{cg} = \log\!\big(1 + \tilde{X}_{cg}\big)\]</span></p>
+<p>After scaling we apply <span class="math inline">\log(1+x)</span> (often written <code>log1p</code>):</p>
+<p><span class="math display">Y_{cg} = \log\!\big(1 + \tilde{X}_{cg}\big)</span></p>
 <p>Why log?</p>
 <ul>
 <li>Expression spans <strong>orders of magnitude</strong>; a few very-high-count genes would otherwise <strong>dominate</strong> every distance and variance calculation.</li>
 <li>Log <strong>compresses</strong> the large values and <strong>stabilizes variance</strong>, so highly and lowly expressed genes contribute more comparably.</li>
-<li>The <span class="math inline">\(+1\)</span> keeps <strong>zeros as zeros</strong> (<span class="math inline">\(\log(1+0)=0\)</span>) and avoids <span class="math inline">\(\log 0 = -\infty\)</span>.</li>
+<li>The <span class="math inline">+1</span> keeps <strong>zeros as zeros</strong> (<span class="math inline">\log(1+0)=0</span>) and avoids <span class="math inline">\log 0 = -\infty</span>.</li>
 </ul>
 <p>The pair <strong>(library-size normalize, then log1p)</strong> is the standard baseline single-cell transform. You met why in <a href="../scrna-log/lec.html">Log and pseudolog transforms</a> (week 3).</p>
 
@@ -644,7 +660,7 @@ Quantitative biology and integrative omics
 </tr>
 <tr class="odd">
 <td>Normalization</td>
-<td>library-size scale, then <span class="math inline">\(\log(1+x)\)</span></td>
+<td>library-size scale, then <span class="math inline">\log(1+x)</span></td>
 </tr>
 <tr class="even">
 <td>Feature selection</td>
@@ -693,7 +709,6 @@ Quantitative biology and integrative omics
   <script src="../site_libs/revealjs/plugin/notes/notes.js"></script>
   <script src="../site_libs/revealjs/plugin/search/search.js"></script>
   <script src="../site_libs/revealjs/plugin/zoom/zoom.js"></script>
-  <script src="../site_libs/revealjs/plugin/math/math.js"></script>
   <script>window.define = window.backupDefine; window.backupDefine = undefined;</script>
 
   <script>
@@ -861,27 +876,9 @@ Quantitative biology and integrative omics
         // Factor of the display size that should remain empty around the content
         margin: 0.1,
 
-        math: {
-          mathjax: 'https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.9/MathJax.js',
-          config: 'TeX-AMS_HTML-full',
-          tex2jax: {
-            inlineMath: [['\\(','\\)']],
-            displayMath: [['\\[','\\]']],
-            balanceBraces: true,
-            processEscapes: false,
-            processRefs: true,
-            processEnvironments: true,
-            preview: 'TeX',
-            skipTags: ['script','noscript','style','textarea','pre','code'],
-            ignoreClass: 'tex2jax_ignore',
-            processClass: 'tex2jax_process'
-          },
-        },
-
         // reveal.js plugins
         plugins: [QuartoLineHighlight, PdfExport, RevealMenu, QuartoSupport,
 
-          RevealMath,
           RevealNotes,
           RevealSearch,
           RevealZoom
