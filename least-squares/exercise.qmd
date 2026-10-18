@@ -1,0 +1,268 @@
+---
+title: "Exercise: least squares as projection"
+format:
+  html:
+    toc: true
+    code-copy: true
+    code-overflow: wrap
+    highlight-style: github
+---
+
+## Goal
+
+By the end of this exercise you should be able to, **by hand and in R**:
+
+- write a line fit $y = a + bx$ through a few points as an over-determined system $X\boldsymbol\beta = \mathbf{y}$,
+- compute residuals and the sum of squared residuals for a given line,
+- check whether a fit is the least-squares fit, by testing that the residual is **orthogonal** to every column of $X$,
+- set up and solve the **normal equations** $X^\mathsf{T}X\boldsymbol\beta = X^\mathsf{T}\mathbf{y}$ for a small example,
+- confirm that `solve(t(X) %*% X, t(X) %*% y)` and `coef(lm(y ~ x))` give the same answer,
+- recognise when $\boldsymbol\beta$ is not unique.
+
+Do the by-hand problems with pen and paper first, then check with R.
+
+## Background
+
+Fitting a line $y = a + bx$ to $n$ points gives one equation per point. In matrix form, with $\boldsymbol\beta = (a, b)$:
+
+$$
+X\boldsymbol\beta = \mathbf{y}, \qquad
+X = \begin{pmatrix} 1 & x_1 \\ \vdots & \vdots \\ 1 & x_n \end{pmatrix}, \qquad
+\mathbf{y} = \begin{pmatrix} y_1 \\ \vdots \\ y_n \end{pmatrix}.
+$$
+
+| Object | Meaning |
+|---|---|
+| Columns of $X$ | $\mathbf{1} = (1, \dots, 1)$ (intercept) and $\mathbf{x}$ (the predictor) |
+| Fitted values | $\hat{\mathbf{y}} = X\boldsymbol\beta$, a combination $a\,\mathbf{1} + b\,\mathbf{x}$ of the columns |
+| Residual | $\mathbf{r} = \mathbf{y} - X\boldsymbol\beta$ |
+| Sum of squared residuals | $\lVert\mathbf{r}\rVert^2 = \mathbf{r}\cdot\mathbf{r} = \sum_i r_i^2$ |
+| Least squares | the $\boldsymbol\beta$ with the smallest $\lVert\mathbf{r}\rVert^2$ |
+| Orthogonality test | least squares $\iff$ $\mathbf{1}\cdot\mathbf{r} = 0$ **and** $\mathbf{x}\cdot\mathbf{r} = 0$ |
+| Normal equations | $X^\mathsf{T}X\boldsymbol\beta = X^\mathsf{T}\mathbf{y}$ |
+
+For a line, the normal equations are two equations in $a$ and $b$:
+
+$$
+X^\mathsf{T}X = \begin{pmatrix} \mathbf{1}\cdot\mathbf{1} & \mathbf{1}\cdot\mathbf{x} \\ \mathbf{x}\cdot\mathbf{1} & \mathbf{x}\cdot\mathbf{x} \end{pmatrix}
+= \begin{pmatrix} n & \sum_i x_i \\ \sum_i x_i & \sum_i x_i^2 \end{pmatrix}, \qquad
+X^\mathsf{T}\mathbf{y} = \begin{pmatrix} \mathbf{1}\cdot\mathbf{y} \\ \mathbf{x}\cdot\mathbf{y} \end{pmatrix}
+= \begin{pmatrix} \sum_i y_i \\ \sum_i x_i y_i \end{pmatrix}.
+$$
+
+Geometrically: $\hat{\mathbf{y}}$ is the **projection** of $\mathbf{y}$ onto the plane spanned by the columns of $X$, and $\mathbf{r}$ is the orthogonal leftover, as in [Vectors, dot product & projection](../vectors-projection/lec.qmd).
+
+## By hand
+
+A gene's log2 expression in three samples taken at a drug dose of 0, 1 and 2 µM:
+
+| dose $x$ | 0 | 1 | 2 |
+|---|---|---|---|
+| log2 expression $y$ | 1 | 3 | 2 |
+
+**B1.** Write the three equations $a + bx = y$, one per sample. Show that no line passes through all three points: solve the first two equations for $a$ and $b$, and check the third.
+
+**B2.** Write the system as $X\boldsymbol\beta = \mathbf{y}$: give the $3 \times 2$ matrix $X$ and the vector $\mathbf{y}$.
+
+**B3.** A colleague proposes the line $y = 1 + x$ (it goes through the first two points).
+
+a. Compute the fitted values, the residual vector $\mathbf{r}$, and the sum of squared residuals.
+b. Compute $\mathbf{1}\cdot\mathbf{r}$ and $\mathbf{x}\cdot\mathbf{r}$. Is this the least-squares line?
+
+**B4.** Set up the normal equations: compute $X^\mathsf{T}X$ and $X^\mathsf{T}\mathbf{y}$, write the two equations in $a$ and $b$, and solve them.
+
+**B5.** For your answer to B4:
+
+a. Compute the fitted values $\hat{\mathbf{y}}$ and the residual $\mathbf{r}$.
+b. Check that $\mathbf{r}$ is orthogonal to both columns of $X$.
+c. Compute the sum of squared residuals and compare it with B3a.
+
+**B6.** *Intercept only.* Fit the model `y ~ 1`, i.e. $X$ is the single column $\mathbf{1} = (1, 1, 1)$, to the same $\mathbf{y}$. Use the projection formula $\hat{\mathbf{y}} = \dfrac{\mathbf{y}\cdot\mathbf{1}}{\mathbf{1}\cdot\mathbf{1}}\,\mathbf{1}$. What is the fitted constant, and what familiar number is it?
+
+**B7.** *Through the origin.* Fit the model `y ~ x - 1` (no intercept), i.e. $X$ is the single column $\mathbf{x} = (0, 1, 2)$. Use the same projection formula with $\mathbf{x}$ in place of $\mathbf{1}$. What is the slope? Is it the same as the slope in B4? Why not?
+
+**B8.** *A familiar system.* In [Linear systems in R](../solving-systems-r/lec.qmd), the over-determined system
+
+$$
+x = 2, \qquad y = 3, \qquad x + y = 6
+$$
+
+had least-squares solution $(x, y) = (2.33, 3.33)$ from `qr.solve`. Here $x$ and $y$ are the unknowns. Write the matrix $A$, set up the normal equations $A^\mathsf{T}A\begin{pmatrix} x \\ y \end{pmatrix} = A^\mathsf{T}\mathbf{b}$, and solve them by hand. Do you get the same answer?
+
+**B9.** *No unique answer.* Suppose all three samples were taken at the same dose, $\mathbf{x} = (1, 1, 1)$, with the same $\mathbf{y} = (1, 3, 2)$.
+
+a. Compute $X^\mathsf{T}X$. Can the normal equations be solved uniquely?
+b. Find two different pairs $(a, b)$ that give the same fitted values. What are those fitted values?
+
+## In R
+
+Check your by-hand answers. Build $X$ with [`cbind`](https://rdrr.io/r/base/cbind.html), transpose with [`t`](https://rdrr.io/r/base/t.html), and solve the normal equations with [`solve`](https://rdrr.io/r/base/solve.html):
+
+```r
+x <- c(0, 1, 2)
+y <- c(1, 3, 2)
+X <- cbind(1, x)          # columns: intercept, dose
+X
+model.matrix(~ x)         # the same matrix, built from a formula
+
+# B3: the colleague's line y = 1 + x
+r_bad <- y - X %*% c(1, 1)
+r_bad
+sum(r_bad^2)
+t(X) %*% r_bad            # not zero -> not least squares
+
+# B4: normal equations
+t(X) %*% X
+t(X) %*% y
+beta <- solve(t(X) %*% X, t(X) %*% y)
+beta
+
+# B5: fitted values, residual, orthogonality
+yhat <- X %*% beta
+r    <- y - yhat
+t(X) %*% r                # zero up to rounding
+sum(r^2)
+
+# the same with lm
+fit <- lm(y ~ x)
+coef(fit)
+fitted(fit)
+resid(fit)
+```
+
+**R1.** Run the block. Do `beta` and `coef(fit)` agree? Do `fitted(fit)` and `resid(fit)` match B5?
+
+**R2.** Check B6 and B7 with `coef(lm(y ~ 1))`, `mean(y)`, `coef(lm(y ~ x - 1))` and `sum(x * y) / sum(x * x)`.
+
+**R3.** Check B8: build `A` and `b` and compare `solve(t(A) %*% A, t(A) %*% b)` with `qr.solve(A, b)`.
+
+**R4.** *More points.* Simulate a larger experiment and check that the normal equations still give `lm`'s answer:
+
+```r
+set.seed(1)
+dose <- rep(c(0, 0.5, 1, 2, 4), each = 4)          # 20 samples
+expr <- 2 + 0.8 * dose + rnorm(20, sd = 0.5)       # true line: a = 2, b = 0.8
+X <- cbind(1, dose)
+solve(t(X) %*% X, t(X) %*% expr)
+coef(lm(expr ~ dose))
+plot(dose, expr, pch = 19)
+abline(lm(expr ~ dose), col = "red")
+```
+
+How close are the estimates to the true $a = 2$, $b = 0.8$? Compute `t(X) %*% resid(lm(expr ~ dose))`.
+
+**R5.** Check B9: with `x <- c(1, 1, 1)`, what do `solve(t(X) %*% X, t(X) %*% y)`, `qr(X)$rank` and `coef(lm(y ~ x))` report?
+
+## Hints
+
+::: {.callout-tip collapse="true" title="Hint 1 — the design matrix (B1, B2)"}
+One row per sample, one column per unknown. The intercept $a$ multiplies 1 in every row, so the first column is all 1's; the slope $b$ multiplies the dose, so the second column is $\mathbf{x}$.
+:::
+
+::: {.callout-tip collapse="true" title="Hint 2 — residuals and orthogonality (B3, B5)"}
+Fitted value $=a + b\cdot\text{dose}$, residual $=$ data $-$ fitted. Then take dot products: $\mathbf{1}\cdot\mathbf{r}$ is just the sum of the residuals, and $\mathbf{x}\cdot\mathbf{r}$ multiplies each residual by its dose and adds. Least squares needs **both** to be zero.
+:::
+
+::: {.callout-tip collapse="true" title="Hint 3 — building the normal equations (B4, B8)"}
+Each entry of $X^\mathsf{T}X$ is a dot product of two columns of $X$; each entry of $X^\mathsf{T}\mathbf{y}$ is a dot product of a column with $\mathbf{y}$. You get a square $2\times2$ system. Subtract one equation from the other to eliminate $a$.
+:::
+
+::: {.callout-tip collapse="true" title="Hint 4 — a single column (B6, B7)"}
+With one column $\mathbf{v}$, the plane is just a line and the fit is the Week 1 projection: coefficient $= \dfrac{\mathbf{y}\cdot\mathbf{v}}{\mathbf{v}\cdot\mathbf{v}}$. For B7, think about which point a line without intercept is forced through.
+:::
+
+::: {.callout-tip collapse="true" title="Hint 5 — singular normal equations (B9)"}
+If the two columns of $X$ are equal, then $a\,\mathbf{1} + b\,\mathbf{x} = (a + b)\,\mathbf{1}$: only the sum $a + b$ matters. In R, [`qr`](https://rdrr.io/r/base/qr.html)`(X)$rank` smaller than `ncol(X)` flags dependent columns.
+:::
+
+## Solutions
+
+::: {.callout-note collapse="true" title="Solution"}
+
+**B1.** $a + 0b = 1$, $a + 1b = 3$, $a + 2b = 2$. The first gives $a = 1$, then the second gives $b = 2$. The third would need $1 + 2\cdot2 = 5 = 2$, which is false. No exact solution.
+
+**B2.**
+$$
+X = \begin{pmatrix} 1 & 0 \\ 1 & 1 \\ 1 & 2 \end{pmatrix}, \qquad \mathbf{y} = \begin{pmatrix} 1 \\ 3 \\ 2 \end{pmatrix}.
+$$
+
+**B3.** a. Fitted values $1 + x$: $(1, 2, 3)$. Residual $\mathbf{r} = (1, 3, 2) - (1, 2, 3) = (0, 1, -1)$. Sum of squares $0 + 1 + 1 = 2$.
+b. $\mathbf{1}\cdot\mathbf{r} = 0 + 1 - 1 = 0$, but $\mathbf{x}\cdot\mathbf{r} = 0 + 1 - 2 = -1 \ne 0$. Not orthogonal to the dose column, so **not** the least-squares line: the residuals still have a trend with dose that a different slope could take up.
+
+**B4.**
+$$
+X^\mathsf{T}X = \begin{pmatrix} 3 & 0+1+2 \\ 0+1+2 & 0+1+4 \end{pmatrix} = \begin{pmatrix} 3 & 3 \\ 3 & 5 \end{pmatrix}, \qquad
+X^\mathsf{T}\mathbf{y} = \begin{pmatrix} 1+3+2 \\ 0+3+4 \end{pmatrix} = \begin{pmatrix} 6 \\ 7 \end{pmatrix}.
+$$
+So $3a + 3b = 6$ and $3a + 5b = 7$. Subtracting: $2b = 1$, $b = 0.5$; then $3a = 6 - 1.5 = 4.5$, $a = 1.5$. The least-squares line is $y = 1.5 + 0.5x$.
+
+**B5.** a. $\hat{\mathbf{y}} = (1.5, 2, 2.5)$, $\mathbf{r} = (1, 3, 2) - (1.5, 2, 2.5) = (-0.5, 1, -0.5)$.
+b. $\mathbf{1}\cdot\mathbf{r} = -0.5 + 1 - 0.5 = 0$ and $\mathbf{x}\cdot\mathbf{r} = 0 + 1 - 1 = 0$. Orthogonal to both columns.
+c. $0.25 + 1 + 0.25 = 1.5$, smaller than the colleague's $2$.
+
+**B6.** $\dfrac{\mathbf{y}\cdot\mathbf{1}}{\mathbf{1}\cdot\mathbf{1}} = \dfrac{1 + 3 + 2}{3} = 2$, so $\hat{\mathbf{y}} = (2, 2, 2)$. The fitted constant is the **mean** of $\mathbf{y}$. The residual $(-1, 1, 0)$ sums to zero, i.e. it is orthogonal to $\mathbf{1}$.
+
+**B7.** $\dfrac{\mathbf{y}\cdot\mathbf{x}}{\mathbf{x}\cdot\mathbf{x}} = \dfrac{0 + 3 + 4}{0 + 1 + 4} = \dfrac{7}{5} = 1.4$. Not the same as $0.5$: without an intercept the line is forced through $(0, 0)$, so the slope has to do all the work of reaching the data, which sit around $y = 2$. The two models project $\mathbf{y}$ onto different spaces (a line versus a plane), so they give different answers.
+
+**B8.**
+$$
+A = \begin{pmatrix} 1 & 0 \\ 0 & 1 \\ 1 & 1 \end{pmatrix}, \quad \mathbf{b} = \begin{pmatrix} 2 \\ 3 \\ 6 \end{pmatrix}, \quad
+A^\mathsf{T}A = \begin{pmatrix} 2 & 1 \\ 1 & 2 \end{pmatrix}, \quad A^\mathsf{T}\mathbf{b} = \begin{pmatrix} 8 \\ 9 \end{pmatrix}.
+$$
+So $2x + y = 8$ and $x + 2y = 9$. Twice the second minus the first: $3y = 10$, $y = 10/3 \approx 3.33$; then $x = 9 - 20/3 = 7/3 \approx 2.33$. The same answer as `qr.solve`.
+
+**B9.** a. $X = \begin{pmatrix} 1 & 1 \\ 1 & 1 \\ 1 & 1 \end{pmatrix}$, so $X^\mathsf{T}X = \begin{pmatrix} 3 & 3 \\ 3 & 3 \end{pmatrix}$. The two rows are equal (the matrix is singular), so the normal equations $3a + 3b = 6$, $3a + 3b = 6$ are one equation in two unknowns: infinitely many solutions.
+b. Any pair with $a + b = 2$, e.g. $(2, 0)$ and $(0, 2)$, or $(5, -3)$. All give fitted values $(2, 2, 2)$, the mean. The fit is fine, but the split between intercept and slope is not determined: with only one dose you cannot learn a dose effect.
+
+**R answers (selected output):**
+
+```r
+t(X) %*% X
+#     x
+#   3 3
+# x 3 5
+t(X) %*% y
+#   [,1]
+#      6
+# x    7
+beta
+#   [,1]
+#    1.5
+# x  0.5
+sum(r_bad^2)       # 2
+sum(r^2)           # 1.5
+coef(fit)          # (Intercept) 1.5   x 0.5
+fitted(fit)        # 1.5 2.0 2.5
+resid(fit)         # -0.5  1.0 -0.5
+```
+
+**R1.** Yes: `beta` and `coef(fit)` are both $(1.5, 0.5)$, and `t(X) %*% r` prints zeros (on other data you may see tiny numbers like `-8.9e-16`: zero up to floating point).
+
+**R2.** `coef(lm(y ~ 1))` and `mean(y)` are both `2`; `coef(lm(y ~ x - 1))` and `sum(x * y) / sum(x * x)` are both `1.4`.
+
+**R3.**
+```r
+A <- matrix(c(1, 0,
+              0, 1,
+              1, 1), nrow = 3, byrow = TRUE)
+b <- c(2, 3, 6)
+solve(t(A) %*% A, t(A) %*% b)   # 2.333333 3.333333
+qr.solve(A, b)                  # 2.333333 3.333333
+```
+
+**R4.** With `set.seed(1)` both lines print the same estimates:
+```r
+#   (Intercept)        dose
+#     2.0449578   0.8335361
+```
+close to the true $a = 2$, $b = 0.8$ but not equal: the noise moves the estimates a little. `t(X) %*% resid(...)` is zero up to rounding, as always for a least-squares fit.
+
+**R5.** `solve` stops with *"Lapack routine dgesv: system is exactly singular"*, `qr(X)$rank` is `1` (but `ncol(X)` is 2), and `lm` reports `(Intercept) 2` and `x NA`: it keeps the first column and drops the redundant one.
+:::
+
+## Where this leads
+
+- **Design matrices for covariates:** the same $\boldsymbol\beta$-finding, but $X$ gets more columns: treatment dummies, sex, age, batch. The fit is always the projection onto the column space of $X$; the new work is building $X$ and reading the coefficients. B9 is the simplest case of the dependent columns discussed there.
+- **Design matrices in R: DESeq2 & limma:** limma fits exactly this least-squares model, gene by gene, with the design matrix you give it.
+- **Penalized linear models:** when $X^\mathsf{T}X$ is singular or nearly so (more columns than samples, or almost-dependent columns), ridge regression adds a penalty that makes the normal equations solvable again.
+- **Looking back at principal component analysis:** PCA also projects, but the other way round: instead of projecting onto columns you chose, it finds the directions whose projection keeps the most of the data.

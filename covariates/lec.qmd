@@ -1,6 +1,6 @@
 ---
 title: "Design matrices for covariates"
-subtitle: "Linear models — Design matrices for covariates"
+subtitle: "Week 3 — Design matrices for covariates"
 author: "Quantitative biology and integrative omics"
 format:
   revealjs:
@@ -29,7 +29,7 @@ Real experiments are never clean. Your samples differ in **treatment**, but also
 - **Existence of solutions**: when does $\boldsymbol\beta$ have a unique answer, and what to do when it does not.
 
 ::: notes
-This deck is about one object: the design matrix. Everything students will later do in DESeq2 or limma starts with a design formula, and the formula is nothing more than a recipe for X. The skills to leave with are all by hand: build X for a small experiment, multiply X by beta to get predicted group means, read a coefficient as "difference from the reference" or "slope per unit", and spot when the columns of X are dependent so that beta has no unique answer. What it means to "adjust" for a covariate, confounding and Simpson's paradox come in the next deck, Confounding & Simpson's paradox. The R side (model.matrix, DESeq2, limma) is in Design matrices in R.
+This deck is about one object: the design matrix. Everything students will later do in limma (or DESeq2) starts with a design formula, and the formula is nothing more than a recipe for X. The skills to leave with are all by hand: build X for a small experiment, multiply X by beta to get predicted group means, read a coefficient as "difference from the reference" or "slope per unit", and spot when the columns of X are dependent so that beta has no unique answer. What it means to "adjust" for a covariate, confounding and Simpson's paradox come in the next deck, Confounding & Simpson's paradox. The R side (model.matrix, DESeq2, limma) is in Design matrices in R.
 :::
 
 ## One gene, a whole sample sheet {.smaller}
@@ -444,9 +444,9 @@ coef(lm(y ~ batch + treatment))
 ```
 
 - `lm` keeps the first column of a dependent set and reports **`NA`** for the rest. The `4` is *not* a batch effect — it is batch and treatment together.
-- **DESeq2** refuses outright: *"the model matrix is not full rank, so the model cannot be fit as specified."*
+- **limma** does the same ("coefficients not estimable"); DESeq2 refuses outright with *"the model matrix is not full rank"*.
 
-More in *Design matrices in R: DESeq2 & limma*.
+More in *Design matrices in R: limma*.
 
 ::: notes
 Show what the problem looks like in practice. lm does not error; it silently drops the redundant column and prints NA, and the remaining coefficient absorbs both effects. That is easy to misread, so an NA coefficient should always prompt a look at the design. DESeq2 checks the rank up front and stops with the "not full rank" error. The rank check qr(X)$rank is the same one from Linear systems in R. The full DESeq2 workflow is in the R deck.
@@ -466,7 +466,7 @@ Show what the problem looks like in practice. lm does not error; it silently dro
 | Unique $\boldsymbol\beta$ | iff columns of $X$ are **linearly independent** (needs $n \ge p$) |
 | Not unique | dummy trap, batch = treatment, empty cell, $p > n$ → drop a column or **fix the design** |
 
-**Next:** *Confounding & Simpson's paradox* — what "holding the others constant" buys you; then *Design matrices in R* (DESeq2, limma).
+**Next:** *Confounding & Simpson's paradox* — what "holding the others constant" buys you; then *Design matrices in R* (limma).
 
 ::: notes
 The summary is the revision sheet. The four skills to take away: build X for a described experiment, compute X beta for a sample or group, say what a coefficient means, and decide whether beta is unique — and if not, why and what to change. Point forward to the confounding deck for adjustment and interactions, and to the R deck for doing all this on real RNA-seq and metabolomics data.

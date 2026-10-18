@@ -1,6 +1,6 @@
 ---
 title: "Solving linear equation systems"
-subtitle: "Linear algebra — Linear systems by hand"
+subtitle: "Week 1 — Linear systems by hand"
 author: "Quantitative biology and integrative omics"
 format:
   revealjs:
@@ -39,7 +39,7 @@ solve a small system without a computer.
 In Linear systems in R we do the same thing at scale.
 :::
 
-## A biology problem: what is in the mixture?
+## A common biology problem: what is in the mixture?
 
 A tumour biopsy is **not** one cell type. It is a *mixture*: some tumour
 cells, some immune cells, some healthy tissue. Suppose we already know two
@@ -81,7 +81,8 @@ Two unknowns ($x$ and $y$), two equations. This is a **system of linear
 equations**.
 
 "Linear" means every unknown appears only to the first power — no $x^2$,
-no $xy$, no $\sin x$. Just numbers times unknowns, added up.
+no $xy$, no $\sin x$. Just numbers times unknowns, added up. More formally,
+a function is linear if $f(x+y)=f(x)+f(y)$. You can check that $f(x)=2x$ is linear.
 
 ![](fig03-two-lines.svg){width="55%" fig-align="center"}
 
@@ -98,10 +99,12 @@ We separate the **known coefficients** from the **unknowns** and the
 **measurements**:
 
 $$
-\underbrace{\begin{bmatrix} 2 & 1 \\ 1 & 3 \end{bmatrix}}_{A}
-\underbrace{\begin{bmatrix} x \\ y \end{bmatrix}}_{\mathbf{x}}
+\begin{bmatrix} 2 & 1 \\ 1 & 3 \end{bmatrix}
+\begin{bmatrix} x \\ y \end{bmatrix}
 =
-\underbrace{\begin{bmatrix} 8 \\ 9 \end{bmatrix}}_{\mathbf{b}}
+\begin{bmatrix} 8 \\ 9 \end{bmatrix}
+\qquad\text{that is}\qquad
+A\,\mathbf{x} = \mathbf{b}
 $$
 
 - $A$ — the **coefficient matrix**. Here, the cell-type signatures (one
@@ -125,6 +128,8 @@ multiplication, which we formalise in Matrices as transformations.
 
 ## Strategy 1 — Substitution
 
+:::: {.columns}
+::: {.column width="68%"}
 Solve one equation for one unknown, then substitute into the other.
 
 From equation 1: $\;2x + y = 8 \;\Rightarrow\; y = 8 - 2x$.
@@ -138,6 +143,18 @@ $$
 So $x = 3$, and then $y = 8 - 2(3) = 2$.
 
 **Answer:** 3 units of tumour, 2 units of immune cells.
+:::
+::: {.column width="32%"}
+::: {.callout-note title="The system"}
+$$
+\begin{aligned}
+2x + y &= 8 \quad(1)\\
+x + 3y &= 9 \quad(2)
+\end{aligned}
+$$
+:::
+:::
+::::
 
 ::: notes
 Substitution is the method most students already half-remember from school.
@@ -148,6 +165,8 @@ is the only place to slip up, so go step by step on the board.
 
 ## Always check your answer
 
+:::: {.columns}
+::: {.column width="68%"}
 Plug $x = 3,\; y = 2$ back into the **original** equations:
 
 $$
@@ -158,9 +177,20 @@ $$
 $$
 
 Both hold, so the solution is correct.
+:::
+::: {.column width="32%"}
+::: {.callout-note title="The system"}
+$$
+\begin{aligned}
+2x + y &= 8 \quad(1)\\
+x + 3y &= 9 \quad(2)
+\end{aligned}
+$$
+:::
+:::
+::::
 
-Checking costs seconds and catches almost every arithmetic mistake.
-**Always** do it.
+Checking takes little effort and catches almost every arithmetic mistake. Get the habit in to avoid losing points on the exam! (or getting the wrong answer in your research)
 
 ::: notes
 Make checking a habit and say so explicitly. Substituting back into the
@@ -177,12 +207,14 @@ is the systematic method that scales (it is what R uses internally).
 The idea: add multiples of one equation to another to **eliminate** a
 variable, until the system is easy to read off.
 
-Two moves are allowed (they never change the solution):
+Three moves are allowed (they never change the solution):
 
 1. Multiply an equation by a non-zero number.
 2. Add a multiple of one equation to another.
+3. (Swapping order of two equations. Can sometimes make life more convenient)
 
-(A third, swapping two equations, just reorders them.)
+![](fig05-row-operations.svg){width="95%" fig-align="center"}
+
 
 ::: notes
 Frame Gaussian elimination as "substitution made systematic". The allowed
@@ -210,8 +242,11 @@ $$
 \;\Rightarrow\; 0\,x + 2.5\,y = 5
 $$
 
-Now R2 says $2.5\,y = 5 \Rightarrow y = 2$. **Back-substitute** into R1:
-$2x + 2 = 8 \Rightarrow x = 3$. Same answer as before. $\checkmark$
+Now R2 says $2.5\,y = 5 \Rightarrow y = 2$.
+
+**Back-substitute** into R1: $2x + 2 = 8 \Rightarrow x = 3$.
+
+Same answer as before. $\checkmark$
 
 ::: notes
 Show the multiplier choice: we want to kill x in R2, R2 has coefficient 1 and
@@ -286,7 +321,7 @@ becomes error-prone, but elimination is just "clear column 1, then clear column
 Walk through the plan before doing the arithmetic.
 :::
 
-## 3×3 elimination — clear column 1 {.smaller}
+## 3×3 elimination — clear column 1
 
 Pivot is the $1$ in the top-left. R2 already has a $0$ there. Clear R3 with
 $\;\text{R3} - 2\,\text{R1}$:
@@ -305,6 +340,16 @@ $$
 \end{array}\right]
 $$
 
+Row by row, what $\text{R3} - 2\,\text{R1}$ means:
+
+$$
+\begin{array}{lrrrr}
+\text{R3} & 2 & 1 & 1 & 8\\
+2\,\text{R1} & 2 & 2 & 2 & 12\\ \hline
+\text{R3} - 2\,\text{R1} & 0 & -1 & -1 & -4
+\end{array}
+$$
+
 Column 1 now has zeros below the pivot.
 
 ::: notes
@@ -313,7 +358,7 @@ minus 1, and 8 minus 12 is minus 4. Do each subtraction out loud. The point is
 that the first unknown is now confined to the first equation only.
 :::
 
-## 3×3 elimination — clear column 2 {.smaller}
+## 3×3 elimination — clear column 2
 
 Pivot is now the $2$ in R2. Clear R3 with
 $\;\text{R3} + \tfrac{1}{2}\text{R2}$:
@@ -332,6 +377,16 @@ $$
 \end{array}\right]
 $$
 
+Row by row, what $\text{R3} + \tfrac12\,\text{R2}$ means:
+
+$$
+\begin{array}{lrrrr}
+\text{R3} & 0 & -1 & -1 & -4\\
+\tfrac12\,\text{R2} & 0 & 1 & 0.5 & 3.5\\ \hline
+\text{R3} + \tfrac12\,\text{R2} & 0 & 0 & -0.5 & -0.5
+\end{array}
+$$
+
 Now upper-triangular. The bottom row reads $-0.5\,z = -0.5$.
 
 ::: notes
@@ -341,7 +396,23 @@ is minus a half. We have reached the staircase shape. Now we read off and back-
 substitute.
 :::
 
-## 3×3 — back-substitution {.smaller}
+## 3×3 — back-substitution
+
+The triangular form from the last slide, written as equations again:
+
+$$
+\left[\begin{array}{ccc|c}
+1 & 1 & 1 & 6\\
+0 & 2 & 1 & 7\\
+0 & 0 & -0.5 & -0.5
+\end{array}\right]
+\quad\Longleftrightarrow\quad
+\begin{aligned}
+x + y + z &= 6\\
+2y + z &= 7\\
+-0.5\,z &= -0.5
+\end{aligned}
+$$
 
 From the bottom up:
 

@@ -1,0 +1,133 @@
+---
+title: "Quiz: least squares as projection"
+format:
+  html:
+    toc: true
+    code-copy: true
+    code-overflow: wrap
+    highlight-style: github
+---
+
+Short questions on how a linear model finds its coefficients. Try each on paper first, then open the answer.
+
+---
+
+**Q1.** You fit a line $y = a + bx$ to 10 samples. How many equations and how many unknowns do you have, and why is there usually no exact solution?
+
+::: {.callout-tip collapse="true" title="Hint"}
+One equation per sample; one unknown per coefficient.
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+10 equations, 2 unknowns ($a$ and $b$). With noisy measurements the 10 points do not lie exactly on one line, so no $(a, b)$ satisfies all 10 equations: the system is over-determined (Case 2 from *Linear systems in R*).
+:::
+
+---
+
+**Q2.** For the points $(0, 2)$, $(1, 1)$, $(2, 6)$ and the line $y = 1 + 2x$, compute the residual vector and the sum of squared residuals.
+
+::: {.callout-tip collapse="true" title="Hint"}
+Residual = data − fitted. Fitted values are $1 + 2x$ at $x = 0, 1, 2$.
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+Fitted values $(1, 3, 5)$. Residual $(2, 1, 6) - (1, 3, 5) = (1, -2, 1)$. Sum of squares $1 + 4 + 1 = 6$.
+:::
+
+---
+
+**Q3.** Is $y = 1 + 2x$ the least-squares line for the points in Q2?
+
+::: {.callout-tip collapse="true" title="Hint"}
+Check whether the residual is orthogonal to both columns of $X$: $\mathbf{1} = (1, 1, 1)$ and $\mathbf{x} = (0, 1, 2)$.
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+Yes. $\mathbf{1}\cdot\mathbf{r} = 1 - 2 + 1 = 0$ and $\mathbf{x}\cdot\mathbf{r} = 0 - 2 + 2 = 0$. The residual is orthogonal to both columns, so this is the least-squares fit.
+:::
+
+---
+
+**Q4.** In the picture where the data $\mathbf{y}$ is one vector (one axis per sample), what are the fitted values $\hat{\mathbf{y}} = X\boldsymbol\beta$ of the least-squares fit?
+
+::: {.callout-tip collapse="true" title="Hint"}
+Every $X\boldsymbol\beta$ is a combination of the columns of $X$. Which of these is closest to $\mathbf{y}$?
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+The **projection** (shadow) of $\mathbf{y}$ onto the column space of $X$, the set of all combinations of the columns. It is the point of that space closest to $\mathbf{y}$, and the residual $\mathbf{y} - \hat{\mathbf{y}}$ is orthogonal to it.
+:::
+
+---
+
+**Q5.** Which equations does `lm` solve to find $\boldsymbol\beta$?
+(a) $X\boldsymbol\beta = \mathbf{y}$  (b) $X^\mathsf{T}X\boldsymbol\beta = X^\mathsf{T}\mathbf{y}$  (c) $X^\mathsf{T}\boldsymbol\beta = \mathbf{y}$
+
+::: {.callout-tip collapse="true" title="Hint"}
+"The residual $\mathbf{y} - X\boldsymbol\beta$ is orthogonal to every column of $X$" is $X^\mathsf{T}(\mathbf{y} - X\boldsymbol\beta) = \mathbf{0}$.
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+(b), the **normal equations**. (a) usually has no solution when there are more samples than coefficients. (In practice `lm` uses a QR decomposition, which gives the same answer more accurately.)
+:::
+
+---
+
+**Q6.** $X$ has 50 rows (samples) and 3 columns (coefficients). What is the size of $X^\mathsf{T}X$?
+
+::: {.callout-tip collapse="true" title="Hint"}
+$X^\mathsf{T}$ is $3 \times 50$.
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+$3 \times 3$: one row and one column per coefficient. The normal equations are always a square system, however many samples you have.
+:::
+
+---
+
+**Q7.** You fit `lm(y ~ 1)`, a model with only an intercept, to $\mathbf{y} = (4, 7, 1)$. What is the coefficient?
+
+::: {.callout-tip collapse="true" title="Hint"}
+Project $\mathbf{y}$ onto $\mathbf{1} = (1, 1, 1)$: coefficient $= \dfrac{\mathbf{y}\cdot\mathbf{1}}{\mathbf{1}\cdot\mathbf{1}}$.
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+$\dfrac{4 + 7 + 1}{3} = 4$, the **mean** of $\mathbf{y}$. The best constant in the least-squares sense is the average.
+:::
+
+---
+
+**Q8.** True or false: for a least-squares fit with an intercept, the residuals add up to zero.
+
+::: {.callout-tip collapse="true" title="Hint"}
+The intercept column is $\mathbf{1}$, and $\mathbf{1}\cdot\mathbf{r}$ is the sum of the residuals.
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+True. The residual is orthogonal to every column of $X$, including $\mathbf{1}$, and $\mathbf{1}\cdot\mathbf{r} = $ sum of residuals $= 0$.
+:::
+
+---
+
+**Q9.** A model has $X^\mathsf{T}X = \begin{pmatrix} 4 & 4 \\ 4 & 4 \end{pmatrix}$. What does that tell you about $\boldsymbol\beta$, and what does `lm` print?
+
+::: {.callout-tip collapse="true" title="Hint"}
+Can $\begin{pmatrix} 4 & 4 \\ 4 & 4 \end{pmatrix}\begin{pmatrix} a \\ b \end{pmatrix} = \dots$ be solved uniquely?
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+The matrix is singular (both rows equal), so the two columns of $X$ are dependent and there are **infinitely many** $\boldsymbol\beta$ with the same fitted values. `lm` keeps the first column and reports `NA` for the redundant coefficient.
+:::
+
+---
+
+**Q10.** Which R expression computes the least-squares $\boldsymbol\beta$ from a design matrix `X` and data `y`?
+(a) `solve(X, y)`  (b) `solve(t(X) %*% X, t(X) %*% y)`  (c) `t(X) %*% y`
+
+::: {.callout-tip collapse="true" title="Hint"}
+`solve(A, b)` needs a square `A`.
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+(b). Option (a) fails because `X` is not square when there are more samples than coefficients; (c) is only the right-hand side of the normal equations. `coef(lm(y ~ x))` and `qr.solve(X, y)` give the same answer as (b).
+:::

@@ -1,0 +1,241 @@
+---
+title: "Exercise: beyond linear models"
+format:
+  html:
+    toc: true
+    code-copy: true
+    code-overflow: wrap
+    highlight-style: github
+---
+
+## Goal
+
+By the end of this exercise you should be able to:
+
+- decide whether a model is **linear in its parameters**, and write the design matrix when it is,
+- fit a **dose–response curve** with [`nls`](https://rdrr.io/r/stats/nls.html), choose **starting values** from a plot, and read off the EC50,
+- recognise a failed fit and a **local minimum**, and know what to do about them,
+- push a vector through a tiny **neural network** with ReLU by hand, and show that without ReLU the layers **collapse** to one matrix,
+- explain why a curved coordinate can describe a ring of cells where a principal component cannot.
+
+The *By hand* part is the core. The R part fits the curve from the lecture and checks your hand calculations.
+
+## Background
+
+**Linear in the parameters.** A model is linear if the prediction is a weighted sum of columns you can compute from the data: $\hat{\mathbf{y}} = X\boldsymbol\beta$. The columns may be curved functions of $x$ ($x^2$, $\log x$, $\sin$, …). Then least squares has one exact answer, as in `lm()`.
+
+**Nonlinear least squares.** If a parameter sits inside the curve, we still minimise the sum of squared errors (SSE), but by **search**: start from a guess, take a step that lowers the SSE, repeat. `nls()` does this; it needs starting values and can stop at a **local minimum**.
+
+**The Hill (four-parameter logistic) curve** for a drug that lowers viability:
+
+$$\text{viable} = \text{bottom} + \frac{\text{top} - \text{bottom}}{1 + (\text{dose}/\text{EC50})^{h}}$$
+
+**A one-hidden-layer network**: hidden $= \text{ReLU}(A\mathbf{x} + \mathbf{b})$, output $= C\cdot\text{hidden} + d$, with $\text{ReLU}(s) = \max(0, s)$ applied to each number separately.
+
+## By hand
+
+**B1.** Which of these are linear in the parameters $a, b, c$? For each linear one, name the columns of $X$.
+
+a. $y = a + b x + c x^2$
+b. $y = a + b \log(x)$
+c. $y = a\, e^{b x}$
+d. $y = a + b \cos(2\pi t / 24) + c \sin(2\pi t / 24)$
+e. $y = \dfrac{a\, x}{b + x}$
+f. $y = a + b x + c\, x z$ (with $x$ and $z$ both measured)
+g. $y = a + b \cos(2\pi t / c)$
+
+**B2.** For the model $y = a + b x + c x^2$ and $x = 0, 1, 2, 3$:
+
+a. Write the design matrix $X$.
+b. With $a = 1$, $b = 2$, $c = -0.5$, compute the predictions $X\boldsymbol\beta$. Where is the curve highest?
+
+**B3.** Michaelis–Menten kinetics: the reaction rate at substrate concentration $s$ is $\text{rate} = \dfrac{V s}{K + s}$, with maximum rate $V$ and Michaelis constant $K$.
+
+a. What is the rate at $s = K$? Which parameter of the Hill curve plays the same role as $K$?
+b. If $K = 2$ is known from earlier work, is the model linear in $V$? Which single column would $X$ have?
+c. With both $V$ and $K$ unknown, why can `lm()` not fit it?
+d. (bonus) Show that $\dfrac{1}{\text{rate}} = \dfrac{1}{V} + \dfrac{K}{V}\cdot\dfrac{1}{s}$ (the Lineweaver–Burk form). It is linear in $1/s$. Why can fitting a straight line to $1/\text{rate}$ against $1/s$ give poor estimates when the rates at low $s$ are noisy?
+
+**B4.** A tiny network with two inputs, two hidden units and one output:
+
+$$A = \begin{pmatrix} 1 & -1 \\ 2 & 1 \end{pmatrix}, \quad \mathbf{b} = \begin{pmatrix} 0 \\ -3 \end{pmatrix}, \quad C = \begin{pmatrix} 3 & 2 \end{pmatrix}, \quad d = 1.$$
+
+a. Push the input $(x, y) = (1, 2)$ through it: compute $A\mathbf{x} + \mathbf{b}$, apply ReLU, then $C\cdot\text{hidden} + d$.
+b. Do the same **without** ReLU. Is the answer different?
+c. Compute the single matrix $CA$ and the number $C\mathbf{b} + d$. Check that $(CA)\mathbf{x} + (C\mathbf{b} + d)$ gives your answer in b.
+d. Repeat a and b for the input $(2, 0)$. Why do the two answers agree this time?
+
+**B5.** A network with one input and two hidden units computes $f(x) = \text{ReLU}(x) - 2\,\text{ReLU}(x - 1)$.
+
+a. Compute $f$ at $x = -1, 0, 1, 2, 3$ and sketch it.
+b. Can a straight line $f(x) = a + bx$ have this shape? Name a gene whose expression along a differentiation path looks like this.
+
+**B6.** Three cycling cells lie on a ring in two marker genes, at angles $30^\circ$, $330^\circ$ and $150^\circ$ on the unit circle: $(\cos\theta, \sin\theta)$.
+
+a. Write down their coordinates (to 3 decimals).
+b. Take PC1 $= (1, 0)$. Compute the PC1 score of each cell. Which two cells get the same score?
+c. Compute the angle of each cell with `atan2(gene B, gene A)`. Does the angle tell all three apart?
+
+## In R
+
+Enter the dose–response data from the lecture: viability (%) of cells at 8 drug concentrations (µM), in duplicate.
+
+```r
+dose <- rep(c(0.01, 0.03, 0.1, 0.3, 1, 3, 10, 30), each = 2)
+v    <- c(96, 98, 99, 94, 94, 93, 79, 83, 43, 53, 21, 19, 9, 13, 10, 8)
+plot(dose, v, log = "x", xlab = "dose (µM)", ylab = "viable cells (%)")
+```
+
+**R1.** From the plot, guess starting values for `bottom`, `top`, `ec50` and `h`. Fit the Hill curve with `nls()`. Report the EC50 with its standard error, and draw the fitted curve over the points.
+
+**R2.** Refit from `ec50 = 0.1` and from `ec50 = 10` (other starting values as in R1). Add `trace = TRUE` to see the steps. What happens in each case? How many steps does the first one need?
+
+**R3.** Fit a cubic polynomial in log dose instead: `u <- log10(dose)`, `lm(v ~ u + I(u^2) + I(u^3))`. Compare the SSE with the Hill fit. Which coefficient of the cubic is the EC50? Predict viability at 100 µM and 1000 µM with both models. Which do you trust?
+
+**R4.** Check B4 in R: write `relu <- function(s) pmax(0, s)`, set up `A`, `b`, `C`, `d` as matrices, and compute the output for $(1, 2)$ and $(2, 0)$ with and without ReLU. Then compute `C %*% A`.
+
+**R5.** (bonus) Local minima. A clock reporter measured every 2 h:
+
+```r
+t <- seq(0, 46, by = 2)
+y <- c(4.3, 6.6, 8.9, 7.1, 7.5, 6.6, 5.6, 3.3, 4.0, 1.9, 2.7, 4.3,
+       4.7, 5.7, 9.0, 6.2, 8.3, 6.5, 5.8, 3.8, 4.1, 1.0, 3.7, 5.1)
+```
+
+Fit `y ~ m + a * cos(2 * pi * t / P) + b * sin(2 * pi * t / P)` with `nls()`, starting at `m = 5, a = 1, b = 1` and `P = 20`, then `P = 12`. Compare the periods and the SSEs (`sum(resid(fit)^2)`). Then, for each `P` in `seq(5, 48, by = 0.05)`, fit the same model with `lm()` (the period is now fixed, so it is linear) and plot the SSE against `P`. Where are the two fits on this curve?
+
+## Hints
+
+::: {.callout-tip collapse="true" title="Hint 1 — linear or not (B1, B3)"}
+Look at each parameter. If it only **multiplies** something you can compute from the data ($1$, $x$, $x^2$, $\cos(2\pi t/24)$, $xz$, …), it is fine. If it sits in an exponent, a denominator, or inside a sine, the model is not linear in it.
+:::
+
+::: {.callout-tip collapse="true" title="Hint 2 — the network by hand (B4, B5)"}
+Work in three steps: matrix times vector (plus $\mathbf{b}$), then replace each negative number by 0, then the row $C$ times the hidden vector (plus $d$). For $CA$, a $1\times 2$ row times a $2 \times 2$ matrix is a $1 \times 2$ row: each entry is $C$ dotted with one column of $A$.
+:::
+
+::: {.callout-tip collapse="true" title="Hint 3 — starting values (R1, R2)"}
+`top` is the plateau at low dose, `bottom` the plateau at high dose, `ec50` the dose where viability is half-way between them, and `h = 1` is a safe guess for the slope. `nls(..., start = list(bottom = ..., top = ..., ec50 = ..., h = ...))`. For the fitted curve: `dd <- 10^seq(-2, 1.5, length.out = 200)` and `lines(dd, predict(fit, data.frame(dose = dd)))`.
+:::
+
+::: {.callout-tip collapse="true" title="Hint 4 — the SSE scan (R5)"}
+`sapply(PP, function(p) sum(resid(lm(y ~ cos(2 * pi * t / p) + sin(2 * pi * t / p)))^2))` gives one SSE per period in `PP`. Plot it with `type = "l"` and mark the two `nls()` results with `points()`.
+:::
+
+## Solutions
+
+::: {.callout-note collapse="true" title="Solution"}
+
+**B1.**
+a. Linear: columns $1, x, x^2$.
+b. Linear: columns $1, \log x$.
+c. Not linear: $b$ is in the exponent. (Taking logs gives $\log y = \log a + b x$, linear in $\log a$ and $b$, but that also changes how the noise behaves.)
+d. Linear: columns $1, \cos(2\pi t/24), \sin(2\pi t/24)$, a Fourier basis with a known 24 h period.
+e. Not linear: $b$ is in the denominator (Michaelis–Menten).
+f. Linear: columns $1, x, xz$, an interaction column.
+g. Not linear in $c$: the period sits inside the cosine. ($a$ and $b$ alone would be fine.)
+
+**B2.**
+a. $X = \begin{pmatrix} 1 & 0 & 0 \\ 1 & 1 & 1 \\ 1 & 2 & 4 \\ 1 & 3 & 9 \end{pmatrix}$.
+b. $X\boldsymbol\beta = (1,\ 1 + 2 - 0.5,\ 1 + 4 - 2,\ 1 + 6 - 4.5) = (1,\ 2.5,\ 3,\ 2.5)$. Highest at $x = 2$ (the top of the parabola is at $x = -b/(2c) = 2$). A curve, from a linear model.
+
+**B3.**
+a. At $s = K$: $\text{rate} = VK/(2K) = V/2$, half the maximum. $K$ plays the role of EC50: the concentration that gives half the effect.
+b. Yes: $\text{rate} = V \cdot \dfrac{s}{2 + s}$, one column $s/(2 + s)$ (and no intercept).
+c. $K$ sits in the denominator: it does not multiply a column that can be computed from the data, so there is no $X$ with $\text{rate} = X\boldsymbol\beta$. Use `nls()`.
+d. (bonus) $\dfrac{1}{\text{rate}} = \dfrac{K + s}{V s} = \dfrac{K}{V}\cdot\dfrac{1}{s} + \dfrac{1}{V}$. At low $s$ the rate is small, and $1/\text{rate}$ blows up small errors: a rate of 0.1 measured as 0.05 becomes 20 instead of 10. Those few points get huge leverage on the straight line and pull the estimates of $V$ and $K$ around. Fitting the original curve with `nls()` avoids this.
+
+**B4.**
+a. $A\mathbf{x} + \mathbf{b} = (1 - 2,\ 2 + 2) + (0, -3) = (-1,\ 1)$. ReLU: $(0,\ 1)$. Output $= 3\cdot 0 + 2 \cdot 1 + 1 = 3$.
+b. Without ReLU: $3\cdot(-1) + 2\cdot 1 + 1 = 0$. Different.
+c. $CA = (3\cdot 1 + 2\cdot 2,\ 3\cdot(-1) + 2\cdot 1) = (7,\ -1)$, and $C\mathbf{b} + d = 3\cdot 0 + 2\cdot(-3) + 1 = -5$. Then $(7, -1)\cdot(1, 2) - 5 = 7 - 2 - 5 = 0$, as in b. Without ReLU, two layers are one straight-line map.
+d. $A\mathbf{x} + \mathbf{b} = (2,\ 4) + (0, -3) = (2,\ 1)$: both positive, so ReLU changes nothing. Output $= 3\cdot 2 + 2\cdot 1 + 1 = 9$ with and without ReLU. A ReLU network is a straight-line map within each region where the signs of the hidden units stay the same; it bends only where a hidden unit crosses 0.
+
+**B5.**
+a. $f(-1) = 0$, $f(0) = 0$, $f(1) = 1$, $f(2) = 2 - 2 = 0$, $f(3) = 3 - 4 = -1$. Flat at 0, up to a peak at $x = 1$, then down.
+b. No: a straight line goes only up or only down. Two hinges give a rise and a fall. Along a differentiation path, a progenitor gene is low in stem cells, high in progenitors and low again in mature cells (the progenitor gene in the Variational autoencoders unit has this shape).
+
+**B6.**
+a. $30^\circ$: $(0.866, 0.500)$; $330^\circ$: $(0.866, -0.500)$; $150^\circ$: $(-0.866, 0.500)$.
+b. The PC1 score is the first coordinate: $0.866$, $0.866$, $-0.866$. The cells at $30^\circ$ and $330^\circ$ get the same score, although they are $60^\circ$ apart in the cycle.
+c. `atan2` gives $30^\circ$, $-30^\circ$ (the same direction as $330^\circ$) and $150^\circ$: all different. The angle is a curved (nonlinear) coordinate, as in Polar coordinates; no matrix can compute it.
+
+**R1.**
+
+```r
+fit <- nls(v ~ bottom + (top - bottom) / (1 + (dose / ec50)^h),
+           start = list(bottom = 0, top = 100, ec50 = 1, h = 1))
+summary(fit)$coefficients[, 1:2]
+#          Estimate Std. Error
+# bottom  8.4649166 1.57229541
+# top    97.0869359 1.30756401
+# ec50    0.8518747 0.05333948
+# h       1.4685673 0.12254805
+dd <- 10^seq(-2, 1.5, length.out = 200)
+lines(dd, predict(fit, data.frame(dose = dd)), col = "blue", lwd = 2)
+sum(resid(fit)^2)        # 86.2
+```
+
+EC50 $= 0.85$ µM (standard error 0.05). The plateaus are 97% and 8.5%, and the slope is $h = 1.47$. The fit converges in 5 steps.
+
+**R2.**
+
+```r
+nls(v ~ bottom + (top - bottom) / (1 + (dose / ec50)^h),
+    start = list(bottom = 0, top = 100, ec50 = 0.1, h = 1), trace = TRUE)
+nls(v ~ bottom + (top - bottom) / (1 + (dose / ec50)^h),
+    start = list(bottom = 0, top = 100, ec50 = 10, h = 1), trace = TRUE)
+```
+
+From `ec50 = 0.1` the SSE drops from 14923 to 86.2 in 8 steps and lands on the same answer as R1. From `ec50 = 10` the first step jumps to `bottom = -28.8` and `h = 0.14`, and the second step stops with *"Missing value or an infinity produced when evaluating the model"*. The search went somewhere the curve cannot be evaluated. A start read off the plot avoids this.
+
+**R3.**
+
+```r
+u   <- log10(dose)
+cub <- lm(v ~ u + I(u^2) + I(u^3))
+sum(resid(cub)^2)                                     # 337.5
+predict(cub, data.frame(u = log10(c(100, 1000))))     # 30.5  164.0
+predict(fit, data.frame(dose = c(100, 1000)))         #  8.5    8.5
+```
+
+The cubic has 4 parameters, like the Hill curve, but an SSE of 337.5 against 86.2. None of its coefficients is the EC50; you would have to solve for the dose where the cubic crosses half-way. Outside the data it goes wrong: 30.5% viable at 100 µM and 164% at 1000 µM, more than the untreated cells. The Hill curve stays on its bottom plateau (8.5%). A model whose shape follows the biology is easier to read and safer outside the measured range.
+
+**R4.**
+
+```r
+relu <- function(s) pmax(0, s)
+A <- matrix(c(1, -1,
+              2,  1), 2, byrow = TRUE)
+b <- c(0, -3); C <- matrix(c(3, 2), 1); d <- 1
+net <- function(x) C %*% relu(A %*% x + b) + d
+lin <- function(x) C %*% (A %*% x + b) + d
+c(net(c(1, 2)), lin(c(1, 2)), net(c(2, 0)), lin(c(2, 0)))   # 3 0 9 9
+C %*% A                                                     # 7 -1
+C %*% b + d                                                 # -5
+```
+
+**R5.** (bonus)
+
+```r
+fitP <- function(p0) nls(y ~ m + a * cos(2 * pi * t / P) + b * sin(2 * pi * t / P),
+                         start = list(m = 5, a = 1, b = 1, P = p0))
+good <- fitP(20); bad <- fitP(12)
+coef(good)["P"]; sum(resid(good)^2)     # 23.6 h, SSE 18.1
+coef(bad)["P"];  sum(resid(bad)^2)      # 10.7 h, SSE 97.4
+PP  <- seq(5, 48, by = 0.05)
+sse <- sapply(PP, function(p) sum(resid(lm(y ~ cos(2 * pi * t / p) + sin(2 * pi * t / p)))^2))
+plot(PP, sse, type = "l", xlab = "period P (h)", ylab = "SSE")
+points(c(coef(good)["P"], coef(bad)["P"]), c(sum(resid(good)^2), sum(resid(bad)^2)),
+       pch = 19, col = c("blue", "red"))
+```
+
+Starting at 20 h gives a period of 23.6 h with SSE 18.1: a circadian rhythm. Starting at 12 h gives 10.7 h with SSE 97.4, barely better than no rhythm at all (a flat line has SSE 101). Both fits "converge" without a warning. On the SSE curve the 23.6 h fit sits at the bottom of one deep valley; the 10.7 h fit sits in one of several shallow dips at short periods (near 5.2, 6.0, 7.2, 8.6, 10.7 and 14.1 h). The search only walks downhill from its start, so it stays in whichever dip it starts in. Scanning the nonlinear parameter on a grid first, as here, is a safe way to choose the start.
+:::
+
+## Where this leads
+
+- **Kinetics and pharmacology:** the [drc](https://cran.r-project.org/package=drc) package fits dose–response curves with automatic starting values, and R's self-starting models (`SSfpl`, `SSmicmen`) guess starting values for `nls()`.
+- **Nonlinear embeddings: kNN graphs & UMAP** (later this week): a curved map of the cells that keeps neighbours together, the many-gene version of the angle round the ring in B6.
+- **Variational autoencoders** (later this week): an encoder and a decoder that are networks like the one in B4, trained by search. Without ReLU they collapse to matrices, and the best pair of matrices is PCA.
+- **Penalized linear models:** a network has many weights and can overfit; "weight decay" is the ridge penalty, and held-out data (cross-validation) tell you when to stop.

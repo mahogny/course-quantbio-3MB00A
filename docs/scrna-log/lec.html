@@ -194,7 +194,7 @@
 
 <section id="title-slide" class="quarto-title-block center">
   <h1 class="title">Log and pseudolog transforms</h1>
-  <p class="subtitle">Single-cell analysis — Log and pseudolog transforms</p>
+  <p class="subtitle">Week 3 — Log and pseudolog transforms</p>
 
 <div class="quarto-title-authors">
 <div class="quarto-title-author">
@@ -207,16 +207,16 @@ Quantitative biology and integrative omics
 </section>
 <section id="about-this-lecture" class="slide level2">
 <h2>About this lecture</h2>
-<p>In Single-cell RNA-seq: data &amp; QC the last preprocessing step was one line: <code>log1p</code>. This unit is about that line: why we transform counts at all, what the log does to the numbers, and what the “+1” quietly changes.</p>
+<p>Sequencing gives <strong>counts</strong>: how many RNA molecules of each gene were caught in each sample or cell. Before PCA or a linear model, these counts are almost always log-transformed. This unit is about that step: why we transform counts at all, what the log does to the numbers, and what the “+1” quietly changes.</p>
 <ul>
 <li><strong>Why transform:</strong> expression spans orders of magnitude, changes are fold changes, and the variance of a count grows with its mean.</li>
 <li><strong>Log:</strong> turns fold changes into differences. It is <strong>nonlinear</strong>, which has consequences.</li>
 <li><strong>Pseudolog</strong> <span class="math inline">\(\log(1 + x)\)</span>: the log with a pseudocount, so that zeros survive. The pseudocount is a <strong>choice</strong>.</li>
 <li><strong>Plotting:</strong> a log axis is not the same as plotting log values.</li>
 </ul>
-<p>All data today are simulated counts: 400 cells (200 T cells, 200 B cells), 300 genes.</p>
+<p>All data today are simulated <strong>single-cell</strong> counts: 400 cells (200 T cells, 200 B cells), 300 genes. Each count is a number of <strong>UMIs</strong>, tagged RNA molecules. The same reasoning applies to bulk RNA-seq, and to the limma analysis later this week.</p>
 <aside class="notes">
-<p>This unit zooms in on one step of the standard pipeline from the previous unit (normalize, then log1p). It is short on new maths: logs are school maths. The new content is what the log does to data, and why the pseudocount is not an innocent detail. The simulated data: negative-binomial counts with cell-to-cell differences in capture, 280 background genes with means from 0.01 to 30, 5 very highly expressed genes (like ribosomal or mitochondrial genes), and 15 marker genes that are on (mean 4) in one cell type and nearly off (0.3) in the other. The figure script is make-log-figs.R in the unit folder.</p>
+<p>This unit opens week 3: before fitting linear models to omics data, the data go on the log scale. It uses single-cell counts as the example because the effects are largest there; the full single-cell pipeline comes in week 5. Explain UMI in one sentence (a molecule tag, so each count is one RNA molecule, not one read). It is short on new maths: logs are school maths. The new content is what the log does to data, and why the pseudocount is not an innocent detail. The simulated data: negative-binomial counts with cell-to-cell differences in capture, 280 background genes with means from 0.01 to 30, 5 very highly expressed genes (like ribosomal or mitochondrial genes), and 15 marker genes that are on (mean 4) in one cell type and nearly off (0.3) in the other. The figure script is make-log-figs.R in the unit folder.</p>
 <style type="text/css">
         span.MJX_Assistive_MathML {
           position:absolute!important;
@@ -261,7 +261,7 @@ Quantitative biology and integrative omics
 </ul>
 <p>The log does not make variance perfectly constant (genes near 0 stay low), but it stops size from deciding what looks variable.</p>
 <aside class="notes">
-<p>Second reason: heteroskedasticity. For count data the variance is tied to the mean (overdispersion from the distributions block: the negative binomial has variance mu + mu^2 / theta). So a highly expressed gene is “variable” just because it is big. After log1p, the genes that vary because of biology (the markers, on in one cell type and off in the other) rise to the top. This is exactly what highly variable gene selection needs. Be honest about the right panel: very lowly expressed genes have small log variance, and the curve is a hump, not flat. Variance-stabilising transforms are approximate; that is fine for PCA.</p>
+<p>Second reason: heteroskedasticity. For count data the variance is tied to the mean (overdispersion; the negative binomial, with variance mu + mu^2 / theta, comes properly in Error models in week 4). So a highly expressed gene is “variable” just because it is big. After log1p, the genes that vary because of biology (the markers, on in one cell type and off in the other) rise to the top. This is exactly what highly variable gene selection needs. Be honest about the right panel: very lowly expressed genes have small log variance, and the curve is a hump, not flat. Variance-stabilising transforms are approximate; that is fine for PCA.</p>
 <style type="text/css">
         span.MJX_Assistive_MathML {
           position:absolute!important;
@@ -357,7 +357,7 @@ Quantitative biology and integrative omics
 <li>So there is no matrix for it, and the order of operations matters: anything linear (summing counts, averaging, library-size scaling, compensation in flow cytometry) must be done <strong>before</strong> the log, on the original scale.</li>
 </ul>
 <aside class="notes">
-<p>Same test as for polar coordinates in the Applications block: a matrix map always passes it, so the log is not a matrix. Most of single-cell preprocessing is linear: adding up UMIs, dividing by the library size, averaging cells into a pseudobulk sample. These are meaningful on counts. After the log, a sum of logs is the log of a product, which usually means nothing biologically. The next slide shows the most common case: averaging.</p>
+<p>Same test as for polar coordinates in week 1: a matrix map always passes it, so the log is not a matrix. Most of single-cell preprocessing is linear: adding up UMIs, dividing by the library size, averaging cells into a pseudobulk sample. These are meaningful on counts. After the log, a sum of logs is the log of a product, which usually means nothing biologically. The next slide shows the most common case: averaging.</p>
 <style type="text/css">
         span.MJX_Assistive_MathML {
           position:absolute!important;
@@ -679,7 +679,7 @@ Quantitative biology and integrative omics
 </tr>
 </tbody>
 </table>
-<p><strong>Next (<a href="../scrna-umap/lec.html">Dimensionality reduction &amp; clustering</a>):</strong> PCA and UMAP on the log-normalized matrix.</p>
+<p><strong>Next (<a href="../least-squares/lec.html">Least squares as projection</a>):</strong> how a linear model is fitted, the step before design matrices and limma.</p>
 <aside class="notes">
 <p>The one-line takeaway: the log is the right scale for expression because biology works in fold changes, but it is nonlinear, so do everything linear first, and the pseudocount you need for the zeros is a modelling choice with visible consequences for low counts. Next unit runs PCA on exactly this log-normalized, HVG-selected matrix.</p>
 <style type="text/css">

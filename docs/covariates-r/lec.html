@@ -10,7 +10,7 @@
   <meta name="generator" content="quarto-1.7.30">
 
   <meta name="author" content="Quantitative biology and integrative omics">
-  <title>Quantitative biology and integrative omics – Design matrices in R: DESeq2 &amp; limma</title>
+  <title>Quantitative biology and integrative omics – Design matrices in R: limma</title>
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, minimal-ui">
@@ -193,8 +193,8 @@
     <div class="slides">
 
 <section id="title-slide" class="quarto-title-block center">
-  <h1 class="title">Design matrices in R: DESeq2 &amp; limma</h1>
-  <p class="subtitle">Linear models — Design matrices in R</p>
+  <h1 class="title">Design matrices in R: limma</h1>
+  <p class="subtitle">Week 3 — Design matrices in R</p>
 
 <div class="quarto-title-authors">
 <div class="quarto-title-author">
@@ -211,12 +211,12 @@ Quantitative biology and integrative omics
 <ul>
 <li>Turn a formula into <span class="math inline">\(X\)</span> with <a href="https://rdrr.io/r/stats/model.matrix.html"><code>model.matrix</code></a>, and control the reference level with <a href="https://rdrr.io/r/stats/relevel.html"><code>relevel</code></a> and <a href="https://rdrr.io/r/base/factor.html"><code>factor</code></a>.</li>
 <li><strong>Check the rank</strong> of <span class="math inline">\(X\)</span> before fitting, and recognise the <code>NA</code> that <a href="https://rdrr.io/r/stats/lm.html"><code>lm</code></a> returns for a column it cannot estimate.</li>
-<li>Run <strong>DESeq2</strong> on a bulk RNA-seq count matrix with <code>design = ~ batch + sex + treatment</code>, and read log2 fold changes and adjusted p-values.</li>
-<li>Recognise the “model matrix is not full rank” error, and know that only the <strong>experiment</strong> can fix it.</li>
-<li>(Extra material) Do the same with <strong>limma</strong> for log2 intensities from mass spectrometry.</li>
+<li>Run <strong>limma</strong> on a whole omics table with <code>design = ~ batch + sex + treatment</code>, and read log2 fold changes and adjusted p-values.</li>
+<li>Recognise “coefficients not estimable”, and know that only the <strong>experiment</strong> can fix it.</li>
+<li>(Extra material) Know that <strong>DESeq2</strong> does the same for raw counts, with a count error model.</li>
 </ul>
 <aside class="notes">
-<p>This is the R day for the covariates section. Nothing conceptually new: the design matrix, the dummy columns, the reference level and the rank condition are all from the two previous units. What is new is the tooling. First base R (model.matrix, lm), then DESeq2 for counts. limma is extra material at the end, but it is the same idea and many students will meet it for proteomics and metabolomics. Keep it practical: the students should leave knowing how to write the design, how to check it, and which coefficient to ask for.</p>
+<p>This is the R day for the covariates section. Nothing conceptually new: the design matrix, the dummy columns, the reference level and the rank condition are all from the two previous units. What is new is the tooling. First base R (model.matrix, lm), then limma, which fits the same linear model to every gene of a log-scale omics table. limma works for RNA-seq (after voom), proteomics, metabolomics and microarrays, and it needs nothing beyond the Gaussian linear model they already know. DESeq2, which models raw counts with a negative binomial, is a pointer at the end; the count models come in Error models. Keep it practical: the students should leave knowing how to write the design, how to check it, and which coefficient to ask for.</p>
 <style type="text/css">
         span.MJX_Assistive_MathML {
           position:absolute!important;
@@ -277,7 +277,7 @@ Quantitative biology and integrative omics
 <li>R also prints two <code>attr(...)</code> lines below the matrix; you can ignore them.</li>
 </ul>
 <aside class="notes">
-<p>model.matrix is exactly what lm, DESeq2 and limma call internally. Read the column names aloud, because students will need them later to pick coefficients: treatmenttreat is “treatment, level treat”. The reference is the alphabetically first level, ctrl and F here. Ask: which sample is the reference group? Sample 1 and 3 are ctrl and F, so their row is just 1, 0, 0 and their predicted mean is beta 0.</p>
+<p>model.matrix is exactly what lm and limma use; limma even takes its output directly. Read the column names aloud, because students will need them later to pick coefficients: treatmenttreat is “treatment, level treat”. The reference is the alphabetically first level, ctrl and F here. Ask: which sample is the reference group? Sample 1 and 3 are ctrl and F, so their row is just 1, 0, 0 and their predicted mean is beta 0.</p>
 <style type="text/css">
         span.MJX_Assistive_MathML {
           position:absolute!important;
@@ -470,7 +470,7 @@ Quantitative biology and integrative omics
 <li>An <code>NA</code> coefficient is a warning sign: your design cannot separate these effects.</li>
 </ul>
 <aside class="notes">
-<p>lm is forgiving: it drops the redundant column and carries on. Students must not read the 4 as a batch effect. It is the combined difference between the two groups, and we cannot say how much is batch and how much is treatment. Show that changing the order of the formula moves the NA, which proves that the split is arbitrary. DESeq2, on the next slides, refuses outright instead.</p>
+<p>lm is forgiving: it drops the redundant column and carries on. Students must not read the 4 as a batch effect. It is the combined difference between the two groups, and we cannot say how much is batch and how much is treatment. Show that changing the order of the formula moves the NA, which proves that the split is arbitrary. limma behaves the same way, as we will see.</p>
 <style type="text/css">
         span.MJX_Assistive_MathML {
           position:absolute!important;
@@ -516,16 +516,16 @@ Quantitative biology and integrative omics
           display:block!important;
       }</style></aside>
 </section>
-<section id="from-one-gene-to-20-000-deseq2" class="slide level2 smaller">
-<h2>From one gene to 20 000: DESeq2</h2>
+<section id="from-one-gene-to-20-000-limma" class="slide level2 smaller">
+<h2>From one gene to 20 000: limma</h2>
 
 <img data-src="fig01-one-design-many-genes.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:95.0%"><ul>
-<li>An RNA-seq experiment gives a <strong>count matrix</strong>: one row per gene, one column per sample.</li>
-<li><a href="https://bioconductor.org/packages/release/bioc/vignettes/DESeq2/inst/doc/DESeq2.html">DESeq2</a> fits every gene with the <strong>same design matrix</strong> <span class="math inline">\(X\)</span>, with a negative-binomial error model for the counts (see <em>Error models</em>).</li>
-<li>It reports each coefficient as a <strong>log2 fold change</strong> (LFC): LFC 1 = doubled, LFC <span class="math inline">\(-1\)</span> = halved, LFC 0 = no change.</li>
+<li>An omics experiment gives a table: one row per gene (or protein, metabolite), one column per sample, on a <strong>log2 scale</strong> (see <em>Log and pseudolog transforms</em>).</li>
+<li><a href="https://bioconductor.org/packages/release/bioc/html/limma.html">limma</a> fits every row with the <strong>same design matrix</strong> <span class="math inline">\(X\)</span>: 20 000 ordinary linear models.</li>
+<li>On the log2 scale a coefficient is a <strong>log2 fold change</strong> (logFC): 1 = doubled, <span class="math inline">\(-1\)</span> = halved, 0 = no change.</li>
 </ul>
 <aside class="notes">
-<p>The key picture of the day. The samples are the same for every gene, so the design matrix is the same; only y changes from row to row. DESeq2 is in effect 20 000 regressions with one shared X. The negative binomial is the error model from the Error models unit; we do not go into how the counts are linked to X beyond saying that coefficients come out as log2 fold changes. DESeq2 also borrows information about the dispersion across genes, which is why it works with few replicates.</p>
+<p>The key picture of the day. The samples are the same for every gene, so the design matrix is the same; only y changes from row to row. limma is in effect 20 000 lm calls with one shared X. Because the data are on the log2 scale, differences of log2 values are log2 fold changes, which is why we spent a unit on the log. limma adds one important trick, eBayes, on the next slide.</p>
 <style type="text/css">
         span.MJX_Assistive_MathML {
           position:absolute!important;
@@ -538,57 +538,25 @@ Quantitative biology and integrative omics
           display:block!important;
       }</style></aside>
 </section>
-<section id="the-inputs-counts-sample-table-design" class="slide level2 smaller">
-<h2>The inputs: counts + sample table + design</h2>
-<div class="sourceCode" id="cb9"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(DESeq2)</span>
-<span id="cb9-2"><a aria-hidden="true" tabindex="-1"></a><span class="co"># counts : genes x samples matrix of integers (2000 x 12)</span></span>
-<span id="cb9-3"><a aria-hidden="true" tabindex="-1"></a><span class="co"># samples: one row per sample, same order as the columns of counts</span></span>
-<span id="cb9-4"><a aria-hidden="true" tabindex="-1"></a><span class="fu">head</span>(samples, <span class="dv">3</span>)</span>
-<span id="cb9-5"><a aria-hidden="true" tabindex="-1"></a><span class="co">#    batch sex treatment</span></span>
-<span id="cb9-6"><a aria-hidden="true" tabindex="-1"></a><span class="co"># s1     A   F      ctrl</span></span>
-<span id="cb9-7"><a aria-hidden="true" tabindex="-1"></a><span class="co"># s2     A   M     treat</span></span>
-<span id="cb9-8"><a aria-hidden="true" tabindex="-1"></a><span class="co"># s3     A   F     treat</span></span>
-<span id="cb9-9"><a aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb9-10"><a aria-hidden="true" tabindex="-1"></a>dds <span class="ot">&lt;-</span> <span class="fu">DESeqDataSetFromMatrix</span>(<span class="at">countData =</span> counts,</span>
-<span id="cb9-11"><a aria-hidden="true" tabindex="-1"></a>                              <span class="at">colData   =</span> samples,</span>
-<span id="cb9-12"><a aria-hidden="true" tabindex="-1"></a>                              <span class="at">design    =</span> <span class="sc">~</span> batch <span class="sc">+</span> sex <span class="sc">+</span> treatment)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<section id="lmfit-ebayes-toptable" class="slide level2 smaller">
+<h2><code>lmFit</code>, <code>eBayes</code>, <code>topTable</code></h2>
+<div class="sourceCode" id="cb9"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(limma)</span>
+<span id="cb9-2"><a aria-hidden="true" tabindex="-1"></a><span class="co"># counts: 2000 genes x 12 samples; samples: one row per sample (batch, sex, treatment)</span></span>
+<span id="cb9-3"><a aria-hidden="true" tabindex="-1"></a>design <span class="ot">&lt;-</span> <span class="fu">model.matrix</span>(<span class="sc">~</span> batch <span class="sc">+</span> sex <span class="sc">+</span> treatment, <span class="at">data =</span> samples)</span>
+<span id="cb9-4"><a aria-hidden="true" tabindex="-1"></a>v   <span class="ot">&lt;-</span> <span class="fu">voom</span>(counts, design)       <span class="co"># RNA-seq counts -&gt; log2 scale, with weights</span></span>
+<span id="cb9-5"><a aria-hidden="true" tabindex="-1"></a>fit <span class="ot">&lt;-</span> <span class="fu">lmFit</span>(v, design)           <span class="co"># one linear model per gene</span></span>
+<span id="cb9-6"><a aria-hidden="true" tabindex="-1"></a>fit <span class="ot">&lt;-</span> <span class="fu">eBayes</span>(fit)                <span class="co"># share variance information across genes</span></span>
+<span id="cb9-7"><a aria-hidden="true" tabindex="-1"></a><span class="fu">topTable</span>(fit, <span class="at">coef =</span> <span class="st">"treatmenttreat"</span>, <span class="at">number =</span> <span class="dv">3</span>)</span>
+<span id="cb9-8"><a aria-hidden="true" tabindex="-1"></a><span class="co">#      logFC AveExpr     t  P.Value adj.P.Val</span></span>
+<span id="cb9-9"><a aria-hidden="true" tabindex="-1"></a><span class="co"># g5    2.20   10.83  8.05  1.0e-12   2.0e-09</span></span>
+<span id="cb9-10"><a aria-hidden="true" tabindex="-1"></a><span class="co"># g188 -1.97   10.02 -6.88  3.8e-10   2.2e-07</span></span>
+<span id="cb9-11"><a aria-hidden="true" tabindex="-1"></a><span class="co"># g145 -1.87   11.57 -6.86  4.2e-10   2.2e-07</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <ul>
-<li><code>colData</code> is the sample table; the design formula refers to its columns.</li>
-<li>By convention the <strong>variable of interest goes last</strong>; nuisance covariates (batch, sex, age) go before it.</li>
-<li>The order does not change the fit, but <code>results(dds)</code> without arguments reports the <strong>last</strong> variable.</li>
-</ul>
-
-<img data-src="fig02-deseq2-pipeline.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:80.0%"><aside class="notes">
-<p>The three ingredients. The rows of colData must match the columns of the count matrix; DESeq2 checks that the names agree. The convention to put the variable of interest last is only a convention for the fit, but it matters for the default results() call, which reports the last variable. If you wrote ~ treatment + batch, results(dds) would silently give you the batch effect. The figure shows the flow and where the rank check happens.</p>
-<style type="text/css">
-        span.MJX_Assistive_MathML {
-          position:absolute!important;
-          clip: rect(1px, 1px, 1px, 1px);
-          padding: 1px 0 0 0!important;
-          border: 0!important;
-          height: 1px!important;
-          width: 1px!important;
-          overflow: hidden!important;
-          display:block!important;
-      }</style></aside>
-</section>
-<section id="deseq-and-resultsnames" class="slide level2 smaller">
-<h2><code>DESeq()</code> and <code>resultsNames()</code></h2>
-<div class="sourceCode" id="cb10"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a aria-hidden="true" tabindex="-1"></a>dds <span class="ot">&lt;-</span> <span class="fu">DESeq</span>(dds)          <span class="co"># normalises, estimates dispersions, fits every gene</span></span>
-<span id="cb10-2"><a aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb10-3"><a aria-hidden="true" tabindex="-1"></a><span class="fu">resultsNames</span>(dds)</span>
-<span id="cb10-4"><a aria-hidden="true" tabindex="-1"></a><span class="co"># [1] "Intercept"               "batch_B_vs_A"</span></span>
-<span id="cb10-5"><a aria-hidden="true" tabindex="-1"></a><span class="co"># [3] "sex_M_vs_F"              "treatment_treat_vs_ctrl"</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<ul>
-<li>One name per column of <span class="math inline">\(X\)</span>. DESeq2 writes <code>treatmenttreat</code> as <code>treatment_treat_vs_ctrl</code>: “treat compared with the reference ctrl”.</li>
-<li>A factor with three levels, e.g.&nbsp;batch A/B/C, gives <code>batch_B_vs_A</code> and <code>batch_C_vs_A</code>.</li>
-</ul>
-<div class="sourceCode" id="cb11"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a aria-hidden="true" tabindex="-1"></a>res <span class="ot">&lt;-</span> <span class="fu">results</span>(dds, <span class="at">name =</span> <span class="st">"treatment_treat_vs_ctrl"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<ul>
-<li>Always ask for the coefficient <strong>by name</strong>. Then the answer does not depend on the order of the formula.</li>
+<li>limma takes <span class="math inline">\(X\)</span> itself, and <code>coef =</code> is a <strong>column name of <span class="math inline">\(X\)</span></strong>: <code>treatmenttreat</code>.</li>
+<li><a href="https://rdrr.io/bioc/limma/man/voom.html"><code>voom</code></a> is only needed for RNA-seq counts: it takes the log2 and records how noisy each value is. Data that are already log2 intensities (proteomics, metabolomics) go straight into <code>lmFit</code>.</li>
 </ul>
 <aside class="notes">
-<p>DESeq does the work: size factors for library size, a dispersion per gene shared across genes, then the fit. resultsNames is the list of coefficients you can ask for, and it is just the column names of X in DESeq2’s spelling. Insist on name = … in results, which makes the script robust to someone reordering the formula.</p>
+<p>The workflow in three calls, four with voom. voom computes log2 counts per million and a weight per value, because low counts are noisier on the log scale; students do not need the details. eBayes is an empirical Bayes step: with 12 samples each gene’s variance is poorly estimated, so it is pulled towards a common value across genes. That is the shrinkage idea from Hierarchical models, met again in week 4. Column B (log-odds) is left out of the printout.</p>
 <style type="text/css">
         span.MJX_Assistive_MathML {
           position:absolute!important;
@@ -603,15 +571,9 @@ Quantitative biology and integrative omics
 </section>
 <section id="reading-the-results-table" class="slide level2 smaller">
 <h2>Reading the results table</h2>
-<div class="sourceCode" id="cb12"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb12-1"><a aria-hidden="true" tabindex="-1"></a><span class="fu">head</span>(res[<span class="fu">order</span>(res<span class="sc">$</span>padj), ], <span class="dv">4</span>)</span>
-<span id="cb12-2"><a aria-hidden="true" tabindex="-1"></a><span class="co">#       baseMean log2FoldChange  lfcSE  stat   pvalue     padj</span></span>
-<span id="cb12-3"><a aria-hidden="true" tabindex="-1"></a><span class="co"># g5      1975.7           2.27   0.24  9.36  8.1e-21  1.6e-17</span></span>
-<span id="cb12-4"><a aria-hidden="true" tabindex="-1"></a><span class="co"># g144     891.0           1.97   0.24  8.37  5.6e-17  5.5e-14</span></span>
-<span id="cb12-5"><a aria-hidden="true" tabindex="-1"></a><span class="co"># g17      816.8           2.02   0.26  7.67  1.7e-14  1.1e-11</span></span>
-<span id="cb12-6"><a aria-hidden="true" tabindex="-1"></a><span class="co"># g130     336.3          -2.00   0.28 -7.16  8.2e-13  4.0e-10</span></span>
-<span id="cb12-7"><a aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb12-8"><a aria-hidden="true" tabindex="-1"></a><span class="fu">sum</span>(res<span class="sc">$</span>padj <span class="sc">&lt;</span> <span class="fl">0.05</span>, <span class="at">na.rm =</span> <span class="cn">TRUE</span>)</span>
-<span id="cb12-9"><a aria-hidden="true" tabindex="-1"></a><span class="co"># [1] 195</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode" id="cb10"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a aria-hidden="true" tabindex="-1"></a>tt <span class="ot">&lt;-</span> <span class="fu">topTable</span>(fit, <span class="at">coef =</span> <span class="st">"treatmenttreat"</span>, <span class="at">number =</span> <span class="cn">Inf</span>)</span>
+<span id="cb10-2"><a aria-hidden="true" tabindex="-1"></a><span class="fu">sum</span>(tt<span class="sc">$</span>adj.P.Val <span class="sc">&lt;</span> <span class="fl">0.05</span>)</span>
+<span id="cb10-3"><a aria-hidden="true" tabindex="-1"></a><span class="co"># [1] 188</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <table class="caption-top">
 <colgroup>
 <col style="width: 50%">
@@ -625,25 +587,29 @@ Quantitative biology and integrative omics
 </thead>
 <tbody>
 <tr class="odd">
-<td><code>log2FoldChange</code></td>
+<td><code>logFC</code></td>
 <td>the treatment coefficient: treat vs ctrl, holding batch and sex fixed</td>
 </tr>
 <tr class="even">
-<td><code>lfcSE</code></td>
-<td>its standard error</td>
+<td><code>AveExpr</code></td>
+<td>the gene’s average log2 expression</td>
 </tr>
 <tr class="odd">
-<td><code>padj</code></td>
-<td>p-value adjusted for testing 2000 genes: among genes called at <code>padj &lt; 0.05</code>, about 5% are expected to be false</td>
+<td><code>t</code>, <code>P.Value</code></td>
+<td>the test of “coefficient = 0” for this gene</td>
+</tr>
+<tr class="even">
+<td><code>adj.P.Val</code></td>
+<td>p-value adjusted for testing 2000 genes: among genes called at <code>adj.P.Val &lt; 0.05</code>, about 5% are expected to be false</td>
 </tr>
 </tbody>
 </table>
 <ul>
-<li>g130: LFC <span class="math inline">\(-2\)</span>, so about <strong>four times lower</strong> in treated samples (<span class="math inline">\(2^{-2} = 1/4\)</span>).</li>
-<li><code>padj</code> is <code>NA</code> for genes with very low counts, which DESeq2 leaves out before adjusting (use <code>na.rm = TRUE</code> when counting).</li>
+<li>g188: logFC <span class="math inline">\(-1.97\)</span>, so about <strong>four times lower</strong> in treated samples (<span class="math inline">\(2^{-2} = 1/4\)</span>).</li>
+<li>This is simulated data with a known truth: 200 genes respond. The 188 calls are <strong>177 true</strong> and 11 false.</li>
 </ul>
 <aside class="notes">
-<p>Read one row aloud. g5 has an LFC of about 2.3, about five times higher with treatment, and a tiny padj. Explain padj in one sentence: with 2000 tests, raw p-values below 0.05 would give about 100 false hits by chance alone, so DESeq2 adjusts them (Benjamini–Hochberg) so that the cut-off controls the fraction of false calls instead. This is the dataset from the exercise, where we know the truth: 200 genes were simulated as differentially expressed.</p>
+<p>Read one row aloud. g5 has logFC 2.2, about 4.6 times higher with treatment, and a tiny adjusted p-value. Explain adj.P.Val in one sentence: with 2000 tests, raw p-values below 0.05 would give about 100 false hits by chance alone, so limma adjusts them (Benjamini–Hochberg) so that the cut-off controls the fraction of false calls instead. 11 of 188 is 6%, close to the promised 5%.</p>
 <style type="text/css">
         span.MJX_Assistive_MathML {
           position:absolute!important;
@@ -656,40 +622,46 @@ Quantitative biology and integrative omics
           display:block!important;
       }</style></aside>
 </section>
-<section id="why-the-design-matters-one-gene" class="slide level2 smaller">
-<h2>Why the design matters: one gene</h2>
-<p>In this experiment the treatment is <strong>unbalanced</strong> across batches: batch A has 1 control and 5 treated, batch B has 5 controls and 1 treated. Gene g138 is truly up (LFC 1.5) and is also higher in batch B.</p>
-<div class="sourceCode" id="cb13"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a aria-hidden="true" tabindex="-1"></a><span class="fu">table</span>(samples<span class="sc">$</span>batch, samples<span class="sc">$</span>treatment)</span>
-<span id="cb13-2"><a aria-hidden="true" tabindex="-1"></a><span class="co">#     ctrl treat</span></span>
-<span id="cb13-3"><a aria-hidden="true" tabindex="-1"></a><span class="co">#   A    1     5</span></span>
-<span id="cb13-4"><a aria-hidden="true" tabindex="-1"></a><span class="co">#   B    5     1</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<section id="why-the-design-matters" class="slide level2 smaller">
+<h2>Why the design matters</h2>
+<p>In this experiment the treatment is <strong>unbalanced</strong> across batches. Gene g138 truly goes up (logFC 1.5) and is also higher in batch B.</p>
+<div class="sourceCode" id="cb11"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a aria-hidden="true" tabindex="-1"></a><span class="fu">table</span>(samples<span class="sc">$</span>batch, samples<span class="sc">$</span>treatment)</span>
+<span id="cb11-2"><a aria-hidden="true" tabindex="-1"></a><span class="co">#     ctrl treat</span></span>
+<span id="cb11-3"><a aria-hidden="true" tabindex="-1"></a><span class="co">#   A    1     5</span></span>
+<span id="cb11-4"><a aria-hidden="true" tabindex="-1"></a><span class="co">#   B    5     1</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <table class="caption-top">
 <thead>
 <tr class="header">
 <th>design</th>
-<th>LFC for treatment</th>
-<th>padj</th>
+<th>g138 logFC</th>
+<th>g138 adj.P.Val</th>
+<th>genes called</th>
+<th>false calls</th>
 </tr>
 </thead>
 <tbody>
 <tr class="odd">
 <td><code>~ treatment</code></td>
-<td><span class="math inline">\(-0.19\)</span></td>
-<td>0.88</td>
+<td><span class="math inline">\(-0.16\)</span></td>
+<td>0.90</td>
+<td>304</td>
+<td>154</td>
 </tr>
 <tr class="even">
 <td><code>~ batch + sex + treatment</code></td>
-<td><span class="math inline">\(1.37\)</span></td>
-<td>0.0006</td>
+<td><span class="math inline">\(1.34\)</span></td>
+<td>0.001</td>
+<td>188</td>
+<td>11</td>
 </tr>
 </tbody>
 </table>
 <ul>
-<li>Without batch, the treated samples are mostly from the low batch A, so the up-regulation is hidden: Simpson’s paradox in a real-sized dataset.</li>
-<li>Genes that only differ between batches go the other way: <code>~ treatment</code> calls them as treatment effects. You count them in the exercise.</li>
+<li>Without batch, g138’s up-regulation is hidden: Simpson’s paradox in a real-sized dataset.</li>
+<li>And 151 of the 154 false calls are genes that only differ <strong>between batches</strong>.</li>
 </ul>
 <aside class="notes">
-<p>The same story as the 8-sample lm example, now inside DESeq2. Because batch is unbalanced but not perfectly confounded, X has full rank and the adjusted model can separate batch and treatment. The unadjusted model mixes them. The exercise asks students to count how many false calls ~ treatment makes compared with the full design, using the known truth from the simulation.</p>
+<p>The same story as the 8-sample lm example, now for 2000 genes. Because batch is unbalanced but not perfectly confounded, X has full rank and the adjusted model can separate batch and treatment. Without batch, half the list is wrong. The exercise has students reproduce this table.</p>
 <style type="text/css">
         span.MJX_Assistive_MathML {
           position:absolute!important;
@@ -702,22 +674,23 @@ Quantitative biology and integrative omics
           display:block!important;
       }</style></aside>
 </section>
-<section id="the-not-full-rank-error" class="slide level2 smaller">
-<h2>The “not full rank” error</h2>
+<section id="coefficients-not-estimable" class="slide level2 smaller">
+<h2>“Coefficients not estimable”</h2>
 <p>If every control is in batch A and every treated sample in batch B:</p>
-<div class="sourceCode" id="cb14"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb14-1"><a aria-hidden="true" tabindex="-1"></a>dds <span class="ot">&lt;-</span> <span class="fu">DESeqDataSetFromMatrix</span>(counts, samples_conf, <span class="at">design =</span> <span class="sc">~</span> batch <span class="sc">+</span> treatment)</span>
-<span id="cb14-2"><a aria-hidden="true" tabindex="-1"></a><span class="co"># Error in checkFullRank(modelMatrix) :</span></span>
-<span id="cb14-3"><a aria-hidden="true" tabindex="-1"></a><span class="co">#   the model matrix is not full rank, so the model cannot be fit as specified.</span></span>
-<span id="cb14-4"><a aria-hidden="true" tabindex="-1"></a><span class="co">#   One or more variables or interaction terms in the design formula are linear</span></span>
-<span id="cb14-5"><a aria-hidden="true" tabindex="-1"></a><span class="co">#   combinations of the others and must be removed.</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode" id="cb12"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb12-1"><a aria-hidden="true" tabindex="-1"></a>design_conf <span class="ot">&lt;-</span> <span class="fu">model.matrix</span>(<span class="sc">~</span> batch <span class="sc">+</span> treatment, <span class="at">data =</span> samples_conf)</span>
+<span id="cb12-2"><a aria-hidden="true" tabindex="-1"></a>fit <span class="ot">&lt;-</span> <span class="fu">lmFit</span>(<span class="fu">voom</span>(counts, design_conf), design_conf)</span>
+<span id="cb12-3"><a aria-hidden="true" tabindex="-1"></a><span class="co"># Coefficients not estimable: treatmenttreat</span></span>
+<span id="cb12-4"><a aria-hidden="true" tabindex="-1"></a><span class="fu">head</span>(fit<span class="sc">$</span>coefficients, <span class="dv">2</span>)</span>
+<span id="cb12-5"><a aria-hidden="true" tabindex="-1"></a><span class="co">#    (Intercept) batchB treatmenttreat</span></span>
+<span id="cb12-6"><a aria-hidden="true" tabindex="-1"></a><span class="co"># g1        8.94   0.50             NA</span></span>
+<span id="cb12-7"><a aria-hidden="true" tabindex="-1"></a><span class="co"># g2       10.16  -1.17             NA</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <ul>
-<li>This is the identical-columns case: <code>qr(X)$rank</code> is 2 for 3 columns.</li>
-<li>DESeq2 stops, where <code>lm</code> would return <code>NA</code>. Both mean the same thing: the data <strong>cannot</strong> tell batch from treatment.</li>
-<li>Dropping <code>batch</code> from the formula makes the error go away, but the treatment estimate then <strong>includes</strong> the batch effect.</li>
+<li>This is the identical-columns case: <code>qr(X)$rank</code> is 2 for 3 columns. limma, like <code>lm</code>, gives <code>NA</code>.</li>
+<li>Dropping <code>batch</code> makes the message go away, but the treatment estimate then <strong>includes</strong> the batch effect.</li>
 <li>The only real fix is in the <strong>experiment</strong>: put both conditions in every batch, ideally balanced. No code can recover what the design did not measure.</li>
 </ul>
 <aside class="notes">
-<p>This error message is the one students will see most often in practice, also for interactions with empty cells and for nested designs. Stress the honest message: removing batch silences the error but does not remove the problem; you get a number you cannot interpret. Planning the batches before sequencing is the fix. If a confounded dataset has already been produced, all you can do is report that treatment and batch cannot be separated.</p>
+<p>Stress the honest message: removing batch silences the message but does not remove the problem; you get a number you cannot interpret. Planning the batches before sequencing is the fix. If a confounded dataset has already been produced, all you can do is report that treatment and batch cannot be separated. DESeq2 refuses outright with “the model matrix is not full rank”, which students will meet on forums.</p>
 <style type="text/css">
         span.MJX_Assistive_MathML {
           position:absolute!important;
@@ -730,8 +703,56 @@ Quantitative biology and integrative omics
           display:block!important;
       }</style></aside>
 </section>
-<section id="extra-material-limma-for-continuous-omics-data" class="slide level2 smaller">
-<h2>Extra material: limma for continuous omics data</h2>
+<section id="the-same-code-for-metabolomics" class="slide level2 smaller">
+<h2>The same code for metabolomics</h2>
+<p>Mass spectrometry gives <strong>log2 intensities</strong> directly, so there is no <code>voom</code>. In the exercise, 150 metabolites in 8 healthy and 8 disease samples; the patients have a <strong>higher BMI</strong>, and 20 metabolites truly change with disease.</p>
+<div class="sourceCode" id="cb13"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a aria-hidden="true" tabindex="-1"></a>design <span class="ot">&lt;-</span> <span class="fu">model.matrix</span>(<span class="sc">~</span> group <span class="sc">+</span> sex <span class="sc">+</span> bmi <span class="sc">+</span> day, <span class="at">data =</span> meta)</span>
+<span id="cb13-2"><a aria-hidden="true" tabindex="-1"></a>fit <span class="ot">&lt;-</span> <span class="fu">eBayes</span>(<span class="fu">lmFit</span>(logint, design))</span>
+<span id="cb13-3"><a aria-hidden="true" tabindex="-1"></a><span class="fu">topTable</span>(fit, <span class="at">coef =</span> <span class="st">"groupdisease"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<table class="caption-top">
+<thead>
+<tr class="header">
+<th>design</th>
+<th>called</th>
+<th>true</th>
+<th>false</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>~ group</code></td>
+<td>28</td>
+<td>15</td>
+<td>13</td>
+</tr>
+<tr class="even">
+<td><code>~ group + sex + bmi + day</code></td>
+<td>12</td>
+<td>12</td>
+<td>0</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li><code>bmi</code> is a <strong>continuous</strong> covariate: one column of numbers. <code>day</code> is the MS run day, a batch.</li>
+<li>Without <code>bmi</code>, metabolites that only follow BMI look like disease markers.</li>
+</ul>
+<aside class="notes">
+<p>Same design-matrix idea, a different omics layer: switching tools or data types is a matter of syntax once you understand X. The false calls without BMI are mostly the BMI-driven metabolites. The full design also loses some true metabolites, because BMI and disease are correlated; the exercise discusses why, and the cure is again in the design of the study.</p>
+<style type="text/css">
+        span.MJX_Assistive_MathML {
+          position:absolute!important;
+          clip: rect(1px, 1px, 1px, 1px);
+          padding: 1px 0 0 0!important;
+          border: 0!important;
+          height: 1px!important;
+          width: 1px!important;
+          overflow: hidden!important;
+          display:block!important;
+      }</style></aside>
+</section>
+<section id="extra-material-raw-counts-with-deseq2" class="slide level2 smaller">
+<h2>Extra material: raw counts with DESeq2</h2>
 <div class="callout callout-note callout-titled callout-style-default">
 <div class="callout-body">
 <div class="callout-title">
@@ -741,52 +762,17 @@ Quantitative biology and integrative omics
 <p><strong>Extra material</strong></p>
 </div>
 <div class="callout-content">
-<p>limma is shown here because proteomics, metabolomics and microarray data are usually analysed with it. The design matrix is exactly the same.</p>
+<p><a href="https://bioconductor.org/packages/release/bioc/vignettes/DESeq2/inst/doc/DESeq2.html">DESeq2</a> is the other standard tool for RNA-seq. It works on the <strong>raw counts</strong> with a negative-binomial error model (see <em>Error models</em>), instead of taking the log first.</p>
 </div>
 </div>
 </div>
-<ul>
-<li>Mass-spectrometry metabolomics gives <strong>log2 intensities</strong>: continuous numbers, not counts.</li>
-<li><a href="https://bioconductor.org/packages/release/bioc/html/limma.html">limma</a> fits an ordinary linear model to each metabolite (one row) with the same <span class="math inline">\(X\)</span>, and shares variance information across metabolites (<code>eBayes</code>), which helps with few samples.</li>
-<li>The data are already on the log2 scale, so the coefficients are <strong>log2 differences</strong> directly: <code>logFC</code> 1 = twice the intensity.</li>
-<li>Unlike DESeq2, limma takes <span class="math inline">\(X\)</span> itself: you build it with <code>model.matrix</code>.</li>
+
+<img data-src="fig02-deseq2-pipeline.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:75.0%"><ul>
+<li>Same design formula, same <span class="math inline">\(X\)</span>, same rank condition. A confounded design gives the error “the model matrix is not full rank”.</li>
+<li>Coefficients are named <code>treatment_treat_vs_ctrl</code>; ask for them by name with <code>results(dds, name = ...)</code>.</li>
 </ul>
 <aside class="notes">
-<p>Extra material. The point is that once you understand the design matrix, switching tools is a matter of syntax. limma predates DESeq2 and came from microarrays; today it is the standard for many continuous omics measurements. eBayes is an empirical Bayes step, which connects back to shrinkage in Hierarchical models: each metabolite’s variance is pulled towards a common value.</p>
-<style type="text/css">
-        span.MJX_Assistive_MathML {
-          position:absolute!important;
-          clip: rect(1px, 1px, 1px, 1px);
-          padding: 1px 0 0 0!important;
-          border: 0!important;
-          height: 1px!important;
-          width: 1px!important;
-          overflow: hidden!important;
-          display:block!important;
-      }</style></aside>
-</section>
-<section id="extra-material-lmfit-ebayes-toptable" class="slide level2 smaller">
-<h2>Extra material: <code>lmFit</code>, <code>eBayes</code>, <code>topTable</code></h2>
-<div class="sourceCode" id="cb15"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb15-1"><a aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(limma)</span>
-<span id="cb15-2"><a aria-hidden="true" tabindex="-1"></a><span class="co"># logint: 150 metabolites x 16 samples (log2 intensity); meta: one row per sample</span></span>
-<span id="cb15-3"><a aria-hidden="true" tabindex="-1"></a>design <span class="ot">&lt;-</span> <span class="fu">model.matrix</span>(<span class="sc">~</span> group <span class="sc">+</span> sex <span class="sc">+</span> bmi <span class="sc">+</span> day, <span class="at">data =</span> meta)</span>
-<span id="cb15-4"><a aria-hidden="true" tabindex="-1"></a><span class="fu">colnames</span>(design)</span>
-<span id="cb15-5"><a aria-hidden="true" tabindex="-1"></a><span class="co"># [1] "(Intercept)"  "groupdisease" "sexM"  "bmi"  "day2"</span></span>
-<span id="cb15-6"><a aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb15-7"><a aria-hidden="true" tabindex="-1"></a>fit <span class="ot">&lt;-</span> <span class="fu">lmFit</span>(logint, design)      <span class="co"># one linear model per metabolite</span></span>
-<span id="cb15-8"><a aria-hidden="true" tabindex="-1"></a>fit <span class="ot">&lt;-</span> <span class="fu">eBayes</span>(fit)                <span class="co"># share variance information across metabolites</span></span>
-<span id="cb15-9"><a aria-hidden="true" tabindex="-1"></a><span class="fu">topTable</span>(fit, <span class="at">coef =</span> <span class="st">"groupdisease"</span>, <span class="at">number =</span> <span class="dv">3</span>)</span>
-<span id="cb15-10"><a aria-hidden="true" tabindex="-1"></a><span class="co">#       logFC AveExpr     t  P.Value adj.P.Val</span></span>
-<span id="cb15-11"><a aria-hidden="true" tabindex="-1"></a><span class="co"># met4   1.69   15.34  5.05  2.0e-06   0.00030</span></span>
-<span id="cb15-12"><a aria-hidden="true" tabindex="-1"></a><span class="co"># met15  1.55   15.91  4.62  1.1e-05   0.00086</span></span>
-<span id="cb15-13"><a aria-hidden="true" tabindex="-1"></a><span class="co"># met3   1.45   20.51  4.17  6.5e-05   0.00275</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<ul>
-<li><code>coef =</code> takes a <strong>column name of the design matrix</strong>, here <code>groupdisease</code> (reference level <code>healthy</code>).</li>
-<li><code>day</code> is the MS run day: a batch covariate. <code>bmi</code> is continuous.</li>
-<li><code>adj.P.Val</code> plays the role of DESeq2’s <code>padj</code>.</li>
-</ul>
-<aside class="notes">
-<p>The workflow in three calls. Point out that coef uses the model.matrix column name directly, not a DESeq2-style name. In the exercise the BMI of the disease group is higher, so leaving BMI out produces false hits among metabolites that only depend on BMI. Columns B (log-odds) are omitted from the printout.</p>
+<p>Extra material. On this dataset DESeq2 calls 195 genes (181 true), very close to limma’s 188 (177 true). The point is that the design matrix carries over unchanged. The exercise has an optional DESeq2 part, including the real airway dataset.</p>
 <style type="text/css">
         span.MJX_Assistive_MathML {
           position:absolute!important;
@@ -804,13 +790,13 @@ Quantitative biology and integrative omics
 <ul>
 <li><a href="https://rdrr.io/r/stats/model.matrix.html"><code>model.matrix</code></a><code>(~ ...)</code> builds <span class="math inline">\(X\)</span>; column names are variable + level (<code>treatmenttreat</code>, <code>sexM</code>, <code>batchB</code>, <code>bmi</code>).</li>
 <li>The reference is the alphabetically first level: check <code>levels()</code>, use <a href="https://rdrr.io/r/stats/relevel.html"><code>relevel</code></a> or <code>factor(x, levels = ...)</code> (0 h / 6 h / 24 h!).</li>
-<li>Check <code>qr(X)$rank == ncol(X)</code>. If not: <code>lm</code> gives <code>NA</code>, DESeq2 says “not full rank”. Fix the <strong>design of the experiment</strong>.</li>
-<li>DESeq2: counts + <code>colData</code> + <code>design = ~ batch + sex + treatment</code> → <code>DESeq()</code> → <code>resultsNames()</code> → <code>results(name = ...)</code>.</li>
-<li>Read <code>log2FoldChange</code> (1 = doubled) and <code>padj</code> (adjusted for testing many genes).</li>
+<li>Check <code>qr(X)$rank == ncol(X)</code>. If not: <code>lm</code> and limma give <code>NA</code>. Fix the <strong>design of the experiment</strong>.</li>
+<li>limma: log2 data (<code>voom</code> for counts) + <code>design</code> → <code>lmFit()</code> → <code>eBayes()</code> → <code>topTable(coef = ...)</code>.</li>
+<li>Read <code>logFC</code> (1 = doubled) and <code>adj.P.Val</code> (adjusted for testing many genes).</li>
 <li>Leaving out a covariate that is unbalanced across groups gives false and missed calls: Simpson’s paradox at genome scale.</li>
-<li>Extra: limma does the same for log2 intensities with <code>lmFit</code>, <code>eBayes</code>, <code>topTable(coef = ...)</code>.</li>
+<li>Extra: DESeq2 does the same on raw counts, with a count error model.</li>
 </ul>
-<p><strong>Next:</strong> <em>Why penalize?</em> What to do when <span class="math inline">\(X\)</span> has more columns than samples.</p>
+<p><strong>Next (week 4):</strong> <em>Why penalize?</em> What to do when <span class="math inline">\(X\)</span> has more columns than samples.</p>
 <aside class="notes">
 <p>Recap the workflow and the two checks students should always do: levels and rank. The forward link: with more columns than samples the rank condition fails by shape, and penalized models are one way out.</p>
 <style type="text/css">

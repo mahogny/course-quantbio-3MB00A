@@ -1,6 +1,6 @@
 ---
 title: "Confounding & Simpson's paradox"
-subtitle: "Linear models — Confounding & Simpson's paradox"
+subtitle: "Week 3 — Confounding & Simpson's paradox"
 author: "Quantitative biology and integrative omics"
 format:
   revealjs:
@@ -290,7 +290,7 @@ coef(lm(expr ~ treatment + batch, data = p))
 qr(model.matrix(~ treatment + batch, data = p))$rank   # 2, not 3
 ```
 
-`lm` reports `NA` and silently gives the whole 12 to treatment; DESeq2 refuses with "model matrix is not full rank" ([Design matrices in R](../covariates-r/lec.qmd)).
+`lm` and limma report `NA` and silently give the whole 12 to treatment; DESeq2 refuses with "model matrix is not full rank" ([Design matrices in R](../covariates-r/lec.qmd)).
 
 ::: notes
 This is the link back to existence of solutions. Two identical columns mean X has rank 2 with 3 columns, so beta is not unique. lm drops the later column (batchB -> NA) and the treatmenttreat coefficient becomes "treatment plus batch", which is meaningless as a drug effect. No statistics can fix this after the fact: the information is not in the data. Contrast with the partial case, where the columns differ in two samples and that is enough.
@@ -403,7 +403,7 @@ Over-adjustment. The mediator case: if you want the total drug effect, holding t
 A short checklist. Collinearity links to rank and to the penalized-model block, where ridge regression handles it. Weight and BMI is the example students recognise: the model cannot tell which of two near-identical columns deserves the credit, so the coefficients seesaw between fits. The counts-table check is cheap: table(treatment, batch) in R, look for zeros.
 :::
 
-## Same $X$ in a Bayesian model {.smaller}
+## Looking ahead: the same $X$ in a Bayesian model {.smaller}
 
 Everything today lives in the design matrix, so it carries over unchanged to a Bayesian fit: same formula, same $X$, same "holding the others constant". The only addition is a **prior on each $\beta$**, and the result is a **posterior distribution** per coefficient.
 
@@ -417,7 +417,7 @@ rstanarm::stan_glm(expr ~ treatment + batch, data = d,
 A prior does **not** rescue a confounded design: with identical columns the data still only fix $\beta_1 + \beta_2$, and how that sum is split between $\beta_1$ and $\beta_2$ is decided by the priors, not by the data.
 
 ::: notes
-One-slide connection to the Bayesian block. Same X, priors on beta, posterior per coefficient. The last point is worth making: with perfect confounding a Bayesian fit runs without an error because the prior makes the problem well-posed, but the answer for the treatment effect is driven by the prior, not by the data. The design lesson still holds.
+One-slide preview of week 4 (Bayesian statistics); keep it short, priors and posteriors are introduced there. Same X, priors on beta, posterior per coefficient. The last point is worth making: with perfect confounding a Bayesian fit runs without an error because the prior makes the problem well-posed, but the answer for the treatment effect is driven by the prior, not by the data. The design lesson still holds.
 :::
 
 ## Summary {.smaller}
@@ -434,7 +434,7 @@ One-slide connection to the Bayesian block. Same X, priors on beta, posterior pe
 | Interaction | `a * b`; effect in non-reference group $= \beta_1 + \beta_3$ |
 | Don't adjust | mediators, colliders, one of two collinear covariates |
 
-**Next:** [Design matrices in R: DESeq2 & limma](../covariates-r/lec.qmd) — the same designs on real count and mass-spec data.
+**Next:** [Design matrices in R: limma](../covariates-r/lec.qmd) — the same designs on real RNA-seq and mass-spec data.
 
 ::: notes
 Revision sheet. The skills to take away: compute the Simpson numbers by hand from a small table, explain why adjusted and unadjusted differ, recognise perfect confounding from a table or a design matrix, propose a balanced design, read interaction coefficients, and pick sensible covariates (not mediators or colliders).

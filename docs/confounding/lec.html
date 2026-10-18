@@ -194,7 +194,7 @@
 
 <section id="title-slide" class="quarto-title-block center">
   <h1 class="title">Confounding &amp; Simpson’s paradox</h1>
-  <p class="subtitle">Linear models — Confounding &amp; Simpson’s paradox</p>
+  <p class="subtitle">Week 3 — Confounding &amp; Simpson’s paradox</p>
 
 <div class="quarto-title-authors">
 <div class="quarto-title-author">
@@ -693,7 +693,7 @@ X = \begin{pmatrix}
 <span id="cb3-2"><a aria-hidden="true" tabindex="-1"></a><span class="co">#    (Intercept) treatmenttreat         batchB</span></span>
 <span id="cb3-3"><a aria-hidden="true" tabindex="-1"></a><span class="co">#             10             12             NA</span></span>
 <span id="cb3-4"><a aria-hidden="true" tabindex="-1"></a><span class="fu">qr</span>(<span class="fu">model.matrix</span>(<span class="sc">~</span> treatment <span class="sc">+</span> batch, <span class="at">data =</span> p))<span class="sc">$</span>rank   <span class="co"># 2, not 3</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<p><code>lm</code> reports <code>NA</code> and silently gives the whole 12 to treatment; DESeq2 refuses with “model matrix is not full rank” (<a href="../covariates-r/lec.html">Design matrices in R</a>).</p>
+<p><code>lm</code> and limma report <code>NA</code> and silently give the whole 12 to treatment; DESeq2 refuses with “model matrix is not full rank” (<a href="../covariates-r/lec.html">Design matrices in R</a>).</p>
 <aside class="notes">
 <p>This is the link back to existence of solutions. Two identical columns mean X has rank 2 with 3 columns, so beta is not unique. lm drops the later column (batchB -&gt; NA) and the treatmenttreat coefficient becomes “treatment plus batch”, which is meaningless as a drug effect. No statistics can fix this after the fact: the information is not in the data. Contrast with the partial case, where the columns differ in two samples and that is enough.</p>
 <style type="text/css">
@@ -928,15 +928,15 @@ X = \begin{pmatrix}
           display:block!important;
       }</style></aside>
 </section>
-<section id="same-x-in-a-bayesian-model" class="slide level2 smaller">
-<h2>Same <span class="math inline">\(X\)</span> in a Bayesian model</h2>
+<section id="looking-ahead-the-same-x-in-a-bayesian-model" class="slide level2 smaller">
+<h2>Looking ahead: the same <span class="math inline">\(X\)</span> in a Bayesian model</h2>
 <p>Everything today lives in the design matrix, so it carries over unchanged to a Bayesian fit: same formula, same <span class="math inline">\(X\)</span>, same “holding the others constant”. The only addition is a <strong>prior on each <span class="math inline">\(\beta\)</span></strong>, and the result is a <strong>posterior distribution</strong> per coefficient.</p>
 <div class="sourceCode" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a aria-hidden="true" tabindex="-1"></a>rstanarm<span class="sc">::</span><span class="fu">stan_glm</span>(expr <span class="sc">~</span> treatment <span class="sc">+</span> batch, <span class="at">data =</span> d,</span>
 <span id="cb5-2"><a aria-hidden="true" tabindex="-1"></a>                   <span class="at">prior =</span> rstanarm<span class="sc">::</span><span class="fu">normal</span>(<span class="dv">0</span>, <span class="dv">5</span>))   <span class="co"># prior on each beta</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 
 <img data-src="fig14-prior-posterior-coefficients.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:56.0%"><p>A prior does <strong>not</strong> rescue a confounded design: with identical columns the data still only fix <span class="math inline">\(\beta_1 + \beta_2\)</span>, and how that sum is split between <span class="math inline">\(\beta_1\)</span> and <span class="math inline">\(\beta_2\)</span> is decided by the priors, not by the data.</p>
 <aside class="notes">
-<p>One-slide connection to the Bayesian block. Same X, priors on beta, posterior per coefficient. The last point is worth making: with perfect confounding a Bayesian fit runs without an error because the prior makes the problem well-posed, but the answer for the treatment effect is driven by the prior, not by the data. The design lesson still holds.</p>
+<p>One-slide preview of week 4 (Bayesian statistics); keep it short, priors and posteriors are introduced there. Same X, priors on beta, posterior per coefficient. The last point is worth making: with perfect confounding a Bayesian fit runs without an error because the prior makes the problem well-posed, but the answer for the treatment effect is driven by the prior, not by the data. The design lesson still holds.</p>
 <style type="text/css">
         span.MJX_Assistive_MathML {
           position:absolute!important;
@@ -1001,7 +1001,7 @@ X = \begin{pmatrix}
 </tr>
 </tbody>
 </table>
-<p><strong>Next:</strong> <a href="../covariates-r/lec.html">Design matrices in R: DESeq2 &amp; limma</a> — the same designs on real count and mass-spec data.</p>
+<p><strong>Next:</strong> <a href="../covariates-r/lec.html">Design matrices in R: limma</a> — the same designs on real RNA-seq and mass-spec data.</p>
 <aside class="notes">
 <p>Revision sheet. The skills to take away: compute the Simpson numbers by hand from a small table, explain why adjusted and unadjusted differ, recognise perfect confounding from a table or a design matrix, propose a balanced design, read interaction coefficients, and pick sensible covariates (not mediators or colliders).</p>
 <style type="text/css">
