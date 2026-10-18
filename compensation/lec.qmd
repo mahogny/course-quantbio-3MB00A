@@ -18,6 +18,67 @@ format:
     menu: true
 ---
 
+## Flow cytometry: measuring single cells
+
+:::: {.columns}
+::: {.column width="56%"}
+![](fig01-flow-cytometer.jpg){width="100%"}
+
+[Photo: Mark Fergus, CSIRO, [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/), via [Wikimedia Commons](https://commons.wikimedia.org/wiki/File:CSIRO_ScienceImage_3360_Scientist_using_a_Flow_Cytometer.jpg).]{style="font-size: 0.55em; color: #5a6b7a;"}
+:::
+::: {.column width="44%"}
+- A **flow cytometer** measures cells **one at a time**, thousands per second.
+- The cells (for example from blood) float in a liquid. They are labelled with **fluorescent antibodies**: each dye marks one protein on the cell surface.
+- For every cell the machine records a handful of numbers: how the cell **scatters** light, and how bright each **dye** is.
+- It is a daily tool in immunology and haematology: counting cell types, following an infection or a leukaemia, sorting cells.
+:::
+::::
+
+::: notes
+Start with the instrument, not the maths. Most students have never seen a cytometer; the photo shows a classic benchtop analyser (the tube in her hand holds the stained cells). The key idea for the rest of the lecture: every cell becomes a short vector of numbers, one per detector. Immunophenotyping (which cells are T cells, B cells, ...) is the standard use.
+:::
+
+## How a cell is measured
+
+:::: {.columns}
+::: {.column width="58%"}
+![](fig01b-cytometer-schematic.png){width="100%"}
+
+[Schematic: Kierano, [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/), via [Wikimedia Commons](https://commons.wikimedia.org/wiki/File:Cytometer.svg).]{style="font-size: 0.55em; color: #5a6b7a;"}
+:::
+::: {.column width="42%"}
+- A thin stream lines the cells up **single file** and carries them through a **laser** beam.
+- **Forward scatter (FSC)**: light that goes almost straight on. Roughly the cell's **size**.
+- **Side scatter (SSC)**: light bounced sideways. The cell's **granularity**.
+- The dyes **fluoresce**. Mirrors and filters split this light into colour bands, with one **detector** per band (FL1, FL2, FL3, ...).
+- Modern instruments have several lasers and dozens of detectors.
+:::
+::::
+
+::: notes
+Walk the light path left to right: cells in single file, the laser hits one cell at a time, the scattered and emitted light is collected, dichroic mirrors split it by colour, filters narrow each band, and a photomultiplier (PMT) per band turns light into a number. FSC and SSC need no stain. Each FL detector is meant for one dye, which is exactly the assumption that breaks down later today.
+:::
+
+## What the data look like {.smaller}
+
+One real sample: 10 000 cells, one **row per cell**, one **column per detector**.
+
+```
+     FSC-H SSC-H FL1-H FL2-H     (first 4 of 10 000 cells)
+[1,]   382    77 259.5   1.0
+[2,]   628   280   9.1  48.3
+[3,]  1023   735 537.6  56.2
+[4,]   373   128   6.2  24.1
+```
+
+![](fig03-real-data.png){width="66%" fig-align="center"}
+
+Groups of cells separate by size and granularity (left) and by dye brightness (right). [Example file `0877408774.B08` (FACSCalibur) from the Bioconductor package [flowCore](https://bioconductor.org/packages/flowCore/).]{style="font-size: 0.7em; color: #5a6b7a;"}
+
+::: notes
+This is a real measurement file (FCS format) that ships with flowCore. Each cell is a row of numbers; a plot of two columns is the standard way to look at the data. On the left, the dense cloud and the spread-out cells are different cell types or debris, separated without any stain. On the right, the clusters are cells that are negative or positive for the two dyes; fluorescence spans several orders of magnitude, hence the log axes. The catch, which the rest of the lecture is about: FL2 does not see only the orange dye.
+:::
+
 ## About this lecture
 
 A flow cytometer measures thousands of cells per second, each stained with several fluorescent dyes. The detectors do not see one dye each: the colours **leak into each other's detectors**.
@@ -27,13 +88,11 @@ A flow cytometer measures thousands of cells per second, each stained with sever
 - **Spectral unmixing** is the same equation, with $S$ built from reference spectra.
 - When two dyes look too alike, $\det(S)$ is close to 0, and unmixing **amplifies noise**.
 
-All data today are simulated in base R; no packages needed.
-
 ::: notes
 This unit is a second biological use of "undo a known matrix with its inverse", after the misalignment slide in Transforming images with matrices. It needs only matrix-vector products, solve(), and the idea that the columns of a matrix are where the axes land. Flow cytometry is used in immunology and haematology every day (immunophenotyping, sorting); compensation is a step every user meets.
 :::
 
-## Biology: two dyes, two detectors {.smaller}
+## Common scenario: two dyes, two detectors {.smaller}
 
 ![](fig02-spectra.png){width="78%" fig-align="center"}
 
@@ -49,11 +108,13 @@ Emission spectra are broad, so filters cannot fully separate them. FITC into the
 
 Each detector sees a **mix** of the two dyes:
 
-$$\underbrace{\begin{pmatrix} \text{FITC detector} \\ \text{PE detector} \end{pmatrix}}_{\text{measured}} = \underbrace{\begin{pmatrix} 1 & 0.02 \\ 0.25 & 1 \end{pmatrix}}_{S} \underbrace{\begin{pmatrix} \text{FITC} \\ \text{PE} \end{pmatrix}}_{\text{true}}$$
+$$\begin{pmatrix} \text{FITC detector} \\ \text{PE detector} \end{pmatrix} = \begin{pmatrix} 1 & 0.02 \\ 0.25 & 1 \end{pmatrix} \begin{pmatrix} \text{FITC dye} \\ \text{PE dye} \end{pmatrix}$$
+
+In words: measured = $S$ × true, where $S$ is the **spillover matrix**.
 
 - **Column 1** = where FITC's light lands: all in the FITC detector, plus 25 % of that in the PE detector.
 - **Column 2** = where PE's light lands: 2 % in the FITC detector.
-- By hand: a cell with FITC = 1000, PE = 0 is **measured** as $(1000,\ 250)$. A cell with PE = 1000 only: $(20,\ 1000)$.
+- A cell with FITC = 1000, PE = 0 is **measured** as $(1000,\ 250)$. A cell with PE = 1000 only: $(20,\ 1000)$.
 
 ```r
 S <- matrix(c(1,    0.02,                         # rows = detectors, columns = dyes
@@ -192,7 +253,7 @@ comp2 <- solve(S2) %*% (S2 %*% true + noise(ncol(true)))
 
 The inverse multiplies the noise by about 5: unstained cells spread from sd 45 to **209**, and populations smear.
 
-[Bonus material: you do not need to memorise determinants for the exam.]{style="font-size: 0.7em; color: #bc4749;"}
+[Bonus material.]{style="font-size: 0.7em; color: #bc4749;"}
 
 ::: notes
 This is the panel-design rule of thumb in flow cytometry, explained with linear algebra: avoid pairs of dyes with overlapping spectra on the same cells, or at least on markers that are co-expressed. Geometrically, the two columns of S2 are almost parallel, so the parallelogram they span is thin (small determinant), and the inverse has to stretch a lot to undo it. The singular case (det = 0, identical spectra) cannot be undone at all, as in the gallery of Transforming images with matrices. The true values are still recovered on average; it is the spread that grows.

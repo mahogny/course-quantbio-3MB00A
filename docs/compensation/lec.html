@@ -205,6 +205,87 @@ Quantitative biology and integrative omics
 </div>
 
 </section>
+<section id="flow-cytometry-measuring-single-cells" class="slide level2">
+<h2>Flow cytometry: measuring single cells</h2>
+<div class="columns">
+<div class="column" style="width:56%;">
+<p><img data-src="fig01-flow-cytometer.jpg" style="width:100.0%"></p>
+<p><span style="font-size: 0.55em; color: #5a6b7a;">Photo: Mark Fergus, CSIRO, <a href="https://creativecommons.org/licenses/by/3.0/">CC BY 3.0</a>, via <a href="https://commons.wikimedia.org/wiki/File:CSIRO_ScienceImage_3360_Scientist_using_a_Flow_Cytometer.jpg">Wikimedia Commons</a>.</span></p>
+</div><div class="column" style="width:44%;">
+<ul>
+<li>A <strong>flow cytometer</strong> measures cells <strong>one at a time</strong>, thousands per second.</li>
+<li>The cells (for example from blood) float in a liquid. They are labelled with <strong>fluorescent antibodies</strong>: each dye marks one protein on the cell surface.</li>
+<li>For every cell the machine records a handful of numbers: how the cell <strong>scatters</strong> light, and how bright each <strong>dye</strong> is.</li>
+<li>It is a daily tool in immunology and haematology: counting cell types, following an infection or a leukaemia, sorting cells.</li>
+</ul>
+</div></div>
+<aside class="notes">
+<p>Start with the instrument, not the maths. Most students have never seen a cytometer; the photo shows a classic benchtop analyser (the tube in her hand holds the stained cells). The key idea for the rest of the lecture: every cell becomes a short vector of numbers, one per detector. Immunophenotyping (which cells are T cells, B cells, …) is the standard use.</p>
+<style type="text/css">
+        span.MJX_Assistive_MathML {
+          position:absolute!important;
+          clip: rect(1px, 1px, 1px, 1px);
+          padding: 1px 0 0 0!important;
+          border: 0!important;
+          height: 1px!important;
+          width: 1px!important;
+          overflow: hidden!important;
+          display:block!important;
+      }</style></aside>
+</section>
+<section id="how-a-cell-is-measured" class="slide level2">
+<h2>How a cell is measured</h2>
+<div class="columns">
+<div class="column" style="width:58%;">
+<p><img data-src="fig01b-cytometer-schematic.png" style="width:100.0%"></p>
+<p><span style="font-size: 0.55em; color: #5a6b7a;">Schematic: Kierano, <a href="https://creativecommons.org/licenses/by/3.0/">CC BY 3.0</a>, via <a href="https://commons.wikimedia.org/wiki/File:Cytometer.svg">Wikimedia Commons</a>.</span></p>
+</div><div class="column" style="width:42%;">
+<ul>
+<li>A thin stream lines the cells up <strong>single file</strong> and carries them through a <strong>laser</strong> beam.</li>
+<li><strong>Forward scatter (FSC)</strong>: light that goes almost straight on. Roughly the cell’s <strong>size</strong>.</li>
+<li><strong>Side scatter (SSC)</strong>: light bounced sideways. The cell’s <strong>granularity</strong>.</li>
+<li>The dyes <strong>fluoresce</strong>. Mirrors and filters split this light into colour bands, with one <strong>detector</strong> per band (FL1, FL2, FL3, …).</li>
+<li>Modern instruments have several lasers and dozens of detectors.</li>
+</ul>
+</div></div>
+<aside class="notes">
+<p>Walk the light path left to right: cells in single file, the laser hits one cell at a time, the scattered and emitted light is collected, dichroic mirrors split it by colour, filters narrow each band, and a photomultiplier (PMT) per band turns light into a number. FSC and SSC need no stain. Each FL detector is meant for one dye, which is exactly the assumption that breaks down later today.</p>
+<style type="text/css">
+        span.MJX_Assistive_MathML {
+          position:absolute!important;
+          clip: rect(1px, 1px, 1px, 1px);
+          padding: 1px 0 0 0!important;
+          border: 0!important;
+          height: 1px!important;
+          width: 1px!important;
+          overflow: hidden!important;
+          display:block!important;
+      }</style></aside>
+</section>
+<section id="what-the-data-look-like" class="slide level2 smaller">
+<h2>What the data look like</h2>
+<p>One real sample: 10 000 cells, one <strong>row per cell</strong>, one <strong>column per detector</strong>.</p>
+<pre><code>     FSC-H SSC-H FL1-H FL2-H     (first 4 of 10 000 cells)
+[1,]   382    77 259.5   1.0
+[2,]   628   280   9.1  48.3
+[3,]  1023   735 537.6  56.2
+[4,]   373   128   6.2  24.1</code></pre>
+
+<img data-src="fig03-real-data.png" class="quarto-figure quarto-figure-center r-stretch" style="width:66.0%"><p>Groups of cells separate by size and granularity (left) and by dye brightness (right). <span style="font-size: 0.7em; color: #5a6b7a;">Example file <code>0877408774.B08</code> (FACSCalibur) from the Bioconductor package <a href="https://bioconductor.org/packages/flowCore/">flowCore</a>.</span></p>
+<aside class="notes">
+<p>This is a real measurement file (FCS format) that ships with flowCore. Each cell is a row of numbers; a plot of two columns is the standard way to look at the data. On the left, the dense cloud and the spread-out cells are different cell types or debris, separated without any stain. On the right, the clusters are cells that are negative or positive for the two dyes; fluorescence spans several orders of magnitude, hence the log axes. The catch, which the rest of the lecture is about: FL2 does not see only the orange dye.</p>
+<style type="text/css">
+        span.MJX_Assistive_MathML {
+          position:absolute!important;
+          clip: rect(1px, 1px, 1px, 1px);
+          padding: 1px 0 0 0!important;
+          border: 0!important;
+          height: 1px!important;
+          width: 1px!important;
+          overflow: hidden!important;
+          display:block!important;
+      }</style></aside>
+</section>
 <section id="about-this-lecture" class="slide level2">
 <h2>About this lecture</h2>
 <p>A flow cytometer measures thousands of cells per second, each stained with several fluorescent dyes. The detectors do not see one dye each: the colours <strong>leak into each other’s detectors</strong>.</p>
@@ -214,7 +295,6 @@ Quantitative biology and integrative omics
 <li><strong>Spectral unmixing</strong> is the same equation, with <span class="math inline">\(S\)</span> built from reference spectra.</li>
 <li>When two dyes look too alike, <span class="math inline">\(\det(S)\)</span> is close to 0, and unmixing <strong>amplifies noise</strong>.</li>
 </ul>
-<p>All data today are simulated in base R; no packages needed.</p>
 <aside class="notes">
 <p>This unit is a second biological use of “undo a known matrix with its inverse”, after the misalignment slide in Transforming images with matrices. It needs only matrix-vector products, solve(), and the idea that the columns of a matrix are where the axes land. Flow cytometry is used in immunology and haematology every day (immunophenotyping, sorting); compensation is a step every user meets.</p>
 <style type="text/css">
@@ -229,8 +309,8 @@ Quantitative biology and integrative omics
           display:block!important;
       }</style></aside>
 </section>
-<section id="biology-two-dyes-two-detectors" class="slide level2 smaller">
-<h2>Biology: two dyes, two detectors</h2>
+<section id="common-scenario-two-dyes-two-detectors" class="slide level2 smaller">
+<h2>Common scenario: two dyes, two detectors</h2>
 
 <img data-src="fig02-spectra.png" class="quarto-figure quarto-figure-center r-stretch" style="width:78.0%"><ul>
 <li>Cells are labelled with antibodies carrying dyes, e.g.&nbsp;<strong>FITC</strong> (green) and <strong>PE</strong> (orange). Each dye marks one protein.</li>
@@ -254,16 +334,17 @@ Quantitative biology and integrative omics
 <section id="the-spillover-matrix" class="slide level2 smaller">
 <h2>The spillover matrix</h2>
 <p>Each detector sees a <strong>mix</strong> of the two dyes:</p>
-<p><span class="math display">\[\underbrace{\begin{pmatrix} \text{FITC detector} \\ \text{PE detector} \end{pmatrix}}_{\text{measured}} = \underbrace{\begin{pmatrix} 1 &amp; 0.02 \\ 0.25 &amp; 1 \end{pmatrix}}_{S} \underbrace{\begin{pmatrix} \text{FITC} \\ \text{PE} \end{pmatrix}}_{\text{true}}\]</span></p>
+<p><span class="math display">\[\begin{pmatrix} \text{FITC detector} \\ \text{PE detector} \end{pmatrix} = \begin{pmatrix} 1 &amp; 0.02 \\ 0.25 &amp; 1 \end{pmatrix} \begin{pmatrix} \text{FITC dye} \\ \text{PE dye} \end{pmatrix}\]</span></p>
+<p>In words: measured = <span class="math inline">\(S\)</span> × true, where <span class="math inline">\(S\)</span> is the <strong>spillover matrix</strong>.</p>
 <ul>
 <li><strong>Column 1</strong> = where FITC’s light lands: all in the FITC detector, plus 25 % of that in the PE detector.</li>
 <li><strong>Column 2</strong> = where PE’s light lands: 2 % in the FITC detector.</li>
-<li>By hand: a cell with FITC = 1000, PE = 0 is <strong>measured</strong> as <span class="math inline">\((1000,\ 250)\)</span>. A cell with PE = 1000 only: <span class="math inline">\((20,\ 1000)\)</span>.</li>
+<li>A cell with FITC = 1000, PE = 0 is <strong>measured</strong> as <span class="math inline">\((1000,\ 250)\)</span>. A cell with PE = 1000 only: <span class="math inline">\((20,\ 1000)\)</span>.</li>
 </ul>
-<div class="sourceCode" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a aria-hidden="true" tabindex="-1"></a>S <span class="ot">&lt;-</span> <span class="fu">matrix</span>(<span class="fu">c</span>(<span class="dv">1</span>,    <span class="fl">0.02</span>,                         <span class="co"># rows = detectors, columns = dyes</span></span>
-<span id="cb1-2"><a aria-hidden="true" tabindex="-1"></a>              <span class="fl">0.25</span>, <span class="dv">1</span>   ), <span class="at">nrow =</span> <span class="dv">2</span>, <span class="at">byrow =</span> <span class="cn">TRUE</span>,</span>
-<span id="cb1-3"><a aria-hidden="true" tabindex="-1"></a>            <span class="at">dimnames =</span> <span class="fu">list</span>(<span class="fu">c</span>(<span class="st">"FITC det"</span>, <span class="st">"PE det"</span>), <span class="fu">c</span>(<span class="st">"FITC"</span>, <span class="st">"PE"</span>)))</span>
-<span id="cb1-4"><a aria-hidden="true" tabindex="-1"></a>S <span class="sc">%*%</span> <span class="fu">c</span>(<span class="dv">1000</span>, <span class="dv">0</span>)                                  <span class="co"># 1000, 250</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a aria-hidden="true" tabindex="-1"></a>S <span class="ot">&lt;-</span> <span class="fu">matrix</span>(<span class="fu">c</span>(<span class="dv">1</span>,    <span class="fl">0.02</span>,                         <span class="co"># rows = detectors, columns = dyes</span></span>
+<span id="cb2-2"><a aria-hidden="true" tabindex="-1"></a>              <span class="fl">0.25</span>, <span class="dv">1</span>   ), <span class="at">nrow =</span> <span class="dv">2</span>, <span class="at">byrow =</span> <span class="cn">TRUE</span>,</span>
+<span id="cb2-3"><a aria-hidden="true" tabindex="-1"></a>            <span class="at">dimnames =</span> <span class="fu">list</span>(<span class="fu">c</span>(<span class="st">"FITC det"</span>, <span class="st">"PE det"</span>), <span class="fu">c</span>(<span class="st">"FITC"</span>, <span class="st">"PE"</span>)))</span>
+<span id="cb2-4"><a aria-hidden="true" tabindex="-1"></a>S <span class="sc">%*%</span> <span class="fu">c</span>(<span class="dv">1000</span>, <span class="dv">0</span>)                                  <span class="co"># 1000, 250</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <aside class="notes">
 <p>Same reading as in Matrices as transformations: the columns of a matrix are where the axes land. Here the “axes” are the pure dyes: one unit of pure FITC lands at column 1, one unit of pure PE at column 2. Each column is scaled so that the dye’s own (main) detector is 1. Each row is one detector, adding up its share of every dye. This is a linear model: double the dye, double every detector signal.</p>
 <style type="text/css">
@@ -281,17 +362,17 @@ Quantitative biology and integrative omics
 <section id="before-what-the-cytometer-records" class="slide level2 smaller">
 <h2>Before: what the cytometer records</h2>
 <p>Four simulated populations, 1600 cells, one cell per <strong>column</strong> (like the pixels in Transforming images with matrices):</p>
-<div class="sourceCode" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a aria-hidden="true" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">1</span>)</span>
-<span id="cb2-2"><a aria-hidden="true" tabindex="-1"></a>make_pop <span class="ot">&lt;-</span> <span class="cf">function</span>(n, fitc, pe) {               <span class="co"># true dye amounts, one cell per COLUMN</span></span>
-<span id="cb2-3"><a aria-hidden="true" tabindex="-1"></a>  <span class="fu">rbind</span>(<span class="at">FITC =</span> <span class="fu">rlnorm</span>(n, <span class="fu">log</span>(fitc), <span class="fl">0.3</span>), <span class="at">PE =</span> <span class="fu">rlnorm</span>(n, <span class="fu">log</span>(pe), <span class="fl">0.3</span>))</span>
-<span id="cb2-4"><a aria-hidden="true" tabindex="-1"></a>}</span>
-<span id="cb2-5"><a aria-hidden="true" tabindex="-1"></a>true <span class="ot">&lt;-</span> <span class="fu">cbind</span>(<span class="fu">make_pop</span>(<span class="dv">600</span>,  <span class="dv">100</span>,  <span class="dv">100</span>),          <span class="co"># unstained</span></span>
-<span id="cb2-6"><a aria-hidden="true" tabindex="-1"></a>              <span class="fu">make_pop</span>(<span class="dv">400</span>, <span class="dv">3000</span>,  <span class="dv">100</span>),          <span class="co"># FITC+</span></span>
-<span id="cb2-7"><a aria-hidden="true" tabindex="-1"></a>              <span class="fu">make_pop</span>(<span class="dv">400</span>,  <span class="dv">100</span>, <span class="dv">2000</span>),          <span class="co"># PE+</span></span>
-<span id="cb2-8"><a aria-hidden="true" tabindex="-1"></a>              <span class="fu">make_pop</span>(<span class="dv">200</span>, <span class="dv">3000</span>, <span class="dv">2000</span>))          <span class="co"># FITC+ PE+</span></span>
-<span id="cb2-9"><a aria-hidden="true" tabindex="-1"></a>group <span class="ot">&lt;-</span> <span class="fu">rep</span>(<span class="fu">c</span>(<span class="st">"unstained"</span>, <span class="st">"FITC+"</span>, <span class="st">"PE+"</span>, <span class="st">"FITC+ PE+"</span>), <span class="fu">c</span>(<span class="dv">600</span>, <span class="dv">400</span>, <span class="dv">400</span>, <span class="dv">200</span>))</span>
-<span id="cb2-10"><a aria-hidden="true" tabindex="-1"></a>noise <span class="ot">&lt;-</span> <span class="cf">function</span>(n) <span class="fu">matrix</span>(<span class="fu">rnorm</span>(<span class="dv">2</span> <span class="sc">*</span> n, <span class="dv">0</span>, <span class="dv">30</span>), <span class="at">nrow =</span> <span class="dv">2</span>)   <span class="co"># detector noise</span></span>
-<span id="cb2-11"><a aria-hidden="true" tabindex="-1"></a>measured <span class="ot">&lt;-</span> S <span class="sc">%*%</span> true <span class="sc">+</span> <span class="fu">noise</span>(<span class="fu">ncol</span>(true))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a aria-hidden="true" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">1</span>)</span>
+<span id="cb3-2"><a aria-hidden="true" tabindex="-1"></a>make_pop <span class="ot">&lt;-</span> <span class="cf">function</span>(n, fitc, pe) {               <span class="co"># true dye amounts, one cell per COLUMN</span></span>
+<span id="cb3-3"><a aria-hidden="true" tabindex="-1"></a>  <span class="fu">rbind</span>(<span class="at">FITC =</span> <span class="fu">rlnorm</span>(n, <span class="fu">log</span>(fitc), <span class="fl">0.3</span>), <span class="at">PE =</span> <span class="fu">rlnorm</span>(n, <span class="fu">log</span>(pe), <span class="fl">0.3</span>))</span>
+<span id="cb3-4"><a aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb3-5"><a aria-hidden="true" tabindex="-1"></a>true <span class="ot">&lt;-</span> <span class="fu">cbind</span>(<span class="fu">make_pop</span>(<span class="dv">600</span>,  <span class="dv">100</span>,  <span class="dv">100</span>),          <span class="co"># unstained</span></span>
+<span id="cb3-6"><a aria-hidden="true" tabindex="-1"></a>              <span class="fu">make_pop</span>(<span class="dv">400</span>, <span class="dv">3000</span>,  <span class="dv">100</span>),          <span class="co"># FITC+</span></span>
+<span id="cb3-7"><a aria-hidden="true" tabindex="-1"></a>              <span class="fu">make_pop</span>(<span class="dv">400</span>,  <span class="dv">100</span>, <span class="dv">2000</span>),          <span class="co"># PE+</span></span>
+<span id="cb3-8"><a aria-hidden="true" tabindex="-1"></a>              <span class="fu">make_pop</span>(<span class="dv">200</span>, <span class="dv">3000</span>, <span class="dv">2000</span>))          <span class="co"># FITC+ PE+</span></span>
+<span id="cb3-9"><a aria-hidden="true" tabindex="-1"></a>group <span class="ot">&lt;-</span> <span class="fu">rep</span>(<span class="fu">c</span>(<span class="st">"unstained"</span>, <span class="st">"FITC+"</span>, <span class="st">"PE+"</span>, <span class="st">"FITC+ PE+"</span>), <span class="fu">c</span>(<span class="dv">600</span>, <span class="dv">400</span>, <span class="dv">400</span>, <span class="dv">200</span>))</span>
+<span id="cb3-10"><a aria-hidden="true" tabindex="-1"></a>noise <span class="ot">&lt;-</span> <span class="cf">function</span>(n) <span class="fu">matrix</span>(<span class="fu">rnorm</span>(<span class="dv">2</span> <span class="sc">*</span> n, <span class="dv">0</span>, <span class="dv">30</span>), <span class="at">nrow =</span> <span class="dv">2</span>)   <span class="co"># detector noise</span></span>
+<span id="cb3-11"><a aria-hidden="true" tabindex="-1"></a>measured <span class="ot">&lt;-</span> S <span class="sc">%*%</span> true <span class="sc">+</span> <span class="fu">noise</span>(<span class="fu">ncol</span>(true))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 
 <img data-src="fig04-raw.png" class="quarto-figure quarto-figure-center r-stretch" style="width:62.0%"><aside class="notes">
 <p>One %*% applies the spillover to all 1600 cells. The FITC+ population (green) should lie flat along the x-axis, but in the measured data it is tilted: the brighter the FITC, the more false PE. That tilt has slope 0.25, column 1 of S. The PE+ population hardly moves, because PE leaks only 2 percent back. Real cytometry data are usually shown on log-like axes; we use linear axes so the matrix action is a straight-line tilt.</p>
@@ -312,10 +393,10 @@ Quantitative biology and integrative omics
 <div class="columns">
 <div class="column" style="width:52%;">
 <p>How do we know the 0.25? Run a <strong>single-stained control</strong>: cells (or beads) carrying <strong>only FITC</strong>. Every PE-detector signal is then spillover.</p>
-<div class="sourceCode" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a aria-hidden="true" tabindex="-1"></a>ctrl <span class="ot">&lt;-</span> S <span class="sc">%*%</span> <span class="fu">rbind</span>(<span class="at">FITC =</span> <span class="fu">rlnorm</span>(<span class="dv">500</span>, <span class="fu">log</span>(<span class="dv">3000</span>), <span class="fl">0.5</span>), <span class="at">PE =</span> <span class="dv">0</span>) <span class="sc">+</span></span>
-<span id="cb3-2"><a aria-hidden="true" tabindex="-1"></a>        <span class="fu">noise</span>(<span class="dv">500</span>)</span>
-<span id="cb3-3"><a aria-hidden="true" tabindex="-1"></a>fit <span class="ot">&lt;-</span> <span class="fu">lm</span>(ctrl[<span class="dv">2</span>, ] <span class="sc">~</span> ctrl[<span class="dv">1</span>, ])                  <span class="co"># PE detector vs FITC detector</span></span>
-<span id="cb3-4"><a aria-hidden="true" tabindex="-1"></a><span class="fu">coef</span>(fit)[<span class="dv">2</span>]                                      <span class="co"># slope 0.249: about 0.25</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a aria-hidden="true" tabindex="-1"></a>ctrl <span class="ot">&lt;-</span> S <span class="sc">%*%</span> <span class="fu">rbind</span>(<span class="at">FITC =</span> <span class="fu">rlnorm</span>(<span class="dv">500</span>, <span class="fu">log</span>(<span class="dv">3000</span>), <span class="fl">0.5</span>), <span class="at">PE =</span> <span class="dv">0</span>) <span class="sc">+</span></span>
+<span id="cb4-2"><a aria-hidden="true" tabindex="-1"></a>        <span class="fu">noise</span>(<span class="dv">500</span>)</span>
+<span id="cb4-3"><a aria-hidden="true" tabindex="-1"></a>fit <span class="ot">&lt;-</span> <span class="fu">lm</span>(ctrl[<span class="dv">2</span>, ] <span class="sc">~</span> ctrl[<span class="dv">1</span>, ])                  <span class="co"># PE detector vs FITC detector</span></span>
+<span id="cb4-4"><a aria-hidden="true" tabindex="-1"></a><span class="fu">coef</span>(fit)[<span class="dv">2</span>]                                      <span class="co"># slope 0.249: about 0.25</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <ul>
 <li>The slope is the spillover coefficient: column 1 of <span class="math inline">\(S\)</span>, measured.</li>
 <li>A PE-only control gives column 2 the same way.</li>
@@ -340,8 +421,8 @@ Quantitative biology and integrative omics
 <section id="compensation-undo-the-matrix" class="slide level2 smaller">
 <h2>Compensation: undo the matrix</h2>
 <p>If measured <span class="math inline">\(= S\,\text{true}\)</span>, then true <span class="math inline">\(= S^{-1}\,\text{measured}\)</span>: the same <code>solve()</code> as in Linear systems in R.</p>
-<div class="sourceCode" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a aria-hidden="true" tabindex="-1"></a><span class="fu">solve</span>(S)                          <span class="co"># [1.005 -0.020; -0.251 1.005]</span></span>
-<span id="cb4-2"><a aria-hidden="true" tabindex="-1"></a>comp <span class="ot">&lt;-</span> <span class="fu">solve</span>(S) <span class="sc">%*%</span> measured     <span class="co"># compensated: one %*% for all cells</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a aria-hidden="true" tabindex="-1"></a><span class="fu">solve</span>(S)                          <span class="co"># [1.005 -0.020; -0.251 1.005]</span></span>
+<span id="cb5-2"><a aria-hidden="true" tabindex="-1"></a>comp <span class="ot">&lt;-</span> <span class="fu">solve</span>(S) <span class="sc">%*%</span> measured     <span class="co"># compensated: one %*% for all cells</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 
 <img data-src="fig06-before-after.png" class="quarto-figure quarto-figure-center r-stretch" style="width:80.0%"><p>The FITC+ cells: median PE <strong>850</strong> before, <strong>102</strong> after (unstained cells: about 100).</p>
 <aside class="notes">
@@ -410,10 +491,10 @@ Quantitative biology and integrative omics
 <li>With 2 dyes and 2 detectors, <span class="math inline">\(S\)</span> is square, and unmixing <strong>is</strong> compensation: <code>solve(S)</code>.</li>
 <li>With more detectors than dyes, <span class="math inline">\(S\)</span> is <strong>tall</strong>. No inverse exists, but least squares finds the best fit:</li>
 </ul>
-<div class="sourceCode" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a aria-hidden="true" tabindex="-1"></a>S4 <span class="ot">&lt;-</span> <span class="fu">cbind</span>(<span class="at">FITC =</span> <span class="fu">c</span>(<span class="dv">1</span>,    <span class="fl">0.45</span>, <span class="fl">0.10</span>, <span class="fl">0.02</span>),     <span class="co"># reference spectra over 4 detectors</span></span>
-<span id="cb5-2"><a aria-hidden="true" tabindex="-1"></a>            <span class="at">PE   =</span> <span class="fu">c</span>(<span class="fl">0.02</span>, <span class="fl">0.30</span>, <span class="dv">1</span>,    <span class="fl">0.40</span>))</span>
-<span id="cb5-3"><a aria-hidden="true" tabindex="-1"></a>cell <span class="ot">&lt;-</span> S4 <span class="sc">%*%</span> <span class="fu">c</span>(<span class="dv">3000</span>, <span class="dv">2000</span>)                      <span class="co"># one FITC+ PE+ cell, no noise</span></span>
-<span id="cb5-4"><a aria-hidden="true" tabindex="-1"></a><span class="fu">qr.solve</span>(S4, cell)                                <span class="co"># least squares: 3000, 2000</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a aria-hidden="true" tabindex="-1"></a>S4 <span class="ot">&lt;-</span> <span class="fu">cbind</span>(<span class="at">FITC =</span> <span class="fu">c</span>(<span class="dv">1</span>,    <span class="fl">0.45</span>, <span class="fl">0.10</span>, <span class="fl">0.02</span>),     <span class="co"># reference spectra over 4 detectors</span></span>
+<span id="cb6-2"><a aria-hidden="true" tabindex="-1"></a>            <span class="at">PE   =</span> <span class="fu">c</span>(<span class="fl">0.02</span>, <span class="fl">0.30</span>, <span class="dv">1</span>,    <span class="fl">0.40</span>))</span>
+<span id="cb6-3"><a aria-hidden="true" tabindex="-1"></a>cell <span class="ot">&lt;-</span> S4 <span class="sc">%*%</span> <span class="fu">c</span>(<span class="dv">3000</span>, <span class="dv">2000</span>)                      <span class="co"># one FITC+ PE+ cell, no noise</span></span>
+<span id="cb6-4"><a aria-hidden="true" tabindex="-1"></a><span class="fu">qr.solve</span>(S4, cell)                                <span class="co"># least squares: 3000, 2000</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <aside class="notes">
 <p>Preview only. Spectral unmixing is the modern version: instead of one filter per dye, the full emission spectrum is recorded, and every cell is written as a combination of the reference spectra (columns). Extra detectors give more equations than unknowns; qr.solve (or lm without intercept) finds the dye amounts that best explain the measured spectrum. This is the same least squares as regression in the Bayesian and penalized blocks. Autofluorescence can be added as one more column, an extra “dye”.</p>
 <style type="text/css">
@@ -431,13 +512,13 @@ Quantitative biology and integrative omics
 <section id="when-unmixing-fails-similar-dyes" class="slide level2 smaller">
 <h2>When unmixing fails: similar dyes</h2>
 <p>If two dyes have <strong>similar</strong> spectra, the columns of <span class="math inline">\(S\)</span> point almost the same way and <span class="math inline">\(\det(S)\)</span> is near 0:</p>
-<div class="sourceCode" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a aria-hidden="true" tabindex="-1"></a>S2 <span class="ot">&lt;-</span> <span class="fu">matrix</span>(<span class="fu">c</span>(<span class="dv">1</span>,   <span class="fl">0.9</span>,</span>
-<span id="cb6-2"><a aria-hidden="true" tabindex="-1"></a>               <span class="fl">0.9</span>, <span class="dv">1</span>  ), <span class="at">nrow =</span> <span class="dv">2</span>, <span class="at">byrow =</span> <span class="cn">TRUE</span>)  <span class="co"># det(S2) = 0.19</span></span>
-<span id="cb6-3"><a aria-hidden="true" tabindex="-1"></a><span class="fu">solve</span>(S2)                                          <span class="co"># [5.26 -4.74; -4.74 5.26]: large entries</span></span>
-<span id="cb6-4"><a aria-hidden="true" tabindex="-1"></a>comp2 <span class="ot">&lt;-</span> <span class="fu">solve</span>(S2) <span class="sc">%*%</span> (S2 <span class="sc">%*%</span> true <span class="sc">+</span> <span class="fu">noise</span>(<span class="fu">ncol</span>(true)))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a aria-hidden="true" tabindex="-1"></a>S2 <span class="ot">&lt;-</span> <span class="fu">matrix</span>(<span class="fu">c</span>(<span class="dv">1</span>,   <span class="fl">0.9</span>,</span>
+<span id="cb7-2"><a aria-hidden="true" tabindex="-1"></a>               <span class="fl">0.9</span>, <span class="dv">1</span>  ), <span class="at">nrow =</span> <span class="dv">2</span>, <span class="at">byrow =</span> <span class="cn">TRUE</span>)  <span class="co"># det(S2) = 0.19</span></span>
+<span id="cb7-3"><a aria-hidden="true" tabindex="-1"></a><span class="fu">solve</span>(S2)                                          <span class="co"># [5.26 -4.74; -4.74 5.26]: large entries</span></span>
+<span id="cb7-4"><a aria-hidden="true" tabindex="-1"></a>comp2 <span class="ot">&lt;-</span> <span class="fu">solve</span>(S2) <span class="sc">%*%</span> (S2 <span class="sc">%*%</span> true <span class="sc">+</span> <span class="fu">noise</span>(<span class="fu">ncol</span>(true)))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 
 <img data-src="fig09-similar-dyes.png" class="quarto-figure quarto-figure-center r-stretch" style="width:72.0%"><p>The inverse multiplies the noise by about 5: unstained cells spread from sd 45 to <strong>209</strong>, and populations smear.</p>
-<p><span style="font-size: 0.7em; color: #bc4749;">Bonus material: you do not need to memorise determinants for the exam.</span></p>
+<p><span style="font-size: 0.7em; color: #bc4749;">Bonus material.</span></p>
 <aside class="notes">
 <p>This is the panel-design rule of thumb in flow cytometry, explained with linear algebra: avoid pairs of dyes with overlapping spectra on the same cells, or at least on markers that are co-expressed. Geometrically, the two columns of S2 are almost parallel, so the parallelogram they span is thin (small determinant), and the inverse has to stretch a lot to undo it. The singular case (det = 0, identical spectra) cannot be undone at all, as in the gallery of Transforming images with matrices. The true values are still recovered on average; it is the spread that grows.</p>
 <style type="text/css">
@@ -460,10 +541,10 @@ Quantitative biology and integrative omics
 <li><code>spillover()</code> estimates <span class="math inline">\(S\)</span> from single-stained controls; <code>compensate()</code> applies <span class="math inline">\(S^{-1}\)</span> to every cell, exactly our <code>solve(S) %*% measured</code>.</li>
 <li>Example data: <code>data(GvHD)</code> in flowCore, an extract of a graft-versus-host disease monitoring experiment. Many public experiments are in <a href="https://flowrepository.org">FlowRepository</a>.</li>
 </ul>
-<div class="sourceCode" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a aria-hidden="true" tabindex="-1"></a><span class="co"># install.packages("BiocManager"); BiocManager::install("flowCore")   # optional</span></span>
-<span id="cb7-2"><a aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(flowCore)</span>
-<span id="cb7-3"><a aria-hidden="true" tabindex="-1"></a><span class="fu">data</span>(GvHD)</span>
-<span id="cb7-4"><a aria-hidden="true" tabindex="-1"></a><span class="fu">head</span>(<span class="fu">exprs</span>(GvHD[[<span class="dv">1</span>]]))            <span class="co"># one sample: cells as ROWS, channels as columns</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode" id="cb8"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a aria-hidden="true" tabindex="-1"></a><span class="co"># install.packages("BiocManager"); BiocManager::install("flowCore")   # optional</span></span>
+<span id="cb8-2"><a aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(flowCore)</span>
+<span id="cb8-3"><a aria-hidden="true" tabindex="-1"></a><span class="fu">data</span>(GvHD)</span>
+<span id="cb8-4"><a aria-hidden="true" tabindex="-1"></a><span class="fu">head</span>(<span class="fu">exprs</span>(GvHD[[<span class="dv">1</span>]]))            <span class="co"># one sample: cells as ROWS, channels as columns</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <aside class="notes">
 <p>Not required for the exercises. Note that flowCore stores cells as rows (the usual data-frame layout), so in real code the multiplication is measured %*% solve(t(S)) or similar; compensate() handles that for you. FCS files usually carry the instrument’s own spillover matrix in their metadata (keyword SPILL or $SPILLOVER), which is what compensate() typically uses.</p>
 <style type="text/css">

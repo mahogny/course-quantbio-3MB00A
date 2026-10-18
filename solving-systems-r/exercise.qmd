@@ -46,7 +46,7 @@ Two key facts:
 
 - $A$ (square) is **singular** when one equation is a combination of the others
   — it carries no new information. Its columns are then not independent, and
-  `solve()` stops with an error. (Bonus, not for exam: then $\det A = 0$.)
+  `solve()` stops with an error. (Bonus: then $\det A = 0$.)
 - The **rank** of $A$ is the number of genuinely independent equations. Full
   rank ($=n$) with a square $A$ is exactly the unique-solution case.
 
@@ -104,19 +104,48 @@ Check your classifications in Problem 1 with the interactive picture: each equat
 
 ## In R
 
-### Step 1 — solve a well-determined system
+### Step 1 — check your answers from Linear systems by hand
+
+In [Linear systems by hand](../solving-systems/exercise.qmd) you solved
+Problems 1–4 with pen and paper. Now let R confirm them.
 
 ```r
-A <- matrix(c(2, 1,
-              1, 3), nrow = 2, byrow = TRUE)
-b <- c(8, 9)
+# Problems 1 and 2 — the 2x2 mixture
+A <- matrix(c(3, 1,
+              1, 2), nrow = 2, byrow = TRUE)
+b <- c(11, 7)
 
-x <- solve(A, b)
+x <- solve(A, b)   # solve A x = b
 x
-# expected: 3 2
+# expected: your Type A and Type B amounts
 
-A %*% x          # should reproduce b = c(8, 9)
+A %*% x            # check: does it reproduce b?
 ```
+
+```r
+# Problem 3 — the 3x3 mixture
+A3 <- matrix(c(1, 2, 1,
+               2, 1, 1,
+               1, 1, 3), nrow = 3, byrow = TRUE)
+b3 <- c(8, 7, 10)
+
+x3 <- solve(A3, b3)
+x3
+
+A3 %*% x3 - b3     # the residual should be (numerically) zero
+```
+
+```r
+# Problem 4 — the inverse
+Ainv <- solve(A)   # one argument: the inverse
+Ainv
+Ainv %*% A         # the identity
+Ainv %*% c(8, 6)   # the second sample
+```
+
+Note `byrow = TRUE`: it fills the matrix row by row, so the R code reads in the
+same order as the equations on paper. (The default, `byrow = FALSE`, fills
+column by column — a common source of confusion.)
 
 ### Step 2 — confirm your by-hand classifications
 
@@ -257,19 +286,33 @@ solution.
 
 ### R, step by step
 
-**Step 1 — the well-determined system.** First confirm the answer by hand so
-you know what to expect. The system is $2x + y = 8$ and $x + 3y = 9$.
-From equation 1, $y = 8 - 2x$; substitute into equation 2:
-$$
-x + 3(8 - 2x) = 9 \;\Rightarrow\; x + 24 - 6x = 9
-\;\Rightarrow\; -5x = -15 \;\Rightarrow\; x = 3,
-$$
-then $y = 8 - 2(3) = 2$. So $\mathbf{x} = (3, 2)$, which is what `solve` returns.
+**Step 1 — your by-hand answers.** `solve` agrees with Problems 1–4 of
+Linear systems by hand: Type A $= 3$ and Type B $= 2$, the $3\times3$ amounts
+$9/7$, $16/7$ and $15/7$, and the inverse used for the second sample.
 
 ```r
-A <- matrix(c(2, 1, 1, 3), nrow = 2, byrow = TRUE)
-solve(A, c(8, 9))           # 3 2
-A %*% c(3, 2)               # 8 9  (check: reproduces b)
+A <- matrix(c(3, 1, 1, 2), nrow = 2, byrow = TRUE)
+b <- c(11, 7)
+solve(A, b)
+# [1] 3 2
+
+A3 <- matrix(c(1, 2, 1,
+               2, 1, 1,
+               1, 1, 3), nrow = 3, byrow = TRUE)
+b3 <- c(8, 7, 10)
+solve(A3, b3)
+# [1] 1.285714 2.285714 2.142857   (= 9/7, 16/7, 15/7)
+
+A3 %*% solve(A3, b3) - b3
+# all entries ~0 (tiny floating-point residual)
+
+solve(A)
+#      [,1] [,2]
+# [1,]  0.4 -0.2
+# [2,] -0.2  0.6
+solve(A) %*% c(8, 6)
+# [1,] 2
+# [2,] 2
 ```
 
 **Step 2 — confirm the classifications.** (a) is the one-solution system; adding

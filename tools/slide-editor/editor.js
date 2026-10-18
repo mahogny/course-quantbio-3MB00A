@@ -637,7 +637,14 @@
       }
       if (act === "cancel") openNotes();
       if (act === "handover") {
-        if (!notesData.batch) return say("No open batch to hand over");
+        // A note still in the box is saved first, so it is not lost.
+        if (ta.value.trim()) {
+          const where = DECK ? { slide: h, title: title === "(title slide)" ? "" : title } : { section: title };
+          if (!(await postNote({ action: "add", ...where, anchor: noteAnchor?.text, figure: noteAnchor?.figure, note: ta.value }))) return;
+          ta.value = "";
+          noteAnchor = null;
+        }
+        if (!notesData.batch) return say("No notes to hand over: add a note first (Add note or Ctrl+Enter)", "err");
         if (!confirm(`Hand over batch ${notesData.batch}? Its note files are marked closed for an LLM to act on; new notes start a new batch.`)) return;
         const r = await call("POST", "notes-handover", {});
         if (!r.ok) return say(r.error, "err");

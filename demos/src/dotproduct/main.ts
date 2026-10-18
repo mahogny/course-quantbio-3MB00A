@@ -171,7 +171,7 @@ function mount(host: HTMLElement): void {
     const side = (u[0] - p[0]) * nrm[0] + (u[1] - p[1]) * nrm[1] >= 0 ? -1 : 1;
     const pl: V2 = [p[0] / 2 + side * 0.65 * nrm[0], p[1] / 2 + side * 0.65 * nrm[1]];
     projLab.setAttribute("x", String(sx(pl[0]))); projLab.setAttribute("y", String(sy(pl[1]) + 6));
-    projLab.textContent = Math.hypot(p[0], p[1]) > 0.05 ? "proj" : "";
+    projLab.textContent = Math.hypot(p[0], p[1]) > 0.05 ? "p" : "";
 
     // ---- readouts ----
     const U = (t: string) => `<span class="dp-u">${t}</span>`, Vv = (t: string) => `<span class="dp-v">${t}</span>`;
@@ -184,8 +184,8 @@ function mount(host: HTMLElement): void {
       `‖u‖ = ${fmt(s.nu)}    ‖v‖ = ${fmt(s.nv)}`,
       `cos θ = u·v/(‖u‖‖v‖) = ${fmt(s.dot)}/(${fmt(s.nu)}·${fmt(s.nv)}) = ${cosT(s.cos)}`,
       `θ = ${s.deg === null ? "–" : fmt(s.deg, 1) + "°"}`,
-      s.coef === null ? "proj: v = 0" :
-        `proj<sub>v</sub>u = (u·v / v·v)·v = (${fmt(s.dot)}/${fmt(s.nv * s.nv)})·v\n        = ${fmt(s.coef, 3)}·${vec(v)} = <b>${vec(s.proj!)}</b>`,
+      s.coef === null ? "shadow p: none (v = 0)" :
+        `shadow p = (u·v / v·v)·v = (${fmt(s.dot)}/${fmt(s.nv * s.nv)})·v\n        = ${fmt(s.coef, 3)}·${vec(v)} = <b>${vec(s.proj!)}</b>`,
     ].join("\n");
     sign.style.background = signCol;
     sign.textContent = s.sign > 0 ? "u·v > 0: same general direction (θ < 90°)"

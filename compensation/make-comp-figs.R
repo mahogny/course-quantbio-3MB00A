@@ -3,8 +3,11 @@
 # Re-run by hand from this folder (it is NOT run by `quarto render`):
 #   cd compensation && Rscript make-comp-figs.R
 #
-# All data are simulated (no real cytometry files); the simulation code is the
-# same as on the slides and in the exercise.
+# Most data are simulated; the simulation code is the same as on the slides and
+# in the exercise. fig03 uses one real FCS file, flowcore-0877408774.B08.fcs
+# (a FACSCalibur sample shipped as example data with the Bioconductor package
+# flowCore, Artistic-2.0), read with the small reader below so that flowCore
+# itself is not needed.
 
 ## ---- the student setup (same code as on the slides / in the exercise) ----
 
@@ -135,6 +138,44 @@ fig("fig07-under-over.png", 1700, 850, mfrow = c(1, 2), {
 fig("fig09-similar-dyes.png", 1700, 850, mfrow = c(1, 2), {
   cells(comp, "different dyes: det(S) = 0.995", xlab = "FITC", ylab = "PE", lim = c(-1500, 4500))
   cells(comp2, "similar dyes: det(S2) = 0.19", xlab = "FITC", ylab = "PE", lim = c(-1500, 4500))
+})
+
+## ---- fig03: a real FCS file --------------------------------------------------
+
+# Minimal FCS 2.0/3.0 reader for list-mode integer data: the header gives byte
+# offsets of the TEXT (keywords) and DATA segments; $PnE says whether channel n
+# is stored on a log scale (value = f2 * 10^(f1 * channel / range)).
+read_fcs <- function(file) {
+  raw <- readBin(file, "raw", file.size(file))
+  off <- as.integer(substring(rawToChar(raw[1:58]), c(11, 19, 27, 35), c(18, 26, 34, 42)))
+  txt <- iconv(rawToChar(raw[(off[1] + 1):(off[2] + 1)]), "latin1", "UTF-8")
+  parts <- strsplit(substring(txt, 2), substr(txt, 1, 1), fixed = TRUE)[[1]]
+  kw <- setNames(parts[c(FALSE, TRUE)], parts[c(TRUE, FALSE)])
+  npar <- as.integer(kw[["$PAR"]])
+  stopifnot(kw[["$DATATYPE"]] == "I", all(kw[paste0("$P", 1:npar, "B")] == "16"))
+  x <- readBin(raw[(off[3] + 1):(off[4] + 1)], "integer", n = npar * as.integer(kw[["$TOT"]]),
+               size = 2, signed = FALSE, endian = if (kw[["$BYTEORD"]] == "1,2") "little" else "big")
+  m <- matrix(as.numeric(x), ncol = npar, byrow = TRUE,
+              dimnames = list(NULL, kw[paste0("$P", 1:npar, "N")]))
+  for (j in 1:npar) {
+    e <- as.numeric(strsplit(kw[[paste0("$P", j, "E")]], ",")[[1]])
+    if (e[1] > 0) m[, j] <- e[2] * 10^(e[1] * m[, j] / as.numeric(kw[[paste0("$P", j, "R")]]))
+  }
+  m
+}
+
+fcs <- read_fcs("flowcore-0877408774.B08.fcs")
+cat("real FCS:", nrow(fcs), "cells x", ncol(fcs), "channels\n")
+print(round(head(fcs[, c("FSC-H", "SSC-H", "FL1-H", "FL2-H")], 4), 1))
+
+fig("fig03-real-data.png", 1700, 850, mfrow = c(1, 2), {
+  dens <- function(x, y) adjustcolor("#1b2a3a", 0.25)
+  plot(fcs[, "FSC-H"], fcs[, "SSC-H"], pch = 16, cex = 0.3, col = dens(),
+       xlab = "forward scatter (FSC): size", ylab = "side scatter (SSC): granularity",
+       main = "light scattered by each cell", font.main = 1, cex.main = 1.1)
+  plot(fcs[, "FL1-H"], fcs[, "FL2-H"], pch = 16, cex = 0.3, col = dens(), log = "xy",
+       xlab = "FL1 detector (green, e.g. FITC)", ylab = "FL2 detector (orange, e.g. PE)",
+       main = "fluorescence, log axes", font.main = 1, cex.main = 1.1)
 })
 
 cat("done\n")

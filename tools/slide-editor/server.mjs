@@ -501,9 +501,15 @@ async function api(req, res, url) {
 
   if (route === "notes" && req.method === "POST") {
     const b = await readBody(req);
-    if (!checkSource(b.page)) return fail(res, 403, "not an editable page source");
+    if (!checkSource(b.page)) {
+      console.log(`[note] rejected for ${JSON.stringify(b.page)}: not an editable page source`);
+      return fail(res, 403, "not an editable page source");
+    }
     const r = saveNote(b);
-    if (r.code !== 200) return fail(res, r.code, r.error);
+    if (r.code !== 200) {
+      console.log(`[note] ${b.page}: ${b.action} rejected: ${r.error}`);
+      return fail(res, r.code, r.error);
+    }
     console.log(`[note] ${b.page} ${b.slide ?? b.section ?? ""}: ${b.action} (batch ${r.batch})`);
     return send(res, 200, { ok: true, batch: r.batch });
   }
@@ -564,7 +570,7 @@ const server = http.createServer(async (req, res) => {
 server.listen(PORT, HOST, () => {
   const host = os.hostname();
   console.log(`Slide editor serving ${DOCS}`);
-  console.log(`Writes allowed: <unit>/lec.qmd and hand-made <unit>/*.svg under ${REPO}`);
+  console.log(`Writes allowed: page sources (.qmd/.md), hand-made <unit>/*.svg and edit-notes/ under ${REPO}`);
   console.log(`\n  Sandbox: http://${host}:${PORT}/editor-sandbox/lec.html?token=${TOKEN}`);
   console.log(`  Site:    http://${host}:${PORT}/?token=${TOKEN}\n`);
 });
