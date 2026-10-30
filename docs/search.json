@@ -16021,5 +16021,109 @@
       "Bulk RNA-seq with DESeq2",
       "Lecture (slides)"
     ]
+  },
+  {
+    "objectID": "bulk-rnaseq/lec.html#the-ma-plot-highlights-the-counting-noise",
+    "href": "bulk-rnaseq/lec.html#the-ma-plot-highlights-the-counting-noise",
+    "title": "Bulk RNA-seq with DESeq2",
+    "section": "The MA plot highlights the counting noise",
+    "text": "The MA plot highlights the counting noise\n\n\nAn MA plot: log2 fold change against the gene’s mean count. Two replicates, no true change for any of 5000 genes.\nWide at low counts, narrow at high counts. The dashed lines are the n \\pm \\sqrt{n} rule.\nRanking by fold change picks the low-count genes: the 10 largest fold changes here are all genes with fewer than 15 reads, and all are noise.\nA test must know that 3 vs 0 carries less information than 3000 vs 1000. One \\sigma for all genes, as in plain least squares, cannot. A count model can (week 4). voom’s weights in covariates-r were a patch for the same problem.\n\n\nThe picture to remember. Each dot is a gene, x is its mean count on a log axis, y is log2 of replicate 2 over replicate 1. Because nothing changed, every dot should be at 0; the spread is counting noise, and it shrinks as the count grows, like 1 over root n. Genes with a 0 in one replicate have an infinite log ratio; they are the triangles at the edge. The ten largest fold changes have between 1 and 13 reads. Real replicates spread more than this, because the biology also varies between replicates (different mice, different cultures); Error models adds that extra spread with the negative binomial. Link back: voom in covariates-r computed a weight per value exactly because low counts are noisier on the log scale. DESeq2 instead models the counts directly.",
+    "crumbs": [
+      "Home",
+      "Week 3: Linear models & differential expression",
+      "Bulk RNA-seq with DESeq2",
+      "Lecture (slides)"
+    ]
+  },
+  {
+    "objectID": "bulk-rnaseq/lec.html#comparing-compositions-is-tricky",
+    "href": "bulk-rnaseq/lec.html#comparing-compositions-is-tricky",
+    "title": "Bulk RNA-seq with DESeq2",
+    "section": "Comparing compositions is tricky",
+    "text": "Comparing compositions is tricky\n\n\nOnly gene A changed: 3 times more molecules in sample 2. B, C and D are exactly the same in the tube.\nAfter dividing by the total, B, C and D look halved, and A looks only 1.5× up.\nThe fraction of the RNA is a zero-sum game: if one gene takes more of the reads, all others get fewer. A few very abundant genes that change can fake changes in thousands of others.\n\n\nThis is the reason DESeq2 does not use the total count. Read the left panel: the tube has 1000 molecules in sample 1 and 2000 in sample 2, all of the extra from gene A. The sequencer does not know how many molecules were in the tube; it reads 1000 from each. In the right panel A has 750 of 1000, so B, C and D are squeezed to half. Real examples: a tissue where a few secreted proteins dominate (pancreas, liver), or a treatment that switches on a very abundant gene. Ask: what should the size factor of sample 2 be, so that B, C and D come out unchanged? 0.5 relative to sample 1, not 1. The next slide gets that number without knowing in advance which genes changed.",
+    "crumbs": [
+      "Home",
+      "Week 3: Linear models & differential expression",
+      "Bulk RNA-seq with DESeq2",
+      "Lecture (slides)"
+    ]
+  },
+  {
+    "objectID": "bulk-rnaseq/lec.html#shrinkage-compensates-for-low-count-noise",
+    "href": "bulk-rnaseq/lec.html#shrinkage-compensates-for-low-count-noise",
+    "title": "Bulk RNA-seq with DESeq2",
+    "section": "“Shrinkage” compensates for low-count noise",
+    "text": "“Shrinkage” compensates for low-count noise\n\nairway, dexamethasone vs untreated (exercise R4). Red: padj &lt; 0.05.\nres_shr &lt;- lfcShrink(dds, coef = \"dex_trt_vs_untrt\", type = \"apeglm\")\n\nWhen the data are weak, believe less extreme values. Low-count fold changes are pulled towards 0; high-count ones barely move.\nGenes with baseMean ≤ 10: 465 have a raw fold change above 4× (|LFC| &gt; 2), 33 after shrinking. Above 100: 102 and 98.\nPractical rule: test with padj, rank and plot with the shrunken fold change.\nHow this works is week 4: it is a penalty (Why penalize?), a prior (Bayesian vs frequentist), and sharing across genes (Hierarchical models).\n\n\nThe segue to week 4. lfcShrink with apeglm returns new fold changes: the same as before for genes with many reads, pulled towards zero for genes with few. Left is plotMA of the raw results on airway, the fan at low counts; right the same genes after lfcShrink: the grey fan collapses onto 0, the red called genes keep their fold changes. Below 10 reads, 465 genes have a raw |LFC| above 2 and only 33 after shrinking; above 100 reads hardly anything changes (102 to 98). The sentence to remember: when the data are weak, believe less extreme values. Shrinking is not a filter: a low-count gene that changes consistently in all four cell lines keeps a large fold change (GUCY2D and MCHR1, about 6 reads, stay in the top 10). In week 4 this is ridge regression (a penalty on large coefficients), a prior in Bayesian language, and in Hierarchical models the information shared across genes that decides how much to shrink. Do not explain how; promise it. The p-values do not change with lfcShrink; it only changes the fold changes you use for ranking and plotting. Figure and numbers: make-airway-figs.R.",
+    "crumbs": [
+      "Home",
+      "Week 3: Linear models & differential expression",
+      "Bulk RNA-seq with DESeq2",
+      "Lecture (slides)"
+    ]
+  },
+  {
+    "objectID": "bulk-rnaseq/lec.html#the-volcano-plot-summarises-effect-size-and-probability",
+    "href": "bulk-rnaseq/lec.html#the-volcano-plot-summarises-effect-size-and-probability",
+    "title": "Bulk RNA-seq with DESeq2",
+    "section": "The volcano plot summarises effect size and probability",
+    "text": "The volcano plot summarises effect size and probability\n\nplot(res_shr$log2FoldChange, -log10(res_shr$padj))   # one dot per gene\n\nx: how big the change is (shrunken log2 fold change). y: how sure we are (-\\log_{10} padj: 2 means 0.01, 10 means 10^{-10}).\nTop corners: large and well-supported changes. Airway: 4000 genes at padj &lt; 0.05, 823 of them also more than 2-fold (|LFC| &gt; 1).\nSmall but very sure (DSTN, 1.9-fold).\nLarge but less sure (ALOX15B).\nOne of the most important plots you’ll ever learn to read\n\n\nThe volcano plot is the figure in almost every RNA-seq paper, and it is just the two columns of the results table plotted against each other. x is the fold change, y is minus log10 of padj, so higher is more significant: the dashed horizontal line is padj = 0.05 (y = 1.3), the dotted vertical lines are 2-fold up and down. Use the shrunken fold change for x, the rule from the previous slide: otherwise the low-count noise spreads the bottom of the volcano sideways. The shape: genes with no change sit at the bottom middle; the two arms rise because a larger change is easier to detect. Point at the corners: SPARCL1 and DUSP1 are among the most significant genes; ZBTB16 and FKBP5 are classic glucocorticoid targets; ALOX15B has the largest fold change but fewer reads, so it sits lower. DSTN changes only 1.9-fold but with about 16 000 reads it is as significant as anything on the plot (padj 6e-31): small but sure. Orange genes are significant but changed less than 2-fold: real, but perhaps not interesting; the |LFC| &gt; 1 cut-off is a convention, not a law. Figure and numbers: make-airway-figs.R. limma’s topTable gives the same two columns (logFC, adj.P.Val), so the same plot works there.",
+    "crumbs": [
+      "Home",
+      "Week 3: Linear models & differential expression",
+      "Bulk RNA-seq with DESeq2",
+      "Lecture (slides)"
+    ]
+  },
+  {
+    "objectID": "penalized-intro/lec.html#least-squares-only-works-when-the-system-is-full-rank",
+    "href": "penalized-intro/lec.html#least-squares-only-works-when-the-system-is-full-rank",
+    "title": "Why penalize?",
+    "section": "Least squares only works when the system is full rank",
+    "text": "Least squares only works when the system is full rank\nWe can’t hit \\mathbf{y} = X\\boldsymbol{\\beta} exactly (data is noisy), so ordinary least squares (OLS) picks the \\boldsymbol{\\beta} that makes the total squared error smallest:\n\\hat{\\boldsymbol{\\beta}} = \\arg\\min_{\\boldsymbol{\\beta}} \\ \\|\\mathbf{y} - X\\boldsymbol{\\beta}\\|^2\nWorking this out gives the normal equations:\nX^\\top X\\,\\boldsymbol{\\beta} = X^\\top \\mathbf{y} \\qquad\\Longrightarrow\\qquad \\hat{\\boldsymbol{\\beta}} = (X^\\top X)^{-1} X^\\top \\mathbf{y}\nEverything hinges on that inverse: we can only solve for \\boldsymbol{\\beta} if X^\\top X is invertible.\n\n\nState the least-squares objective in words: find the coefficients that minimise the total squared gap between prediction and truth. Don’t derive the normal equations — just present them and point at the single load-bearing object, the matrix X-transpose-X (a p by p matrix), and its inverse. The entire rest of the lecture is about when that inverse fails to exist or is untrustworthy. Students met invertibility and singular matrices in the Linear systems units and eigenvalues; lean on that vocabulary: a matrix you cannot invert is singular.",
+    "crumbs": [
+      "Home",
+      "Week 4: Penalized models & Bayesian statistics",
+      "Why penalize?",
+      "Lecture (slides)"
+    ]
+  },
+  {
+    "objectID": "penalized-intro/lec.html#least-squares-only-works-when-there-is-sufficient-data",
+    "href": "penalized-intro/lec.html#least-squares-only-works-when-there-is-sufficient-data",
+    "title": "Why penalize?",
+    "section": "Least squares only works when there is sufficient data",
+    "text": "Least squares only works when there is sufficient data\nWe can’t hit \\mathbf{y} = X\\boldsymbol{\\beta} exactly (data is noisy), so ordinary least squares (OLS) picks the \\boldsymbol{\\beta} that makes the total squared error smallest:\n\\hat{\\boldsymbol{\\beta}} = \\arg\\min_{\\boldsymbol{\\beta}} \\ \\|\\mathbf{y} - X\\boldsymbol{\\beta}\\|^2\nWorking this out gives the normal equations:\nX^\\top X\\,\\boldsymbol{\\beta} = X^\\top \\mathbf{y} \\qquad\\Longrightarrow\\qquad \\hat{\\boldsymbol{\\beta}} = (X^\\top X)^{-1} X^\\top \\mathbf{y}\nEverything hinges on that inverse: we can only solve for \\boldsymbol{\\beta} if X^\\top X is invertible.\n\n\nState the least-squares objective in words: find the coefficients that minimise the total squared gap between prediction and truth. Don’t derive the normal equations — just present them and point at the single load-bearing object, the matrix X-transpose-X (a p by p matrix), and its inverse. The entire rest of the lecture is about when that inverse fails to exist or is untrustworthy. Students met invertibility and singular matrices in the Linear systems units and eigenvalues; lean on that vocabulary: a matrix you cannot invert is singular.",
+    "crumbs": [
+      "Home",
+      "Week 4: Penalized models & Bayesian statistics",
+      "Why penalize?",
+      "Lecture (slides)"
+    ]
+  },
+  {
+    "objectID": "penalized-intro/lec.html#the-real-goal-a-good-prediction-of-future-data-not-a-perfect-fit",
+    "href": "penalized-intro/lec.html#the-real-goal-a-good-prediction-of-future-data-not-a-perfect-fit",
+    "title": "Why penalize?",
+    "section": "The real goal: A good prediction of future data, not a perfect fit",
+    "text": "The real goal: A good prediction of future data, not a perfect fit\nIt is tempting to want the \\boldsymbol{\\beta} that fits this dataset best. But we almost never care about this dataset — we care about the next patient.\n\nA model with enough free parameters can fit the training data perfectly, noise and all.\nThat model has learned the noise, not the biology — it overfits.\nOn new patients it predicts badly, because the noise it memorised won’t repeat.\n\nThe best fit to the data at hand is often the worst predictor of new data.\n\n\nReframe the objective. Beginners equate “best model” with “smallest error on my data.” That is exactly wrong for prediction. With enough flexibility you interpolate the training data perfectly, but you have fit the noise, and noise does not generalise. The classic picture: a high-degree polynomial threading every point versus a smooth line — the smooth line is worse on training data but better on new data. This slide sets up the bias–variance tradeoff, which names the tension formally.",
+    "crumbs": [
+      "Home",
+      "Week 4: Penalized models & Bayesian statistics",
+      "Why penalize?",
+      "Lecture (slides)"
+    ]
+  },
+  {
+    "objectID": "penalized-intro/lec.html#the-idea-penalizing-large-coefficients-improves-fit",
+    "href": "penalized-intro/lec.html#the-idea-penalizing-large-coefficients-improves-fit",
+    "title": "Why penalize?",
+    "section": "The idea: Penalizing large coefficients improves fit",
+    "text": "The idea: Penalizing large coefficients improves fit\nInstead of minimising only the fit error, add a penalty that grows with the size of the coefficients:\n\\hat{\\boldsymbol{\\beta}} = \\arg\\min_{\\boldsymbol{\\beta}} \\ \\underbrace{\\|\\mathbf{y} - X\\boldsymbol{\\beta}\\|^2}_{\\text{fit the data}} \\;+\\; \\lambda\\underbrace{\\,\\text{(size of }\\boldsymbol{\\beta}\\text{)}}_{\\text{stay small}}\n\nThe first term still rewards fitting the data.\nThe second term punishes large coefficients. \\lambda \\ge 0 sets how hard.\nThe fit now has to justify every unit of coefficient it uses against the penalty.\n\nWe deliberately move away from the perfect-fit solution to buy stability.\n\nHere is the whole idea in one equation, stated conceptually so the specific penalty (sum of squares for ridge, sum of absolute values for lasso) can come later. We augment the objective with a term that charges for coefficient magnitude. Lambda is the price. With lambda = 0 we are back to OLS; as lambda grows, coefficients are pulled toward zero. The intuition to leave them with: the model can no longer spend coefficient magnitude freely — it must earn each unit by improving the fit more than the penalty costs. That is what stops it from chasing noise.",
+    "crumbs": [
+      "Home",
+      "Week 4: Penalized models & Bayesian statistics",
+      "Why penalize?",
+      "Lecture (slides)"
+    ]
   }
 ]
