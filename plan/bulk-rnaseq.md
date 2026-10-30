@@ -28,7 +28,7 @@ No Poisson or negative binomial by name in the main line; at most one sentence
   N of them at random. Gene G makes up a fraction p of the bag, so it gets about
   N · p reads.
 - Consequence: a count says nothing on its own. 512 reads out of 10 M is not
-  512 out of 40 M. What we want per gene is **p**, the share of the RNA.
+  512 out of 40 M. What we want per gene is **p**, the fraction of the RNA.
 - Contrast with limma's input in covariates-r: there we started from log2
   values; here we start one step earlier, from the counts table
   (genes × samples).
@@ -39,7 +39,7 @@ No Poisson or negative binomial by name in the main line; at most one sentence
 - By hand: a 4-gene × 2-sample table where sample 2 was simply sequenced twice
   as deep; dividing by the totals makes them equal.
 - The catch (one slide): composition. If one very abundant gene goes up a lot
-  in sample 2, all other genes' shares go down although nothing happened to
+  in sample 2, all other genes' fractions go down although nothing happened to
   them. "% of RNA" is a zero-sum game.
 - DESeq2's fix, kept to its idea: compare each gene to its typical value
   across samples (a ratio), and take the **median** ratio over genes as the
@@ -50,7 +50,7 @@ No Poisson or negative binomial by name in the main line; at most one sentence
   `counts(dds, normalized = TRUE)`.
 
 ### 3. Why x / y is noisy for small x and y (the core new idea)
-- Set-up: two samples, **same** true share for every gene, same depth. Any
+- Set-up: two samples, **same** true fraction for every gene, same depth. Any
   difference is pure counting noise.
 - Big gene (expected 1000 reads): counts like 1012 and 987, ratio 1.03.
   Small gene (expected 2): counts like 0 and 3, 1 and 4, 3 and 0 → ratios 0,
@@ -91,15 +91,15 @@ No Poisson or negative binomial by name in the main line; at most one sentence
 - Practical rule: rank by shrunken LFC; test with padj.
 
 ### 6. Summary + where this leads
-- counts → share of RNA (size factors) → noisy ratios at low counts → count
+- counts → fraction of RNA (size factors) → noisy ratios at low counts → count
   model (week 4: error models) + shrinkage (week 4: penalized, Bayes,
   hierarchical).
 
 ## Exercise (by hand + R)
 
 By hand:
-- B1 counts to shares; same library twice as deep.
-- B2 composition trap: one huge gene goes up; compute shares; spot the fake
+- B1 counts to fractions; same library twice as deep.
+- B2 composition trap: one huge gene goes up; compute fractions; spot the fake
   "down" genes.
 - B3 median-of-ratios size factors on a 5 × 3 table (whole numbers chosen so
   ratios are nice).

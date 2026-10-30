@@ -12,7 +12,7 @@ format:
 
 After this exercise you will be able to:
 
-- Turn read counts into **shares of the RNA**, and explain why a raw count means nothing without the sequencing depth.
+- Turn read counts into **fractions of the RNA**, and explain why a raw count means nothing without the sequencing depth.
 - Spot the **composition trap**: one abundant gene that goes up makes all the others look down.
 - Compute **median-of-ratios size factors** by hand, as DESeq2's [`estimateSizeFactors`](https://rdrr.io/bioc/DESeq2/man/estimateSizeFactors.html) does.
 - Use the rule "expect $n$, get $n \pm \sqrt{n}$" to judge whether a fold change could be counting noise.
@@ -22,9 +22,9 @@ After this exercise you will be able to:
 
 ## Background
 
-**Sequencing is drawing from a bag.** The library is a bag of RNA fragments. A gene that makes up a share $p$ of the bag gets about $N \cdot p$ of the $N$ reads, but not exactly: the draw is random.
+**Sequencing is drawing from a bag.** The library is a bag of RNA fragments. A gene that makes up a fraction $p$ of the bag gets about $N \cdot p$ of the $N$ reads, but not exactly: the draw is random.
 
-**Size factors.** To compare samples, divide each sample's counts by a number that says how deep it was sequenced: its **size factor**. The simplest choice is the total count (counts per million, CPM, is the same times $10^6$). It fails when a few abundant genes change a lot: the share of the RNA is a zero-sum game (the **composition trap**).
+**Size factors.** To compare samples, divide each sample's counts by a number that says how deep it was sequenced: its **size factor**. The simplest choice is the total count (counts per million, CPM, is the same times $10^6$). It fails when a few abundant genes change a lot: the fraction of the RNA is a zero-sum game (the **composition trap**).
 
 **Median of ratios** (DESeq2):
 
@@ -50,7 +50,7 @@ res_shr <- lfcShrink(dds, coef = "treatment_treat_vs_ctrl", type = "apeglm")
 
 Do these on paper. A calculator is fine.
 
-**B1. Counts and shares.** Three libraries of the same RNA, sequenced to different depths:
+**B1. Counts and fractions.** Three libraries of the same RNA, sequenced to different depths:
 
 | gene | sample 1 | sample 2 | sample 3 |
 |---|---|---|---|
@@ -59,13 +59,13 @@ Do these on paper. A calculator is fine.
 | C | 90 | 180 | 45 |
 | D | 10 | 20 | 5 |
 
-(a) Compute the total of each sample and the share of each gene. What do you notice?
+(a) Compute the total of each sample and the fraction of each gene. What do you notice?
 
 (b) Compute counts per million (CPM) for gene D in each sample.
 
 (c) A colleague computes sample 2 / sample 1 for every gene and reports "all genes are 2× up". What went wrong?
 
-(d) Gene G has 512 reads in a library of 10 million reads, and 512 reads in another library of 40 million. In which library is G a larger share of the RNA, and by what factor?
+(d) Gene G has 512 reads in a library of 10 million reads, and 512 reads in another library of 40 million. In which library is G a larger fraction of the RNA, and by what factor?
 
 **B2. The composition trap.** In sample 1, gene A makes up half of the RNA. In sample 2, the cells make **7 times** more A; nothing else changes. Both samples are sequenced to 2000 reads:
 
@@ -76,7 +76,7 @@ Do these on paper. A calculator is fine.
 | C | 300 | 75 |
 | D | 200 | 50 |
 
-(a) Compute the share of each gene in each sample, and the fold change of the shares (sample 2 / sample 1).
+(a) Compute the fraction of each gene in each sample, and the fold change of the fractions (sample 2 / sample 1).
 
 (b) Which genes look "down"? Did they really go down? What fold change do you get for A, and what is the truth?
 
@@ -100,7 +100,7 @@ Do these on paper. A calculator is fine.
 
 (d) Divide the counts of genes A and D by the size factors. Which gene changed, in which sample, and by how much?
 
-(e) Now use the totals of the samples as size factors instead. Compute the totals, and the share of gene A in s1 and s3. What would you conclude about gene A, and why is it wrong?
+(e) Now use the totals of the samples as size factors instead. Compute the totals, and the fraction of gene A in s1 and s3. What would you conclude about gene A, and why is it wrong?
 
 **B4. Which fold changes would you trust?** A control and a treated sample, same depth, one sample each:
 
@@ -158,7 +158,7 @@ set.seed(1)
 G     <- 2000                                  # number of genes
 genes <- paste0("g", 1:G)
 p     <- exp(rnorm(G, 0, 2))                   # some genes are rare, some very common
-p     <- p / sum(p)                            # the share of the bag for each gene
+p     <- p / sum(p)                            # the fraction of the bag for each gene
 N     <- 1e6                                   # reads per sample
 expected <- N * p                              # expected reads per gene
 
@@ -287,10 +287,23 @@ top_shr <- head(res_shr[order(-abs(res_shr$log2FoldChange)), c("baseMean", "log2
 
 What changed in the plot? Compare `baseMean` in `top_raw` and `top_shr`. Which list would you rather send to a colleague who wants "the genes most changed by dexamethasone"?
 
+(f) Draw a volcano plot: the shrunken fold change against $-\log_{10}$ `padj`.
+
+```r
+ok  <- !is.na(res_shr$padj)
+big <- ok & res_shr$padj < 0.05 & abs(res_shr$log2FoldChange) > 1
+plot(res_shr$log2FoldChange[ok], -log10(res_shr$padj[ok]), pch = 16, cex = 0.4,
+     col = ifelse(big[ok], "red", "grey"), xlab = "log2 fold change", ylab = "-log10(padj)")
+abline(h = -log10(0.05), lty = 2); abline(v = c(-1, 1), lty = 3)
+sum(big); sum(big & res_shr$log2FoldChange > 0)
+```
+
+How many genes are at `padj < 0.05` **and** changed more than 2-fold, and how many of them go up? Find SPARCL1, FKBP5 and ALOX15B (`rowData(dds_air)$gene_name`) and explain where each sits.
+
 ## Hints
 
-::: {.callout-tip collapse="true" title="Hint 1 — shares and CPM (B1, B2)"}
-Share = count / total of that sample. CPM = share $\times 10^6$. A fold change of shares is (share in sample 2) / (share in sample 1). The shares of one sample always add up to 1.
+::: {.callout-tip collapse="true" title="Hint 1 — fractions and CPM (B1, B2)"}
+Fraction = count / total of that sample. CPM = fraction $\times 10^6$. A fold change of fractions is (fraction in sample 2) / (fraction in sample 1). The fractions of one sample always add up to 1.
 :::
 
 ::: {.callout-tip collapse="true" title="Hint 2 — median of ratios (B2c, B3)"}
@@ -317,17 +330,17 @@ $\log_2 4 = 2$, $\log_2 8 = 3$, $\log_2 0.25 = -2$, and $\log_2 1.1 \approx 0.14
 
 ::: {.callout-note collapse="true" title="Solutions — by hand"}
 
-**B1.** (a) Totals 1000, 2000 and 500. The shares are the same in all three samples: A 0.6, B 0.3, C 0.09, D 0.01. The samples differ only in depth.
+**B1.** (a) Totals 1000, 2000 and 500. The fractions are the same in all three samples: A 0.6, B 0.3, C 0.09, D 0.01. The samples differ only in depth.
 
 (b) Gene D: $10 / 1000 \times 10^6 = 10\,000$ CPM in sample 1, $20 / 2000 \times 10^6 = 10\,000$ in sample 2, $5 / 500 \times 10^6 = 10\,000$ in sample 3. The same.
 
 (c) Sample 2 was sequenced twice as deep, so every count doubled. The ratio of raw counts measures the depth, not the biology. Divide by the size factors (here the totals) first.
 
-(d) $512 / 10$ million $= 51.2$ per million, and $512 / 40$ million $= 12.8$ per million. G is a **4 times** larger share of the RNA in the first library.
+(d) $512 / 10$ million $= 51.2$ per million, and $512 / 40$ million $= 12.8$ per million. G is a **4 times** larger fraction of the RNA in the first library.
 
 **B2.** (a)
 
-| gene | share 1 | share 2 | fold change |
+| gene | fraction 1 | fraction 2 | fold change |
 |---|---|---|---|
 | A | 0.50 | 0.875 | 1.75 |
 | B | 0.25 | 0.0625 | 0.25 |
@@ -356,7 +369,7 @@ The size factors are 0.5, 1 and 2: s3 was sequenced 4 times deeper than s1.
 
 (d) A: $100/0.5 = 200$, $200/1 = 200$, $400/2 = 200$. Unchanged. D: $200$, $200$, $3200/2 = 1600$: **8 times up in s3**. The median was not fooled by D, because only one gene in four changed.
 
-(e) Totals: 288, 560 and 3952. Share of A: $100/288 = 0.35$ in s1, $400/3952 = 0.10$ in s3. A would look about 3.4 times **down** in s3. It is wrong: D took a big share of s3's reads (3200 of 3952), so every other gene's share fell. That is the composition trap.
+(e) Totals: 288, 560 and 3952. Fraction of A: $100/288 = 0.35$ in s1, $400/3952 = 0.10$ in s3. A would look about 3.4 times **down** in s3. It is wrong: D took a big fraction of s3's reads (3200 of 3952), so every other gene's fraction fell. That is the composition trap.
 
 ```r
 m <- rbind(A = c(100, 200, 400), B = c(50, 100, 200), C = c(30, 60, 120),
@@ -536,6 +549,8 @@ sum(res_air$padj < 0.05, na.rm = TRUE)
 | > 100 | 11 203 | 102 | 98 |
 
 The top-10 lists change less than you might expect, because airway is clean data (four cell lines, low dispersion). `top_raw` has four genes with `baseMean` below 10, two of them not significant (RP11-156L14.1 with `padj` `NA`, RP11-434D9.1); both drop out of `top_shr`. GUCY2D and MCHR1 (about 6 reads each) stay: they change consistently in all four cell lines, so their `padj` is small and the evidence is not weak. Shrinking is not a filter on counts: it pulls a fold change in as far as the evidence for it is weak. The top genes in both lists are ALOX15B (LFC 9.5 raw, 11.0 shrunk), ZBTB16 and STEAP4, all known dexamethasone responders; gene names are in `rowData(dds_air)$gene_name`. Send `top_shr`: it ranks genes by fold changes you can believe. The `padj` column is identical in both, because `lfcShrink` does not change the test.
+
+(f) Of 18 032 tested genes, 4000 have `padj < 0.05`, and 823 of those also have |LFC| > 1: 454 up and 369 down. SPARCL1 (LFC 4.6, `padj` $7 \times 10^{-132}$) is at the very top: large and extremely well supported. FKBP5 (LFC 4.0, `padj` $9 \times 10^{-26}$) is far right but lower. ALOX15B has the largest fold change (11.0) but sits lower still (`padj` $10^{-17}$), because it has fewer reads. Genes just above the dashed line and between the dotted lines are significant but changed less than 2-fold. A volcano plot shows size and evidence together; a list sorted by one column hides the other.
 :::
 
 ## Where this leads

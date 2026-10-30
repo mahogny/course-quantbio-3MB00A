@@ -225,7 +225,7 @@ Quantitative biology and integrative omics
 <h2>About this lecture</h2>
 <p>In <em>Design matrices in R: limma</em> we started from log2 values. Today we start one step earlier, from the <strong>table of raw counts</strong> (genes × samples), and run the standard tool for it, <a href="https://bioconductor.org/packages/release/bioc/vignettes/DESeq2/inst/doc/DESeq2.html">DESeq2</a>. The design formula is the same as before. Three ideas are new:</p>
 <ul>
-<li><strong>RNA-seq is counting.</strong> A read count is a random draw; what we want per gene is its <strong>share</strong> of the RNA.</li>
+<li><strong>RNA-seq is counting.</strong> A read count is a random draw; what we want per gene is its <strong>fraction</strong> of the RNA.</li>
 <li><strong>Size factors.</strong> How deep each sample was sequenced, estimated so that a few big changes cannot fool us (the <strong>median of ratios</strong>).</li>
 <li><strong>Ratios of small counts are noisy.</strong> 3 reads versus 0 says much less than 3000 versus 1000. This is why we need a count model and why we <strong>shrink</strong> fold changes. Both get their maths in week 4.</li>
 </ul>
@@ -243,16 +243,26 @@ Quantitative biology and integrative omics
           display:block!important;
       }</style></aside>
 </section>
-<section id="rna-seq-is-counting" class="slide level2 smaller">
-<h2>RNA-seq is counting</h2>
-
-<img data-src="fig01-sequencing-bag.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:100.0%"><ul>
-<li>The library is a <strong>bag of RNA fragments</strong>. Gene A makes up a share <span class="math inline">p</span> of the bag.</li>
+<section id="rna-seq-analysis-is-just-counting-molecules" class="slide level2 smaller">
+<h2>RNA-seq analysis is just counting molecules</h2>
+<div class="columns">
+<div class="column" style="width:22%;">
+<p><img data-src="photo-novaseq6000.jpg" style="width:100.0%"></p>
+<p><span style="font-size: 0.55em; line-height: 1.2; display: block;">An Illumina NovaSeq 6000. Photo: Magnus Manske, <a href="https://creativecommons.org/licenses/by-sa/4.0/">CC BY-SA 4.0</a>, via <a href="https://commons.wikimedia.org/wiki/File:NovaSeq_6000.jpg">Wikimedia Commons</a> (resized).</span></p>
+</div><div class="column" style="width:78%;">
+<div class="quarto-figure quarto-figure-center">
+<figure>
+<p><img data-src="fig01-sequencing-bag.svg" class="quarto-figure quarto-figure-center" style="width:100.0%"></p>
+</figure>
+</div>
+</div></div>
+<ul>
+<li>The library is a <strong>bag of RNA fragments</strong>. Gene A makes up a fraction <span class="math inline">p</span> of the bag.</li>
 <li>Sequencing draws <span class="math inline">N</span> fragments <strong>at random</strong>. Gene A gets about <span class="math inline">N \cdot p</span> reads, but not exactly: here 6, next time maybe 5 or 8.</li>
-<li>So a count says nothing on its own: 512 reads out of 10 million is <strong>not</strong> the same as 512 out of 40 million. What we want per gene is <span class="math inline">p</span>, the <strong>share of the RNA</strong>.</li>
+<li>So a count says nothing on its own: 512 reads out of 10 million is <strong>not</strong> the same as 512 out of 40 million. What we want per gene is <span class="math inline">p</span>, i.e., what <strong>fraction of the RNA</strong> stems from a particular gene?</li>
 </ul>
 <aside class="notes">
-<p>Walk the picture left to right. Cells, RNA extracted and cut into fragments, the fragments form a library, and the sequencer reads a random subset of them. Real libraries have billions of fragments and we read tens of millions, so it really is a random sample. Two consequences follow, and they are the two halves of today. First, the count depends on N, the depth, which is a technical choice; to compare samples we must undo it (size factors). Second, even with the same bag and the same N, a repeat gives a slightly different count, because the draw is random (counting noise). Ask: in a library of 10 million reads, gene G has 512 reads; in a library of 40 million, also 512. Is it the same? No: 51.2 per million versus 12.8 per million, a factor of 4.</p>
+<p>The photo is a NovaSeq 6000, the workhorse of large sequencing centres: one run gives billions of reads. Walk the picture left to right. Cells, RNA extracted and cut into fragments, the fragments form a library, and the sequencer reads a random subset of them. Real libraries have billions of fragments and we read tens of millions, so it really is a random sample. Two consequences follow, and they are the two halves of today. First, the count depends on N, the depth, which is a technical choice; to compare samples we must undo it (size factors). Second, even with the same bag and the same N, a repeat gives a slightly different count, because the draw is random (counting noise). Ask: in a library of 10 million reads, gene G has 512 reads; in a library of 40 million, also 512. Is it the same? No: 51.2 per million versus 12.8 per million, a factor of 4.</p>
 <style type="text/css">
         span.MJX_Assistive_MathML {
           position:absolute!important;
@@ -274,8 +284,8 @@ Quantitative biology and integrative omics
 <th>gene</th>
 <th>sample 1</th>
 <th>sample 2</th>
-<th>share 1</th>
-<th>share 2</th>
+<th>fraction 1</th>
+<th>fraction 2</th>
 </tr>
 </thead>
 <tbody>
@@ -317,7 +327,7 @@ Quantitative biology and integrative omics
 </tbody>
 </table>
 <ul>
-<li>Raw counts say every gene is “2× up”. Divide by the total and the shares agree: nothing changed.</li>
+<li>Raw counts say every gene is “2× up”. Divide by the total and the fractions agree: nothing changed.</li>
 <li>The number we divide by is the sample’s <strong>size factor</strong>. The simplest one is the total read count. <strong>Counts per million</strong> (CPM) is the same thing, times <span class="math inline">10^6</span>.</li>
 </ul>
 <div class="sourceCode" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a aria-hidden="true" tabindex="-1"></a>cpm <span class="ot">&lt;-</span> <span class="fu">t</span>(<span class="fu">t</span>(counts) <span class="sc">/</span> <span class="fu">colSums</span>(counts)) <span class="sc">*</span> <span class="fl">1e6</span>    <span class="co"># divide each column by its total</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
@@ -341,7 +351,7 @@ Quantitative biology and integrative omics
 <img data-src="fig02-composition.png" class="quarto-figure quarto-figure-center r-stretch" style="width:80.0%"><ul>
 <li>Only gene A changed: 3 times more molecules in sample 2. B, C and D are <strong>exactly the same</strong> in the tube.</li>
 <li>After dividing by the total, B, C and D look <strong>halved</strong>, and A looks only 1.5× up.</li>
-<li>The share of the RNA is a <strong>zero-sum game</strong>: if one gene takes more of the reads, all others get fewer. A few very abundant genes that change can fake changes in thousands of others.</li>
+<li>The fraction of the RNA is a <strong>zero-sum game</strong>: if one gene takes more of the reads, all others get fewer. A few very abundant genes that change can fake changes in thousands of others.</li>
 </ul>
 <aside class="notes">
 <p>This is the reason DESeq2 does not use the total count. Read the left panel: the tube has 1000 molecules in sample 1 and 2000 in sample 2, all of the extra from gene A. The sequencer does not know how many molecules were in the tube; it reads 1000 from each. In the right panel A has 750 of 1000, so B, C and D are squeezed to half. Real examples: a tissue where a few secreted proteins dominate (pancreas, liver), or a treatment that switches on a very abundant gene. Ask: what should the size factor of sample 2 be, so that B, C and D come out unchanged? 0.5 relative to sample 1, not 1. The next slide gets that number without knowing in advance which genes changed.</p>
@@ -357,8 +367,8 @@ Quantitative biology and integrative omics
           display:block!important;
       }</style></aside>
 </section>
-<section id="the-fix-the-median-of-ratios" class="slide level2 smaller">
-<h2>The fix: the median of ratios</h2>
+<section id="improving-sample-comparability-the-median-of-ratios" class="slide level2 smaller">
+<h2>Improving sample comparability: the median of ratios</h2>
 <div class="columns">
 <div class="column" style="width:44%;">
 <table class="caption-top">
@@ -421,6 +431,7 @@ Quantitative biology and integrative omics
 <li>DESeq2 compares each sample with a “typical sample” (for each gene, the geometric mean over all samples) and takes the <strong>median</strong> ratio. Genes with a <strong>0</strong> in any sample are left out: a ratio with 0 is useless.</li>
 </ul>
 <div class="sourceCode" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a aria-hidden="true" tabindex="-1"></a>dds <span class="ot">&lt;-</span> <span class="fu">estimateSizeFactors</span>(dds);  <span class="fu">sizeFactors</span>(dds);  <span class="fu">counts</span>(dds, <span class="at">normalized =</span> <span class="cn">TRUE</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p><strong>The main thing to remember: In principle, we just want to get ratios comparable. But DESeq2 does some further math to improve comparability. The size factor takes care of this</strong></p>
 <aside class="notes">
 <p>The idea: if most genes did not change, then for most genes the ratio sample 2 over sample 1 is just the depth ratio. A median ignores the few genes that really changed, as long as they are fewer than half. Do the table by hand: the five ratios, sorted 1.9, 2.0, 2.1, 2.2, 8.0, median 2.1. Compare with the totals: 568 over 220 is 2.58, too high, because gene D grabbed reads. The histogram shows the same with 3000 genes: 60 well-expressed genes went up 5-fold, the median ratio is 1.41 while the ratio of totals is 2.00. With more than two samples DESeq2 builds a reference sample, the geometric mean of each gene over all samples (on the log scale, the ordinary mean), and computes each sample’s median ratio against it; the exercise does that by hand on a 5 by 3 table. The rule “leave out genes with a 0” is the first sign of today’s main theme: small counts carry little information.</p>
 <style type="text/css">
@@ -505,7 +516,7 @@ Quantitative biology and integrative omics
 </tbody>
 </table>
 <aside class="notes">
-<p>This is the core idea of the day. The same true share, the same depth, and the small gene gives fold changes of 0, 4 and infinity, while the big gene gives 0.98. Nothing biological happened. The rule of thumb n plus or minus root n is what students see in the R part of the exercise when they repeat the draw many times; in Error models (week 4) it gets its name: this counting noise is the Poisson distribution, whose variance equals its mean. For now, use the rule: relative noise is 1 over root n, so 3% at 1000 reads, 10% at 100, 70% at 2. A fold change built from two such counts is noisier still, because both counts wobble.</p>
+<p>This is the core idea of the day. The same true fraction, the same depth, and the small gene gives fold changes of 0, 4 and infinity, while the big gene gives 0.98. Nothing biological happened. The rule of thumb n plus or minus root n is what students see in the R part of the exercise when they repeat the draw many times; in Error models (week 4) it gets its name: this counting noise is the Poisson distribution, whose variance equals its mean. For now, use the rule: relative noise is 1 over root n, so 3% at 1000 reads, 10% at 100, 70% at 2. A fold change built from two such counts is noisier still, because both counts wobble.</p>
 <style type="text/css">
         span.MJX_Assistive_MathML {
           position:absolute!important;
@@ -662,6 +673,29 @@ Quantitative biology and integrative omics
           display:block!important;
       }</style></aside>
 </section>
+<section id="the-volcano-plot-size-and-evidence-in-one-picture" class="slide level2 smaller">
+<h2>The volcano plot: size and evidence in one picture</h2>
+
+<img data-src="fig07-airway-volcano.png" class="quarto-figure quarto-figure-center r-stretch" style="width:68.0%"><div class="sourceCode" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(res_shr<span class="sc">$</span>log2FoldChange, <span class="sc">-</span><span class="fu">log10</span>(res_shr<span class="sc">$</span>padj))   <span class="co"># one dot per gene</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<ul>
+<li><strong>x: how big</strong> the change is (shrunken log2 fold change). <strong>y: how sure</strong> we are (<span class="math inline">-\log_{10}</span> <code>padj</code>: 2 means 0.01, 10 means <span class="math inline">10^{-10}</span>).</li>
+<li>Top corners: large <strong>and</strong> well-supported changes. Airway: 4000 genes at <code>padj &lt; 0.05</code>, 823 of them also more than 2-fold (|LFC| &gt; 1).</li>
+<li>Small but very sure (DSTN, 1.9-fold) and large but less sure (ALOX15B) are both visible: a list sorted on one column hides the other.</li>
+</ul>
+<aside class="notes">
+<p>The volcano plot is the figure in almost every RNA-seq paper, and it is just the two columns of the results table plotted against each other. x is the fold change, y is minus log10 of padj, so higher is more significant: the dashed horizontal line is padj = 0.05 (y = 1.3), the dotted vertical lines are 2-fold up and down. Use the shrunken fold change for x, the rule from the previous slide: otherwise the low-count noise spreads the bottom of the volcano sideways. The shape: genes with no change sit at the bottom middle; the two arms rise because a larger change is easier to detect. Point at the corners: SPARCL1 and DUSP1 are among the most significant genes; ZBTB16 and FKBP5 are classic glucocorticoid targets; ALOX15B has the largest fold change but fewer reads, so it sits lower. DSTN changes only 1.9-fold but with about 16 000 reads it is as significant as anything on the plot (padj 6e-31): small but sure. Orange genes are significant but changed less than 2-fold: real, but perhaps not interesting; the |LFC| &gt; 1 cut-off is a convention, not a law. Figure and numbers: make-airway-figs.R. limma’s topTable gives the same two columns (logFC, adj.P.Val), so the same plot works there.</p>
+<style type="text/css">
+        span.MJX_Assistive_MathML {
+          position:absolute!important;
+          clip: rect(1px, 1px, 1px, 1px);
+          padding: 1px 0 0 0!important;
+          border: 0!important;
+          height: 1px!important;
+          width: 1px!important;
+          overflow: hidden!important;
+          display:block!important;
+      }</style></aside>
+</section>
 <section id="summary" class="slide level2 smaller">
 <h2>Summary</h2>
 <table class="caption-top">
@@ -678,7 +712,7 @@ Quantitative biology and integrative omics
 <tbody>
 <tr class="odd">
 <td>RNA-seq is counting</td>
-<td>reads are random draws from a bag of fragments; gene with share <span class="math inline">p</span> gets about <span class="math inline">N \cdot p</span></td>
+<td>reads are random draws from a bag of fragments; gene with fraction <span class="math inline">p</span> gets about <span class="math inline">N \cdot p</span></td>
 </tr>
 <tr class="even">
 <td>size factor</td>
@@ -704,11 +738,15 @@ Quantitative biology and integrative omics
 <td><code>lfcShrink</code></td>
 <td>pulls weak fold changes towards 0: rank with it, test with <code>padj</code></td>
 </tr>
+<tr class="even">
+<td>volcano plot</td>
+<td>shrunken fold change (x) against <span class="math inline">-\log_{10}</span> <code>padj</code> (y): size and evidence together</td>
+</tr>
 </tbody>
 </table>
 <p><strong>Where this leads (week 4):</strong> <em>Error models</em> names the counting noise (Poisson) and the extra spread between replicates (negative binomial). <em>Why penalize?</em>, <em>Bayesian vs frequentist</em> and <em>Hierarchical models</em> explain the shrinkage.</p>
 <aside class="notes">
-<p>Recap the chain: counts, then shares via size factors, then the realisation that ratios of small counts are noisy, which needs a count model and shrinkage. Week 4 opens with the fan from today: this is the noise, now we name it. Students should leave able to compute a median-of-ratios size factor by hand, to explain why the top raw fold changes are low-count genes, and to run DESeq2 with a design formula and read log2FoldChange, lfcSE and padj.</p>
+<p>Recap the chain: counts, then fractions via size factors, then the realisation that ratios of small counts are noisy, which needs a count model and shrinkage. Week 4 opens with the fan from today: this is the noise, now we name it. Students should leave able to compute a median-of-ratios size factor by hand, to explain why the top raw fold changes are low-count genes, and to run DESeq2 with a design formula, read log2FoldChange, lfcSE and padj, and read a volcano plot.</p>
 <style type="text/css">
         span.MJX_Assistive_MathML {
           position:absolute!important;

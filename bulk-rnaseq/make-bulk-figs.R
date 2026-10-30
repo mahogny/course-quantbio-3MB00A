@@ -48,7 +48,7 @@ fig("fig02-composition.png", 1800, 800, mfrow = c(1, 2), {
 
 ## ---- fig03: median of ratios ----------------------------------------------------
 # 3000 genes, sample 2 sequenced twice as deep. 60 genes truly go up 5-fold in
-# sample 2 and are highly expressed, so they take a big share of the reads.
+# sample 2 and are highly expressed, so they take a big fraction of the reads.
 G  <- 3000
 p1 <- exp(rnorm(G, 0, 1.5)); p1 <- p1 / sum(p1)
 up <- order(p1, decreasing = TRUE)[seq(5, 300, by = 5)]       # 60 well-expressed genes
@@ -59,7 +59,7 @@ rat <- x2[ok] / x1[ok]
 med <- median(rat); tot <- sum(x2) / sum(x1)
 cat(sprintf("fig03: %d genes with no zero; median ratio %.2f; total-count ratio %.2f\n",
             sum(ok), med, tot))
-cat(sprintf("fig03: share of sample-2 reads from the 60 up genes: %.2f\n", sum(x2[up]) / sum(x2)))
+cat(sprintf("fig03: fraction of sample-2 reads from the 60 up genes: %.2f\n", sum(x2[up]) / sum(x2)))
 fig("fig03-median-of-ratios.png", 1600, 800, {
   h <- hist(log2(rat), breaks = seq(-6, 9, by = 0.125), plot = FALSE)
   plot(h, col = "grey75", border = "white", xlim = c(-3, 6), main = "", xaxt = "n",

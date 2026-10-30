@@ -40,3 +40,27 @@ for (k in 1:2) {
                      col = c("#bc4749", "grey35"), bty = "n", cex = 0.8)
 }
 invisible(dev.off())
+
+## ---- fig07: volcano plot ---------------------------------------------------------
+# x: shrunken log2 fold change (the size), y: -log10(padj) (the evidence).
+sym <- rowData(dds)$gene_name
+ok  <- !is.na(res$padj)
+big <- ok & res$padj < 0.05 & abs(shr$log2FoldChange) > 1
+cat(sprintf("volcano: %d genes tested, %d with padj < 0.05, %d of them also |LFC| > 1 (%d up, %d down)\n",
+            sum(ok), sum(called), sum(big), sum(big & shr$log2FoldChange > 0), sum(big & shr$log2FoldChange < 0)))
+y   <- -log10(res$padj)
+lab <- match(c("SPARCL1", "DUSP1", "GPX3", "FKBP5", "ZBTB16", "ALOX15B", "DSTN"), sym)   # top hits, known targets, a small sure change
+pos <- c(4, 2, 4, 4, 4, 2, 2)
+print(data.frame(gene = sym[lab], lfc = round(shr$log2FoldChange[lab], 2), padj = signif(res$padj[lab], 2)))
+png("fig07-airway-volcano.png", width = 1500, height = 950, res = 200)
+par(mar = c(4.5, 4.8, 1, 1), las = 1, mgp = c(3.2, 0.8, 0))
+col <- ifelse(big, "#bc4749", ifelse(called, "#e9a03b", "grey55"))
+o <- which(ok)[order((called + big)[ok])]          # called genes drawn on top
+plot(shr$log2FoldChange[o], y[o], pch = 16, cex = 0.4, col = adjustcolor(col[o], 0.6),
+     xlim = c(-6, 12), xlab = "log2 fold change (shrunken), dexamethasone vs untreated",
+     ylab = "-log10(padj)")
+abline(h = -log10(0.05), lty = 2, col = "grey30"); abline(v = c(-1, 1), lty = 3, col = "grey30")
+text(shr$log2FoldChange[lab], y[lab], sym[lab], pos = pos, cex = 0.7, offset = 0.3)
+legend("topright", c("padj < 0.05 and |LFC| > 1", "padj < 0.05", "not called"), pch = 16,
+       col = c("#bc4749", "#e9a03b", "grey55"), bty = "n", cex = 0.75)
+invisible(dev.off())
