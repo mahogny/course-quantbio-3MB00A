@@ -27,10 +27,10 @@ In *Design matrices for covariates* you built $X$ by hand, and in *Confounding &
 - **Check the rank** of $X$ before fitting, and recognise the `NA` that [`lm`](https://rdrr.io/r/stats/lm.html) returns for a column it cannot estimate.
 - Run **limma** on a whole omics table with `design = ~ batch + sex + treatment`, and read log2 fold changes and adjusted p-values.
 - Recognise "coefficients not estimable", and know that only the **experiment** can fix it.
-- (Extra material) Know that **DESeq2** does the same for raw counts, with a count error model.
+- Know that the next unit, *Bulk RNA-seq with DESeq2*, starts one step earlier: from the raw counts.
 
 ::: notes
-This is the R day for the covariates section. Nothing conceptually new: the design matrix, the dummy columns, the reference level and the rank condition are all from the two previous units. What is new is the tooling. First base R (model.matrix, lm), then limma, which fits the same linear model to every gene of a log-scale omics table. limma works for RNA-seq (after voom), proteomics, metabolomics and microarrays, and it needs nothing beyond the Gaussian linear model they already know. DESeq2, which models raw counts with a negative binomial, is a pointer at the end; the count models come in Error models. Keep it practical: the students should leave knowing how to write the design, how to check it, and which coefficient to ask for.
+This is the R day for the covariates section. Nothing conceptually new: the design matrix, the dummy columns, the reference level and the rank condition are all from the two previous units. What is new is the tooling. First base R (model.matrix, lm), then limma, which fits the same linear model to every gene of a log-scale omics table. limma works for RNA-seq (after voom), proteomics, metabolomics and microarrays, and it needs nothing beyond the Gaussian linear model they already know. DESeq2, which works on the raw counts, is the next unit (Bulk RNA-seq with DESeq2); here it is only a forward pointer. Keep it practical: the students should leave knowing how to write the design, how to check it, and which coefficient to ask for.
 :::
 
 ## Recap: a formula is a recipe for $X$ {.smaller}
@@ -261,7 +261,7 @@ topTable(fit, coef = "treatmenttreat", number = 3)
 - [`voom`](https://rdrr.io/bioc/limma/man/voom.html) is only needed for RNA-seq counts: it takes the log2 and records how noisy each value is. Data that are already log2 intensities (proteomics, metabolomics) go straight into `lmFit`.
 
 ::: notes
-The workflow in three calls, four with voom. voom computes log2 counts per million and a weight per value, because low counts are noisier on the log scale; students do not need the details. eBayes is an empirical Bayes step: with 12 samples each gene's variance is poorly estimated, so it is pulled towards a common value across genes. That is the shrinkage idea from Hierarchical models, met again in week 4. Column B (log-odds) is left out of the printout.
+The workflow in three calls, four with voom. voom computes log2 counts per million and a weight per value, because low counts are noisier on the log scale; students do not need the details. The next unit, Bulk RNA-seq with DESeq2, shows why small counts are noisy. eBayes is an empirical Bayes step: with 12 samples each gene's variance is poorly estimated, so it is pulled towards a common value across genes. That is the shrinkage idea from Hierarchical models, met again in week 4. Column B (log-odds) is left out of the printout.
 :::
 
 ## Reading the results table {.smaller}
@@ -353,22 +353,6 @@ topTable(fit, coef = "groupdisease")
 Same design-matrix idea, a different omics layer: switching tools or data types is a matter of syntax once you understand X. The false calls without BMI are mostly the BMI-driven metabolites. The full design also loses some true metabolites, because BMI and disease are correlated; the exercise discusses why, and the cure is again in the design of the study.
 :::
 
-## Extra material: raw counts with DESeq2 {.smaller}
-
-::: {.callout-note}
-## Extra material
-[DESeq2](https://bioconductor.org/packages/release/bioc/vignettes/DESeq2/inst/doc/DESeq2.html) is the other standard tool for RNA-seq. It works on the **raw counts** with a negative-binomial error model (see *Error models*), instead of taking the log first.
-:::
-
-![](fig02-deseq2-pipeline.svg){width="75%" fig-align="center"}
-
-- Same design formula, same $X$, same rank condition. A confounded design gives the error "the model matrix is not full rank".
-- Coefficients are named `treatment_treat_vs_ctrl`; ask for them by name with `results(dds, name = ...)`.
-
-::: notes
-Extra material. On this dataset DESeq2 calls 195 genes (181 true), very close to limma's 188 (177 true). The point is that the design matrix carries over unchanged. The exercise has an optional DESeq2 part, including the real airway dataset.
-:::
-
 ## Summary {.smaller}
 
 - [`model.matrix`](https://rdrr.io/r/stats/model.matrix.html)`(~ ...)` builds $X$; column names are variable + level (`treatmenttreat`, `sexM`, `batchB`, `bmi`).
@@ -377,10 +361,9 @@ Extra material. On this dataset DESeq2 calls 195 genes (181 true), very close to
 - limma: log2 data (`voom` for counts) + `design` → `lmFit()` → `eBayes()` → `topTable(coef = ...)`.
 - Read `logFC` (1 = doubled) and `adj.P.Val` (adjusted for testing many genes).
 - Leaving out a covariate that is unbalanced across groups gives false and missed calls: Simpson's paradox at genome scale.
-- Extra: DESeq2 does the same on raw counts, with a count error model.
 
-**Next (week 4):** *Why penalize?* What to do when $X$ has more columns than samples.
+**Next:** *Bulk RNA-seq with DESeq2*: the same design, but starting from the raw counts.
 
 ::: notes
-Recap the workflow and the two checks students should always do: levels and rank. The forward link: with more columns than samples the rank condition fails by shape, and penalized models are one way out.
+Recap the workflow and the two checks students should always do: levels and rank. The forward link: the next unit keeps the same design formula and starts from the raw counts instead of log2 values.
 :::

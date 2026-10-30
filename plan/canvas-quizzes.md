@@ -26,8 +26,7 @@ impossible; even 5 MC of 5 options gives only P(≥3/5) ≈ 6%.
 
 ## Which units each question covers
 
-Week 5 has five units: one question each. Week 3 has four, so covariates
-gets two questions. Weeks 1, 2 and 4 have more, so some questions cover two or
+Weeks 3 and 5 have five units: one question each. Weeks 1, 2 and 4 have more, so some questions cover two or
 three units (an R unit with its concept unit,
 or neighbouring topics):
 
@@ -35,7 +34,7 @@ or neighbouring topics):
 |---|---|---|---|---|---|
 | 1 | solving-systems (+ warm-ups) | solving-systems-r | vectors-projection | matrix-transforms + matrix-images | compensation + polar |
 | 2 | eigen | eigen-r + markov + markov-r (stationary distribution) | pca | pca-r + pca-scree | fourier |
-| 3 | covariates (Xβ) | least-squares | covariates | confounding | covariates-r (limma) |
+| 3 | bulk-rnaseq | least-squares | covariates | confounding | covariates-r (limma) |
 | 4 | penalized-intro + ridge-lasso-enet | crossval | bayes-intro | bayes-fitting + error-models | hierarchical + penalty-bayes-link |
 | 5 | nonlinear | scrna-intro | scrna-umap | vae | scrna-annotation |
 

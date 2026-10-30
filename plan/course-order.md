@@ -27,8 +27,9 @@ folder names never change.
 1. least-squares (NEW) — least squares as projection; how lm finds β
 2. covariates
 3. confounding
-4. covariates-r — limma first (main path); DESeq2 reduced to a pointer to
-   error models (week 4). Avoids the negative binomial in week 3.
+4. covariates-r — limma (main path); DESeq2 moved to bulk-rnaseq.
+5. bulk-rnaseq (NEW) — RNA-seq as counting, size factors, noisy ratios at low
+   counts, DESeq2, lfcShrink
 
 ## Week 4 — Penalized models & Bayesian statistics (overview, tight)
 1. penalized-intro (follows from week 3's p > n slide)

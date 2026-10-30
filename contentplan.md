@@ -83,8 +83,9 @@ Bayesian, penalized) and to every differential-expression tool.
 - Design matrices for common covariates: age, sex, BMI, batch, time, treatment;
   when the coefficients have a unique solution
 - Confounding and Simpson's paradox; adjustment, interactions, balanced designs
-- In R: `model.matrix`, DESeq2 on bulk RNA-seq counts (limma on metabolomics
-  as extra material)
+- In R: `model.matrix`, limma (RNA-seq via voom, metabolomics)
+- Bulk RNA-seq with DESeq2: counts, size factors, noisy ratios at low counts,
+  `lfcShrink`
 
 ## Week 4 — Penalized linear models · *Moderate · ~5 days*
 

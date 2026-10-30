@@ -223,6 +223,7 @@ Quantitative biology and integrative omics
 </section>
 <section id="about-this-lecture" class="slide level2">
 <h2>About this lecture</h2>
+<p>In <em>Bulk RNA-seq with DESeq2</em> you saw that ratios of small counts are noisy, and the fan in the MA plot. Now we name that noise: <strong>Poisson</strong> is the counting noise, the <strong>negative binomial</strong> adds the biological spread between replicates.</p>
 <p>Every statistical analysis makes an assumption about <strong>how the data scatter around the truth</strong> — the <em>error model</em>, or <em>likelihood</em>. Choosing it well is most of the battle in genomics.</p>
 <ul>
 <li>What an <strong>error model</strong> is: the probability distribution you assume generated your data.</li>
@@ -232,7 +233,7 @@ Quantitative biology and integrative omics
 <li><strong>Why the wrong error model misleads</strong> — the practical cost is false discoveries.</li>
 </ul>
 <aside class="notes">
-<p>The one idea for today: before you fit anything, you commit to a story about how noise entered your data, and that story is a probability distribution. Pick the wrong one and every downstream number — p-values, confidence intervals, effect sizes — is quietly wrong. This is a concept day: no heavy algebra, just building the reflex “what kind of data is this, and which distribution matches it?” We will lean on distributions students have used before (Gaussian, Poisson) but re-derive <em>why</em> each fits a data type. The likelihood introduced here is the same likelihood that plugs into Bayes’ theorem in the prior, likelihood and posterior unit — flag that connection but do not teach Bayes today.</p>
+<p>Open with the recall: in Bulk RNA-seq with DESeq2 students saw the noise (n plus or minus root n, the MA-plot fan) without a name, and DESeq2 fit a count model for them. Today names it. The one idea for today: before you fit anything, you commit to a story about how noise entered your data, and that story is a probability distribution. Pick the wrong one and every downstream number — p-values, confidence intervals, effect sizes — is quietly wrong. This is a concept day: no heavy algebra, just building the reflex “what kind of data is this, and which distribution matches it?” We will lean on distributions students have used before (Gaussian, Poisson) but re-derive <em>why</em> each fits a data type. The likelihood introduced here is the same likelihood that plugs into Bayes’ theorem in the prior, likelihood and posterior unit — flag that connection but do not teach Bayes today.</p>
 <style type="text/css">
         span.MJX_Assistive_MathML {
           position:absolute!important;
@@ -254,9 +255,10 @@ Quantitative biology and integrative omics
 </ul>
 <p>You want to know if the gene is <strong>differentially expressed</strong>. A first instinct from earlier stats courses: run a t-test, which assumes the data are <strong>Gaussian</strong> with <strong>constant variance</strong>.</p>
 <p>But look: group B has a <strong>much larger spread</strong> than group A. That is not sloppy data — it is what <strong>counts</strong> do. A t-test’s constant-variance assumption is already wrong here.</p>
+<p>You met the same thing in <em>Bulk RNA-seq with DESeq2</em>: the noise depends on the count.</p>
 
 <img data-src="fig02-count-dotstrips.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:70.0%"><aside class="notes">
-<p>Anchor everything in a concrete count table before any distribution theory. The key observation students should feel: the group with the higher mean also has the higher spread. For counts this is not a nuisance to be scrubbed away — it is a law (Poisson: variance equals mean). So the standard t-test / Gaussian assumption of one common variance is violated from the start. This motivates the whole lecture: count data has its own error model. Do not resolve the example yet; the payoff (Poisson, then negative binomial, then why it matters for the test) comes over the next slides.</p>
+<p>Anchor everything in a concrete count table before any distribution theory. The key observation students should feel: the group with the higher mean also has the higher spread. For counts this is not a nuisance to be scrubbed away — it is a law (Poisson: variance equals mean). So the standard t-test / Gaussian assumption of one common variance is violated from the start. This motivates the whole lecture: count data has its own error model. Link back to the bulk day: there the same fact showed up as the MA-plot fan (low counts give noisy ratios). Do not resolve the example yet; the payoff (Poisson, then negative binomial, then why it matters for the test) comes over the next slides.</p>
 <style type="text/css">
         span.MJX_Assistive_MathML {
           position:absolute!important;
@@ -326,11 +328,12 @@ Quantitative biology and integrative omics
 <li><strong>Non-negative integers</strong> — you cannot observe <span class="math inline">-2</span> or <span class="math inline">3.7</span> reads.</li>
 <li><strong>Discrete</strong>, especially near zero (many genes have 0, 1, 2 reads).</li>
 <li><strong>Spread grows with the mean</strong> — highly expressed genes vary more, in absolute terms, than lowly expressed ones (we saw this in the two groups).</li>
+<li>In <strong>relative</strong> terms it is the other way round: about <span class="math inline">n \pm \sqrt{n}</span>, so small counts are the noisiest (the MA-plot fan).</li>
 </ul>
 <p>A distribution built for counts should be discrete, non-negative, and let variance depend on the mean. That distribution is the <strong>Poisson</strong>.</p>
 
 <img data-src="fig05-counts-vs-gaussian.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:62.0%"><aside class="notes">
-<p>List the three ways count data violates Gaussian assumptions so students can recognise count data in the wild. The third point is the deepest and the one earlier stats courses rarely stress: for counts the variance is not a free parameter, it is welded to the mean. This is why you cannot just pool a single variance across genes of very different expression, and why naive constant-variance methods misbehave. The next slide introduces the distribution that has exactly these properties baked in.</p>
+<p>List the three ways count data violates Gaussian assumptions so students can recognise count data in the wild. The third point is the deepest and the one earlier stats courses rarely stress: for counts the variance is not a free parameter, it is welded to the mean. This is why you cannot just pool a single variance across genes of very different expression, and why naive constant-variance methods misbehave. The new bullet reconciles this with the bulk day: absolute spread grows with the mean, but relative spread (root n over n) shrinks, which is why ratios of small counts were noisy there. The next slide introduces the distribution that has exactly these properties baked in.</p>
 <style type="text/css">
         span.MJX_Assistive_MathML {
           position:absolute!important;
@@ -554,10 +557,10 @@ Quantitative biology and integrative omics
 <li>The extra <span class="math inline">\phi\mu^2</span> term is why highly expressed genes vary <em>disproportionately</em> more.</li>
 </ul>
 <p>It arises naturally as a <strong>Poisson whose rate <span class="math inline">\lambda</span> is itself Gamma-distributed</strong> — exactly the “rate varies between samples” story.</p>
-<p>The workhorse error model of <strong><code>DESeq2</code></strong> and <strong><code>edgeR</code></strong> for RNA-seq differential expression.</p>
+<p>The workhorse error model of <strong><code>DESeq2</code></strong> and <strong><code>edgeR</code></strong> for RNA-seq differential expression: the count model DESeq2 fit for you in <em>Bulk RNA-seq with DESeq2</em>.</p>
 
 <img data-src="fig13-gamma-poisson-mixture.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:72.0%"><aside class="notes">
-<p>NB is the fix for overdispersion: it is Poisson plus a dispersion parameter phi that decouples variance from mean. Variance = mu + phi*mu^2, so at phi = 0 it collapses back to Poisson, and the quadratic term means the variance gap widens for high-expression genes. Mechanistically it is a Gamma-Poisson mixture: draw a per-sample rate from a Gamma, then a Poisson count given that rate — precisely the “lambda varies between biological replicates” model from the previous slide. Name-drop DESeq2 and edgeR as the Bioconductor tools students will actually use; both are NB GLMs with clever dispersion estimation. Different sources parameterise phi differently (size = 1/phi in R’s dnbinom) — mention only if asked. This connects forward to the Poisson and negative binomial distributions unit if listed separately.</p>
+<p>NB is the fix for overdispersion: it is Poisson plus a dispersion parameter phi that decouples variance from mean. Variance = mu + phi*mu^2, so at phi = 0 it collapses back to Poisson, and the quadratic term means the variance gap widens for high-expression genes. Mechanistically it is a Gamma-Poisson mixture: draw a per-sample rate from a Gamma, then a Poisson count given that rate — precisely the “lambda varies between biological replicates” model from the previous slide. Students already ran DESeq2 in Bulk RNA-seq with DESeq2, and edgeR is the other standard tool; both are NB GLMs with clever dispersion estimation. Different sources parameterise phi differently (size = 1/phi in R’s dnbinom) — mention only if asked. This connects forward to the Poisson and negative binomial distributions unit if listed separately.</p>
 <style type="text/css">
         span.MJX_Assistive_MathML {
           position:absolute!important;

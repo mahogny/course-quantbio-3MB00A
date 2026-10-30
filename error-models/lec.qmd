@@ -21,6 +21,8 @@ format:
 
 ## About this lecture
 
+In *Bulk RNA-seq with DESeq2* you saw that ratios of small counts are noisy, and the fan in the MA plot. Now we name that noise: **Poisson** is the counting noise, the **negative binomial** adds the biological spread between replicates.
+
 Every statistical analysis makes an assumption about **how the data scatter around the truth** — the *error model*, or *likelihood*. Choosing it well is most of the battle in genomics.
 
 - What an **error model** is: the probability distribution you assume generated your data.
@@ -30,7 +32,7 @@ Every statistical analysis makes an assumption about **how the data scatter arou
 - **Why the wrong error model misleads** — the practical cost is false discoveries.
 
 ::: notes
-The one idea for today: before you fit anything, you commit to a story about how noise entered your data, and that story is a probability distribution. Pick the wrong one and every downstream number — p-values, confidence intervals, effect sizes — is quietly wrong. This is a concept day: no heavy algebra, just building the reflex "what kind of data is this, and which distribution matches it?" We will lean on distributions students have used before (Gaussian, Poisson) but re-derive *why* each fits a data type. The likelihood introduced here is the same likelihood that plugs into Bayes' theorem in the prior, likelihood and posterior unit — flag that connection but do not teach Bayes today.
+Open with the recall: in Bulk RNA-seq with DESeq2 students saw the noise (n plus or minus root n, the MA-plot fan) without a name, and DESeq2 fit a count model for them. Today names it. The one idea for today: before you fit anything, you commit to a story about how noise entered your data, and that story is a probability distribution. Pick the wrong one and every downstream number — p-values, confidence intervals, effect sizes — is quietly wrong. This is a concept day: no heavy algebra, just building the reflex "what kind of data is this, and which distribution matches it?" We will lean on distributions students have used before (Gaussian, Poisson) but re-derive *why* each fits a data type. The likelihood introduced here is the same likelihood that plugs into Bayes' theorem in the prior, likelihood and posterior unit — flag that connection but do not teach Bayes today.
 :::
 
 ## A biology picture first {.smaller}
@@ -44,10 +46,12 @@ You want to know if the gene is **differentially expressed**. A first instinct f
 
 But look: group B has a **much larger spread** than group A. That is not sloppy data — it is what **counts** do. A t-test's constant-variance assumption is already wrong here.
 
+You met the same thing in *Bulk RNA-seq with DESeq2*: the noise depends on the count.
+
 ![](fig02-count-dotstrips.svg){width="70%" fig-align="center"}
 
 ::: notes
-Anchor everything in a concrete count table before any distribution theory. The key observation students should feel: the group with the higher mean also has the higher spread. For counts this is not a nuisance to be scrubbed away — it is a law (Poisson: variance equals mean). So the standard t-test / Gaussian assumption of one common variance is violated from the start. This motivates the whole lecture: count data has its own error model. Do not resolve the example yet; the payoff (Poisson, then negative binomial, then why it matters for the test) comes over the next slides.
+Anchor everything in a concrete count table before any distribution theory. The key observation students should feel: the group with the higher mean also has the higher spread. For counts this is not a nuisance to be scrubbed away — it is a law (Poisson: variance equals mean). So the standard t-test / Gaussian assumption of one common variance is violated from the start. This motivates the whole lecture: count data has its own error model. Link back to the bulk day: there the same fact showed up as the MA-plot fan (low counts give noisy ratios). Do not resolve the example yet; the payoff (Poisson, then negative binomial, then why it matters for the test) comes over the next slides.
 :::
 
 ## What is an error model? {.smaller}
@@ -93,13 +97,14 @@ Sequencing gives **counts**: reads per gene, molecules per cell, variants per ki
 - **Non-negative integers** — you cannot observe $-2$ or $3.7$ reads.
 - **Discrete**, especially near zero (many genes have 0, 1, 2 reads).
 - **Spread grows with the mean** — highly expressed genes vary more, in absolute terms, than lowly expressed ones (we saw this in the two groups).
+- In **relative** terms it is the other way round: about $n \pm \sqrt{n}$, so small counts are the noisiest (the MA-plot fan).
 
 A distribution built for counts should be discrete, non-negative, and let variance depend on the mean. That distribution is the **Poisson**.
 
 ![](fig05-counts-vs-gaussian.svg){width="62%" fig-align="center"}
 
 ::: notes
-List the three ways count data violates Gaussian assumptions so students can recognise count data in the wild. The third point is the deepest and the one earlier stats courses rarely stress: for counts the variance is not a free parameter, it is welded to the mean. This is why you cannot just pool a single variance across genes of very different expression, and why naive constant-variance methods misbehave. The next slide introduces the distribution that has exactly these properties baked in.
+List the three ways count data violates Gaussian assumptions so students can recognise count data in the wild. The third point is the deepest and the one earlier stats courses rarely stress: for counts the variance is not a free parameter, it is welded to the mean. This is why you cannot just pool a single variance across genes of very different expression, and why naive constant-variance methods misbehave. The new bullet reconciles this with the bulk day: absolute spread grows with the mean, but relative spread (root n over n) shrinks, which is why ratios of small counts were noisy there. The next slide introduces the distribution that has exactly these properties baked in.
 :::
 
 ## Poisson: the count distribution {.smaller}
@@ -252,12 +257,12 @@ $$X \sim \text{NB}(\mu, \phi), \qquad \text{Var}(X) = \mu + \phi\,\mu^2$$
 
 It arises naturally as a **Poisson whose rate $\lambda$ is itself Gamma-distributed** — exactly the "rate varies between samples" story.
 
-The workhorse error model of **`DESeq2`** and **`edgeR`** for RNA-seq differential expression.
+The workhorse error model of **`DESeq2`** and **`edgeR`** for RNA-seq differential expression: the count model DESeq2 fit for you in *Bulk RNA-seq with DESeq2*.
 
 ![](fig13-gamma-poisson-mixture.svg){width="72%" fig-align="center"}
 
 ::: notes
-NB is the fix for overdispersion: it is Poisson plus a dispersion parameter phi that decouples variance from mean. Variance = mu + phi*mu^2, so at phi = 0 it collapses back to Poisson, and the quadratic term means the variance gap widens for high-expression genes. Mechanistically it is a Gamma-Poisson mixture: draw a per-sample rate from a Gamma, then a Poisson count given that rate — precisely the "lambda varies between biological replicates" model from the previous slide. Name-drop DESeq2 and edgeR as the Bioconductor tools students will actually use; both are NB GLMs with clever dispersion estimation. Different sources parameterise phi differently (size = 1/phi in R's dnbinom) — mention only if asked. This connects forward to the Poisson and negative binomial distributions unit if listed separately.
+NB is the fix for overdispersion: it is Poisson plus a dispersion parameter phi that decouples variance from mean. Variance = mu + phi*mu^2, so at phi = 0 it collapses back to Poisson, and the quadratic term means the variance gap widens for high-expression genes. Mechanistically it is a Gamma-Poisson mixture: draw a per-sample rate from a Gamma, then a Poisson count given that rate — precisely the "lambda varies between biological replicates" model from the previous slide. Students already ran DESeq2 in Bulk RNA-seq with DESeq2, and edgeR is the other standard tool; both are NB GLMs with clever dispersion estimation. Different sources parameterise phi differently (size = 1/phi in R's dnbinom) — mention only if asked. This connects forward to the Poisson and negative binomial distributions unit if listed separately.
 :::
 
 ## Try it: Poisson vs negative binomial {.smaller}

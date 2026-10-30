@@ -1,0 +1,545 @@
+---
+title: "Exercise: Bulk RNA-seq with DESeq2"
+format:
+  html:
+    toc: true
+    code-copy: true
+    code-overflow: wrap
+    highlight-style: github
+---
+
+## Goal
+
+After this exercise you will be able to:
+
+- Turn read counts into **shares of the RNA**, and explain why a raw count means nothing without the sequencing depth.
+- Spot the **composition trap**: one abundant gene that goes up makes all the others look down.
+- Compute **median-of-ratios size factors** by hand, as DESeq2's [`estimateSizeFactors`](https://rdrr.io/bioc/DESeq2/man/estimateSizeFactors.html) does.
+- Use the rule "expect $n$, get $n \pm \sqrt{n}$" to judge whether a fold change could be counting noise.
+- Simulate sequencing as drawing from a bag with [`sample`](https://rdrr.io/r/base/sample.html), and draw the **fan** of fold changes between two replicates.
+- Run **DESeq2** with a design formula on a simulated and a real dataset (`airway`), read `log2FoldChange`, `lfcSE` and `padj`, and compare with limma.
+- Use [`lfcShrink`](https://rdrr.io/bioc/DESeq2/man/lfcShrink.html) and explain in one sentence what it does to low-count genes.
+
+## Background
+
+**Sequencing is drawing from a bag.** The library is a bag of RNA fragments. A gene that makes up a share $p$ of the bag gets about $N \cdot p$ of the $N$ reads, but not exactly: the draw is random.
+
+**Size factors.** To compare samples, divide each sample's counts by a number that says how deep it was sequenced: its **size factor**. The simplest choice is the total count (counts per million, CPM, is the same times $10^6$). It fails when a few abundant genes change a lot: the share of the RNA is a zero-sum game (the **composition trap**).
+
+**Median of ratios** (DESeq2):
+
+1. Leave out every gene with a 0 in any sample.
+2. For each gene, compute its **geometric mean** over the samples: the product of the counts, then the $k$-th root for $k$ samples (for 3 samples, the cube root). This is the gene's "typical value".
+3. Divide every count by its gene's geometric mean: one ratio per gene and sample.
+4. The size factor of a sample is the **median** of its ratios over the genes.
+
+The median ignores the few genes that really changed. With only two samples, the ratio of the two size factors is simply the median over genes of (sample 2 / sample 1).
+
+**Counting noise.** If you expect about $n$ reads, you get $n \pm \sqrt{n}$. The relative noise is $\sqrt{n} / n = 1/\sqrt{n}$: 70% at $n = 2$, 10% at 100, 3% at 1000. A fold change between two small counts is therefore very noisy. (In *Error models*, week 4, this noise gets its name: Poisson. Real replicates spread more, which the negative binomial adds.)
+
+**DESeq2** takes raw integer counts, a sample table and a design formula, exactly as in *Design matrices in R: limma*:
+
+```r
+dds <- DESeqDataSetFromMatrix(countData = counts, colData = samples, design = ~ batch + sex + treatment)
+dds <- DESeq(dds)                                    # size factors, count model per gene, tests
+res <- results(dds, name = "treatment_treat_vs_ctrl")
+res_shr <- lfcShrink(dds, coef = "treatment_treat_vs_ctrl", type = "apeglm")
+```
+
+## By hand
+
+Do these on paper. A calculator is fine.
+
+**B1. Counts and shares.** Three libraries of the same RNA, sequenced to different depths:
+
+| gene | sample 1 | sample 2 | sample 3 |
+|---|---|---|---|
+| A | 600 | 1200 | 300 |
+| B | 300 | 600 | 150 |
+| C | 90 | 180 | 45 |
+| D | 10 | 20 | 5 |
+
+(a) Compute the total of each sample and the share of each gene. What do you notice?
+
+(b) Compute counts per million (CPM) for gene D in each sample.
+
+(c) A colleague computes sample 2 / sample 1 for every gene and reports "all genes are 2× up". What went wrong?
+
+(d) Gene G has 512 reads in a library of 10 million reads, and 512 reads in another library of 40 million. In which library is G a larger share of the RNA, and by what factor?
+
+**B2. The composition trap.** In sample 1, gene A makes up half of the RNA. In sample 2, the cells make **7 times** more A; nothing else changes. Both samples are sequenced to 2000 reads:
+
+| gene | sample 1 | sample 2 |
+|---|---|---|
+| A | 1000 | 1750 |
+| B | 500 | 125 |
+| C | 300 | 75 |
+| D | 200 | 50 |
+
+(a) Compute the share of each gene in each sample, and the fold change of the shares (sample 2 / sample 1).
+
+(b) Which genes look "down"? Did they really go down? What fold change do you get for A, and what is the truth?
+
+(c) Compute the ratio sample 2 / sample 1 for each gene, and take the median. Divide sample 2 by this number. What are the fold changes now?
+
+**B3. Median of ratios.** Five genes in three samples:
+
+| gene | s1 | s2 | s3 |
+|---|---|---|---|
+| A | 100 | 200 | 400 |
+| B | 50 | 100 | 200 |
+| C | 30 | 60 | 120 |
+| D | 100 | 200 | 3200 |
+| E | 8 | 0 | 32 |
+
+(a) Which gene is left out, and why?
+
+(b) Compute the geometric mean of each remaining gene. (For gene A: $100 \cdot 200 \cdot 400 = 8\,000\,000$, and the cube root of that is 200.)
+
+(c) Divide each count by its gene's geometric mean, and take the median per sample. These are the size factors. (With four genes, the median is the mean of the middle two.)
+
+(d) Divide the counts of genes A and D by the size factors. Which gene changed, in which sample, and by how much?
+
+(e) Now use the totals of the samples as size factors instead. Compute the totals, and the share of gene A in s1 and s3. What would you conclude about gene A, and why is it wrong?
+
+**B4. Which fold changes would you trust?** A control and a treated sample, same depth, one sample each:
+
+| gene | control | treated |
+|---|---|---|
+| A | 1000 | 1100 |
+| B | 400 | 1600 |
+| C | 2 | 8 |
+| D | 1 | 8 |
+| E | 3 | 0 |
+| F | 900 | 225 |
+| G | 100 | 50 |
+
+(a) Compute the log2 fold change (treated / control) of each gene, and rank the genes by its size (largest first, ignoring the sign).
+
+(b) Suppose a gene did **not** change. Then both counts come from the same expected value $n$, roughly their mean. For each gene, compute $n$ and $\sqrt{n}$, and how many $\sqrt{n}$ the counts are away from $n$.
+
+(c) Which genes would you believe are really changed? Which of your top 3 from (a) are likely noise?
+
+(d) What would you need, in the experiment, to say more about gene G?
+
+## Explore: noise in a ratio of counts {#explore}
+
+The demo draws 2000 pairs of replicate counts with the same expected value $n$ (buttons from 1 to 1000). Panel (a) is a histogram of the log2 ratio of each pair; pairs with a zero get their own bars (0, $\infty$, 0/0), and pairs at least 2-fold apart are red. Its header shows the spread of the counts against $\sqrt{n}$ and the **% of pairs at least 2-fold apart**. Panel (b) is a fan of 2000 genes with averages from 0.5 to 5000; red circles mark the 10 largest fold changes.
+
+```{=html}
+<link rel="stylesheet" href="../demos/dist/demo.css">
+<div data-demo="countratio" data-mean="2"></div>
+<script src="../demos/dist/countratio.js"></script>
+```
+
+**E1.** Click through $n$ = 1, 2, 5, 10, 30 and 100. Note the % of pairs at least 2-fold apart each time. At $n = 1$ and 2, how many pairs contain a zero, and what is their ratio?
+
+**E2.** At $n = 100$ and $n = 1000$, compare the spread of the counts with $\sqrt{n}$ in the header. By how much must $n$ grow to halve the relative spread? Then tick **add biological variation**: what happens at $n = 1000$?
+
+**E3.** In the fan (b), what do the 10 largest fold changes (red circles) have in common? Compare the % of genes at least 2-fold apart below an average of 10 and above 100. What does that mean for a gene list sorted by fold change?
+
+::: {.callout-note collapse="true" title="Solutions"}
+
+**E1.** At the defaults: 77% at $n = 1$, 65% at 2, 37% at 5, 17% at 10, 1.3% at 30 and 0% at 100. Nothing changed between the replicates, yet at low counts most pairs look like a 2-fold change or more. At $n = 1$ and 2 many pairs contain a zero: their ratio is 0, $\infty$ or 0/0, so their log2 ratio is $-\infty$, $+\infty$ or undefined. (That is also why the SD in the header, computed on zero-free pairs only, is not a good summary there.)
+
+**E2.** The spread of the counts is close to $\sqrt{n}$: about 10 at $n = 100$, about 32 at $n = 1000$. The relative spread goes as $1/\sqrt{n}$, so $n$ must grow **4 times** to halve it. With biological variation on, the spread at $n = 1000$ no longer goes to zero: the SD of the log2 ratio stays around 0.47 and about 3% of pairs are still 2-fold apart. Real replicates differ by more than counting noise; *Error models* (week 4) adds this with the negative binomial.
+
+**E3.** The 10 largest fold changes all belong to **low-count** genes (averages of about 3 to 5.5). Below an average of 10, 56% of the genes are at least 2-fold apart; above 100, none are. A list sorted by raw fold change is topped by noise; you need a test that knows the count (DESeq2's `lfcSE` and `padj`), and a shrunken fold change for ranking (R4).
+:::
+
+## In R
+
+Base R is enough for R1 and R2. R3 and R4 need DESeq2, limma, apeglm and airway: install them once with `BiocManager::install(c("DESeq2", "limma", "apeglm", "airway"))` (see *Install R*).
+
+### R1 — Sequencing as drawing from a bag
+
+```r
+set.seed(1)
+G     <- 2000                                  # number of genes
+genes <- paste0("g", 1:G)
+p     <- exp(rnorm(G, 0, 2))                   # some genes are rare, some very common
+p     <- p / sum(p)                            # the share of the bag for each gene
+N     <- 1e6                                   # reads per sample
+expected <- N * p                              # expected reads per gene
+
+draw_library <- function() {
+  reads <- sample(genes, N, replace = TRUE, prob = p)    # N fragments drawn at random
+  as.vector(table(factor(reads, levels = genes)))        # count them, keep the zeros
+}
+rep1 <- draw_library()                         # two replicates: same bag, same depth
+rep2 <- draw_library()
+```
+
+(a) Look at `head(cbind(expected, rep1, rep2))`. Do the counts match the expected values? Which genes match best, relative to their size?
+
+(b) How many genes have 0 reads in `rep1`? Compute `lfc <- log2(rep2 / rep1)`. How many values are not finite (`!is.finite(lfc)`), and why?
+
+(c) Draw the fan: `m <- (rep1 + rep2) / 2; plot(m, lfc, log = "x")`. Add `abline(h = 0)`. Describe the shape.
+
+(d) Nothing changed between the replicates. Still: list the 10 genes with the largest `abs(lfc)` (among the finite ones), with their counts. How many genes look at least "2-fold changed" (`abs(lfc) > 1`), and what is the largest mean count among them? Among genes with a mean count of at least 100, what is the largest `abs(lfc)`?
+
+### R2 — The $n \pm \sqrt{n}$ rule
+
+Repeat the draw 100 times and look at the spread of each gene. `tabulate(sample.int(...))` does the same as R1's `draw_library()`, only faster; it still takes about 20 seconds.
+
+```r
+draw_fast <- function() tabulate(sample.int(G, N, replace = TRUE, prob = p), nbins = G)
+reps <- replicate(100, draw_fast())            # genes x 100 repeated libraries
+mu <- rowMeans(reps)                           # mean count of each gene
+s  <- apply(reps, 1, sd)                       # its standard deviation
+```
+
+(a) Find the genes whose expected count is closest to 2, 100 and 1000 (`which.min(abs(expected - 100))`). For each, compare `s` with `sqrt(mu)`.
+
+(b) Plot the variance against the mean on log–log axes: `plot(mu[mu > 0], s[mu > 0]^2, log = "xy"); abline(0, 1)`. What does the line $y = x$ say about the variance?
+
+(c) Compute the relative noise `s / mu` for the three genes in (a) and compare with $1/\sqrt{n}$. How many reads must a gene have for 10% relative noise? For 1%?
+
+### R3 — DESeq2 on the simulated experiment from covariates-r
+
+This is the simulation from *Design matrices in R: limma*: 2000 genes, 12 samples, batch unbalanced against treatment, and 200 genes that truly respond to treatment. Run it, and the limma analysis, so you can compare.
+
+```r
+library(limma)
+set.seed(1)
+
+samples <- data.frame(
+  batch     = factor(rep(c("A", "B"), each = 6)),
+  sex       = factor(rep(c("F", "M"), times = 6)),
+  treatment = factor(c("ctrl", rep("treat", 5), rep("ctrl", 5), "treat")))
+rownames(samples) <- paste0("s", 1:12)
+
+n <- 2000
+lfc_treat <- rep(0, n); lfc_treat[1:200]   <- sample(c(-1.5, 1.5), 200, TRUE)
+lfc_batch <- rep(0, n); lfc_batch[101:600] <- sample(c(-2, 2), 500, TRUE)
+lfc_sex   <- rep(0, n); lfc_sex[1901:1950] <- 3
+B <- cbind(lfc_batch, lfc_sex, lfc_treat)
+
+X    <- model.matrix(~ batch + sex + treatment, data = samples)
+base <- exp(rnorm(n, log(200), 1))              # baseline mean count of each gene
+mu   <- base * 2^(B %*% t(X[, -1]))             # mean count: genes x samples
+phi  <- 0.05 + 2 / base                         # negative-binomial dispersion
+counts <- matrix(rnbinom(n * 12, mu = mu, size = 1 / phi), nrow = n,
+                 dimnames = list(paste0("g", 1:n), rownames(samples)))
+truth_de <- lfc_treat != 0                      # TRUE for the 200 DE genes
+
+# limma, as in covariates-r
+v   <- voom(counts, X)
+tt  <- topTable(eBayes(lmFit(v, X)), coef = "treatmenttreat", number = Inf)
+table(limma_called = tt[rownames(counts), "adj.P.Val"] < 0.05, truly_DE = truth_de)
+```
+
+Now DESeq2 on the same counts:
+
+```r
+library(DESeq2)
+dds <- DESeqDataSetFromMatrix(countData = counts, colData = samples,
+                              design = ~ batch + sex + treatment)
+dds <- DESeq(dds)
+resultsNames(dds)
+res <- results(dds, name = "treatment_treat_vs_ctrl")
+table(called = res$padj < 0.05, truly_DE = truth_de, useNA = "ifany")
+```
+
+(a) How does DESeq2 name the coefficients? Why is it safer to ask for one by `name =`?
+
+(b) Compare the number of true and false calls with limma. Why are some `padj` values `NA`?
+
+(c) Look at `sizeFactors(dds)`. Every sample was simulated with the same depth. Are the size factors close to 1? Check one by hand: `median(counts[, 1] / exp(rowMeans(log(counts))), na.rm = TRUE)` (genes with a 0 give `NaN` or `0` and need care: which genes does DESeq2 leave out?).
+
+(d) Plot `plot(res$baseMean, res$lfcSE, log = "xy")`. Where is `lfcSE` largest? Relate it to the fan in R1.
+
+(e) What does `DESeqDataSetFromMatrix(counts, samples_conf, design = ~ batch + treatment)` say, with the confounded `samples_conf` from covariates-r R5 (`samples_conf <- samples; samples_conf$treatment <- factor(ifelse(samples$batch == "A", "ctrl", "treat"))`)?
+
+### R4 — A real dataset: `airway`
+
+The [airway](https://bioconductor.org/packages/release/data/experiment/html/airway.html) package has RNA-seq of four airway smooth-muscle cell lines (`cell`), each untreated or treated with dexamethasone (`dex`), a glucocorticoid.
+
+```r
+library(DESeq2)
+library(airway)
+data(airway)
+levels(airway$dex)
+airway$dex <- relevel(airway$dex, ref = "untrt")
+dds_air <- DESeqDataSet(airway, design = ~ cell + dex)
+dds_air <- dds_air[rowSums(counts(dds_air)) >= 10, ]   # drop almost-empty genes
+dds_air <- DESeq(dds_air)
+res_air <- results(dds_air, name = "dex_trt_vs_untrt")
+sum(res_air$padj < 0.05, na.rm = TRUE)
+```
+
+(a) What are the levels of `dex` before `relevel`? What would have gone wrong without it?
+
+(b) Compare `sizeFactors(dds_air)` with the total counts scaled the same way: `colSums(counts(dds_air)) / exp(mean(log(colSums(counts(dds_air)))))`. Are the two close? Which samples were sequenced deepest?
+
+(c) Why is `cell` in the design? Compare the number of genes at `padj < 0.05` with `design = ~ dex`.
+
+(d) Draw `plotMA(res_air, ylim = c(-5, 5))`. Where do you see the fan? Where are the called genes (in colour)?
+
+(e) Shrink the fold changes and draw the MA plot again:
+
+```r
+res_shr <- lfcShrink(dds_air, coef = "dex_trt_vs_untrt", type = "apeglm")
+plotMA(res_shr, ylim = c(-5, 5))
+top_raw <- head(res_air[order(-abs(res_air$log2FoldChange)), c("baseMean", "log2FoldChange", "padj")], 10)
+top_shr <- head(res_shr[order(-abs(res_shr$log2FoldChange)), c("baseMean", "log2FoldChange", "padj")], 10)
+```
+
+What changed in the plot? Compare `baseMean` in `top_raw` and `top_shr`. Which list would you rather send to a colleague who wants "the genes most changed by dexamethasone"?
+
+## Hints
+
+::: {.callout-tip collapse="true" title="Hint 1 — shares and CPM (B1, B2)"}
+Share = count / total of that sample. CPM = share $\times 10^6$. A fold change of shares is (share in sample 2) / (share in sample 1). The shares of one sample always add up to 1.
+:::
+
+::: {.callout-tip collapse="true" title="Hint 2 — median of ratios (B2c, B3)"}
+Follow the four steps in the Background. A geometric mean of 3 numbers is the cube root of their product; when the counts in a row are $a$, $2a$, $4a$, the product is $8a^3$ and the geometric mean is $2a$. The median of an even number of values is the mean of the middle two. See [`estimateSizeFactors`](https://rdrr.io/bioc/DESeq2/man/estimateSizeFactors.html) and the [DESeq2 vignette](https://bioconductor.org/packages/release/bioc/vignettes/DESeq2/inst/doc/DESeq2.html), section "Normalization".
+:::
+
+::: {.callout-tip collapse="true" title="Hint 3 — log2 fold changes and the $\\sqrt{n}$ rule (B4)"}
+$\log_2 4 = 2$, $\log_2 8 = 3$, $\log_2 0.25 = -2$, and $\log_2 1.1 \approx 0.14$. For "how many $\sqrt{n}$ away": $(\text{count} - n) / \sqrt{n}$. More than about 3 is hard to get from counting noise alone; 1 or 2 is common.
+:::
+
+::: {.callout-tip collapse="true" title="Hint 4 — simulating the bag (R1, R2)"}
+[`sample`](https://rdrr.io/r/base/sample.html)`(genes, N, replace = TRUE, prob = p)` draws $N$ gene names, each with probability $p$. [`table`](https://rdrr.io/r/base/table.html) counts them; turning the draws into a [`factor`](https://rdrr.io/r/base/factor.html) with all genes as levels keeps the genes with 0 reads. [`tabulate`](https://rdrr.io/r/base/tabulate.html) does the same for numbers 1 to `G`. [`replicate`](https://rdrr.io/r/base/lapply.html) repeats a call and puts the results side by side as columns.
+:::
+
+::: {.callout-tip collapse="true" title="Hint 5 — DESeq2 (R3, R4)"}
+[`DESeqDataSetFromMatrix`](https://rdrr.io/bioc/DESeq2/man/DESeqDataSet.html) takes raw integer counts, the sample table and the design. [`DESeq`](https://rdrr.io/bioc/DESeq2/man/DESeq.html) fits every gene. [`results`](https://rdrr.io/bioc/DESeq2/man/results.html)`(dds, name = ...)` picks a coefficient by its name from `resultsNames(dds)`; without `name` it reports the last variable of the formula. `padj` is `NA` for genes DESeq2 does not test (too few reads, or an extreme outlier); see the vignette's section "Independent filtering". [`plotMA`](https://rdrr.io/bioc/DESeq2/man/plotMA.html) draws the fold change against `baseMean`.
+:::
+
+::: {.callout-tip collapse="true" title="Hint 6 — shrinkage (R4e)"}
+[`lfcShrink`](https://rdrr.io/bioc/DESeq2/man/lfcShrink.html) with `type = "apeglm"` needs the [apeglm](https://bioconductor.org/packages/release/bioc/html/apeglm.html) package and a `coef` name from `resultsNames`. It changes `log2FoldChange` and `lfcSE`, not the test.
+:::
+
+## Solutions
+
+::: {.callout-note collapse="true" title="Solutions — by hand"}
+
+**B1.** (a) Totals 1000, 2000 and 500. The shares are the same in all three samples: A 0.6, B 0.3, C 0.09, D 0.01. The samples differ only in depth.
+
+(b) Gene D: $10 / 1000 \times 10^6 = 10\,000$ CPM in sample 1, $20 / 2000 \times 10^6 = 10\,000$ in sample 2, $5 / 500 \times 10^6 = 10\,000$ in sample 3. The same.
+
+(c) Sample 2 was sequenced twice as deep, so every count doubled. The ratio of raw counts measures the depth, not the biology. Divide by the size factors (here the totals) first.
+
+(d) $512 / 10$ million $= 51.2$ per million, and $512 / 40$ million $= 12.8$ per million. G is a **4 times** larger share of the RNA in the first library.
+
+**B2.** (a)
+
+| gene | share 1 | share 2 | fold change |
+|---|---|---|---|
+| A | 0.50 | 0.875 | 1.75 |
+| B | 0.25 | 0.0625 | 0.25 |
+| C | 0.15 | 0.0375 | 0.25 |
+| D | 0.10 | 0.025 | 0.25 |
+
+(b) B, C and D look 4 times down (log2 FC $-2$), but nothing happened to them. A looks 1.75 times up, but truly went up 7 times. In the tube, sample 2 had $7000 + 500 + 300 + 200 = 8000$ units of RNA for every 2000 in sample 1, so each read of sample 2 stands for 4 times as much RNA: A took most of the reads.
+
+(c) The ratios are 1.75, 0.25, 0.25, 0.25; the median is 0.25. Sample 2 divided by 0.25: A 7000, B 500, C 300, D 200. Now B, C and D are unchanged and A is 7 times up: the truth.
+
+**B3.** (a) Gene E: it has a 0 in s2, so its geometric mean is 0 and its ratios are useless ($8/0$).
+
+(b) A: $\sqrt[3]{8\,000\,000} = 200$. B: $\sqrt[3]{1\,000\,000} = 100$. C: $\sqrt[3]{216\,000} = 60$. D: $\sqrt[3]{64\,000\,000} = 400$.
+
+(c)
+
+| gene | s1 | s2 | s3 |
+|---|---|---|---|
+| A | 0.5 | 1 | 2 |
+| B | 0.5 | 1 | 2 |
+| C | 0.5 | 1 | 2 |
+| D | 0.25 | 0.5 | 8 |
+| **median** | **0.5** | **1** | **2** |
+
+The size factors are 0.5, 1 and 2: s3 was sequenced 4 times deeper than s1.
+
+(d) A: $100/0.5 = 200$, $200/1 = 200$, $400/2 = 200$. Unchanged. D: $200$, $200$, $3200/2 = 1600$: **8 times up in s3**. The median was not fooled by D, because only one gene in four changed.
+
+(e) Totals: 288, 560 and 3952. Share of A: $100/288 = 0.35$ in s1, $400/3952 = 0.10$ in s3. A would look about 3.4 times **down** in s3. It is wrong: D took a big share of s3's reads (3200 of 3952), so every other gene's share fell. That is the composition trap.
+
+```r
+m <- rbind(A = c(100, 200, 400), B = c(50, 100, 200), C = c(30, 60, 120),
+           D = c(100, 200, 3200), E = c(8, 0, 32))
+ok <- rowSums(m == 0) == 0                        # leave out genes with a 0
+gm <- exp(rowMeans(log(m[ok, ])))                 # geometric means: 200 100 60 400
+apply(m[ok, ] / gm, 2, median)                    # 0.5 1 2
+```
+
+DESeq2 gives the same: `sizeFactors(estimateSizeFactors(DESeqDataSetFromMatrix(m, data.frame(s = factor(1:3)), ~ 1)))` prints `0.5 1 2`.
+
+**B4.** (a)
+
+| gene | log2 FC | rank |
+|---|---|---|
+| E | $-\infty$ (3 → 0) | 1 |
+| D | 3 | 2 |
+| B, C | 2 | 3–4 |
+| F | $-2$ | 5 |
+| G | $-1$ | 6 |
+| A | 0.14 | 7 |
+
+(b)
+
+| gene | $n$ | $\sqrt{n}$ | distance of the counts from $n$ |
+|---|---|---|---|
+| A | 1050 | 32 | 50, about **1.5** $\sqrt{n}$ |
+| B | 1000 | 32 | 600, about **19** $\sqrt{n}$ |
+| C | 5 | 2.2 | 3, about **1.3** $\sqrt{n}$ |
+| D | 4.5 | 2.1 | 3.5, about **1.6** $\sqrt{n}$ |
+| E | 1.5 | 1.2 | 1.5, about **1.2** $\sqrt{n}$ |
+| F | 562.5 | 24 | 337.5, about **14** $\sqrt{n}$ |
+| G | 75 | 8.7 | 25, about **2.9** $\sqrt{n}$ |
+
+(c) Trust **B** and **F**: their counts are 14–19 $\sqrt{n}$ apart, which counting noise cannot do. The top 3 by fold change, E, D and C, are all within 1–2 $\sqrt{n}$: easily counting noise, even though their fold changes are the largest. A's 10% change is also within the noise.
+
+(d) G is about 3 $\sqrt{n}$ away: probably real, but real replicates vary more than counting noise alone. You need **biological replicates** (several control and treated samples) to see how much G varies between samples of the same group; DESeq2 uses them to estimate that extra spread.
+:::
+
+::: {.callout-note collapse="true" title="Solutions — R1 and R2 (base R)"}
+
+Numbers from R 4.6 with `set.seed(1)`; R1 and R2 run in this order.
+
+**R1.** (a)
+```r
+head(cbind(expected = round(expected, 1), rep1, rep2))
+#      expected rep1 rep2
+# [1,]     16.6   15   22
+# [2,]     84.0   92   94
+# [3,]     10.9    7   16
+# [4,]   1413.7 1444 1442
+# [5,]    112.4  120  123
+# [6,]     11.3    6    8
+```
+Roughly, but not exactly. Relative to their size, the big genes match best: gene 4 is off by about 2%, gene 3 by up to 40%.
+
+(b) 55 genes have 0 reads in `rep1` (42 in `rep2`). 76 values of `lfc` are not finite: $\log_2(x/0) = \infty$, $\log_2(0/y) = -\infty$, and $\log_2(0/0)$ is `NaN`. The expected counts run from 0.09 to about 119 000, so many genes are rare.
+
+(c) A fan (a funnel lying on its side): wide at low mean counts, narrowing towards 0 as the count grows. Everything is centred on 0 because nothing changed.
+
+(d)
+```r
+ok  <- is.finite(lfc)
+top <- order(abs(lfc[ok]), decreasing = TRUE)[1:10]
+data.frame(gene = genes[ok][top], rep1 = rep1[ok][top], rep2 = rep2[ok][top], lfc = round(lfc[ok][top], 2))
+#     gene rep1 rep2   lfc
+# 1  g1134    7    1 -2.81
+# 2  g1544    1    7  2.81
+# 3  g1705    1    7  2.81
+# 4   g553    1    6  2.58
+# 5  g1807    2   11  2.46
+# 6   g268    1    5  2.32
+# 7   g455    5    1 -2.32
+# 8   g819    1    5  2.32
+# 9  g1014    5    1 -2.32
+# 10 g1665    5    1 -2.32
+sum(abs(lfc[ok]) > 1); max(m[ok][abs(lfc[ok]) > 1])
+# [1] 95
+# [1] 30
+max(abs(lfc[m >= 100]))
+# [1] 0.625
+```
+The top 10 "fold changes" (5 to 7 times) all come from genes with 1 to 11 reads. 95 genes look at least 2-fold changed, all with a mean count of 30 or less. Among the 778 genes with a mean of at least 100, no gene changes by more than $2^{0.63} = 1.5$ times. All of it is counting noise.
+
+**R2.** (a)
+```r
+pick <- sapply(c(2, 100, 1000), function(t) which.min(abs(expected - t)))
+round(cbind(expected = expected[pick], mean = mu[pick], sd = s[pick], sqrt_mean = sqrt(mu[pick])), 2)
+#      expected    mean    sd sqrt_mean
+# [1,]     2.00    1.97  1.49      1.40
+# [2,]    99.83   99.28  9.00      9.96
+# [3,]  1007.46 1003.36 27.95     31.68
+```
+(The three genes are g526, g266 and g1970.) In each case the standard deviation is close to $\sqrt{\text{mean}}$. (With 100 repeats the estimate of `sd` itself wobbles by about 7%.)
+
+(b) The points lie on the line $y = x$: the **variance equals the mean**. That is the $n \pm \sqrt{n}$ rule, since the standard deviation is the square root of the variance. (Fitting a line to the log–log plot gives a slope of 1.00.)
+
+(c) Relative noise: 0.76, 0.091 and 0.028, against $1/\sqrt{n}$ = 0.71, 0.10 and 0.032. 10% relative noise needs $1/\sqrt{n} = 0.1$, so $n = 100$ reads; 1% needs $n = 10\,000$.
+:::
+
+::: {.callout-note collapse="true" title="Solutions — R3 and R4 (DESeq2)"}
+
+Numbers from DESeq2 1.52 (R 4.6). Messages such as "converting counts to integer mode" are harmless.
+
+**R3.** (a) `"Intercept"`, `"batch_B_vs_A"`, `"sex_M_vs_F"`, `"treatment_treat_vs_ctrl"`: variable, level, "vs", reference. `results(dds)` without `name =` reports the **last** variable of the formula, so with `~ treatment + batch` it would silently give you the batch effect.
+
+(b)
+```r
+table(called = res$padj < 0.05, truly_DE = truth_de, useNA = "ifany")
+#         truly_DE
+# called   FALSE TRUE
+#   FALSE   1751   15
+#   TRUE      14  181
+#   <NA>      35    4
+```
+195 calls: 181 true and 14 false, very close to limma's 188 calls (177 true, 11 false). g138 gets LFC 1.37 (truth 1.5). DESeq2 does not test genes with very low counts, so their `padj` is `NA` (39 genes here). Same design matrix, nearly the same answer: for well-designed experiments with enough reads, limma-voom and DESeq2 mostly agree.
+
+(c)
+```r
+round(sizeFactors(dds), 2)
+#   s1   s2   s3   s4   s5   s6   s7   s8   s9  s10  s11  s12
+# 1.00 1.03 1.01 1.04 1.01 1.03 1.00 1.02 0.99 1.01 0.98 1.03
+ok <- rowSums(counts == 0) == 0                   # 1995 of 2000 genes
+median(counts[ok, 1] / exp(rowMeans(log(counts[ok, ]))))
+# [1] 1.002157
+```
+The size factors are all close to 1, because every sample was simulated with the same depth (`base` is the same for every sample); they are not exactly 1 because of counting noise and because the treatment, batch and sex genes change the composition a little. DESeq2 leaves out every gene with a 0 in **any** sample (its geometric mean is 0); in the by-hand check those genes give `NaN` or `Inf`, so use `ok <- rowSums(counts == 0) == 0` and compute on `counts[ok, ]`.
+
+(d) `lfcSE` is largest for genes with a small `baseMean` and falls steadily as `baseMean` grows. It is the fan of R1 in another form: the fold change of a low-count gene is uncertain, and DESeq2 knows it. That is why a huge fold change built on a few reads is not called.
+
+(e)
+```
+Error in checkFullRank(modelMatrix) :
+  the model matrix is not full rank, so the model cannot be fit as specified.
+  One or more variables or interaction terms in the design formula are linear
+  combinations of the others and must be removed.
+
+  Please read the vignette section 'Model matrix not full rank':
+
+  vignette('DESeq2')
+```
+DESeq2 stops where limma gives `NA`. Both mean the same thing: batch and treatment cannot be separated.
+
+**R4.** (a) The levels are `"trt"` and `"untrt"`: alphabetically `trt` is the reference, so without `relevel` the coefficient would be `dex_untrt_vs_trt` and every fold change would have the opposite sign.
+
+```r
+levels(airway$dex)
+# [1] "trt"   "untrt"
+resultsNames(dds_air)
+# [1] "Intercept"               "cell_N061011_vs_N052611"
+# [3] "cell_N080611_vs_N052611" "cell_N61311_vs_N052611"
+# [5] "dex_trt_vs_untrt"
+sum(res_air$padj < 0.05, na.rm = TRUE)
+# [1] 4000
+```
+
+(b)
+
+| sample | 508 | 509 | 512 | 513 | 516 | 517 | 520 | 521 |
+|---|---|---|---|---|---|---|---|---|
+| `sizeFactors` | 1.02 | 0.90 | 1.18 | 0.67 | 1.18 | 1.40 | 0.92 | 0.94 |
+| scaled totals | 0.96 | 0.88 | 1.18 | 0.71 | 1.14 | 1.43 | 0.89 | 0.98 |
+| million reads | 20.6 | 18.8 | 25.3 | 15.2 | 24.4 | 30.8 | 19.1 | 21.2 |
+
+(Samples are `SRR1039508` etc.) SRR1039517 was sequenced deepest (31 M reads), SRR1039513 shallowest (15 M), a 2-fold range. The two are close but not identical: the median of ratios ignores the few very abundant genes that change with dexamethasone, the totals do not. Both say the same about which samples were sequenced deepest.
+
+(c) The four cell lines differ a lot from each other, and each was measured with and without dexamethasone. `cell` is a nuisance covariate (like batch); with it the treatment is compared **within** each cell line. With `~ cell + dex`: 4000 genes at `padj < 0.05` (of 22 369 kept); with `~ dex`: 2694. The design is balanced, so leaving `cell` out does not create false positives as in covariates-r R4; it adds the cell-line differences to the noise and loses power. The top gene is SPARCL1 (LFC 4.6), and the classic glucocorticoid target FKBP5 has LFC 4.0.
+
+(d) The fan: at low `baseMean` the points spread widely in both directions, at high `baseMean` they are close to 0. The called genes (coloured) stand out from the fan; at low counts even large fold changes are not called, because their `lfcSE` is large.
+
+(e) The wide grey fan at low counts collapses onto 0; genes with many reads, and the called (red) genes, keep their fold changes. Counted by `baseMean`:
+
+| `baseMean` | genes | raw \|LFC\| > 2 | shrunken \|LFC\| > 2 |
+|---|---|---|---|
+| ≤ 10 | 6371 | 465 | 33 |
+| 10–100 | 4795 | 109 | 81 |
+| > 100 | 11 203 | 102 | 98 |
+
+The top-10 lists change less than you might expect, because airway is clean data (four cell lines, low dispersion). `top_raw` has four genes with `baseMean` below 10, two of them not significant (RP11-156L14.1 with `padj` `NA`, RP11-434D9.1); both drop out of `top_shr`. GUCY2D and MCHR1 (about 6 reads each) stay: they change consistently in all four cell lines, so their `padj` is small and the evidence is not weak. Shrinking is not a filter on counts: it pulls a fold change in as far as the evidence for it is weak. The top genes in both lists are ALOX15B (LFC 9.5 raw, 11.0 shrunk), ZBTB16 and STEAP4, all known dexamethasone responders; gene names are in `rowData(dds_air)$gene_name`. Send `top_shr`: it ranks genes by fold changes you can believe. The `padj` column is identical in both, because `lfcShrink` does not change the test.
+:::
+
+## Where this leads
+
+- **[Error models](../error-models/exercise.qmd)** (week 4): the counting noise of R2 is the **Poisson** distribution (variance = mean), and the extra spread between biological replicates is the **negative binomial**, the count model inside DESeq2.
+- **[Why penalize?](../penalized-intro/exercise.qmd)**, **[Bayesian vs frequentist](../bayes-intro/exercise.qmd)** and **[Hierarchical models](../hierarchical/exercise.qmd)** (week 4): `lfcShrink` is a penalty on large fold changes, a prior that says "most genes change little", and information shared across genes. These units explain how.
+- **[Log and pseudolog transforms](../scrna-log/exercise.qmd)** (optional): the pseudocount table there shows the same noise of small counts, seen through a log.

@@ -229,10 +229,10 @@ Quantitative biology and integrative omics
 <li><strong>Check the rank</strong> of <span class="math inline">X</span> before fitting, and recognise the <code>NA</code> that <a href="https://rdrr.io/r/stats/lm.html"><code>lm</code></a> returns for a column it cannot estimate.</li>
 <li>Run <strong>limma</strong> on a whole omics table with <code>design = ~ batch + sex + treatment</code>, and read log2 fold changes and adjusted p-values.</li>
 <li>Recognise “coefficients not estimable”, and know that only the <strong>experiment</strong> can fix it.</li>
-<li>(Extra material) Know that <strong>DESeq2</strong> does the same for raw counts, with a count error model.</li>
+<li>Know that the next unit, <em>Bulk RNA-seq with DESeq2</em>, starts one step earlier: from the raw counts.</li>
 </ul>
 <aside class="notes">
-<p>This is the R day for the covariates section. Nothing conceptually new: the design matrix, the dummy columns, the reference level and the rank condition are all from the two previous units. What is new is the tooling. First base R (model.matrix, lm), then limma, which fits the same linear model to every gene of a log-scale omics table. limma works for RNA-seq (after voom), proteomics, metabolomics and microarrays, and it needs nothing beyond the Gaussian linear model they already know. DESeq2, which models raw counts with a negative binomial, is a pointer at the end; the count models come in Error models. Keep it practical: the students should leave knowing how to write the design, how to check it, and which coefficient to ask for.</p>
+<p>This is the R day for the covariates section. Nothing conceptually new: the design matrix, the dummy columns, the reference level and the rank condition are all from the two previous units. What is new is the tooling. First base R (model.matrix, lm), then limma, which fits the same linear model to every gene of a log-scale omics table. limma works for RNA-seq (after voom), proteomics, metabolomics and microarrays, and it needs nothing beyond the Gaussian linear model they already know. DESeq2, which works on the raw counts, is the next unit (Bulk RNA-seq with DESeq2); here it is only a forward pointer. Keep it practical: the students should leave knowing how to write the design, how to check it, and which coefficient to ask for.</p>
 <style type="text/css">
         span.MJX_Assistive_MathML {
           position:absolute!important;
@@ -572,7 +572,7 @@ Quantitative biology and integrative omics
 <li><a href="https://rdrr.io/bioc/limma/man/voom.html"><code>voom</code></a> is only needed for RNA-seq counts: it takes the log2 and records how noisy each value is. Data that are already log2 intensities (proteomics, metabolomics) go straight into <code>lmFit</code>.</li>
 </ul>
 <aside class="notes">
-<p>The workflow in three calls, four with voom. voom computes log2 counts per million and a weight per value, because low counts are noisier on the log scale; students do not need the details. eBayes is an empirical Bayes step: with 12 samples each gene’s variance is poorly estimated, so it is pulled towards a common value across genes. That is the shrinkage idea from Hierarchical models, met again in week 4. Column B (log-odds) is left out of the printout.</p>
+<p>The workflow in three calls, four with voom. voom computes log2 counts per million and a weight per value, because low counts are noisier on the log scale; students do not need the details. The next unit, Bulk RNA-seq with DESeq2, shows why small counts are noisy. eBayes is an empirical Bayes step: with 12 samples each gene’s variance is poorly estimated, so it is pulled towards a common value across genes. That is the shrinkage idea from Hierarchical models, met again in week 4. Column B (log-odds) is left out of the printout.</p>
 <style type="text/css">
         span.MJX_Assistive_MathML {
           position:absolute!important;
@@ -767,40 +767,6 @@ Quantitative biology and integrative omics
           display:block!important;
       }</style></aside>
 </section>
-<section id="extra-material-raw-counts-with-deseq2" class="slide level2 smaller">
-<h2>Extra material: raw counts with DESeq2</h2>
-<div class="callout callout-note callout-titled callout-style-default">
-<div class="callout-body">
-<div class="callout-title">
-<div class="callout-icon-container">
-<i class="callout-icon"></i>
-</div>
-<p><strong>Extra material</strong></p>
-</div>
-<div class="callout-content">
-<p><a href="https://bioconductor.org/packages/release/bioc/vignettes/DESeq2/inst/doc/DESeq2.html">DESeq2</a> is the other standard tool for RNA-seq. It works on the <strong>raw counts</strong> with a negative-binomial error model (see <em>Error models</em>), instead of taking the log first.</p>
-</div>
-</div>
-</div>
-
-<img data-src="fig02-deseq2-pipeline.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:75.0%"><ul>
-<li>Same design formula, same <span class="math inline">X</span>, same rank condition. A confounded design gives the error “the model matrix is not full rank”.</li>
-<li>Coefficients are named <code>treatment_treat_vs_ctrl</code>; ask for them by name with <code>results(dds, name = ...)</code>.</li>
-</ul>
-<aside class="notes">
-<p>Extra material. On this dataset DESeq2 calls 195 genes (181 true), very close to limma’s 188 (177 true). The point is that the design matrix carries over unchanged. The exercise has an optional DESeq2 part, including the real airway dataset.</p>
-<style type="text/css">
-        span.MJX_Assistive_MathML {
-          position:absolute!important;
-          clip: rect(1px, 1px, 1px, 1px);
-          padding: 1px 0 0 0!important;
-          border: 0!important;
-          height: 1px!important;
-          width: 1px!important;
-          overflow: hidden!important;
-          display:block!important;
-      }</style></aside>
-</section>
 <section id="summary" class="slide level2 smaller">
 <h2>Summary</h2>
 <ul>
@@ -810,11 +776,10 @@ Quantitative biology and integrative omics
 <li>limma: log2 data (<code>voom</code> for counts) + <code>design</code> → <code>lmFit()</code> → <code>eBayes()</code> → <code>topTable(coef = ...)</code>.</li>
 <li>Read <code>logFC</code> (1 = doubled) and <code>adj.P.Val</code> (adjusted for testing many genes).</li>
 <li>Leaving out a covariate that is unbalanced across groups gives false and missed calls: Simpson’s paradox at genome scale.</li>
-<li>Extra: DESeq2 does the same on raw counts, with a count error model.</li>
 </ul>
-<p><strong>Next (week 4):</strong> <em>Why penalize?</em> What to do when <span class="math inline">X</span> has more columns than samples.</p>
+<p><strong>Next:</strong> <em>Bulk RNA-seq with DESeq2</em>: the same design, but starting from the raw counts.</p>
 <aside class="notes">
-<p>Recap the workflow and the two checks students should always do: levels and rank. The forward link: with more columns than samples the rank condition fails by shape, and penalized models are one way out.</p>
+<p>Recap the workflow and the two checks students should always do: levels and rank. The forward link: the next unit keeps the same design formula and starts from the raw counts instead of log2 values.</p>
 <style type="text/css">
         span.MJX_Assistive_MathML {
           position:absolute!important;

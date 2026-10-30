@@ -1,0 +1,1091 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<script src="../site_libs/clipboard/clipboard.min.js"></script>
+<script src="../site_libs/quarto-html/tabby.min.js"></script>
+<script src="../site_libs/quarto-html/popper.min.js"></script>
+<script src="../site_libs/quarto-html/tippy.umd.min.js"></script>
+<link href="../site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="../site_libs/quarto-html/light-border.css" rel="stylesheet">
+<link href="../site_libs/quarto-html/quarto-syntax-highlighting-662ae1889177880cb371f83234c0a158.css" rel="stylesheet" id="quarto-text-highlighting-styles"><meta charset="utf-8">
+  <meta name="generator" content="quarto-1.7.30">
+
+  <meta name="author" content="Quantitative biology and integrative omics">
+  <title>Quantitative biology and integrative omics – Bulk RNA-seq with DESeq2</title>
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, minimal-ui">
+  <link rel="stylesheet" href="../site_libs/revealjs/dist/reset.css">
+  <link rel="stylesheet" href="../site_libs/revealjs/dist/reveal.css">
+  <style>
+    code{white-space: pre-wrap;}
+    span.smallcaps{font-variant: small-caps;}
+    div.columns{display: flex; gap: min(4vw, 1.5em);}
+    div.column{flex: auto; overflow-x: auto;}
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+    ul.task-list{list-style: none;}
+    ul.task-list li input[type="checkbox"] {
+      width: 0.8em;
+      margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+      vertical-align: middle;
+    }
+    /* CSS for syntax highlighting */
+    html { -webkit-text-size-adjust: 100%; }
+    pre > code.sourceCode { white-space: pre; position: relative; }
+    pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+    pre > code.sourceCode > span:empty { height: 1.2em; }
+    .sourceCode { overflow: visible; }
+    code.sourceCode > span { color: inherit; text-decoration: inherit; }
+    div.sourceCode { margin: 1em 0; }
+    pre.sourceCode { margin: 0; }
+    @media screen {
+    div.sourceCode { overflow: auto; }
+    }
+    @media print {
+    pre > code.sourceCode { white-space: pre-wrap; }
+    pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+    }
+    pre.numberSource code
+      { counter-reset: source-line 0; }
+    pre.numberSource code > span
+      { position: relative; left: -4em; counter-increment: source-line; }
+    pre.numberSource code > span > a:first-child::before
+      { content: counter(source-line);
+        position: relative; left: -1em; text-align: right; vertical-align: baseline;
+        border: none; display: inline-block;
+        -webkit-touch-callout: none; -webkit-user-select: none;
+        -khtml-user-select: none; -moz-user-select: none;
+        -ms-user-select: none; user-select: none;
+        padding: 0 4px; width: 4em;
+      }
+    pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+    div.sourceCode
+      { color: #24292e;  }
+    @media screen {
+    pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+    }
+    code span { color: #24292e; } /* Normal */
+    code span.al { color: #ff5555; font-weight: bold; } /* Alert */
+    code span.an { color: #6a737d; } /* Annotation */
+    code span.at { color: #d73a49; } /* Attribute */
+    code span.bn { color: #005cc5; } /* BaseN */
+    code span.bu { color: #d73a49; } /* BuiltIn */
+    code span.cf { color: #d73a49; } /* ControlFlow */
+    code span.ch { color: #032f62; } /* Char */
+    code span.cn { color: #005cc5; } /* Constant */
+    code span.co { color: #6a737d; } /* Comment */
+    code span.cv { color: #6a737d; } /* CommentVar */
+    code span.do { color: #6a737d; } /* Documentation */
+    code span.dt { color: #d73a49; } /* DataType */
+    code span.dv { color: #005cc5; } /* DecVal */
+    code span.er { color: #ff5555; text-decoration: underline; } /* Error */
+    code span.ex { color: #d73a49; font-weight: bold; } /* Extension */
+    code span.fl { color: #005cc5; } /* Float */
+    code span.fu { color: #6f42c1; } /* Function */
+    code span.im { color: #032f62; } /* Import */
+    code span.in { color: #6a737d; } /* Information */
+    code span.kw { color: #d73a49; } /* Keyword */
+    code span.op { color: #24292e; } /* Operator */
+    code span.ot { color: #6f42c1; } /* Other */
+    code span.pp { color: #d73a49; } /* Preprocessor */
+    code span.re { color: #6a737d; } /* RegionMarker */
+    code span.sc { color: #005cc5; } /* SpecialChar */
+    code span.ss { color: #032f62; } /* SpecialString */
+    code span.st { color: #032f62; } /* String */
+    code span.va { color: #e36209; } /* Variable */
+    code span.vs { color: #032f62; } /* VerbatimString */
+    code span.wa { color: #ff5555; } /* Warning */
+  </style>
+  <link rel="stylesheet" href="../site_libs/revealjs/dist/theme/quarto-bf56578b9c06c165c166475cd19dbcd1.css">
+  <script>window.backupDefine = window.define; window.define = undefined;</script><script src="https://cdn.jsdelivr.net/npm/katex@latest/dist/katex.min.js"></script>
+  <script>document.addEventListener("DOMContentLoaded", function () {
+ var mathElements = document.getElementsByClassName("math");
+ var macros = [];
+ for (var i = 0; i < mathElements.length; i++) {
+  var texText = mathElements[i].firstChild;
+  if (mathElements[i].tagName == "SPAN") {
+   katex.render(texText.data, mathElements[i], {
+    displayMode: mathElements[i].classList.contains('display'),
+    throwOnError: false,
+    macros: macros,
+    fleqn: false
+   });
+}}});
+  </script>
+  <script>window.define = window.backupDefine; window.backupDefine = undefined;</script><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@latest/dist/katex.min.css">
+  <link href="../site_libs/revealjs/plugin/quarto-line-highlight/line-highlight.css" rel="stylesheet">
+  <link href="../site_libs/revealjs/plugin/reveal-menu/menu.css" rel="stylesheet">
+  <link href="../site_libs/revealjs/plugin/reveal-menu/quarto-menu.css" rel="stylesheet">
+  <link href="../site_libs/revealjs/plugin/quarto-support/footer.css" rel="stylesheet">
+  <style type="text/css">
+    .reveal div.sourceCode {
+      margin: 0;
+      overflow: auto;
+    }
+    .reveal div.hanging-indent {
+      margin-left: 1em;
+      text-indent: -1em;
+    }
+    .reveal .slide:not(.center) {
+      height: 100%;
+    }
+    .reveal .slide.scrollable {
+      overflow-y: auto;
+    }
+    .reveal .footnotes {
+      height: 100%;
+      overflow-y: auto;
+    }
+    .reveal .slide .absolute {
+      position: absolute;
+      display: block;
+    }
+    .reveal .footnotes ol {
+      counter-reset: ol;
+      list-style-type: none; 
+      margin-left: 0;
+    }
+    .reveal .footnotes ol li:before {
+      counter-increment: ol;
+      content: counter(ol) ". "; 
+    }
+    .reveal .footnotes ol li > p:first-child {
+      display: inline-block;
+    }
+    .reveal .slide ul,
+    .reveal .slide ol {
+      margin-bottom: 0.5em;
+    }
+    .reveal .slide ul li,
+    .reveal .slide ol li {
+      margin-top: 0.4em;
+      margin-bottom: 0.2em;
+    }
+    .reveal .slide ul[role="tablist"] li {
+      margin-bottom: 0;
+    }
+    .reveal .slide ul li > *:first-child,
+    .reveal .slide ol li > *:first-child {
+      margin-block-start: 0;
+    }
+    .reveal .slide ul li > *:last-child,
+    .reveal .slide ol li > *:last-child {
+      margin-block-end: 0;
+    }
+    .reveal .slide .columns:nth-child(3) {
+      margin-block-start: 0.8em;
+    }
+    .reveal blockquote {
+      box-shadow: none;
+    }
+    .reveal .tippy-content>* {
+      margin-top: 0.2em;
+      margin-bottom: 0.7em;
+    }
+    .reveal .tippy-content>*:last-child {
+      margin-bottom: 0.2em;
+    }
+    .reveal .slide > img.stretch.quarto-figure-center,
+    .reveal .slide > img.r-stretch.quarto-figure-center {
+      display: block;
+      margin-left: auto;
+      margin-right: auto; 
+    }
+    .reveal .slide > img.stretch.quarto-figure-left,
+    .reveal .slide > img.r-stretch.quarto-figure-left  {
+      display: block;
+      margin-left: 0;
+      margin-right: auto; 
+    }
+    .reveal .slide > img.stretch.quarto-figure-right,
+    .reveal .slide > img.r-stretch.quarto-figure-right  {
+      display: block;
+      margin-left: auto;
+      margin-right: 0; 
+    }
+  </style>
+</head>
+<body class="quarto-light">
+  <div class="reveal">
+    <div class="slides">
+
+<section id="title-slide" class="quarto-title-block center">
+  <h1 class="title">Bulk RNA-seq with DESeq2</h1>
+  <p class="subtitle">Week 3 — Bulk RNA-seq with DESeq2</p>
+
+<div class="quarto-title-authors">
+<div class="quarto-title-author">
+<div class="quarto-title-author-name">
+Quantitative biology and integrative omics 
+</div>
+</div>
+</div>
+
+</section>
+<section id="about-this-lecture" class="slide level2">
+<h2>About this lecture</h2>
+<p>In <em>Design matrices in R: limma</em> we started from log2 values. Today we start one step earlier, from the <strong>table of raw counts</strong> (genes × samples), and run the standard tool for it, <a href="https://bioconductor.org/packages/release/bioc/vignettes/DESeq2/inst/doc/DESeq2.html">DESeq2</a>. The design formula is the same as before. Three ideas are new:</p>
+<ul>
+<li><strong>RNA-seq is counting.</strong> A read count is a random draw; what we want per gene is its <strong>share</strong> of the RNA.</li>
+<li><strong>Size factors.</strong> How deep each sample was sequenced, estimated so that a few big changes cannot fool us (the <strong>median of ratios</strong>).</li>
+<li><strong>Ratios of small counts are noisy.</strong> 3 reads versus 0 says much less than 3000 versus 1000. This is why we need a count model and why we <strong>shrink</strong> fold changes. Both get their maths in week 4.</li>
+</ul>
+<aside class="notes">
+<p>This is the last unit of week 3 and it closes the design-matrix section with the tool most students will actually use on their own RNA-seq data. Nothing about the design matrix is new: ~ batch + sex + treatment means exactly what it meant in covariates and covariates-r. The new content is about the data type. Counts come from sampling molecules, so they have to be put on a common scale (size factors), and their noise depends on how many molecules were counted. The noise idea is the centre of the day: it is the reason DESeq2 uses a count model instead of a plain linear model on logs, and the reason for lfcShrink. Poisson and negative binomial may be named, but their maths is in Error models in week 4; shrinkage is explained in Why penalize?, Bayesian vs frequentist and Hierarchical models. Today we only need the picture.</p>
+<style type="text/css">
+        span.MJX_Assistive_MathML {
+          position:absolute!important;
+          clip: rect(1px, 1px, 1px, 1px);
+          padding: 1px 0 0 0!important;
+          border: 0!important;
+          height: 1px!important;
+          width: 1px!important;
+          overflow: hidden!important;
+          display:block!important;
+      }</style></aside>
+</section>
+<section id="rna-seq-is-counting" class="slide level2 smaller">
+<h2>RNA-seq is counting</h2>
+
+<img data-src="fig01-sequencing-bag.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:100.0%"><ul>
+<li>The library is a <strong>bag of RNA fragments</strong>. Gene A makes up a share <span class="math inline">p</span> of the bag.</li>
+<li>Sequencing draws <span class="math inline">N</span> fragments <strong>at random</strong>. Gene A gets about <span class="math inline">N \cdot p</span> reads, but not exactly: here 6, next time maybe 5 or 8.</li>
+<li>So a count says nothing on its own: 512 reads out of 10 million is <strong>not</strong> the same as 512 out of 40 million. What we want per gene is <span class="math inline">p</span>, the <strong>share of the RNA</strong>.</li>
+</ul>
+<aside class="notes">
+<p>Walk the picture left to right. Cells, RNA extracted and cut into fragments, the fragments form a library, and the sequencer reads a random subset of them. Real libraries have billions of fragments and we read tens of millions, so it really is a random sample. Two consequences follow, and they are the two halves of today. First, the count depends on N, the depth, which is a technical choice; to compare samples we must undo it (size factors). Second, even with the same bag and the same N, a repeat gives a slightly different count, because the draw is random (counting noise). Ask: in a library of 10 million reads, gene G has 512 reads; in a library of 40 million, also 512. Is it the same? No: 51.2 per million versus 12.8 per million, a factor of 4.</p>
+<style type="text/css">
+        span.MJX_Assistive_MathML {
+          position:absolute!important;
+          clip: rect(1px, 1px, 1px, 1px);
+          padding: 1px 0 0 0!important;
+          border: 0!important;
+          height: 1px!important;
+          width: 1px!important;
+          overflow: hidden!important;
+          display:block!important;
+      }</style></aside>
+</section>
+<section id="a-count-needs-its-depth-size-factors" class="slide level2 smaller">
+<h2>A count needs its depth: size factors</h2>
+<p>Sample 2 is the same RNA as sample 1, sequenced <strong>twice as deep</strong>:</p>
+<table class="caption-top">
+<thead>
+<tr class="header">
+<th>gene</th>
+<th>sample 1</th>
+<th>sample 2</th>
+<th>share 1</th>
+<th>share 2</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>A</td>
+<td>400</td>
+<td>800</td>
+<td>0.4</td>
+<td>0.4</td>
+</tr>
+<tr class="even">
+<td>B</td>
+<td>300</td>
+<td>600</td>
+<td>0.3</td>
+<td>0.3</td>
+</tr>
+<tr class="odd">
+<td>C</td>
+<td>200</td>
+<td>400</td>
+<td>0.2</td>
+<td>0.2</td>
+</tr>
+<tr class="even">
+<td>D</td>
+<td>100</td>
+<td>200</td>
+<td>0.1</td>
+<td>0.1</td>
+</tr>
+<tr class="odd">
+<td><strong>total</strong></td>
+<td><strong>1000</strong></td>
+<td><strong>2000</strong></td>
+<td>1</td>
+<td>1</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li>Raw counts say every gene is “2× up”. Divide by the total and the shares agree: nothing changed.</li>
+<li>The number we divide by is the sample’s <strong>size factor</strong>. The simplest one is the total read count. <strong>Counts per million</strong> (CPM) is the same thing, times <span class="math inline">10^6</span>.</li>
+</ul>
+<div class="sourceCode" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a aria-hidden="true" tabindex="-1"></a>cpm <span class="ot">&lt;-</span> <span class="fu">t</span>(<span class="fu">t</span>(counts) <span class="sc">/</span> <span class="fu">colSums</span>(counts)) <span class="sc">*</span> <span class="fl">1e6</span>    <span class="co"># divide each column by its total</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<aside class="notes">
+<p>The by-hand version of normalization. The size factor is “how much did we sequence this sample”, relative to the others. Dividing by the total is what CPM does, and what voom did internally in covariates-r. The R line: counts is genes by samples, colSums gives one total per sample; t() twice is the usual trick to divide each column by its own number. Next slide: why the total is not good enough.</p>
+<style type="text/css">
+        span.MJX_Assistive_MathML {
+          position:absolute!important;
+          clip: rect(1px, 1px, 1px, 1px);
+          padding: 1px 0 0 0!important;
+          border: 0!important;
+          height: 1px!important;
+          width: 1px!important;
+          overflow: hidden!important;
+          display:block!important;
+      }</style></aside>
+</section>
+<section id="the-composition-trap" class="slide level2 smaller">
+<h2>The composition trap</h2>
+
+<img data-src="fig02-composition.png" class="quarto-figure quarto-figure-center r-stretch" style="width:80.0%"><ul>
+<li>Only gene A changed: 3 times more molecules in sample 2. B, C and D are <strong>exactly the same</strong> in the tube.</li>
+<li>After dividing by the total, B, C and D look <strong>halved</strong>, and A looks only 1.5× up.</li>
+<li>The share of the RNA is a <strong>zero-sum game</strong>: if one gene takes more of the reads, all others get fewer. A few very abundant genes that change can fake changes in thousands of others.</li>
+</ul>
+<aside class="notes">
+<p>This is the reason DESeq2 does not use the total count. Read the left panel: the tube has 1000 molecules in sample 1 and 2000 in sample 2, all of the extra from gene A. The sequencer does not know how many molecules were in the tube; it reads 1000 from each. In the right panel A has 750 of 1000, so B, C and D are squeezed to half. Real examples: a tissue where a few secreted proteins dominate (pancreas, liver), or a treatment that switches on a very abundant gene. Ask: what should the size factor of sample 2 be, so that B, C and D come out unchanged? 0.5 relative to sample 1, not 1. The next slide gets that number without knowing in advance which genes changed.</p>
+<style type="text/css">
+        span.MJX_Assistive_MathML {
+          position:absolute!important;
+          clip: rect(1px, 1px, 1px, 1px);
+          padding: 1px 0 0 0!important;
+          border: 0!important;
+          height: 1px!important;
+          width: 1px!important;
+          overflow: hidden!important;
+          display:block!important;
+      }</style></aside>
+</section>
+<section id="the-fix-the-median-of-ratios" class="slide level2 smaller">
+<h2>The fix: the median of ratios</h2>
+<div class="columns">
+<div class="column" style="width:44%;">
+<table class="caption-top">
+<thead>
+<tr class="header">
+<th>gene</th>
+<th>s1</th>
+<th>s2</th>
+<th>s2 / s1</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>A</td>
+<td>100</td>
+<td>210</td>
+<td>2.1</td>
+</tr>
+<tr class="even">
+<td>B</td>
+<td>50</td>
+<td>100</td>
+<td>2.0</td>
+</tr>
+<tr class="odd">
+<td>C</td>
+<td>40</td>
+<td>76</td>
+<td>1.9</td>
+</tr>
+<tr class="even">
+<td>D</td>
+<td>20</td>
+<td>160</td>
+<td><strong>8.0</strong></td>
+</tr>
+<tr class="odd">
+<td>E</td>
+<td>10</td>
+<td>22</td>
+<td>2.2</td>
+</tr>
+<tr class="even">
+<td>total</td>
+<td>220</td>
+<td>568</td>
+<td>2.58</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li>Median of 1.9, 2.0, 2.1, 2.2, 8.0 is <strong>2.1</strong>. Gene D, which really changed, does not move it.</li>
+<li>The ratio of totals, 2.58, is pulled up by D.</li>
+</ul>
+</div><div class="column" style="width:56%;">
+<p><img data-src="fig03-median-of-ratios.png" style="width:100.0%"></p>
+<p>Simulated, 3000 genes: most genes did not change, so most ratios pile up at the true depth ratio.</p>
+</div></div>
+<ul>
+<li>DESeq2 compares each sample with a “typical sample” (for each gene, the geometric mean over all samples) and takes the <strong>median</strong> ratio. Genes with a <strong>0</strong> in any sample are left out: a ratio with 0 is useless.</li>
+</ul>
+<div class="sourceCode" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a aria-hidden="true" tabindex="-1"></a>dds <span class="ot">&lt;-</span> <span class="fu">estimateSizeFactors</span>(dds);  <span class="fu">sizeFactors</span>(dds);  <span class="fu">counts</span>(dds, <span class="at">normalized =</span> <span class="cn">TRUE</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<aside class="notes">
+<p>The idea: if most genes did not change, then for most genes the ratio sample 2 over sample 1 is just the depth ratio. A median ignores the few genes that really changed, as long as they are fewer than half. Do the table by hand: the five ratios, sorted 1.9, 2.0, 2.1, 2.2, 8.0, median 2.1. Compare with the totals: 568 over 220 is 2.58, too high, because gene D grabbed reads. The histogram shows the same with 3000 genes: 60 well-expressed genes went up 5-fold, the median ratio is 1.41 while the ratio of totals is 2.00. With more than two samples DESeq2 builds a reference sample, the geometric mean of each gene over all samples (on the log scale, the ordinary mean), and computes each sample’s median ratio against it; the exercise does that by hand on a 5 by 3 table. The rule “leave out genes with a 0” is the first sign of today’s main theme: small counts carry little information.</p>
+<style type="text/css">
+        span.MJX_Assistive_MathML {
+          position:absolute!important;
+          clip: rect(1px, 1px, 1px, 1px);
+          padding: 1px 0 0 0!important;
+          border: 0!important;
+          height: 1px!important;
+          width: 1px!important;
+          overflow: hidden!important;
+          display:block!important;
+      }</style></aside>
+</section>
+<section id="same-truth-different-ratios" class="slide level2 smaller">
+<h2>Same truth, different ratios</h2>
+<p>Two replicates: same RNA, same depth. Every difference below is <strong>pure counting noise</strong>.</p>
+<table class="caption-top">
+<thead>
+<tr class="header">
+<th>gene</th>
+<th>expected reads</th>
+<th>replicate 1</th>
+<th>replicate 2</th>
+<th>ratio</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>big</td>
+<td>1000</td>
+<td>1012</td>
+<td>987</td>
+<td>0.98</td>
+</tr>
+<tr class="even">
+<td>small</td>
+<td>2</td>
+<td>0</td>
+<td>3</td>
+<td><span class="math inline">\infty</span></td>
+</tr>
+<tr class="odd">
+<td>small</td>
+<td>2</td>
+<td>1</td>
+<td>4</td>
+<td>4</td>
+</tr>
+<tr class="even">
+<td>small</td>
+<td>2</td>
+<td>3</td>
+<td>0</td>
+<td>0</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Rule of thumb</strong> (from simulation, and next week from a formula): if you expect about <span class="math inline">n</span> molecules, you get <span class="math inline">n \pm \sqrt{n}</span>.</p>
+<table class="caption-top">
+<thead>
+<tr class="header">
+<th>expected <span class="math inline">n</span></th>
+<th>2</th>
+<th>100</th>
+<th>1000</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>typical spread <span class="math inline">\sqrt{n}</span></td>
+<td>1.4</td>
+<td>10</td>
+<td>32</td>
+</tr>
+<tr class="even">
+<td>relative noise <span class="math inline">\sqrt{n}/n = 1/\sqrt{n}</span></td>
+<td>70%</td>
+<td>10%</td>
+<td>3%</td>
+</tr>
+</tbody>
+</table>
+<aside class="notes">
+<p>This is the core idea of the day. The same true share, the same depth, and the small gene gives fold changes of 0, 4 and infinity, while the big gene gives 0.98. Nothing biological happened. The rule of thumb n plus or minus root n is what students see in the R part of the exercise when they repeat the draw many times; in Error models (week 4) it gets its name: this counting noise is the Poisson distribution, whose variance equals its mean. For now, use the rule: relative noise is 1 over root n, so 3% at 1000 reads, 10% at 100, 70% at 2. A fold change built from two such counts is noisier still, because both counts wobble.</p>
+<style type="text/css">
+        span.MJX_Assistive_MathML {
+          position:absolute!important;
+          clip: rect(1px, 1px, 1px, 1px);
+          padding: 1px 0 0 0!important;
+          border: 0!important;
+          height: 1px!important;
+          width: 1px!important;
+          overflow: hidden!important;
+          display:block!important;
+      }</style></aside>
+</section>
+<section id="the-fan-counting-noise-in-one-picture" class="slide level2 smaller">
+<h2>The fan: counting noise in one picture</h2>
+
+<img data-src="fig04-replicate-fan.png" class="quarto-figure quarto-figure-center r-stretch" style="width:74.0%"><ul>
+<li>An <strong>MA plot</strong>: log2 fold change against the gene’s mean count. Two replicates, <strong>no true change</strong> for any of 5000 genes.</li>
+<li>Wide at low counts, narrow at high counts. The dashed lines are the <span class="math inline">n \pm \sqrt{n}</span> rule.</li>
+<li><strong>Ranking by fold change picks the low-count genes:</strong> the 10 largest fold changes here are all genes with fewer than 15 reads, and all are noise.</li>
+<li>A test must know that 3 vs 0 carries less information than 3000 vs 1000. One <span class="math inline">\sigma</span> for all genes, as in plain least squares, cannot. A <strong>count model</strong> can (week 4). voom’s weights in covariates-r were a patch for the same problem.</li>
+</ul>
+<aside class="notes">
+<p>The picture to remember. Each dot is a gene, x is its mean count on a log axis, y is log2 of replicate 2 over replicate 1. Because nothing changed, every dot should be at 0; the spread is counting noise, and it shrinks as the count grows, like 1 over root n.&nbsp;Genes with a 0 in one replicate have an infinite log ratio; they are the triangles at the edge. The ten largest fold changes have between 1 and 13 reads. Real replicates spread more than this, because the biology also varies between replicates (different mice, different cultures); Error models adds that extra spread with the negative binomial. Link back: voom in covariates-r computed a weight per value exactly because low counts are noisier on the log scale. DESeq2 instead models the counts directly.</p>
+<style type="text/css">
+        span.MJX_Assistive_MathML {
+          position:absolute!important;
+          clip: rect(1px, 1px, 1px, 1px);
+          padding: 1px 0 0 0!important;
+          border: 0!important;
+          height: 1px!important;
+          width: 1px!important;
+          overflow: hidden!important;
+          display:block!important;
+      }</style></aside>
+</section>
+<section id="try-it-noise-in-a-ratio-of-counts" class="slide level2">
+<h2>Try it: noise in a ratio of counts</h2>
+<link rel="stylesheet" href="../demos/dist/demo.css">
+<div data-demo="countratio" data-mean="2"></div>
+<script src="../demos/dist/countratio.js"></script>
+<aside class="notes">
+<p>Interactive demo. The buttons set the expected count n for both replicates (1 to 1000). Panel (a) is a histogram of log2(x/y) for 2000 replicate pairs; pairs with a zero get their own bars (0, infinity, 0/0), and pairs at least 2-fold apart are red. Point at the header number “% of pairs at least 2-fold apart”, not the SD (the SD only uses pairs without a zero, so it is misleading at n = 1 and 2). At the defaults it is 77% at n = 1, 65% at n = 2, 37% at 5, 17% at 10, 1.3% at 30 and 0% at 100: same truth, and at low counts most pairs look like a 2-fold change. Panel (b) is the fan for 2000 genes with averages from 0.5 to 5000: 56% of genes with average below 10 are at least 2-fold apart, 0% above 100, and the red circles (top 10 by fold change) are all genes with averages of about 3 to 5.5. Finally tick “add biological variation”: even at n = 1000 the SD stays around 0.47 and about 3% of pairs are 2-fold apart. That extra spread is what the negative binomial adds in Error models.</p>
+<style type="text/css">
+        span.MJX_Assistive_MathML {
+          position:absolute!important;
+          clip: rect(1px, 1px, 1px, 1px);
+          padding: 1px 0 0 0!important;
+          border: 0!important;
+          height: 1px!important;
+          width: 1px!important;
+          overflow: hidden!important;
+          display:block!important;
+      }</style></aside>
+</section>
+<section id="deseq2-in-four-calls" class="slide level2 smaller">
+<h2>DESeq2 in four calls</h2>
+
+<img data-src="fig05-deseq2-pipeline.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:88.0%"><div class="sourceCode" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(DESeq2)</span>
+<span id="cb3-2"><a aria-hidden="true" tabindex="-1"></a>dds <span class="ot">&lt;-</span> <span class="fu">DESeqDataSetFromMatrix</span>(<span class="at">countData =</span> counts, <span class="at">colData =</span> samples,</span>
+<span id="cb3-3"><a aria-hidden="true" tabindex="-1"></a>                              <span class="at">design =</span> <span class="sc">~</span> batch <span class="sc">+</span> sex <span class="sc">+</span> treatment)</span>
+<span id="cb3-4"><a aria-hidden="true" tabindex="-1"></a>dds <span class="ot">&lt;-</span> <span class="fu">DESeq</span>(dds)              <span class="co"># size factors -&gt; count model per gene -&gt; tests</span></span>
+<span id="cb3-5"><a aria-hidden="true" tabindex="-1"></a><span class="fu">resultsNames</span>(dds)              <span class="co"># "Intercept" "batch_B_vs_A" "sex_M_vs_F" "treatment_treat_vs_ctrl"</span></span>
+<span id="cb3-6"><a aria-hidden="true" tabindex="-1"></a>res <span class="ot">&lt;-</span> <span class="fu">results</span>(dds, <span class="at">name =</span> <span class="st">"treatment_treat_vs_ctrl"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<ul>
+<li>Input: <strong>raw integer counts</strong>, not CPM and not logs. DESeq2 does the dividing itself.</li>
+<li>The design is the one from covariates. Same <span class="math inline">X</span>, same rank check: a confounded design stops with “the model matrix is not full rank”.</li>
+</ul>
+<aside class="notes">
+<p>The workflow. The counts and the sample table go in together with the design formula. DESeq() does three things in order: the size factors from the median-of-ratios slide; one count model per gene, where the noise is allowed to depend on the mean count (named in Error models: negative binomial, which is the counting noise plus the extra spread between biological replicates); and a test of each coefficient. The coefficient names are variable, level, vs, reference. Always ask for one by name: results(dds) without a name gives the last variable of the formula, which is easy to get wrong. The counts and samples objects are the simulated experiment from covariates-r, so the exercise can compare with limma.</p>
+<style type="text/css">
+        span.MJX_Assistive_MathML {
+          position:absolute!important;
+          clip: rect(1px, 1px, 1px, 1px);
+          padding: 1px 0 0 0!important;
+          border: 0!important;
+          height: 1px!important;
+          width: 1px!important;
+          overflow: hidden!important;
+          display:block!important;
+      }</style></aside>
+</section>
+<section id="reading-the-results" class="slide level2 smaller">
+<h2>Reading the results</h2>
+<table class="caption-top">
+<colgroup>
+<col style="width: 50%">
+<col style="width: 50%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>column</th>
+<th>meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>baseMean</code></td>
+<td>mean of the normalized counts (divided by the size factors) over all samples</td>
+</tr>
+<tr class="even">
+<td><code>log2FoldChange</code></td>
+<td>the treatment coefficient: treat vs ctrl, holding batch and sex fixed</td>
+</tr>
+<tr class="odd">
+<td><code>lfcSE</code></td>
+<td>its standard error: how uncertain the fold change is. <strong>Large when <code>baseMean</code> is small</strong></td>
+</tr>
+<tr class="even">
+<td><code>pvalue</code>, <code>padj</code></td>
+<td>the test of “coefficient = 0”, and adjusted for testing all genes; <code>NA</code> for genes with too few reads to test</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li>On the simulated experiment from covariates-r (200 truly changed genes): DESeq2 calls <strong>195</strong> genes at <code>padj &lt; 0.05</code>, <strong>181</strong> of them true. limma with voom called 188, 177 true. Same design, same answer.</li>
+<li><code>plotMA(res)</code> draws the fan again, now for a real comparison (next slide, left): called genes stand out from the fan; at low counts even large fold changes are not called.</li>
+</ul>
+<aside class="notes">
+<p>Read the columns. baseMean is the gene’s x position in the fan, log2FoldChange its y position. lfcSE is the new column to look at: plot it against baseMean and it is large exactly where the fan is wide. That is how DESeq2 knows that 3 versus 0 is weak evidence: the standard error is large, so the test is not significant even though the fold change is huge. padj is NA for genes DESeq2 does not test because their counts are too low to say anything (independent filtering). The numbers: DESeq2 1.52 on the covariates-r simulation gave 195 calls, 181 true and 14 false, close to limma’s 188 with 177 true and 11 false. On the real airway dataset in the exercise, 4000 genes are called with ~ cell + dex.</p>
+<style type="text/css">
+        span.MJX_Assistive_MathML {
+          position:absolute!important;
+          clip: rect(1px, 1px, 1px, 1px);
+          padding: 1px 0 0 0!important;
+          border: 0!important;
+          height: 1px!important;
+          width: 1px!important;
+          overflow: hidden!important;
+          display:block!important;
+      }</style></aside>
+</section>
+<section id="shrink-the-noisy-fold-changes" class="slide level2 smaller">
+<h2>Shrink the noisy fold changes</h2>
+
+<img data-src="fig06-airway-shrinkage.png" class="quarto-figure quarto-figure-center r-stretch" style="width:80.0%"><p><em>airway, dexamethasone vs untreated (exercise R4). Red: <code>padj &lt; 0.05</code>.</em></p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a aria-hidden="true" tabindex="-1"></a>res_shr <span class="ot">&lt;-</span> <span class="fu">lfcShrink</span>(dds, <span class="at">coef =</span> <span class="st">"dex_trt_vs_untrt"</span>, <span class="at">type =</span> <span class="st">"apeglm"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<ul>
+<li><strong>When the data are weak, believe less extreme values.</strong> Low-count fold changes are pulled towards 0; high-count ones barely move.</li>
+<li>Genes with <code>baseMean</code> ≤ 10: <strong>465</strong> have a raw fold change above 4× (|LFC| &gt; 2), <strong>33</strong> after shrinking. Above 100: 102 and 98.</li>
+<li>Practical rule: <strong>test with <code>padj</code>, rank and plot with the shrunken fold change.</strong></li>
+<li><em>How</em> this works is week 4: it is a <strong>penalty</strong> (<em>Why penalize?</em>), a <strong>prior</strong> (<em>Bayesian vs frequentist</em>), and sharing across genes (<em>Hierarchical models</em>).</li>
+</ul>
+<aside class="notes">
+<p>The segue to week 4. lfcShrink with apeglm returns new fold changes: the same as before for genes with many reads, pulled towards zero for genes with few. Left is plotMA of the raw results on airway, the fan at low counts; right the same genes after lfcShrink: the grey fan collapses onto 0, the red called genes keep their fold changes. Below 10 reads, 465 genes have a raw |LFC| above 2 and only 33 after shrinking; above 100 reads hardly anything changes (102 to 98). The sentence to remember: when the data are weak, believe less extreme values. Shrinking is not a filter: a low-count gene that changes consistently in all four cell lines keeps a large fold change (GUCY2D and MCHR1, about 6 reads, stay in the top 10). In week 4 this is ridge regression (a penalty on large coefficients), a prior in Bayesian language, and in Hierarchical models the information shared across genes that decides how much to shrink. Do not explain how; promise it. The p-values do not change with lfcShrink; it only changes the fold changes you use for ranking and plotting. Figure and numbers: make-airway-figs.R.</p>
+<style type="text/css">
+        span.MJX_Assistive_MathML {
+          position:absolute!important;
+          clip: rect(1px, 1px, 1px, 1px);
+          padding: 1px 0 0 0!important;
+          border: 0!important;
+          height: 1px!important;
+          width: 1px!important;
+          overflow: hidden!important;
+          display:block!important;
+      }</style></aside>
+</section>
+<section id="summary" class="slide level2 smaller">
+<h2>Summary</h2>
+<table class="caption-top">
+<colgroup>
+<col style="width: 50%">
+<col style="width: 50%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>idea</th>
+<th>key fact</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>RNA-seq is counting</td>
+<td>reads are random draws from a bag of fragments; gene with share <span class="math inline">p</span> gets about <span class="math inline">N \cdot p</span></td>
+</tr>
+<tr class="even">
+<td>size factor</td>
+<td>how deep a sample was sequenced; the total count is fooled by a few big genes (composition)</td>
+</tr>
+<tr class="odd">
+<td>median of ratios</td>
+<td>ratio of each gene to its typical value, median over genes; genes with a 0 are left out</td>
+</tr>
+<tr class="even">
+<td>counting noise</td>
+<td>expect <span class="math inline">n</span>, get <span class="math inline">n \pm \sqrt{n}</span>; relative noise <span class="math inline">1/\sqrt{n}</span></td>
+</tr>
+<tr class="odd">
+<td>the fan</td>
+<td>fold changes of low-count genes are mostly noise; never rank by raw fold change</td>
+</tr>
+<tr class="even">
+<td>DESeq2</td>
+<td>raw counts + design → <code>DESeq()</code> → <code>results(dds, name = ...)</code>: <code>log2FoldChange</code>, <code>lfcSE</code>, <code>padj</code></td>
+</tr>
+<tr class="odd">
+<td><code>lfcShrink</code></td>
+<td>pulls weak fold changes towards 0: rank with it, test with <code>padj</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Where this leads (week 4):</strong> <em>Error models</em> names the counting noise (Poisson) and the extra spread between replicates (negative binomial). <em>Why penalize?</em>, <em>Bayesian vs frequentist</em> and <em>Hierarchical models</em> explain the shrinkage.</p>
+<aside class="notes">
+<p>Recap the chain: counts, then shares via size factors, then the realisation that ratios of small counts are noisy, which needs a count model and shrinkage. Week 4 opens with the fan from today: this is the noise, now we name it. Students should leave able to compute a median-of-ratios size factor by hand, to explain why the top raw fold changes are low-count genes, and to run DESeq2 with a design formula and read log2FoldChange, lfcSE and padj.</p>
+<style type="text/css">
+        span.MJX_Assistive_MathML {
+          position:absolute!important;
+          clip: rect(1px, 1px, 1px, 1px);
+          padding: 1px 0 0 0!important;
+          border: 0!important;
+          height: 1px!important;
+          width: 1px!important;
+          overflow: hidden!important;
+          display:block!important;
+      }</style></aside>
+
+
+</section>
+    </div>
+  <div class="quarto-auto-generated-content" style="display: none;">
+<div class="footer footer-default">
+
+</div>
+</div></div>
+
+  <script>window.backupDefine = window.define; window.define = undefined;</script>
+  <script src="../site_libs/revealjs/dist/reveal.js"></script>
+  <!-- reveal.js plugins -->
+  <script src="../site_libs/revealjs/plugin/quarto-line-highlight/line-highlight.js"></script>
+  <script src="../site_libs/revealjs/plugin/pdf-export/pdfexport.js"></script>
+  <script src="../site_libs/revealjs/plugin/reveal-menu/menu.js"></script>
+  <script src="../site_libs/revealjs/plugin/reveal-menu/quarto-menu.js"></script>
+  <script src="../site_libs/revealjs/plugin/quarto-support/support.js"></script>
+  
+
+  <script src="../site_libs/revealjs/plugin/notes/notes.js"></script>
+  <script src="../site_libs/revealjs/plugin/search/search.js"></script>
+  <script src="../site_libs/revealjs/plugin/zoom/zoom.js"></script>
+  <script>window.define = window.backupDefine; window.backupDefine = undefined;</script>
+
+  <script>
+
+      // Full list of configuration options available at:
+      // https://revealjs.com/config/
+      Reveal.initialize({
+'controlsAuto': true,
+'previewLinksAuto': false,
+'pdfSeparateFragments': false,
+'autoAnimateEasing': "ease",
+'autoAnimateDuration': 1,
+'autoAnimateUnmatched': true,
+'jumpToSlide': true,
+'menu': {"side":"left","useTextContentForMissingTitles":true,"markers":false,"loadIcons":false,"custom":[{"title":"Tools","icon":"<i class=\"fas fa-gear\"></i>","content":"<ul class=\"slide-menu-items\">\n<li class=\"slide-tool-item active\" data-item=\"0\"><a href=\"#\" onclick=\"RevealMenuToolHandlers.fullscreen(event)\"><kbd>f</kbd> Fullscreen</a></li>\n<li class=\"slide-tool-item\" data-item=\"1\"><a href=\"#\" onclick=\"RevealMenuToolHandlers.speakerMode(event)\"><kbd>s</kbd> Speaker View</a></li>\n<li class=\"slide-tool-item\" data-item=\"2\"><a href=\"#\" onclick=\"RevealMenuToolHandlers.overview(event)\"><kbd>o</kbd> Slide Overview</a></li>\n<li class=\"slide-tool-item\" data-item=\"3\"><a href=\"#\" onclick=\"RevealMenuToolHandlers.togglePdfExport(event)\"><kbd>e</kbd> PDF Export Mode</a></li>\n<li class=\"slide-tool-item\" data-item=\"4\"><a href=\"#\" onclick=\"RevealMenuToolHandlers.toggleScrollView(event)\"><kbd>r</kbd> Scroll View Mode</a></li>\n<li class=\"slide-tool-item\" data-item=\"5\"><a href=\"#\" onclick=\"RevealMenuToolHandlers.keyboardHelp(event)\"><kbd>?</kbd> Keyboard Help</a></li>\n</ul>"}],"openButton":true},
+'smaller': false,
+ 
+        // Display controls in the bottom right corner
+        controls: false,
+
+        // Help the user learn the controls by providing hints, for example by
+        // bouncing the down arrow when they first encounter a vertical slide
+        controlsTutorial: false,
+
+        // Determines where controls appear, "edges" or "bottom-right"
+        controlsLayout: 'edges',
+
+        // Visibility rule for backwards navigation arrows; "faded", "hidden"
+        // or "visible"
+        controlsBackArrows: 'faded',
+
+        // Display a presentation progress bar
+        progress: true,
+
+        // Display the page number of the current slide
+        slideNumber: 'c/t',
+
+        // 'all', 'print', or 'speaker'
+        showSlideNumber: 'all',
+
+        // Add the current slide number to the URL hash so that reloading the
+        // page/copying the URL will return you to the same slide
+        hash: true,
+
+        // Start with 1 for the hash rather than 0
+        hashOneBasedIndex: false,
+
+        // Flags if we should monitor the hash and change slides accordingly
+        respondToHashChanges: true,
+
+        // Push each slide change to the browser history
+        history: false,
+
+        // Enable keyboard shortcuts for navigation
+        keyboard: true,
+
+        // Enable the slide overview mode
+        overview: true,
+
+        // Disables the default reveal.js slide layout (scaling and centering)
+        // so that you can use custom CSS layout
+        disableLayout: false,
+
+        // Vertical centering of slides
+        center: false,
+
+        // Enables touch navigation on devices with touch input
+        touch: true,
+
+        // Loop the presentation
+        loop: false,
+
+        // Change the presentation direction to be RTL
+        rtl: false,
+
+        // see https://revealjs.com/vertical-slides/#navigation-mode
+        navigationMode: 'linear',
+
+        // Randomizes the order of slides each time the presentation loads
+        shuffle: false,
+
+        // Turns fragments on and off globally
+        fragments: true,
+
+        // Flags whether to include the current fragment in the URL,
+        // so that reloading brings you to the same fragment position
+        fragmentInURL: false,
+
+        // Flags if the presentation is running in an embedded mode,
+        // i.e. contained within a limited portion of the screen
+        embedded: false,
+
+        // Flags if we should show a help overlay when the questionmark
+        // key is pressed
+        help: true,
+
+        // Flags if it should be possible to pause the presentation (blackout)
+        pause: true,
+
+        // Flags if speaker notes should be visible to all viewers
+        showNotes: false,
+
+        // Global override for autoplaying embedded media (null/true/false)
+        autoPlayMedia: null,
+
+        // Global override for preloading lazy-loaded iframes (null/true/false)
+        preloadIframes: null,
+
+        // Number of milliseconds between automatically proceeding to the
+        // next slide, disabled when set to 0, this value can be overwritten
+        // by using a data-autoslide attribute on your slides
+        autoSlide: 0,
+
+        // Stop auto-sliding after user input
+        autoSlideStoppable: true,
+
+        // Use this method for navigation when auto-sliding
+        autoSlideMethod: null,
+
+        // Specify the average time in seconds that you think you will spend
+        // presenting each slide. This is used to show a pacing timer in the
+        // speaker view
+        defaultTiming: null,
+
+        // Enable slide navigation via mouse wheel
+        mouseWheel: false,
+
+        // The display mode that will be used to show slides
+        display: 'block',
+
+        // Hide cursor if inactive
+        hideInactiveCursor: true,
+
+        // Time before the cursor is hidden (in ms)
+        hideCursorTime: 5000,
+
+        // Opens links in an iframe preview overlay
+        previewLinks: false,
+
+        // Transition style (none/fade/slide/convex/concave/zoom)
+        transition: 'none',
+
+        // Transition speed (default/fast/slow)
+        transitionSpeed: 'default',
+
+        // Transition style for full page slide backgrounds
+        // (none/fade/slide/convex/concave/zoom)
+        backgroundTransition: 'none',
+
+        // Number of slides away from the current that are visible
+        viewDistance: 3,
+
+        // Number of slides away from the current that are visible on mobile
+        // devices. It is advisable to set this to a lower number than
+        // viewDistance in order to save resources.
+        mobileViewDistance: 2,
+
+        // The "normal" size of the presentation, aspect ratio will be preserved
+        // when the presentation is scaled to fit different resolutions. Can be
+        // specified using percentage units.
+        width: 1280,
+
+        height: 720,
+
+        // Factor of the display size that should remain empty around the content
+        margin: 0.1,
+
+        // reveal.js plugins
+        plugins: [QuartoLineHighlight, PdfExport, RevealMenu, QuartoSupport,
+
+          RevealNotes,
+          RevealSearch,
+          RevealZoom
+        ]
+      });
+    </script>
+    <script id="quarto-html-after-body" type="application/javascript">
+      window.document.addEventListener("DOMContentLoaded", function (event) {
+        const tabsets =  window.document.querySelectorAll(".panel-tabset-tabby")
+        tabsets.forEach(function(tabset) {
+          const tabby = new Tabby('#' + tabset.id);
+        });
+        const isCodeAnnotation = (el) => {
+          for (const clz of el.classList) {
+            if (clz.startsWith('code-annotation-')) {                     
+              return true;
+            }
+          }
+          return false;
+        }
+        const onCopySuccess = function(e) {
+          // button target
+          const button = e.trigger;
+          // don't keep focus
+          button.blur();
+          // flash "checked"
+          button.classList.add('code-copy-button-checked');
+          var currentTitle = button.getAttribute("title");
+          button.setAttribute("title", "Copied!");
+          let tooltip;
+          if (window.bootstrap) {
+            button.setAttribute("data-bs-toggle", "tooltip");
+            button.setAttribute("data-bs-placement", "left");
+            button.setAttribute("data-bs-title", "Copied!");
+            tooltip = new bootstrap.Tooltip(button, 
+              { trigger: "manual", 
+                customClass: "code-copy-button-tooltip",
+                offset: [0, -8]});
+            tooltip.show();    
+          }
+          setTimeout(function() {
+            if (tooltip) {
+              tooltip.hide();
+              button.removeAttribute("data-bs-title");
+              button.removeAttribute("data-bs-toggle");
+              button.removeAttribute("data-bs-placement");
+            }
+            button.setAttribute("title", currentTitle);
+            button.classList.remove('code-copy-button-checked');
+          }, 1000);
+          // clear code selection
+          e.clearSelection();
+        }
+        const getTextToCopy = function(trigger) {
+            const codeEl = trigger.previousElementSibling.cloneNode(true);
+            for (const childEl of codeEl.children) {
+              if (isCodeAnnotation(childEl)) {
+                childEl.remove();
+              }
+            }
+            return codeEl.innerText;
+        }
+        const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+          text: getTextToCopy
+        });
+        clipboard.on('success', onCopySuccess);
+        if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+          const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+            text: getTextToCopy,
+            container: window.document.getElementById('quarto-embedded-source-code-modal')
+          });
+          clipboardModal.on('success', onCopySuccess);
+        }
+          var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+          var mailtoRegex = new RegExp(/^mailto:/);
+            var filterRegex = new RegExp('/' + window.location.host + '/');
+          var isInternal = (href) => {
+              return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+          }
+          // Inspect non-navigation links and adorn them if external
+         var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+          for (var i=0; i<links.length; i++) {
+            const link = links[i];
+            if (!isInternal(link.href)) {
+              // undo the damage that might have been done by quarto-nav.js in the case of
+              // links that we want to consider external
+              if (link.dataset.originalHref !== undefined) {
+                link.href = link.dataset.originalHref;
+              }
+            }
+          }
+        function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+          const config = {
+            allowHTML: true,
+            maxWidth: 500,
+            delay: 100,
+            arrow: false,
+            appendTo: function(el) {
+                return el.closest('section.slide') || el.parentElement;
+            },
+            interactive: true,
+            interactiveBorder: 10,
+            theme: 'light-border',
+            placement: 'bottom-start',
+          };
+          if (contentFn) {
+            config.content = contentFn;
+          }
+          if (onTriggerFn) {
+            config.onTrigger = onTriggerFn;
+          }
+          if (onUntriggerFn) {
+            config.onUntrigger = onUntriggerFn;
+          }
+            config['offset'] = [0,0];
+            config['maxWidth'] = 700;
+          window.tippy(el, config); 
+        }
+        const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+        for (var i=0; i<noterefs.length; i++) {
+          const ref = noterefs[i];
+          tippyHover(ref, function() {
+            // use id or data attribute instead here
+            let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+            try { href = new URL(href).hash; } catch {}
+            const id = href.replace(/^#\/?/, "");
+            const note = window.document.getElementById(id);
+            if (note) {
+              return note.innerHTML;
+            } else {
+              return "";
+            }
+          });
+        }
+        const findCites = (el) => {
+          const parentEl = el.parentElement;
+          if (parentEl) {
+            const cites = parentEl.dataset.cites;
+            if (cites) {
+              return {
+                el,
+                cites: cites.split(' ')
+              };
+            } else {
+              return findCites(el.parentElement)
+            }
+          } else {
+            return undefined;
+          }
+        };
+        var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+        for (var i=0; i<bibliorefs.length; i++) {
+          const ref = bibliorefs[i];
+          const citeInfo = findCites(ref);
+          if (citeInfo) {
+            tippyHover(citeInfo.el, function() {
+              var popup = window.document.createElement('div');
+              citeInfo.cites.forEach(function(cite) {
+                var citeDiv = window.document.createElement('div');
+                citeDiv.classList.add('hanging-indent');
+                citeDiv.classList.add('csl-entry');
+                var biblioDiv = window.document.getElementById('ref-' + cite);
+                if (biblioDiv) {
+                  citeDiv.innerHTML = biblioDiv.innerHTML;
+                }
+                popup.appendChild(citeDiv);
+              });
+              return popup.innerHTML;
+            });
+          }
+        }
+      });
+      </script>
+    
+
+</body></html>

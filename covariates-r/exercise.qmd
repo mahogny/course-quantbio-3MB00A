@@ -18,7 +18,6 @@ After this exercise you will be able to:
 - Run a **limma** analysis of bulk RNA-seq counts with `design = ~ batch + sex + treatment`, read log2 fold changes and `adj.P.Val`, and compare designs against a known truth.
 - Do the same for log2 intensities from mass-spectrometry metabolomics, with a continuous covariate (BMI).
 - Explain why a perfectly confounded design gives "coefficients not estimable", and why only the experiment can fix it.
-- (Extra material) Run **DESeq2** on the same counts.
 
 ## Background
 
@@ -261,48 +260,7 @@ count_hits(~ group + sex + bmi + day)
 
 Which design gives false positives, and which metabolites are they? Why does adding `day` find more true metabolites, and why does adding `bmi` remove false ones but also lose some true ones?
 
-## Extra material: DESeq2 {#deseq2}
-
-::: {.callout-note}
-## Extra material
-**DESeq2** is the other standard tool for RNA-seq. It works on the raw counts with a negative-binomial error model (see *Error models*) instead of taking the log first. The design matrix is the same. Install it with `BiocManager::install("DESeq2")`.
-:::
-
-**D1. The same counts with DESeq2.**
-
-```r
-library(DESeq2)
-dds <- DESeqDataSetFromMatrix(countData = counts, colData = samples,
-                              design = ~ batch + sex + treatment)
-dds <- DESeq(dds)
-resultsNames(dds)
-res <- results(dds, name = "treatment_treat_vs_ctrl")
-table(called = res$padj < 0.05, truly_DE = truth_de, useNA = "ifany")
-```
-
-(a) How does DESeq2 name the coefficients? Why is it safer to ask for one by `name =`?
-
-(b) Compare the number of true and false calls with limma in R3. Why are some `padj` values `NA`?
-
-(c) What does `DESeqDataSetFromMatrix(counts, samples_conf, design = ~ batch + treatment)` say?
-
-**D2. A real dataset (`airway`).** The [airway](https://bioconductor.org/packages/release/data/experiment/html/airway.html) package has RNA-seq of four airway smooth-muscle cell lines (`cell`), each untreated or treated with dexamethasone (`dex`). Install it with `BiocManager::install("airway")`.
-
-```r
-library(airway)
-data(airway)
-levels(airway$dex)
-airway$dex <- relevel(airway$dex, ref = "untrt")
-dds_air <- DESeqDataSet(airway, design = ~ cell + dex)
-dds_air <- dds_air[rowSums(counts(dds_air)) >= 10, ]   # drop almost-empty genes
-dds_air <- DESeq(dds_air)
-res_air <- results(dds_air, name = "dex_trt_vs_untrt")
-sum(res_air$padj < 0.05, na.rm = TRUE)
-```
-
-(a) What are the levels of `dex` before `relevel`? What would have gone wrong without it?
-
-(b) Why is `cell` in the design? Compare the number of genes at `padj < 0.05` with `design = ~ dex`.
+DESeq2 on the same counts, and on the real `airway` dataset, is in the next unit: [Bulk RNA-seq with DESeq2](../bulk-rnaseq/exercise.qmd).
 
 ## Hints
 
@@ -538,50 +496,9 @@ count_hits(~ group + sex + bmi + day)
 - Adding `bmi` removes the false positives. But BMI and disease are correlated, so the model has less information to tell them apart and some true metabolites are lost (12 of 20). The cure for that is again the **design**: recruit patients and controls with similar BMI and spread them over the run days.
 :::
 
-::: {.callout-note collapse="true" title="Solutions — Extra material: DESeq2 (D1–D2)"}
-
-Numbers from DESeq2 1.44. Messages such as "converting counts to integer mode" are harmless.
-
-**D1.** (a) `"Intercept"`, `"batch_B_vs_A"`, `"sex_M_vs_F"`, `"treatment_treat_vs_ctrl"`: variable, level, "vs", reference. `results(dds)` without `name =` reports the **last** variable of the formula, so with `~ treatment + batch` it would silently give you the batch effect.
-
-(b)
-```r
-table(called = res$padj < 0.05, truly_DE = truth_de, useNA = "ifany")
-#         truly_DE
-# called   FALSE TRUE
-#   FALSE   1751   15
-#   TRUE      14  181
-#   <NA>      35    4
-```
-195 calls: 181 true and 14 false, very close to limma's 177 and 11. g138 gets LFC 1.37. DESeq2 does not test genes with very low counts, so their `padj` is `NA` (39 genes here).
-
-(c)
-```
-Error in checkFullRank(modelMatrix) :
-  the model matrix is not full rank, so the model cannot be fit as specified.
-  One or more variables or interaction terms in the design formula are linear
-  combinations of the others and must be removed.
-```
-DESeq2 stops where limma gives `NA`. Both mean the same thing.
-
-**D2.** (a) The levels are `"trt"` and `"untrt"`: alphabetically `trt` is the reference, so without `relevel` the coefficient would be `dex_untrt_vs_trt` and every fold change would have the opposite sign.
-
-(b) The four cell lines differ a lot from each other, and each was measured with and without dexamethasone. `cell` is a nuisance covariate (like batch); with it the treatment is compared **within** each cell line. With `~ cell + dex`: 4000 genes at `padj < 0.05` (of 22 369 kept); with `~ dex`: 2694. Here the design is balanced, so leaving `cell` out does not create false positives as in R4; it adds the cell-line differences to the noise and loses power. The top gene is SPARCL1 (LFC 4.6), and the classic glucocorticoid target FKBP5 has LFC 4.0.
-
-```r
-levels(airway$dex)
-# [1] "trt"   "untrt"
-resultsNames(dds_air)
-# [1] "Intercept"               "cell_N061011_vs_N052611"
-# [3] "cell_N080611_vs_N052611" "cell_N61311_vs_N052611"
-# [5] "dex_trt_vs_untrt"
-sum(res_air$padj < 0.05, na.rm = TRUE)
-# [1] 4000
-```
-:::
-
 ## Where this leads
 
+- **[Bulk RNA-seq with DESeq2](../bulk-rnaseq/exercise.qmd)** (next unit): the same designs on the raw counts, size factors, and why fold changes of small counts are noisy.
 - **Penalized linear models** (*Why penalize?*): when $X$ has more columns than samples, the rank condition fails by shape, and a penalty is one way to still get a unique $\boldsymbol\beta$.
 - **Interactions** (`~ sex + treatment + sex:treatment`) and **contrasts** between any two levels (limma's [`makeContrasts`](https://rdrr.io/bioc/limma/man/makeContrasts.html)) use the same design matrix. We do not cover them further here.
 - limma's `eBayes` (and DESeq2's dispersion estimate) share information between genes. That is the same idea as the shrinkage in *Hierarchical models* (week 4).

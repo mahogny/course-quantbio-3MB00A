@@ -92,6 +92,10 @@ Mark an item complete only after a reviewer has checked every executable chunk f
 - [ ] `scrna-log/exercise.qmd` — added 2026-10-15; needs audit
 - [ ] `scrna-log/lec.qmd` — added 2026-10-15; needs audit
 - [ ] `scrna-log/make-log-figs.R` — added 2026-10-15; needs audit
+- [ ] `bulk-rnaseq/exercise.qmd` — added 2026-10-30; needs audit (R3/R4 run with DESeq2 1.52)
+- [ ] `bulk-rnaseq/lec.qmd` — added 2026-10-30; needs audit
+- [ ] `bulk-rnaseq/make-bulk-figs.R` — added 2026-10-30; needs audit
+- [ ] `bulk-rnaseq/make-airway-figs.R` — added 2026-10-30; needs audit
 - [x] `scrna-umap/exercise.qmd`
 - [x] `scrna-umap/lec.qmd`
 - [ ] `solving-systems-r/exercise.qmd` — 2026-10-15: rank replaces det as the singularity check (det now bonus); needs re-audit
@@ -145,3 +149,4 @@ Each demo was checked by its author (node tests of the maths, scripted clicks in
 - [ ] `demos/src/leiden/` — scrna-umap (added 2026-10-16; needs audit; Leiden and Louvain with modularity + resolution in `leiden.ts`: queue-based local move, refinement, aggregation on the refined partition, passes until stable; imports the data, kNN/fuzzy graph and UMAP layout from `demos/src/umaplive/`, which is unchanged)
 - [ ] `demos/src/hmmcpg/` — hmm (added 2026-10-16; needs audit; 2-state H/L HMM over A/C/G/T in `hmm.ts`: simulation from fixed uniforms, scaled forward–backward posterior and log-likelihood, log-space Viterbi; checked against brute force over all 2^n paths for n ≤ 10)
 - [ ] `demos/src/kernel3x3/` — kernels (added 2026-10-16; needs audit; 3 × 3 filtering without kernel flip in `conv.ts` (replicate/zero borders, repeat, display mapping); Node-tested: identity, constant images, Sobel sign on a step, shift direction, by-hand examples; imports `cell256.png` from `demos/src/fourier2d/`, which is unchanged)
+- [ ] `demos/src/countratio/` — bulk-rnaseq (added 2026-10-30; needs audit; ratio x / y of two counts with the same expected count n: (a) histogram of log2(x / y) over replicate pairs with separate 0 / ∞ / 0⁄0 bars, no pseudocount; (b) MA-style fan for 2000 genes, means log-uniform 0.5–5000, top 10 |log2 ratio| among genes without a zero. Optional gamma-mixed "biological variation" (shape 20, CV 0.22) in `sim.ts`. Imports `rpois`/`rgamma` from `demos/src/nbdisp/stats.ts`; summary numbers checked in node against √n and sqrt(2/n)/ln 2)

@@ -1,0 +1,107 @@
+---
+title: "Quiz: bulk RNA-seq with DESeq2"
+format:
+  html:
+    toc: true
+    code-copy: true
+    code-overflow: wrap
+    highlight-style: github
+---
+
+Short questions on counts, size factors and counting noise. Try each on paper first, then open the answer.
+
+---
+
+**Q1.** Gene G has 300 reads in sample 1 (10 million reads in total) and 300 reads in sample 2 (30 million reads in total). Is G expressed at the same level in both samples?
+
+::: {.callout-tip collapse="true" title="Hint"}
+What we want per gene is its share of the RNA, not its raw count.
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+No. Its share is $300 / 10$ million $= 30$ per million in sample 1 and $300 / 30$ million $= 10$ per million in sample 2: G is a **3 times** larger share of the RNA in sample 1. A count means nothing without the depth of its sample.
+:::
+
+---
+
+**Q2.** In sample 2, one very abundant gene goes up 10-fold; nothing else changes. Both samples are sequenced to the same depth. After dividing by the total count, what do all the other genes look like, and why?
+
+::: {.callout-tip collapse="true" title="Hint"}
+The shares of one sample always add up to 1.
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+They all look **down**, although nothing happened to them. The abundant gene takes a larger share of the reads, so every other gene gets a smaller share: a zero-sum game. This is the **composition trap**, and the reason DESeq2 does not use the total count as its size factor.
+:::
+
+---
+
+**Q3.** Two samples, five genes. The ratios sample 2 / sample 1 are 1.6, 1.4, 6.0, 1.5 and 1.5. What is the median-of-ratios size factor of sample 2 relative to sample 1? Which gene probably really changed?
+
+::: {.callout-tip collapse="true" title="Hint"}
+Sort the five ratios and take the middle one.
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+Sorted: 1.4, 1.5, 1.5, 1.6, 6.0. The median is **1.5**: sample 2 was sequenced about 1.5 times deeper. The gene with ratio 6.0 is 4 times up after normalization ($6.0 / 1.5$); the median was not pulled by it.
+:::
+
+---
+
+**Q4.** Why does DESeq2 leave out genes with a 0 in any sample when it computes size factors?
+
+::: {.callout-tip collapse="true" title="Hint"}
+What is the geometric mean of 0, 50 and 200?
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+The geometric mean of a row with a 0 is 0, so the gene's ratios are $x / 0$: infinite or undefined. Such a gene says nothing about the depth of the samples. (It is also a low-count gene, whose counts are very noisy anyway.)
+:::
+
+---
+
+**Q5.** You expect 400 reads of a gene. Roughly what range of counts will you see in repeated libraries, and what is the relative noise? And if you expect 4 reads?
+
+::: {.callout-tip collapse="true" title="Hint"}
+Expect $n$, get $n \pm \sqrt{n}$.
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+$400 \pm 20$, so mostly between about 380 and 420; relative noise $20 / 400 = 5\%$. With 4 expected reads: $4 \pm 2$, relative noise 50%. A count of 2 versus 6 is therefore easily noise, while 300 versus 500 is not.
+:::
+
+---
+
+**Q6.** Two replicates of the same RNA, same depth. You sort all genes by the size of their log2 fold change. What kind of genes are at the top of the list, and should you report them?
+
+::: {.callout-tip collapse="true" title="Hint"}
+Think of the MA-plot fan.
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+Genes with **low counts**: 1 versus 7 reads is a 7-fold change from counting noise alone. Nothing changed, so none of them should be reported. In a real comparison, rank by a test (`padj`) or by a shrunken fold change, never by the raw fold change.
+:::
+
+---
+
+**Q7.** In a DESeq2 result, gene X has `baseMean` 3, `log2FoldChange` 4.2 and `padj` 0.6. Gene Y has `baseMean` 5000, `log2FoldChange` 0.8 and `padj` $10^{-12}$. Which change is better supported, and which column explains the difference?
+
+::: {.callout-tip collapse="true" title="Hint"}
+Which column tells you how uncertain a fold change is?
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+Gene Y. X's fold change is large but built on a few reads, so its standard error `lfcSE` is large and the test is not significant. Y's change is smaller (about 1.7 times) but measured on thousands of reads, so `lfcSE` is small and `padj` tiny.
+:::
+
+---
+
+**Q8.** What does `lfcShrink(dds, coef = ..., type = "apeglm")` do to genes X and Y from Q7, and does it change their `padj`?
+
+::: {.callout-tip collapse="true" title="Hint"}
+"When the data are weak, believe less extreme values."
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+X's fold change is pulled strongly towards 0, because the data behind it are weak; Y's barely moves. The test is not changed: rank and plot with the shrunken fold change, test with `padj`. Why this works (a penalty, or a prior) comes in week 4.
+:::
