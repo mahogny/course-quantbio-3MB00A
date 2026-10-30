@@ -1,0 +1,81 @@
+---
+title: "Bonus quiz, week 3: the questions"
+search: false
+---
+
+Answer these in **Canvas**. They are listed here so you can see them next to the course material. You may use pen and paper and R.
+
+## Question 1: Predict from the coefficients
+
+Expression of one gene in mice was fitted with `lm(expr ~ treatment + age)`, with `ctrl` as the reference level and age in weeks. The coefficients are
+
+(Intercept): 2    treatmenttreat: 1.5    age: 0.2
+
+What is the predicted expression of a treated mouse that is 15 weeks old? Enter a number.
+
+## Question 2: Normal equations for a line
+
+A gene's log2 expression was measured at three drug doses:
+
+dose x:            0   1   2 \
+log2 expression y: 2   1   6
+
+Fit the line y = a + b·x by least squares: write X (a column of 1's and a column with x), compute XᵀX and Xᵀy, and solve the normal equations XᵀX (a, b) = Xᵀy by hand.
+
+What is the slope b? Enter a number.
+
+## Question 3: From batch means to coefficients
+
+Samples were sequenced in three batches, A, B and C. For one gene the mean expression per batch is
+
+A: 7    B: 4    C: 10
+
+You fit `expr ~ batch` with R's default (treatment) coding. Which coefficients do you get for (`(Intercept)`, `batchB`, `batchC`)?
+
+- **A** (7, 4, 10)
+- **B** (7, −3, 3)
+- **C** (7, 3, −3)
+- **D** (7, −3, 6)
+- **E** (4, 3, 6)
+- **F** (7, −3, −7)
+
+## Question 4: Adjusted treatment effect
+
+One gene, 8 samples, two sequencing batches:
+
+ctrl,  batch A: 10 \
+ctrl,  batch B: 30, 30, 30 \
+treat, batch A: 13, 13, 13 \
+treat, batch B: 33
+
+The model `lm(expr ~ treatment + batch)` fits these data exactly. Compute its coefficient `treatmenttreat`, that is the treat − ctrl difference within a batch.
+
+Enter a number.
+
+## Question 5: Which coefficient is NA?
+
+Five samples are left after quality control:
+
+sample 1: batch A, F, ctrl \
+sample 2: batch A, M, treat \
+sample 3: batch B, F, ctrl \
+sample 4: batch B, M, treat \
+sample 5: batch C, M, treat
+
+Predict the design matrix of `~ batch + sex + treatment` and its rank first, then check with the R code below. If you fit any gene with `lm(y ~ batch + sex + treatment)` (or limma), which coefficient is reported as NA (not estimable)?
+
+```r
+d <- data.frame(batch     = c("A", "A", "B", "B", "C"),
+                sex       = c("F", "M", "F", "M", "M"),
+                treatment = c("ctrl", "treat", "ctrl", "treat", "treat"))
+X <- model.matrix(~ batch + sex + treatment, data = d)
+X
+c(ncol(X), qr(X)$rank)
+```
+
+- **A** (Intercept)
+- **B** batchB
+- **C** batchC
+- **D** sexM
+- **E** treatmenttreat
+- **F** None: all five coefficients are estimable

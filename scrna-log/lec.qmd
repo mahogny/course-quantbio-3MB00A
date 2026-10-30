@@ -1,6 +1,6 @@
 ---
 title: "Log and pseudolog transforms"
-subtitle: "Week 3 — Log and pseudolog transforms"
+subtitle: "Candidate material — Log and pseudolog transforms"
 author: "Quantitative biology and integrative omics"
 format:
   revealjs:
@@ -28,10 +28,10 @@ Sequencing gives **counts**: how many RNA molecules of each gene were caught in 
 - **Pseudolog** $\log(1 + x)$: the log with a pseudocount, so that zeros survive. The pseudocount is a **choice**.
 - **Plotting:** a log axis is not the same as plotting log values.
 
-All data today are simulated **single-cell** counts: 400 cells (200 T cells, 200 B cells), 300 genes. Each count is a number of **UMIs**, tagged RNA molecules. The same reasoning applies to bulk RNA-seq, and to the limma analysis later this week.
+All data today are simulated **single-cell** counts: 400 cells (200 T cells, 200 B cells), 300 genes. Each count is a number of **UMIs**, tagged RNA molecules. The same reasoning applies to bulk RNA-seq, and to the limma analysis in week 3.
 
 ::: notes
-This unit opens week 3: before fitting linear models to omics data, the data go on the log scale. It uses single-cell counts as the example because the effects are largest there; the full single-cell pipeline comes in week 5. Explain UMI in one sentence (a molecule tag, so each count is one RNA molecule, not one read). It is short on new maths: logs are school maths. The new content is what the log does to data, and why the pseudocount is not an innocent detail. The simulated data: negative-binomial counts with cell-to-cell differences in capture, 280 background genes with means from 0.01 to 30, 5 very highly expressed genes (like ribosomal or mitochondrial genes), and 15 marker genes that are on (mean 4) in one cell type and nearly off (0.3) in the other. The figure script is make-log-figs.R in the unit folder.
+Optional unit, a deeper look at a step the core units only use: before fitting linear models (week 3) or running PCA on single cells (week 5), the data go on the log scale. It uses single-cell counts as the example because the effects are largest there; the full single-cell pipeline is in Single-cell RNA-seq: data & QC (week 5). Explain UMI in one sentence (a molecule tag, so each count is one RNA molecule, not one read). It is short on new maths: logs are school maths. The new content is what the log does to data, and why the pseudocount is not an innocent detail. The simulated data: negative-binomial counts with cell-to-cell differences in capture, 280 background genes with means from 0.01 to 30, 5 very highly expressed genes (like ribosomal or mitochondrial genes), and 15 marker genes that are on (mean 4) in one cell type and nearly off (0.3) in the other. The figure script is make-log-figs.R in the unit folder.
 :::
 
 ## Expression spans orders of magnitude {.smaller}
@@ -130,7 +130,9 @@ Concrete version of "not linear". The mean of log values is the log of the geome
 
 ## The zero problem, and the pseudolog
 
-Half the entries in our matrix are 0 (real datasets: 90% or more), and $\log 0 = -\infty$.
+We will often work with gene RNA counts. When genes are "off", we have 0 counts.
+
+But $\log 0 = -\infty$.
 
 The fix: add a **pseudocount** $c$ before taking the log. With $c = 1$ this is the **pseudolog**:
 
@@ -139,7 +141,7 @@ $$\text{pseudolog}(x) = \log(1 + x)$$
 In R: `log1p(x)`.
 
 - $0 \mapsto 0$: zeros stay zeros, so the matrix stays sparse.
-- For large $x$, $\log(1 + x) \approx \log x$: the +1 does not matter.
+- For large $x$, $\log(1 + x) \approx \log x$, so the +1 does not matter.
 - For small $x$ it matters a lot: $\log(1 + x) \approx x$, the transform is almost linear near 0.
 
 In general, $\log(x + c)$ with any pseudocount $c > 0$. Our 0, 1, 3, 15 example used $c = 1$ in base 2.
@@ -171,6 +173,8 @@ True fold change for the last three rows: 3, i.e. $\log_2 3 = 1.58$.
 - **Small $c$:** the gap between 0 and 1 count is huge; noise at low counts is blown up.
 - **Large $c$:** low counts are **squashed** together; fold changes between small values shrink towards 0.
 - Values well above $c$ are hardly affected.
+
+In practice, you will see that $c=1$ is almost always used. But you can definitely consider alternatives!
 
 ::: notes
 Read the figure first: with c = 0.1, the step from 0 to 1 count is 3.5 log2 units, larger than the step from 1 to 10. With c = 10 everything below about 10 counts is squashed into a narrow band. Then the table: the same true 3-fold change gives anything from 0.24 to 1.58 depending on c and on how many counts the gene has. A difference of 0 versus 1 UMI, which is mostly sampling noise, gets log2 FC 3.46 with c = 0.1. So the pseudocount sets the count level below which differences are treated as noise. There is no single right value; c = 1 is a convention.
@@ -259,8 +263,8 @@ Point out the order: rowSums and division are linear and happen on counts; log1p
 | Scale factor | pseudocount in counts is $n / 10{,}000$ per cell | `NormalizeData()` |
 | Plotting | a log axis drops zeros; plot log1p values instead | `aes(y = log1p(x))` |
 
-**Next ([Least squares as projection](../least-squares/lec.qmd)):** how a linear model is fitted, the step before design matrices and limma.
+**Where this is used:** [Design matrices in R: limma](../covariates-r/lec.qmd) (week 3) fits linear models to log-scale data; [Single-cell RNA-seq: data & QC](../scrna-intro/lec.qmd) (week 5) normalizes and log-transforms before PCA and UMAP.
 
 ::: notes
-The one-line takeaway: the log is the right scale for expression because biology works in fold changes, but it is nonlinear, so do everything linear first, and the pseudocount you need for the zeros is a modelling choice with visible consequences for low counts. Next unit runs PCA on exactly this log-normalized, HVG-selected matrix.
+The one-line takeaway: the log is the right scale for expression because biology works in fold changes, but it is nonlinear, so do everything linear first, and the pseudocount you need for the zeros is a modelling choice with visible consequences for low counts. Nonlinear embeddings (week 5) runs PCA on exactly this log-normalized, HVG-selected matrix.
 :::

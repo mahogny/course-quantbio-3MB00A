@@ -24,11 +24,10 @@ folder names never change.
    Placed after PCA because the deck leans on PCA throughout.
 
 ## Week 3 — Linear models & differential expression
-1. scrna-log — log/pseudolog of counts (general, not only single cell)
-2. least-squares (NEW) — least squares as projection; how lm finds β
-3. covariates
-4. confounding
-5. covariates-r — limma first (main path); DESeq2 reduced to a pointer to
+1. least-squares (NEW) — least squares as projection; how lm finds β
+2. covariates
+3. confounding
+4. covariates-r — limma first (main path); DESeq2 reduced to a pointer to
    error models (week 4). Avoids the negative binomial in week 3.
 
 ## Week 4 — Penalized models & Bayesian statistics (overview, tight)
@@ -51,6 +50,8 @@ If it must shrink further: crossval or hierarchical next.
 5. scrna-annotation (marker DE recaps week 3)
 
 ## Candidate material
+scrna-log (moved out of week 3 on 2026-10-30: pseudolog and size factors in
+this depth are not needed; scrna-intro covers normalize + log1p briefly),
 rstan-intro, bayes-case, penalized-case, scrna-cellcycle, kernels, ctmc, hmm,
 hmm-r, opls, chemometrics-1, chemometrics-2, multiome.
 
