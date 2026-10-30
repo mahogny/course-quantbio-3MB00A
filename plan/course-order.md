@@ -53,7 +53,9 @@ If it must shrink further: crossval or hierarchical next.
 ## Candidate material
 scrna-log (moved out of week 3 on 2026-10-30: pseudolog and size factors in
 this depth are not needed; scrna-intro covers normalize + log1p briefly),
-rstan-intro, bayes-case, penalized-case, scrna-cellcycle, kernels, ctmc, hmm,
+rstan-intro, bayes-case, penalized-case, scrna-cellcycle, scrna-qc-extra
+(moved out of scrna-intro/scrna-annotation on 2026-10-30: doublets,
+mitochondrial and ribosomal fractions), kernels, ctmc, hmm,
 hmm-r, opls, chemometrics-1, chemometrics-2, multiome.
 
 ## Housekeeping done with the reorder

@@ -32,7 +32,7 @@ Every statistical analysis makes an assumption about **how the data scatter arou
 - **Why the wrong error model misleads** — the practical cost is false discoveries.
 
 ::: notes
-Open with the recall: in Bulk RNA-seq with DESeq2 students saw the noise (n plus or minus root n, the MA-plot fan) without a name, and DESeq2 fit a count model for them. Today names it. The one idea for today: before you fit anything, you commit to a story about how noise entered your data, and that story is a probability distribution. Pick the wrong one and every downstream number — p-values, confidence intervals, effect sizes — is quietly wrong. This is a concept day: no heavy algebra, just building the reflex "what kind of data is this, and which distribution matches it?" We will lean on distributions students have used before (Gaussian, Poisson) but re-derive *why* each fits a data type. The likelihood introduced here is the same likelihood that plugs into Bayes' theorem in the prior, likelihood and posterior unit — flag that connection but do not teach Bayes today.
+Open with the recall: in Bulk RNA-seq with DESeq2 students saw the noise (n plus or minus root n, the MA-plot fan) without a name, and DESeq2 fit a count model for them. Today names it. The one idea for today: before you fit anything, you commit to a story about how noise entered your data, and that story is a probability distribution. Pick the wrong one and every downstream number — p-values, confidence intervals, effect sizes — is quietly wrong. This is a concept day: no heavy algebra, just building the reflex "what kind of data is this, and which distribution matches it?" We will lean on distributions students have used before (Gaussian, Poisson) but re-derive *why* each fits a data type. The likelihood introduced here is the same likelihood that is the likelihood that multiplied the prior in Bayesian vs frequentist — flag that connection but do not teach Bayes today.
 :::
 
 ## A biology picture first {.smaller}
@@ -61,7 +61,7 @@ A measurement is **signal + noise**. The error model is the probability distribu
 $$\text{data} \sim \text{Distribution}(\text{parameters})$$
 
 - It answers: *"If the true value were $\mu$, how likely is the number I actually observed?"*
-- That "how likely" is the **likelihood** — the same likelihood that feeds into Bayes' theorem in the **prior, likelihood and posterior** unit.
+- That "how likely" is the **likelihood** — the same likelihood that multiplied the prior in Bayes' theorem in *Bayesian vs frequentist*.
 - Fitting a model (a t-test, a linear model with `lm`, a genomics tool) always assumes *some* error model, whether or not you named it.
 
 **Choosing the error model = choosing the distribution that matches your data type.**
@@ -69,16 +69,14 @@ $$\text{data} \sim \text{Distribution}(\text{parameters})$$
 ![](fig03-signal-plus-noise.svg){width="65%" fig-align="center"}
 
 ::: notes
-Make the abstraction explicit: whenever you compute a p-value or fit a curve, a distribution is assumed in the background. `lm` assumes Gaussian residuals; a Poisson GLM assumes Poisson counts. The likelihood is just this distribution read as a function of the parameters for fixed data — the bridge to the Bayesian unit, where likelihood times prior gives the posterior. Today we stay frequentist-flavoured and focus only on *picking* the distribution. The recurring question for the rest of the lecture: what does my data type look like — continuous? counts? waiting times? — and which named distribution has that shape?
+Make the abstraction explicit: whenever you compute a p-value or fit a curve, a distribution is assumed in the background. `lm` assumes Gaussian residuals; a Poisson GLM assumes Poisson counts. The likelihood is just this distribution read as a function of the parameters for fixed data — the same thing that, times the prior, gave the posterior in Bayesian vs frequentist. Today we stay frequentist-flavoured and focus only on *picking* the distribution. The recurring question for the rest of the lecture: what does my data type look like — continuous? counts? waiting times? — and which named distribution has that shape?
 :::
 
 ## Gaussian: continuous measurements {.smaller}
 
-The **Gaussian** (normal) distribution fits measurements that are **continuous** and scatter **symmetrically** around a mean.
+The **Gaussian** (normal) distribution fits measurements that are **continuous** and scatter **symmetrically** around a mean: the familiar bell.
 
-$$X \sim \mathcal{N}(\mu, \sigma^2), \qquad f(x) = \frac{1}{\sqrt{2\pi\sigma^2}}\, e^{-\frac{(x-\mu)^2}{2\sigma^2}}$$
-
-- Two separate parameters: mean $\mu$ and variance $\sigma^2$ (**spread is independent of the mean**).
+- Two separate knobs: the mean $\mu$ and the spread (variance $\sigma^2$). **The spread does not depend on the mean.**
 - Good for: protein concentration, cell diameter, $\log$-transformed intensities, height, temperature.
 - The default assumption behind the **t-test**, **linear regression**, and `lm`.
 
@@ -87,7 +85,7 @@ It can take **any real value** — including negatives — which is exactly why 
 ![](fig04-gaussian-bell.svg){width="60%" fig-align="center"}
 
 ::: notes
-Gaussian is the students' familiar ground, so use it to set up the contrast. Two independent knobs: you can have a large mean with a small variance or vice versa — nothing ties them together. That is fine for genuinely continuous quantities. The tell-tale weakness for count data is on the last line: a Gaussian puts probability on negative numbers and on fractional values, but you can never observe -3 reads or 4.5 reads. Log-transforming counts is a common patch that partly Gaussian-ises them, but for low counts it distorts things; the honest fix is a count distribution, which is where we go next.
+Gaussian is the students' familiar ground, so use it to set up the contrast. Two independent knobs: you can have a large mean with a small variance or vice versa — nothing ties them together. That is fine for genuinely continuous quantities. The formula for the bell is not needed today (it is on the optional maths slide at the end); the picture and the two knobs are the point. The tell-tale weakness for count data is on the last line: a Gaussian puts probability on negative numbers and on fractional values, but you can never observe -3 reads or 4.5 reads. Log-transforming counts is a common patch that partly Gaussian-ises them, but for low counts it distorts things; the honest fix is a count distribution, which is where we go next.
 :::
 
 ## Counts are not Gaussian {.smaller}
@@ -109,122 +107,104 @@ List the three ways count data violates Gaussian assumptions so students can rec
 
 ## Poisson: the count distribution {.smaller}
 
-The **Poisson** distribution models the number of independent events in a fixed interval (of time, space, or sequencing depth), occurring at constant average rate.
+The **Poisson** distribution models the **number of independent events in a fixed window** (of time, of genome, of sequencing depth), when events happen at a constant average rate.
 
-$$X \sim \text{Poisson}(\lambda), \qquad P(X = k) = \frac{\lambda^k e^{-\lambda}}{k!}, \quad k = 0, 1, 2, \dots$$
-
-- **One** parameter $\lambda > 0$ — the average count (the rate).
-- Discrete and non-negative by construction.
-- **Defining property:** $\;\mathbb{E}[X] = \lambda \;$ and $\; \text{Var}(X) = \lambda$.
+- **One** knob: the rate $\lambda$, the average count per window.
+- Discrete and non-negative by construction: 0, 1, 2, 3, …
+- That single knob sets both the centre **and** the spread:
 
 $$\boxed{\text{mean} = \text{variance} = \lambda}$$
 
 ![](fig06-poisson-pmf.svg){width="70%" fig-align="center"}
 
 ::: notes
-Introduce Poisson as the natural law for "count of rare-ish independent events in a fixed window." Reads mapping to a gene fit this picture: each of millions of reads independently has a small probability of landing on this gene. The headline, worth repeating aloud, is mean equals variance — a single parameter controls both. This is a strong, testable claim about data: if counts are truly Poisson, their sample variance should roughly equal their sample mean. Keep the factorial formula on screen but do not dwell on it; the conceptual content is the mean = variance identity and the "events in a window" picture.
+Introduce Poisson as the natural law for "count of rare-ish independent events in a fixed window." Reads mapping to a gene fit this picture: each of millions of reads independently has a small probability of landing on this gene. The headline, worth repeating aloud, is mean equals variance — a single parameter controls both. This is a strong, testable claim about data: if counts are truly Poisson, their sample variance should roughly equal their sample mean. The formula for the bar heights (with a factorial) is on the optional maths slide at the end; in practice R's dpois gives the bar heights, and the next slide reads them off a simulation instead.
 :::
 
 ## Poisson: a small example {.smaller}
 
-A gene receives on average $\lambda = 3$ reads per sample. Then:
-
-$$P(0) = \frac{3^0 e^{-3}}{0!} = e^{-3} \approx 0.050, \quad P(3) = \frac{3^3 e^{-3}}{3!} = \frac{27 e^{-3}}{6} \approx 0.224$$
-
-The distribution is **right-skewed** for small $\lambda$ and piles up near zero; as $\lambda$ grows it becomes more symmetric.
-
-```r
-# probabilities for counts 0..8 when lambda = 3
-lambda <- 3
-k <- 0:8
-dpois(k, lambda)         # P(X = k)
-
-mean_sim <- mean(rpois(1e5, lambda))   # ~ 3
-var_sim  <- var(rpois(1e5, lambda))    # ~ 3  -> mean = variance
+```{=html}
+<link rel="stylesheet" href="../demos/dist/demo.css">
+<div data-demo="poissonprocess" data-rate="3" data-window="1" data-view="counts"></div>
+<script src="../demos/dist/poissonprocess.js"></script>
 ```
 
-![](fig07-poisson-lambda3.svg){width="55%" fig-align="center"}
+A gene gets on average 3 reads per sample: read the bars. In R, `dpois(0:8, 3)` gives the red dots.
 
 ::: notes
-Do the two hand calculations so the formula is not abstract: P(0) is just e^-lambda, P(3) plugs in and simplifies. Point out the shape: for small lambda the mass sits near zero and the tail stretches right — nothing like a symmetric bell. The static R shows the two functions they will use, dpois for exact probabilities and rpois to simulate; the simulated mean and variance both land near 3, confirming mean = variance empirically. Remind them these chunks are illustrative and not executed at render time. This mean = variance check is exactly the diagnostic they will apply to real data to decide whether Poisson is adequate.
+Frame it as reads: each 1-Mb window is "one sample", and on average 3 events fall in it. The strip at the top shows the first 10 Mb with the count written over each window; the histogram collects all 2000 windows. Read two bars aloud: about 5% of windows have 0 events (5.2% in this draw; dpois says 0.050) and about 22% have exactly 3 (22.8%; dpois says 0.224). The red dots are the Poisson probabilities, the same numbers dpois(0:8, 3) prints, so nobody needs the formula. The header shows mean 3.01 and variance 3.01: mean = variance, the Poisson signature, checked on simulated data. Point at the shape: piled up near zero with a tail to the right, nothing like a symmetric bell. Then drag the rate to 0.5 (mostly zeros, very skewed) and to 10 (more symmetric, wider). "Draw again" shows the bars wobble around the dots. This mean = variance check is exactly the diagnostic students will apply to real data to decide whether Poisson is adequate. In R: rpois(1e5, 3) simulates such counts; mean and var of the result both land near 3.
 :::
 
 ## Where Poisson comes from: rare events {.smaller}
 
-Poisson is the limit of **many independent trials, each with tiny success probability**.
+Poisson is what you get from **many independent chances, each very unlikely**.
 
-- $n$ reads in a library, each landing on our gene with small probability $p$.
-- Total on-gene reads is $\text{Binomial}(n, p)$; as $n \to \infty$, $p \to 0$ with $np = \lambda$ fixed, this becomes $\text{Poisson}(\lambda)$.
+- A library has **millions of reads**; each one has a **tiny chance** of landing on our gene.
+- Add up all those tiny chances and the number of reads on the gene is (close to) Poisson, with mean = expected reads.
 
-That is precisely the sequencing picture: **millions of reads**, each with a **tiny** chance of hitting any one gene. So idealised counts of independent molecules are Poisson.
+So idealised counts of independent molecules are Poisson.
 
 This same "stream of random events" also has a **waiting-time** description — which is where the **exponential** enters.
 
 ![](fig08-binomial-to-poisson.svg){width="72%" fig-align="center"}
 
 ::: notes
-Give the mechanistic justification so Poisson is not a distribution pulled from a hat. The binomial-to-Poisson limit is the law of rare events: huge number of chances, each unlikely, expected count fixed. Sequencing is the textbook instance — n in the millions, p per gene minuscule. Under idealised independence, counts are therefore Poisson; the fact that real data exceeds Poisson variance (overdispersion) is a signal that some assumption — usually independence / identical rate across samples — is violated, which we reach shortly. End by teeing up the dual view: the same event stream, described by the gaps between events instead of the count, gives the exponential distribution.
+Give the mechanistic justification so Poisson is not a distribution pulled from a hat: a huge number of chances, each unlikely, expected count fixed. Sequencing is the textbook instance — millions of reads, a minuscule chance per gene. (The formal statement, a binomial limit, is on the optional maths slide.) Under idealised independence, counts are therefore Poisson; the fact that real data exceed Poisson variance (overdispersion) is a signal that some assumption — usually the same rate in every sample — is violated, which we reach shortly. End by teeing up the dual view: the same event stream, described by the gaps between events instead of the count, gives the exponential distribution.
 :::
 
 ## Exponential: waiting times {.smaller}
 
-The **exponential** distribution models the **waiting time** until the next event in a stream of random events occurring at rate $\lambda$.
-
-$$T \sim \text{Exp}(\lambda), \qquad f(t) = \lambda e^{-\lambda t}, \quad t \ge 0$$
+The **exponential** distribution models the **waiting time** (or distance) until the next event, in a stream of random events at rate $\lambda$.
 
 - **Continuous** and non-negative (a time, a distance, a length).
-- $\mathbb{E}[T] = \dfrac{1}{\lambda}, \qquad \text{Var}(T) = \dfrac{1}{\lambda^2}$.
-- **Memoryless:** the chance of waiting another $s$ seconds does not depend on how long you have already waited.
+- Short gaps are the most common, long gaps get steadily rarer.
+- **Mean gap = 1 / rate:** mutations at 2 per Mb lie on average 1/2 = **0.5 Mb apart**.
+- **Memoryless:** however long you have already waited, the wait still to come looks the same.
 
 Biology: time between action-potential spikes, intervals between mutations along a genome, survival/dwell times, gaps between binding events.
 
 ![](fig09-exponential-density.svg){width="62%" fig-align="center"}
 
 ::: notes
-Exponential is the continuous partner to Poisson: Poisson counts events, exponential times the gaps between them. Stress it is continuous and non-negative — a duration or a distance, never a count. The memoryless property is the striking feature: an exponential process has no aging, the wait resets at every instant. Biological examples worth naming: inter-spike intervals in neurons, spacing of mutations along a chromosome (events per base), dwell times of a molecule bound to DNA. The rate lambda is the same lambda as in Poisson when both describe one underlying process — the next slide makes that link explicit.
-:::
-
-## Exponential: a small example {.smaller}
-
-Mutations fall along a genome at rate $\lambda = 2$ per megabase. The waiting **distance** to the next mutation is $\text{Exp}(2)$ (in Mb):
-
-$$\mathbb{E}[T] = \frac{1}{2} = 0.5 \text{ Mb}, \qquad P(T > 1) = e^{-\lambda \cdot 1} = e^{-2} \approx 0.135$$
-
-So there is a ~13.5% chance of a gap longer than 1 Mb.
-
-```r
-lambda <- 2
-pexp(1, rate = lambda, lower.tail = FALSE) # P(T > 1) = e^{-2} ~ 0.135
-mean(rexp(1e5, rate = lambda)) # ~ 0.5  = 1/lambda
-
-# count of events in a 1-Mb window is Poisson(lambda) -- same process
-mean(rpois(1e5, lambda))       # ~ 2
-```
-
-![](fig10-exponential-tail.svg){width="55%" fig-align="center"}
-
-::: notes
-Concrete numbers again. The mean gap is 1/lambda = 0.5 Mb, and the survival probability P(T > 1) is just e^{-lambda} — a clean hand calculation. The R uses `lower.tail = FALSE` to request the exponential tail probability and `rexp` to simulate gaps averaging 0.5. The final rpois line quietly makes the punchline of the next slide: the same rate lambda describes both the gaps (exponential, mean 1/lambda) and the count per window (Poisson, mean lambda). Keep it light; the goal is that students see waiting-time data and reach for exponential, and count-per-window data and reach for Poisson.
+Exponential is the continuous partner to Poisson: Poisson counts events, exponential measures the gaps between them. Stress it is continuous and non-negative — a duration or a distance, never a count. One number to remember: the mean gap is 1 over the rate (2 per Mb, so 0.5 Mb apart on average). The memoryless property is the striking feature: an exponential process has no ageing; two slides on, the demo shows it. Biological examples worth naming: inter-spike intervals in neurons, spacing of mutations along a chromosome, dwell times of a molecule bound to DNA. The density formula and a worked tail probability are on the optional maths slide. The rate is the same rate as in the Poisson when both describe one underlying process — the next slide shows that.
 :::
 
 ## Two views of one process {.smaller}
 
-The **Poisson process** is a single model of random events at rate $\lambda$, seen two ways:
+```{=html}
+<link rel="stylesheet" href="../demos/dist/demo.css">
+<div data-demo="poissonprocess" data-rate="2" data-window="1" data-view="both"></div>
+<script src="../demos/dist/poissonprocess.js"></script>
+```
 
-| Question | Distribution | Parameter meaning |
-|---|---|---|
-| How **many** events in a fixed window? | $\text{Poisson}(\lambda)$ | mean count $= \lambda$ |
-| How **long** until the next event? | $\text{Exp}(\lambda)$ | mean wait $= 1/\lambda$ |
-
-- **Counts** in a window $\to$ Poisson.
-- **Gaps** between events $\to$ exponential.
-
-Same underlying randomness, different question. Which one you use is set by **what you measured**, not by the biology alone.
-
-![](fig11-poisson-process-timeline.svg){width="75%" fig-align="center"}
+One stream of mutations: **count per window → Poisson** (mean = rate), **gap to the next → exponential** (mean = 1 / rate).
 
 ::: notes
-This is the unifying slide. One process, two questions. If you tallied events per fixed interval you have counts and use Poisson; if you recorded the time or distance between consecutive events you have waiting times and use exponential. The distinction is about the measurement, not the phenomenon — the same neuron gives Poisson spike counts per second or exponential inter-spike intervals depending on what you logged. Getting students to ask "did I measure a count or a gap?" is the transferable skill. Next we return to counts and confront the fact that real genomics counts are wilder than Poisson allows.
+This is the unifying slide. The strip is a 2000-Mb genome with mutations at 2 per Mb, first 10 Mb shown: ticks are mutations, the shaded windows carry their counts above, the coloured bars below are the gaps. Left: counts in 1-Mb windows, 4077 mutations in all, mean 2.04 and variance 2.00 — about equal, and the bars sit on the Poisson dots. Right: the gaps, mean 0.49 Mb, about 1/rate = 0.5; most gaps are short, long ones rarer, following the exponential curve. Same random events, two questions: if you tallied events per fixed interval you have counts and use Poisson; if you recorded the distance between consecutive events you have gaps and use exponential. Drag the rate up: counts move right, gaps get shorter (mean 1/rate). Change the window to 2 Mb: the counts double (Poisson with mean rate × window), the gaps do not change. The distinction is about the measurement, not the phenomenon — the same neuron gives Poisson spike counts per second or exponential inter-spike intervals depending on what you logged. Getting students to ask "did I measure a count or a gap?" is the transferable skill.
+:::
+
+## Memoryless: the wait does not age {.smaller}
+
+```{=html}
+<div data-demo="poissonprocess" data-rate="2" data-window="1" data-view="gaps" data-memoryless="on"></div>
+```
+
+Keep only gaps longer than 0.5 Mb and look at what is left after 0.5: it looks just like all gaps.
+
+::: notes
+Same 2000-Mb genome, gaps only, with "memoryless" ticked. The demo takes every gap longer than "already waited" (0.5 Mb) and plots how much of it is left beyond 0.5. Header: 35% of the gaps are longer than 0.5 Mb, and what is left has mean 0.50 Mb — the same as all gaps (0.49). The outline (all gaps) and the filled bars (wait left) match. In words: having already gone 0.5 Mb without a mutation tells you nothing about how much further you have to go. For a protein bound to DNA: having stayed 4 s does not make it more likely to let go now. Drag "already waited" up to 1 or 1.5: fewer gaps qualify, the leftover still looks the same. Contrast with a bus timetable or a cell cycle, where waiting longer does make the event closer — those are not exponential. The clumped switch, a few slides on, breaks this.
+:::
+
+## When events clump {.smaller}
+
+```{=html}
+<div data-demo="poissonprocess" data-rate="2" data-window="1" data-view="both" data-clumped="on"></div>
+```
+
+Same average rate, but events now come in bursts: the counts spread far more than the Poisson allows.
+
+::: notes
+Same genome and the same average of 2 per Mb, but "clumped" is ticked: mutations now arrive in small bursts. Left: variance 7.09, 3.45 times the mean — the header says "overdispersed", and the bars are wider than the red Poisson dots (zeros and big counts both too common). Right: the gaps no longer follow the exponential curve (many tiny gaps inside bursts, long ones between). Untick clumped to compare: back to variance about equal to the mean. If time allows, switch to gaps and tick memoryless with clumped on: the wait left is 1.42 Mb, not 0.5 — the process now remembers. So the simple Poisson promise, variance = mean, is fragile: anything that makes the rate uneven breaks it. Real RNA-seq counts break it too, for a reason we turn to next.
 :::
 
 ## Real counts are overdispersed {.smaller}
@@ -242,7 +222,7 @@ Extra variation in $\lambda$ adds variance **on top of** the Poisson counting no
 ![](fig12-mean-variance-overdispersion.svg){width="60%" fig-align="center"}
 
 ::: notes
-This is the single most important practical fact for genomics count analysis. Poisson is the floor of variability — pure counting noise assuming a fixed rate. Real biological replicates carry additional variation because the rate itself fluctuates between samples (genetics, environment, cell state, batch). By the law of total variance, letting lambda vary inflates the variance above the mean. The classic distinction: technical replicates (same sample resequenced) can be near-Poisson; biological replicates (different organisms/cultures) are overdispersed. Any method that assumes Poisson for biological replicates will understate the true variability — the consequence, quantified two slides on, is too many false positives.
+This is the single most important practical fact for genomics count analysis. Poisson is the floor of variability — pure counting noise assuming a fixed rate. Real biological replicates carry additional variation because the rate itself fluctuates between samples (genetics, environment, cell state, batch). Letting the rate vary inflates the variance above the mean, just as the bursts did in the demo. The classic distinction: technical replicates (same sample resequenced) can be near-Poisson; biological replicates (different organisms/cultures) are overdispersed. Any method that assumes Poisson for biological replicates will understate the true variability — the consequence, quantified a few slides on, is too many false positives.
 :::
 
 ## Negative binomial: overdispersed counts {.smaller}
@@ -252,17 +232,18 @@ The **negative binomial (NB)** is a count distribution with a **separate** dispe
 $$X \sim \text{NB}(\mu, \phi), \qquad \text{Var}(X) = \mu + \phi\,\mu^2$$
 
 - $\mu$ = mean; $\phi \ge 0$ = **dispersion**.
+- Example: $\mu = 50$, $\phi = 0.5$ gives variance $50 + 0.5 \cdot 2500 = 1300$, against 50 for a Poisson.
 - $\phi = 0$ recovers **Poisson** (variance $= \mu$); larger $\phi$ = more overdispersion.
 - The extra $\phi\mu^2$ term is why highly expressed genes vary *disproportionately* more.
 
-It arises naturally as a **Poisson whose rate $\lambda$ is itself Gamma-distributed** — exactly the "rate varies between samples" story.
+It arises naturally as a **Poisson whose rate itself varies from sample to sample** (following a Gamma distribution) — exactly the "rate varies between replicates" story.
 
 The workhorse error model of **`DESeq2`** and **`edgeR`** for RNA-seq differential expression: the count model DESeq2 fit for you in *Bulk RNA-seq with DESeq2*.
 
 ![](fig13-gamma-poisson-mixture.svg){width="72%" fig-align="center"}
 
 ::: notes
-NB is the fix for overdispersion: it is Poisson plus a dispersion parameter phi that decouples variance from mean. Variance = mu + phi*mu^2, so at phi = 0 it collapses back to Poisson, and the quadratic term means the variance gap widens for high-expression genes. Mechanistically it is a Gamma-Poisson mixture: draw a per-sample rate from a Gamma, then a Poisson count given that rate — precisely the "lambda varies between biological replicates" model from the previous slide. Students already ran DESeq2 in Bulk RNA-seq with DESeq2, and edgeR is the other standard tool; both are NB GLMs with clever dispersion estimation. Different sources parameterise phi differently (size = 1/phi in R's dnbinom) — mention only if asked. This connects forward to the Poisson and negative binomial distributions unit if listed separately.
+NB is the fix for overdispersion: it is Poisson plus a dispersion parameter phi that decouples variance from mean. Variance = mu + phi*mu^2, so at phi = 0 it collapses back to Poisson, and the quadratic term means the variance gap widens for high-expression genes. Mechanistically it is a Gamma-Poisson mixture: draw a per-sample rate from a Gamma, then a Poisson count given that rate — precisely the "lambda varies between biological replicates" model from the previous slide. Students already ran DESeq2 in Bulk RNA-seq with DESeq2, and edgeR is the other standard tool; both are NB GLMs with clever dispersion estimation. Do the plug-in example aloud: 50 + 0.5 times 2500 = 1300, the number the demo on the next slide shows. R's own name for the dispersion knob (size) is on the optional maths slide; mention only if asked.
 :::
 
 ## Try it: Poisson vs negative binomial {.smaller}
@@ -287,9 +268,10 @@ Using an error model whose variance is **too small** makes you **overconfident**
 ```r
 # same mean (mu = 50), very different spread
 mean(rpois(1e5, 50)); var(rpois(1e5, 50))          # ~50, ~50
-mu <- 50; size <- 2                                 # NB: size = 1/phi
-mean(rnbinom(1e5, mu = mu, size = size))            # ~50
-var(rnbinom(1e5, mu = mu, size = size))             # >> 50 (overdispersed)
+mu <- 50; phi <- 0.5
+x <- rnbinom(1e5, mu = mu, size = 1 / phi)         # R's knob is size = 1/phi
+mean(x)                                             # ~50
+var(x)                                              # ~1300 >> 50 (overdispersed)
 ```
 
 Right shape, right conclusions. **The error model is not a technicality — it sets your false-discovery rate.**
@@ -297,7 +279,7 @@ Right shape, right conclusions. **The error model is not a technicality — it s
 ![](fig14-poisson-vs-nb-falsepositives.svg){width="60%" fig-align="center"}
 
 ::: notes
-This is the "so what". The direction of the error matters: assuming too little variance makes you anti-conservative — p-values shrink, and you call noise as signal. Poisson-on-biological-replicates is the canonical mistake, and it is why the field moved to negative binomial methods. The R makes it visceral: Poisson(50) has variance ~50; NB with the same mean but size = 2 has variance far above 50 (Var = mu + mu^2/size = 50 + 1250). A Poisson test on the NB data would treat that huge spread as if it were only 50, and every borderline gene becomes a false positive. Emphasise size = 1/phi in R's parameterisation so the code matches the earlier formula. Land the closing line: choosing the error model directly controls how many false discoveries you make.
+This is the "so what". The direction of the error matters: assuming too little variance makes you anti-conservative — p-values shrink, and you call noise as signal. Poisson-on-biological-replicates is the canonical mistake, and it is why the field moved to negative binomial methods. The R makes it visceral: Poisson(50) has variance ~50; NB with the same mean and phi = 0.5 has variance about 1300, the number from the negative binomial slide and the demo. A Poisson test on the NB data would treat that huge spread as if it were only 50, and every borderline gene becomes a false positive. The size = 1/phi in the code is just R's spelling of the same knob; no need to dwell on it. Land the closing line: choosing the error model directly controls how many false discoveries you make.
 :::
 
 ## Choosing the error model {.smaller}
@@ -330,8 +312,25 @@ The decision table is the take-home cheat-sheet. Walk each row: what does the da
 | Negative binomial | counts with dispersion; $\text{Var} = \mu + \phi\mu^2$; RNA-seq (`DESeq2`, `edgeR`) |
 | Wrong model | too-small variance $\to$ overconfidence $\to$ **false positives** |
 
-**Connects to:** the **prior, likelihood and posterior** unit (this likelihood plugs into Bayes' theorem); the **Poisson and negative binomial distributions** for count data.
+**Connects to:** **Bayesian vs frequentist** (this likelihood plugs into Bayes' theorem); **Hierarchical models** (stacking technical and biological variation); **Single-cell RNA-seq: data & QC** (the same counts, per cell, with many zeros).
 
 ::: notes
-Recap as a cheat-sheet. Drill the reflex: name the data type, name the distribution, name its defining feature. The three claims most worth memorising: Poisson has variance = mean, real biological counts are overdispersed so need the negative binomial, and assuming too little variance inflates false positives. Close by pointing forward — the likelihood defined today is exactly what multiplies the prior in the Bayesian unit, and the negative binomial gets fuller treatment alongside the Poisson for count data.
+Recap as a cheat-sheet. Drill the reflex: name the data type, name the distribution, name its defining feature. The three claims most worth memorising: Poisson has variance = mean, real biological counts are overdispersed so need the negative binomial, and assuming too little variance inflates false positives. Close by pointing forward — the likelihood defined today is exactly what multiplies the prior in Bayesian vs frequentist; Hierarchical models makes the "variation stacks" idea (counting noise plus biological spread) explicit; and in Single-cell RNA-seq the same Poisson / negative binomial reasoning explains the many zeros per cell.
+:::
+
+## Optional: the maths behind these distributions {.smaller}
+
+For those who want the formulas; nothing in the lecture needs them.
+
+- **Gaussian density:** $f(x) = \dfrac{1}{\sqrt{2\pi\sigma^2}}\, e^{-(x-\mu)^2/(2\sigma^2)}$.
+- **Poisson probabilities:** $P(X = k) = \dfrac{\lambda^k e^{-\lambda}}{k!}$. With $\lambda = 3$: $P(0) = e^{-3} \approx 0.050$, $P(3) = 27 e^{-3}/6 \approx 0.224$ (the bars in the demo).
+- **Where Poisson comes from:** Binomial$(n, p)$ with $n \to \infty$, $p \to 0$, $np = \lambda$ fixed, becomes Poisson$(\lambda)$.
+- **Exponential density:** $f(t) = \lambda e^{-\lambda t}$ for $t \ge 0$; mean $1/\lambda$, variance $1/\lambda^2$; tail $P(T > t) = e^{-\lambda t}$. At 2 per Mb: $P(T > 1) = e^{-2} \approx 0.135$, so about 13.5% of gaps are longer than 1 Mb (`pexp(1, 2, lower.tail = FALSE)`).
+- **Memoryless:** $P(T > s + t \mid T > s) = P(T > t)$.
+- **Negative binomial in R:** `dnbinom`/`rnbinom` use `size` $= 1/\phi$, so $\text{Var} = \mu + \mu^2/\text{size}$.
+
+![](fig10-exponential-tail.svg){width="36%" fig-align="center"}
+
+::: notes
+Optional reference slide; skip in class unless someone asks. It collects the formulas that used to be on the main slides: the Gaussian and exponential densities, the Poisson probability with its factorial (the numbers match the bars of the lambda = 3 demo), the binomial-to-Poisson limit, the exponential tail with the worked e^-2 example, memorylessness as a conditional probability, and R's size = 1/phi convention for the negative binomial.
 :::

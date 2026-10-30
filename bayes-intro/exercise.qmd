@@ -13,9 +13,9 @@ format:
 By the end of this exercise you should be able to:
 
 - state, in your own words, how the **frequentist** and **Bayesian** views of probability differ,
-- write Bayes' rule and identify the **prior**, **likelihood**, and **posterior**,
+- state Bayes' rule (in words or in symbols) and identify the **prior**, **likelihood**, and **posterior**,
 - use the working form **posterior $\propto$ likelihood $\times$ prior**,
-- update a **Beta** prior with **binomial** count data by hand — the conjugate rule $\text{Beta}(\alpha+k,\ \beta+n-k)$,
+- update a **Beta** prior with counted cells by hand — add positives to $\alpha$ and negatives to $\beta$: $\text{Beta}(\alpha+k,\ \beta+n-k)$,
 - read a **posterior mean** and a **credible interval**, and say what a credible interval means (and what a **confidence interval** does *not* mean),
 - explain the difference between a **p-value** and a **posterior probability**.
 
@@ -25,20 +25,23 @@ This is a **concept day** with light arithmetic. Do the by-hand parts first; the
 
 **Two views of probability.** A *frequentist* treats a parameter $p$ as a **fixed unknown** and probability as a **long-run frequency**; results are point estimates, confidence intervals, and p-values. A *Bayesian* treats $p$ as **uncertain** and describes it with a **probability distribution**, updated by data.
 
-**Bayes' rule.** For a hypothesis $H$ (a value of $p$) and observed data $D$,
+**Bayes' rule.** In words: *what you believe after the data = what you believed before × how well each possibility explains the data, rescaled so the beliefs add up to 1.* In symbols, for a hypothesis $H$ (a value of $p$) and observed data $D$,
 
 $$P(H \mid D) = \frac{P(D \mid H)\,P(H)}{P(D)} \qquad\Longrightarrow\qquad \underbrace{P(H\mid D)}_{\text{posterior}} \;\propto\; \underbrace{P(D\mid H)}_{\text{likelihood}}\;\underbrace{P(H)}_{\text{prior}}.$$
 
 The denominator $P(D)$ does not depend on $H$, so it is just a normaliser; the *shape* of the posterior is prior $\times$ likelihood.
 
-**The conjugate Beta–binomial (memorise this).** To estimate a proportion $p$ from $k$ successes in $n$ trials:
+**The Beta–binomial update (the one rule to remember).** To estimate a proportion $p$ from $k$ positive cells out of $n$:
 
-1. **Likelihood** (binomial): $P(k\mid p) \propto p^{k}(1-p)^{n-k}$.
-2. **Prior** (Beta): $p \sim \text{Beta}(\alpha,\beta)$, with $P(p) \propto p^{\alpha-1}(1-p)^{\beta-1}$. Read $\alpha,\beta$ as **prior pseudo-counts** of successes and failures. $\text{Beta}(1,1)$ is **uniform** ("no opinion").
-3. **Posterior** — multiply and add the exponents:
+1. **Likelihood:** for each possible $p$, how probable is "$k$ positive out of $n$"? (The binomial count; `dbinom(k, n, p)` in R.) It is highest at $p = k/n$.
+2. **Prior:** $p \sim \text{Beta}(\alpha,\beta)$, a belief curve over $p$ from 0 to 1. Read it as **$\alpha$ imagined positive cells and $\beta$ imagined negative cells** (prior *pseudo-counts*). $\text{Beta}(1,1)$ is **flat** ("no opinion").
+3. **Posterior:** **add your positives to $\alpha$ and your negatives to $\beta$:**
 $$p \mid \text{data} \sim \text{Beta}(\alpha + k,\ \beta + n - k).$$
-The update is pure arithmetic: **add your successes to $\alpha$ and your failures to $\beta$.**
 4. **Summaries.** Posterior mean $= \dfrac{\alpha}{\alpha+\beta}$ (using the *posterior* $\alpha,\beta$). A **95% credible interval** holds 95% of the posterior probability; you may say *"there is a 95% probability that $p$ lies inside."*
+
+::: {.callout-note collapse="true" title="Optional: the maths"}
+Why the tally rule works. The binomial likelihood is $P(k\mid p) = \binom{n}{k} p^{k}(1-p)^{n-k} \propto p^{k}(1-p)^{n-k}$ and the Beta prior is $P(p) \propto p^{\alpha-1}(1-p)^{\beta-1}$. Multiplying them adds the exponents, $p^{(\alpha+k)-1}(1-p)^{(\beta+n-k)-1}$, which is again a Beta shape. A prior that gives a posterior in the same family is called **conjugate**. A tail probability such as $P(p > 0.25\mid\text{data})$ is the area $\int_{0.25}^{1}\text{Beta}(p;\alpha,\beta)\,dp$, which `1 - pbeta(0.25, a, b)` computes.
+:::
 
 **Interpretation traps.** A frequentist **confidence** interval is a statement about the long-run *procedure*, not a probability about the parameter. A **p-value** is $P(\text{data this extreme}\mid H_0)$, **not** $P(H_0\mid\text{data})$.
 
@@ -48,7 +51,7 @@ Throughout, the running example is counting marker-**positive** cells: $k$ posit
 
 **B1.** In one sentence each, contrast the frequentist and Bayesian meaning of the word "probability." Then say which of the two is willing to write $P(p = 0.3)$, and why.
 
-**B2.** Label the three pieces of $\text{posterior} \propto \text{likelihood} \times \text{prior}$ for the cell-counting problem: which is the binomial term, which is the Beta term, and which is what you report at the end?
+**B2.** Label the three pieces of $\text{posterior} \propto \text{likelihood} \times \text{prior}$ for the cell-counting problem: which ingredient comes from the data (your 6 of 20 cells), which comes from the earlier experiments, and which do you report at the end?
 
 **B3.** You examine $n = 20$ cells and find $k = 6$ positive. Using a **uniform** prior $\text{Beta}(1,1)$:
 (a) write the posterior distribution;
@@ -67,11 +70,11 @@ Throughout, the running example is counting marker-**positive** cells: $k$ posit
 
 ## Explore {#explore}
 
-Do B3–B5 by hand first, then use the demo to check your numbers and to see the curves. The sliders set the prior Beta($\alpha,\beta$) and the data ($k$ positive of $n$ cells); the presets load the lecture's cases. The solid red curve is the posterior, with its 95% credible interval shaded; below the plot the Bayesian interval is drawn next to the frequentist $k/n$ with its usual 95% confidence interval $\hat p \pm 1.96\sqrt{\hat p(1-\hat p)/n}$.
+Do B3–B5 by hand first, then use the demo to check your numbers and to see the curves. The sliders set the prior Beta($\alpha,\beta$) and the data ($k$ positive of $n$ cells); the presets load the lecture's cases. The solid red curve is the posterior, with its 95% credible interval shaded; below the plot the Bayesian interval is drawn next to the frequentist $k/n$ with its usual 95% confidence interval.^[The usual (Wald) interval is $\hat p \pm 1.96\sqrt{\hat p(1-\hat p)/n}$ with $\hat p = k/n$; you do not need the formula.] The shaded area under the posterior is the part to the right of the "shade p >" slider (0.25 at the start); untick its box to hide it.
 
 ```{=html}
 <link rel="stylesheet" href="../demos/dist/demo.css">
-<div data-demo="betabinom" data-a="1" data-b="1" data-k="6" data-n="20" data-truep="0.3"></div>
+<div data-demo="betabinom" data-a="1" data-b="1" data-k="6" data-n="20" data-truep="0.3" data-threshold="0.25"></div>
 <script src="../demos/dist/betabinom.js"></script>
 ```
 
@@ -83,6 +86,16 @@ Do B3–B5 by hand first, then use the demo to check your numbers and to see the
 
 **E4.** Set a flat prior, press "no data", then "+1 negative" five times ($k = 0$, $n = 5$). Compare the frequentist interval with the Bayesian credible interval. Which one gives a sensible statement of uncertainty, and why does the other one fail?
 
+**E5.** (Tail area.) With "6/20 flat", read $P(p > 0.25)$ from the shaded area. Switch to "6/20 Beta(2,8)". Which prior makes you more confident that the fraction exceeds a quarter? How does this area relate to the quantity the student in B7 was reaching for?
+
+**E6.** (What "95% confidence" means.) The second demo repeats a 20-cell experiment 100 times, with true rate 0.3, and draws each experiment's 95% confidence interval.
+
+```{=html}
+<div data-demo="betabinom" data-mode="repeatci" data-n="20" data-truep="0.3"></div>
+```
+
+(a) How many of the 100 intervals contain the true rate? Press "repeat 100 more experiments" a few times. What does "95%" promise, and about what? (b) Load "n 20, rate 0.05". What goes wrong, and why? (c) Tick "also show credible intervals (flat prior)" and compare. Relate your answers to B6 and E4.
+
 ::: {.callout-note collapse="true" title="Solutions"}
 
 **E1.** Flat prior: posterior Beta(7, 15), mean 0.318, 95% credible interval about [0.146, 0.522]. With Beta(2,8): posterior Beta(8, 22), mean 0.267, interval about [0.127, 0.435]. Only the **Bayesian** interval moves. The frequentist estimate $k/n = 0.30$ and its confidence interval [0.10, 0.50] use the data alone, so the prior has no way to enter them.
@@ -92,6 +105,10 @@ Do B3–B5 by hand first, then use the demo to check your numbers and to see the
 **E3.** Beta(20,80) + 6/20 gives Beta(26, 94), mean 0.217 (versus 0.267 with Beta(2,8)), and a narrower interval, about [0.15, 0.29] instead of [0.13, 0.44]. Both priors are centred at 0.2, but Beta(20,80) is worth 100 pseudo-cells, five times the data, so it pulls the estimate almost all the way to 0.2. The **strength** $\alpha+\beta$, not only the centre, decides how much a prior matters (B8).
 
 **E4.** The frequentist estimate is $0/5 = 0$ and the formula gives SE $= 0$, so the "95% interval" collapses to the single point [0, 0] — it claims certainty from five cells. The flat-prior posterior is Beta(1, 6), mean 0.143, with credible interval about [0.004, 0.46]: small fractions are most plausible, but values up to almost one half are not ruled out. The simple $\pm 1.96\,\text{SE}$ interval is an approximation that breaks down for small $n$ or when $k$ is 0 or $n$ (better frequentist intervals exist, e.g. `binom.test` in R); the Bayesian posterior handles these cases without a special rule.
+
+**E5.** Flat prior: the shaded area is 0.74 (posterior Beta(7, 15)). With Beta(2,8) it drops to 0.56 (posterior Beta(8, 22)), since that prior leans toward 0.2. So the flat prior makes you more confident that $p > 0.25$, matching R2. This area, $P(p > 0.25\mid\text{data})$ (or its complement $P(p \le 0.25\mid\text{data}) = 0.26$ for the flat prior), is the posterior probability the student in B7 wanted; the p-value is a different quantity.
+
+**E6.** (a) At the start 96 of the 100 intervals contain 0.3; repeated forever it would be 94.7%, and further batches wobble around 95. "95%" is a promise about the **procedure** over many experiments; any single interval either contains 0.3 or does not (B6). (b) With rate 0.05 only about 61 of 100 contain the truth (63.9% in the long run): about a third of the experiments see no positive cell at all, and their interval collapses to the point [0, 0], the E4 failure. The simple interval is an approximation that breaks down for rare events and small $n$. (c) The flat-prior credible intervals contain the true rate 94 times in 100 here (92.5% in the long run), because a zero count still gives a wide credible interval. With $n = 200$ at rate 0.3 both kinds contain the truth about 94–95% of the time: with plenty of data the two frameworks agree.
 :::
 
 ## In R
@@ -118,10 +135,10 @@ a / (a + b)                          # posterior mean          -> 0.318
 
 ```r
 # 95% credible interval = 2.5% and 97.5% quantiles of the posterior
-qbeta(c(0.025, 0.975), a, b)         # ~ 0.14 .. 0.52
+qbeta(c(0.025, 0.975), a, b)         # ~ 0.15 .. 0.52
 
 # posterior probability that p exceeds 0.25
-1 - pbeta(0.25, a, b)                # ~ 0.75
+1 - pbeta(0.25, a, b)                # ~ 0.74
 ```
 
 ### Swapping in an informative prior
@@ -159,8 +176,8 @@ Which curve sits a little to the left, and why?
 Frequentist probability is a **long-run frequency** of repeatable events, so a fixed parameter has no distribution — a frequentist will not write $P(p = 0.3)$. Bayesian probability is a **degree of belief**, so it *can* describe uncertainty about a fixed-but-unknown parameter. See the [Wikipedia summary of the two interpretations](https://en.wikipedia.org/wiki/Bayesian_probability).
 :::
 
-::: {.callout-tip collapse="true" title="Hint 2 — the conjugate update"}
-Counting $k$ positives out of $n$ is [**binomial**](https://en.wikipedia.org/wiki/Binomial_distribution); the matching prior for the proportion is the [**Beta**](https://en.wikipedia.org/wiki/Beta_distribution) distribution. Multiplying $p^{\alpha-1}(1-p)^{\beta-1}$ by $p^{k}(1-p)^{n-k}$ just adds the exponents, giving $\text{Beta}(\alpha+k,\ \beta+n-k)$. So: **add successes to $\alpha$, failures to $\beta$.**
+::: {.callout-tip collapse="true" title="Hint 2 — the update"}
+Counting $k$ positives out of $n$ is [**binomial**](https://en.wikipedia.org/wiki/Binomial_distribution); the matching prior for the proportion is the [**Beta**](https://en.wikipedia.org/wiki/Beta_distribution) distribution, worth $\alpha$ imagined positives and $\beta$ imagined negatives. Pool the imagined and the real cells: **add positives to $\alpha$, negatives to $\beta$**, giving $\text{Beta}(\alpha+k,\ \beta+n-k)$. (Optional, why it works: multiplying $p^{\alpha-1}(1-p)^{\beta-1}$ by $p^{k}(1-p)^{n-k}$ just adds the exponents; see "Optional: the maths" in the Background.)
 :::
 
 ::: {.callout-tip collapse="true" title="Hint 3 — posterior mean"}
@@ -189,7 +206,7 @@ Build the posterior parameters by adding counts, then use [`dbeta`](https://rdrr
 
 **B1.** *Frequentist:* probability is the long-run relative frequency of an outcome over many repetitions of an experiment. *Bayesian:* probability is a degree of belief about a proposition, given what you know. Only the **Bayesian** will write $P(p = 0.3)$, because Bayesian probability may describe uncertainty about a fixed-but-unknown parameter; for a frequentist the parameter is fixed (not random), so it has no probability distribution.
 
-**B2.** The **binomial** term $p^{6}(1-p)^{14}$ is the **likelihood** (how probable the observed 6-of-20 is for each value of $p$). The **Beta** term $p^{\alpha-1}(1-p)^{\beta-1}$ is the **prior** (belief about $p$ before the data). What you report is the **posterior**, $\text{Beta}(\alpha+6,\ \beta+14)$, obtained by multiplying the two and renormalising.
+**B2.** The **likelihood** comes from the data: for each value of $p$, how probable the observed 6 positives out of 20 are (the binomial count). The **prior** carries the earlier experiments: the Beta curve, $\alpha$ imagined positives and $\beta$ imagined negatives. What you report is the **posterior**, $\text{Beta}(\alpha+6,\ \beta+14)$: prior and data pooled, rescaled to add up to 1.
 
 **B3.**
 (a) Add successes to $\alpha$ and failures to $\beta$: $\text{Beta}(1+6,\ 1+14) = \text{Beta}(7,\ 15)$.
@@ -218,7 +235,7 @@ a <- 1 + k; b <- 1 + (n - k)         # Beta(7, 15)
 a / (a + b)                          # 0.3181818  -> matches 7/22
 qbeta(c(0.025, 0.975), a, b)         # ~ 0.1459 .. 0.5218
 ```
-The mean equals $\alpha/(\alpha+\beta) = 7/22$; the 95% credible interval is roughly $[0.14, 0.52]$.
+The mean equals $\alpha/(\alpha+\beta) = 7/22$; the 95% credible interval is roughly $[0.15, 0.52]$.
 
 **R2.**
 ```r
@@ -226,14 +243,14 @@ k <- 6; n <- 20
 
 # uniform prior
 a <- 1 + k; b <- 1 + (n - k)         # Beta(7, 15)
-1 - pbeta(0.25, a, b)                # ~ 0.75
+1 - pbeta(0.25, a, b)                # ~ 0.74
 
 # informative prior Beta(2,8)
 a <- 2 + k; b <- 8 + (n - k)         # Beta(8, 22)
 a / (a + b)                          # 0.2667
 1 - pbeta(0.25, a, b)                # ~ 0.55
 ```
-The **uniform** prior gives a higher $P(p > 0.25)$ (~0.75) than the informative prior (~0.55). That matches intuition: the informative prior is centred at $0.2$, so it pulls belief below $0.25$ and makes you less sure the fraction exceeds a quarter.
+The **uniform** prior gives a higher $P(p > 0.25)$ (~0.74) than the informative prior (~0.55). That matches intuition: the informative prior is centred at $0.2$, so it pulls belief below $0.25$ and makes you less sure the fraction exceeds a quarter.
 
 **R3.**
 ```r
@@ -247,11 +264,11 @@ a / (a + b)                          # 0.2952
 ```
 The two means (0.302 and 0.295) differ by under $0.01$, far less than the $n = 20$ gap (0.318 vs 0.267). With ten times the data the prior barely matters.
 
-**R4.** The dashed curve, the $\text{Beta}(8,22)$ posterior from the informative prior, sits slightly to the **left** of the solid $\text{Beta}(7,15)$ curve, because the informative prior is centred near $0.2$ and pulls the posterior toward smaller $p$. The flat-prior posterior Beta(7,15) peaks exactly on the grey line at $0.30$ (its mode $(7-1)/(7+15-2) = 6/20$ is the data estimate); the informative-prior posterior Beta(8,22) peaks below it, at $7/28 = 0.25$, pulled toward the prior's $0.2$. With more data both curves would narrow and slide onto $0.30$.
+**R4.** The dashed curve, the $\text{Beta}(8,22)$ posterior from the informative prior, sits slightly to the **left** of the solid $\text{Beta}(7,15)$ curve, because the informative prior is centred near $0.2$ and pulls the posterior toward smaller $p$. The flat-prior posterior Beta(7,15) peaks exactly on the grey line at $0.30$, the data estimate; the informative-prior posterior Beta(8,22) peaks below it, at $0.25$, pulled toward the prior's $0.2$. (Optional: the peak of $\text{Beta}(\alpha,\beta)$ sits at $(\alpha-1)/(\alpha+\beta-2)$, which gives $6/20$ and $7/28$.) With more data both curves would narrow and slide onto $0.30$.
 :::
 
 ## Where this leads
 
-- **Bayesian inference in R:** for non-conjugate models there is no closed-form posterior, and we sample it with **MCMC** (e.g. Stan / `rstan`, `brms`). The Beta–binomial here is the rare case that needs only `qbeta`/`pbeta`.
+- **Bayesian inference in R:** for non-conjugate models there is no closed-form posterior, and we sample it with **MCMC** (e.g. Stan / `rstan`, `brms`). The Beta–binomial here is the rare case where adding counts gives the posterior and `qbeta`/`pbeta` do the rest.
 - **Hierarchical / empirical-Bayes shrinkage:** the per-gene estimates in differential-expression tools (limma, DESeq2) borrow strength across genes exactly in the spirit of a prior — a hierarchical Bayesian idea, even when the software calls it something else.
 - **Count distributions:** the **Poisson** and **negative binomial** distributions (introduced with overdispersion in the count-data material) are the likelihoods you would pair with priors when modelling sequencing counts the Bayesian way.

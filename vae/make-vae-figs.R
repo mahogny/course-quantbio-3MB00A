@@ -3,7 +3,7 @@
 # Re-run by hand from this folder (it is NOT run by `quarto render`):
 #   cd vae && Rscript make-vae-figs.R
 #
-# Writes fig02, fig04 and fig05 (the diagrams fig01, fig03 and fig06 are separate,
+# Writes fig02, fig04 and fig05 (the diagrams fig01, fig03a, fig03b and fig06 are separate,
 # hand-written SVG files) and prints the numbers quoted on the slides.
 # Base R only. Colours follow the ctmc/ figures. The "decoder" here is the same
 # hand-written function as in exercise.qmd, not a trained network.

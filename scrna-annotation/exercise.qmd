@@ -17,7 +17,7 @@ By the end of this exercise you should be able to:
 - compute a **log$_2$ fold change** and the **detection fractions** `pct.1` / `pct.2` for a gene, one-vs-rest,
 - read a **FindMarkers-style** table and decide which gene is a marker and which is housekeeping,
 - assign a **cell-type label** to a cluster by matching its markers to a signature table,
-- recognise the classic traps: **doublets** and **continuous states**.
+- recognise a classic trap: **continuous states** that resist discrete labels.
 
 The by-hand parts are the core skill: they are just group means and a difference of logs, applied per gene. The R section confirms the same numbers at scale (full workflow fluency continues in Cell-cycle analysis and the single-cell practical).
 
@@ -61,9 +61,7 @@ Clustering has already assigned **cluster 1 = {c1, c2, c3}** and **cluster 2 = {
 | T cell | `CD3D`, `CD3E`, `CD2` |
 | B cell | `MS4A1` (CD20), `CD79A` |
 
-**B6. (doublet)** A seventh cell arrives with expression `CD3D = 8`, `MS4A1 = 8`, `ACTB = 11`. It co-expresses the exclusive T-cell **and** B-cell markers at high level. Should you call it a new "T/B hybrid" cell type? What is the more likely explanation, and how would you check?
-
-**B7. (continuous state)** In a bone-marrow dataset the cells form a smooth gradient from stem cells to mature cells, with no gaps. You still run clustering and get 5 clusters. In one sentence, what is the risk of labelling these 5 clusters as 5 discrete "types", and what representation might be truer to the biology?
+**B6. (continuous state)** In a bone-marrow dataset the cells form a smooth gradient from stem cells to mature cells, with no gaps. You still run clustering and get 5 clusters. In one sentence, what is the risk of labelling these 5 clusters as 5 discrete "types", and what representation might be truer to the biology?
 
 ## In R
 
@@ -128,8 +126,6 @@ head(markers[markers$cluster == 1, ], 5)
 
 **R2.** Reproduce **B3**: confirm `pct.1 = 1.0` and `pct.2 = 0.33` for CD3D. Then compute `pct.1`/`pct.2` for **MS4A1** with respect to cluster 1 — do the values make sense for a *non*-marker of cluster 1?
 
-**R3.** Add the doublet cell from **B6** as a new column `c7 = c(8, 8, 11)` and confirm it is high in **both** `CD3D` and `MS4A1`. Explain in a comment why a naive marker match would mislabel it.
-
 ## Hints
 
 ::: {.callout-tip collapse="true" title="Hint 1 — the centroid is just a mean"}
@@ -150,10 +146,6 @@ A marker must satisfy **all** of: large positive $\log_2$FC (higher in the clust
 
 ::: {.callout-tip collapse="true" title="Hint 5 — assigning the label"}
 Match the cluster's **up** markers to the signature table: whichever cell type's canonical genes appear as the cluster's markers gives the label. `CD3D` up in cluster 1 → look it up in the table.
-:::
-
-::: {.callout-tip collapse="true" title="Hint 6 — the doublet"}
-`CD3D` and `MS4A1` mark **different, exclusive** lineages (T vs B). A single real cell almost never expresses both strongly. When it does, suspect a **doublet** — two cells in one droplet, whose profile is the *sum* of two types. Check with a doublet detector ([`scDblFinder`](https://bioconductor.org/packages/scDblFinder/)) and remove flagged cells before annotating.
 :::
 
 ## Solutions
@@ -193,9 +185,7 @@ so the **cluster-2 centroid** is $(1,\ 8,\ 11)$.
 
 **B5.** Cluster 1's up-marker is `CD3D`, which the table lists under **T cell** → **cluster 1 = T cells**. Cluster 2's up-marker is `MS4A1` (high in cluster 2, low in cluster 1), listed under **B cell** → **cluster 2 = B cells**.
 
-**B6.** Do **not** call it a new hybrid type. `CD3D` (T cell) and `MS4A1` (B cell) mark exclusive lineages that a single cell essentially never co-expresses at high level. The profile `(8, 8, 11)` looks like the **sum** of a T-cell profile and a B-cell profile — the signature of a **doublet**: two cells captured in one droplet and sequenced as one. Check by running a doublet detector (e.g. `scDblFinder` or `DoubletFinder`); if flagged, remove the cell before finalising annotation. Co-expression of two lineages' exclusive markers is a doublet until proven otherwise.
-
-**B7.** If identity is really a smooth **continuum** (stem → mature), cutting it into 5 clusters draws boundaries that are partly arbitrary, so the 5 "types" may be artefacts of where the algorithm split a gradient rather than genuine discrete populations. A **trajectory / pseudotime** representation, which orders cells along the continuous axis instead of boxing them, is truer to this biology.
+**B6.** If identity is really a smooth **continuum** (stem → mature), cutting it into 5 clusters draws boundaries that are partly arbitrary, so the 5 "types" may be artefacts of where the algorithm split a gradient rather than genuine discrete populations. A **trajectory / pseudotime** representation, which orders cells along the continuous axis instead of boxing them, is truer to this biology.
 
 **R1.** Running the centroid and log-fold-change blocks gives `log2fc["CD3D"] = 3` and `log2fc["MS4A1"] ≈ -4.58`, matching B2.
 
@@ -214,14 +204,6 @@ pct(expr["MS4A1", cluster2])   # 1.00  (all of c4,c5,c6) -> pct.2
 
 For a cluster-1 marker we want `pct.1` high and `pct.2` low; MS4A1 shows the **opposite** (`pct.1 = 0.33`, `pct.2 = 1.0`), confirming it is not a marker of cluster 1 — it marks cluster 2.
 
-**R3.**
-
-```r
-expr2 <- cbind(expr, c7 = c(8, 8, 11))
-expr2[, "c7"]      # CD3D 8  MS4A1 8  ACTB 11  -> high in BOTH lineage markers
-# A naive match would see CD3D -> T cell AND MS4A1 -> B cell and might invent a
-# "T/B" type. The profile is really the sum of a T cell and a B cell: a doublet.
-```
 :::
 
 ## Where this leads

@@ -230,7 +230,7 @@ Quantitative biology and integrative omics
 <li><strong>Ridge</strong> ⇔ a <strong>Gaussian</strong> prior; <strong>lasso</strong> ⇔ a <strong>Laplace</strong> (double-exponential) prior.</li>
 <li>The penalty strength <span class="math inline">\lambda</span> encodes <strong>how sure</strong> you were before seeing data — the <strong>prior precision</strong>.</li>
 </ul>
-<p>This is a <strong>concept</strong> day: light math, one master equation, and a change of viewpoint that makes both blocks click together.</p>
+<p>This is a <strong>concept</strong> day: no derivations, one slogan, two demos, and a change of viewpoint that makes both blocks click together.</p>
 <aside class="notes">
 <p>The single idea for today: a penalty and a prior are two languages for the same statement. The engineer says “I penalise large coefficients to stop overfitting”; the Bayesian says “I believe a priori that coefficients are small.” They write down the <em>same</em> objective and get the <em>same</em> answer. Everything else — ridge = Gaussian, lasso = Laplace, lambda = prior precision — is detail hanging off that equivalence. Stress that this reframes material students already own from Ridge and lasso regression and from Bayesian inference; nothing here is a brand-new technique, it is a unifying view.</p>
 <style type="text/css">
@@ -271,15 +271,15 @@ Quantitative biology and integrative omics
 </section>
 <section id="recap-the-penalised-objective" class="slide level2 smaller">
 <h2>Recap: the penalised objective</h2>
-<p>From <strong>Ridge and lasso regression</strong>, we fit coefficients <span class="math inline">\boldsymbol\beta</span> by minimising <em>fit error + penalty</em>:</p>
-<p><span class="math display">\hat{\boldsymbol\beta} = \arg\min_{\boldsymbol\beta}\ \underbrace{\sum_{i=1}^n \big(y_i - \mathbf{x}_i^\top\boldsymbol\beta\big)^2}_{\text{residual sum of squares (RSS)}} \;+\; \lambda\, \underbrace{\mathcal{P}(\boldsymbol\beta)}_{\text{penalty}}</span></p>
+<p>From <strong>Ridge and lasso regression</strong>, we fit the coefficients <span class="math inline">\beta</span> by making this as small as possible:</p>
+<p><span class="math display">\underbrace{\text{RSS}}_{\text{fit error: how badly the model misses the data}} \;+\; \lambda \times \underbrace{\text{penalty}}_{\text{how big the coefficients are}}</span></p>
 <ul>
-<li><strong>Ridge:</strong> <span class="math inline">\mathcal{P}(\boldsymbol\beta) = \sum_j \beta_j^2 = \lVert\boldsymbol\beta\rVert_2^2</span> (sum of squares).</li>
-<li><strong>Lasso:</strong> <span class="math inline">\mathcal{P}(\boldsymbol\beta) = \sum_j |\beta_j| = \lVert\boldsymbol\beta\rVert_1</span> (sum of absolute values).</li>
+<li><strong>Ridge:</strong> penalty <span class="math inline">= \sum \beta^2</span> (sum of squares).</li>
+<li><strong>Lasso:</strong> penalty <span class="math inline">= \sum |\beta|</span> (sum of absolute values).</li>
 </ul>
 <p><span class="math inline">\lambda \ge 0</span> dials the penalty: <span class="math inline">\lambda = 0</span> is plain least squares; large <span class="math inline">\lambda</span> shrinks coefficients hard toward <span class="math inline">0</span>.</p>
 <aside class="notes">
-<p>Pure recap, no new content — just re-establish the objective and notation so the Bayesian side has something to map onto. Remind them ridge shrinks all coefficients smoothly toward zero but keeps them nonzero, while lasso can set some exactly to zero (variable selection). Keep lambda’s role vivid: it is the single knob trading fit against simplicity. We are about to reinterpret every symbol here in probability language.</p>
+<p>Pure recap, no new content: re-establish “fit error plus lambda times penalty” so the Bayesian side has something to map onto. RSS is the residual sum of squares, the total squared miss between the data and the fitted values. Remind them ridge shrinks all coefficients smoothly toward zero but keeps them nonzero, while lasso can set some exactly to zero (variable selection). Keep lambda’s role vivid: it is the single knob trading fit against simplicity. We are about to reinterpret each piece in probability language.</p>
 <style type="text/css">
         span.MJX_Assistive_MathML {
           position:absolute!important;
@@ -302,8 +302,7 @@ Quantitative biology and integrative omics
 <li><strong>Posterior</strong> — the updated belief, combining both.</li>
 </ul>
 <p>A quick summary of the posterior is its <strong>peak</strong> — the single most probable <span class="math inline">\boldsymbol\beta</span>. That is the <strong>MAP</strong> estimate (<em>maximum a posteriori</em>), and it is where the bridge to penalties is built.</p>
-
-<img data-src="fig04-prior-likelihood-posterior.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:60.0%"><aside class="notes">
+<aside class="notes">
 <p>Second recap slide. Reinstate the prior/likelihood/posterior trinity from the Bayesian block. Emphasise proportionality: we drop the normalising constant p(data) because it does not depend on beta and so does not move the location of the peak. Introduce MAP gently as “the top of the posterior hill” — a point summary, in contrast to the full posterior distribution a Bayesian would ideally report. Foreshadow the caveat slide: MAP throws away the width of the posterior, which matters, but it is exactly the quantity that equals penalised regression.</p>
 <style type="text/css">
         span.MJX_Assistive_MathML {
@@ -317,36 +316,39 @@ Quantitative biology and integrative omics
           display:block!important;
       }</style></aside>
 </section>
-<section id="the-one-trick-turn-products-into-sums" class="slide level2 smaller">
-<h2>The one trick: turn products into sums</h2>
-<p>Maximising a product of probabilities is awkward; maximising its <strong>logarithm</strong> is easy and gives the same peak (log is increasing). Taking <span class="math inline">-\log</span> turns “maximise” into “minimise”:</p>
-<p><span class="math display">\arg\max_{\boldsymbol\beta}\ p(\boldsymbol\beta\mid\text{data}) \;=\; \arg\min_{\boldsymbol\beta}\ \Big[\,-\log p(\text{data}\mid\boldsymbol\beta) \;-\; \log p(\boldsymbol\beta)\,\Big]</span></p>
-<p><span class="math display">\underbrace{\ \ \text{MAP estimate}\ \ }_{\text{find the posterior peak}} \;=\; \arg\min_{\boldsymbol\beta}\ \big[\ \underbrace{\text{(negative log-likelihood)}}_{\text{fit term}} \;+\; \underbrace{\text{(negative log-prior)}}_{\text{penalty term}}\ \big]</span></p>
-<p>This already <strong>looks like</strong> <em>fit + penalty</em>. The rest of the lecture is just plugging in specific likelihoods and priors and reading off the terms.</p>
-<aside class="notes">
-<p>This is the mechanical heart of the equivalence and worth doing slowly. Two facts: (1) argmax is unchanged by a monotonically increasing transform, so we may take logs; (2) log turns products into sums and the minus sign flips max to min. The result is structurally already “fit term plus penalty term.” Point at the two braces and say: the negative log-likelihood will become the RSS, and the negative log-prior will become the ridge or lasso penalty. Nothing subtle remains — only substitution. Reassure the less mathematical students that they do not need to reproduce this derivation, only to recognise the shape.</p>
-<style type="text/css">
-        span.MJX_Assistive_MathML {
-          position:absolute!important;
-          clip: rect(1px, 1px, 1px, 1px);
-          padding: 1px 0 0 0!important;
-          border: 0!important;
-          height: 1px!important;
-          width: 1px!important;
-          overflow: hidden!important;
-          display:block!important;
-      }</style></aside>
-</section>
-<section id="the-likelihood-of-linear-regression" class="slide level2 smaller">
-<h2>The likelihood of linear regression</h2>
-<p>The standard linear model assumes the noise is <strong>Gaussian</strong>:</p>
-<p><span class="math display">y_i = \mathbf{x}_i^\top\boldsymbol\beta + \varepsilon_i, \qquad \varepsilon_i \sim \mathcal{N}(0,\ \sigma^2)</span></p>
-<p>So each residual is Gaussian, and the negative log-likelihood is (dropping constants that do not involve <span class="math inline">\boldsymbol\beta</span>):</p>
-<p><span class="math display">-\log p(\text{data}\mid\boldsymbol\beta) \;=\; \frac{1}{2\sigma^2}\sum_{i=1}^n \big(y_i - \mathbf{x}_i^\top\boldsymbol\beta\big)^2 \;+\; \text{const} \;=\; \frac{1}{2\sigma^2}\,\text{RSS} \;+\; \text{const}</span></p>
-<p><strong>The fit term is just the residual sum of squares</strong>, scaled by <span class="math inline">1/(2\sigma^2)</span>. This is why ordinary least squares <em>is</em> maximum-likelihood under Gaussian noise — a fact from the <strong>Linear regression</strong> block, now in probability language.</p>
+<section id="the-bridge-penalty-how-unlikely-the-prior-finds-beta" class="slide level2 smaller">
+<h2>The bridge: penalty = how unlikely the prior finds <span class="math inline">\beta</span></h2>
+<p>Finding the <strong>posterior peak</strong> (MAP) means finding the <span class="math inline">\beta</span> that does well on <strong>both</strong> counts at once:</p>
+<table class="caption-top">
+<colgroup>
+<col style="width: 33%">
+<col style="width: 33%">
+<col style="width: 33%">
+</colgroup>
+<thead>
+<tr class="header">
+<th></th>
+<th>Bayesian view</th>
+<th>Penalised view</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>how well <span class="math inline">\beta</span> explains the data</td>
+<td><strong>likelihood</strong></td>
+<td><strong>fit error (RSS)</strong>: small RSS = high likelihood</td>
+</tr>
+<tr class="even">
+<td>how plausible <span class="math inline">\beta</span> was beforehand</td>
+<td><strong>prior</strong></td>
+<td><strong>penalty</strong>: big penalty = the prior finds <span class="math inline">\beta</span> unlikely</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Slogan:</strong> <em>the penalty is how unlikely the prior finds <span class="math inline">\beta</span>.</em> Minimising “RSS + penalty” is climbing to the top of “likelihood × prior”. Same answer, two languages.</p>
 
-<img data-src="fig06-gaussian-noise-regression.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:60.0%"><aside class="notes">
-<p>Connect back to a result they have already been told, perhaps without proof: least squares equals maximum likelihood when errors are Gaussian. Here is the reason in one line — the Gaussian density has exp(-residual^2 / 2 sigma^2), so its negative log is residual^2 / 2 sigma^2, and summing over independent samples gives RSS / 2 sigma^2. The 1/(2 sigma^2) prefactor will matter on the next slides because it sets the exchange rate between the fit term and the penalty term, which is where lambda comes from. Keep sigma^2 in view; do not absorb it yet.</p>
+<img data-src="fig04-prior-likelihood-posterior.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:60.0%"><aside class="notes">
+<p>This replaces the derivation. Two sentences carry it. (1) With Gaussian noise, a line with a small total squared miss (RSS) is a line under which the data are likely: least squares is maximum likelihood, as in the Linear regression block. (2) A prior that says “coefficients are near 0” finds big coefficients unlikely, and the penalty is exactly that unlikeliness, written as a cost. Adding the two costs and minimising lands on the same beta as multiplying likelihood by prior and taking the peak: in the figure, the posterior peak sits between the prior peak at 0 and the likelihood peak, pulled toward 0, exactly like a penalised estimate. Students do not need to reproduce why; the optional slide near the end has the log algebra for those who want it.</p>
 <style type="text/css">
         span.MJX_Assistive_MathML {
           position:absolute!important;
@@ -361,17 +363,16 @@ Quantitative biology and integrative omics
 </section>
 <section id="adding-a-prior-on-the-coefficients" class="slide level2 smaller">
 <h2>Adding a prior on the coefficients</h2>
-<p>Now assert a <strong>prior</strong> on each coefficient <span class="math inline">\beta_j</span>. Take them independent and centred at <span class="math inline">0</span> — encoding “before seeing data, I expect effects to be <strong>small</strong>, and I have no reason to prefer positive over negative.”</p>
-<p><span class="math display">p(\boldsymbol\beta) = \prod_{j=1}^p p(\beta_j)</span></p>
-<p>The <strong>shape</strong> of <span class="math inline">p(\beta_j)</span> is the modelling choice. Two natural bell-ish curves centred at <span class="math inline">0</span>:</p>
+<p>Now put a <strong>prior</strong> on each coefficient <span class="math inline">\beta</span>, centred at <span class="math inline">0</span> — encoding “before seeing data, I expect effects to be <strong>small</strong>, and I have no reason to prefer positive over negative.”</p>
+<p>The <strong>shape</strong> of the prior is the modelling choice. Two natural bell-ish curves centred at <span class="math inline">0</span>:</p>
 <ul>
-<li>a <strong>Gaussian</strong> <span class="math inline">\mathcal{N}(0,\tau^2)</span> — smoothly peaked, light-ish tails;</li>
+<li>a <strong>Gaussian</strong> with variance <span class="math inline">\tau^2</span> — a rounded top, light-ish tails;</li>
 <li>a <strong>Laplace</strong> (double-exponential) — a <strong>sharp spike</strong> at <span class="math inline">0</span> with heavier tails.</li>
 </ul>
-<p>Each choice, pushed through <span class="math inline">-\log</span>, produces a <strong>different penalty</strong>. That is the whole story.</p>
+<p>Each shape, read as “how unlikely is this <span class="math inline">\beta</span>”, gives a <strong>different penalty</strong>. That is the whole story.</p>
 
 <img data-src="fig07-gaussian-vs-laplace.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:60.0%"><aside class="notes">
-<p>The prior is a statement about coefficients before data. Centring at zero encodes shrinkage-toward-zero and symmetry encodes no directional preference. The variance/scale of the prior encodes how small we think effects are. Preview the punchline visually: Gaussian is a smooth hump, Laplace has a pointed cusp at zero. Tell them to hold that cusp in mind — it is the geometric reason lasso produces exact zeros while ridge does not. The next two slides do the two substitutions explicitly.</p>
+<p>The prior is a statement about coefficients before data. Centring at zero encodes shrinkage-toward-zero and symmetry encodes no directional preference. The variance/scale of the prior encodes how small we think effects are. Preview the punchline visually: Gaussian is a smooth hump, Laplace has a pointed cusp at zero. Tell them to hold that cusp in mind — it is the geometric reason lasso produces exact zeros while ridge does not. The next slide names the two penalties.</p>
 <style type="text/css">
         span.MJX_Assistive_MathML {
           position:absolute!important;
@@ -384,16 +385,42 @@ Quantitative biology and integrative omics
           display:block!important;
       }</style></aside>
 </section>
-<section id="ridge-a-gaussian-prior" class="slide level2 smaller">
-<h2>Ridge = a Gaussian prior</h2>
-<p>Put a <strong>Gaussian</strong> prior on each coefficient: <span class="math inline">\beta_j \sim \mathcal{N}(0,\ \tau^2)</span>. Its density is <span class="math inline">\propto \exp\!\big(-\beta_j^2 / 2\tau^2\big)</span>, so</p>
-<p><span class="math display">-\log p(\boldsymbol\beta) \;=\; \frac{1}{2\tau^2}\sum_{j=1}^p \beta_j^2 \;+\; \text{const} \;=\; \frac{1}{2\tau^2}\,\lVert\boldsymbol\beta\rVert_2^2 \;+\; \text{const}</span></p>
-<p>Add this to the fit term from the previous slide and minimise:</p>
-<p><span class="math display">\arg\min_{\boldsymbol\beta}\ \frac{1}{2\sigma^2}\,\text{RSS} \;+\; \frac{1}{2\tau^2}\,\lVert\boldsymbol\beta\rVert_2^2 \;\;\equiv\;\; \arg\min_{\boldsymbol\beta}\ \text{RSS} \;+\; \frac{\sigma^2}{\tau^2}\,\lVert\boldsymbol\beta\rVert_2^2</span></p>
-<p>That second form (multiply through by <span class="math inline">2\sigma^2</span>) is <strong>exactly ridge regression</strong>, with</p>
-<p><span class="math display">\boxed{\ \lambda_{\text{ridge}} = \dfrac{\sigma^2}{\tau^2}\ }</span></p>
+<section id="ridge-gaussian-prior-lasso-laplace-prior" class="slide level2 smaller">
+<h2>Ridge = Gaussian prior, lasso = Laplace prior</h2>
+<table class="caption-top">
+<colgroup>
+<col style="width: 25%">
+<col style="width: 25%">
+<col style="width: 25%">
+<col style="width: 25%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Prior on each <span class="math inline">\beta</span></th>
+<th>How unlikely it finds <span class="math inline">\beta</span> grows like</th>
+<th>Penalty</th>
+<th>Method</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><strong>Gaussian</strong>, variance <span class="math inline">\tau^2</span></td>
+<td><span class="math inline">\beta^2</span>: a smooth bowl</td>
+<td><span class="math inline">\sum \beta^2</span></td>
+<td><strong>ridge</strong></td>
+</tr>
+<tr class="even">
+<td><strong>Laplace</strong>, scale <span class="math inline">b</span></td>
+<td><span class="math inline">\lvert\beta\rvert</span>: a V</td>
+<td><span class="math inline">\sum \lvert\beta\rvert</span></td>
+<td><strong>lasso</strong></td>
+</tr>
+</tbody>
+</table>
+<p>These are <strong>identities</strong>, not analogies: the ridge estimate <em>is</em> the posterior peak under a Gaussian prior, and the lasso estimate <em>is</em> the posterior peak under a Laplace prior.</p>
+<p>The prior’s width sets <span class="math inline">\lambda</span>: <strong>a narrow prior means a big <span class="math inline">\lambda</span>.</strong> For ridge, <span class="math inline">\lambda = \sigma^2/\tau^2</span> (noise variance over prior variance).</p>
 <aside class="notes">
-<p>First concrete substitution. Gaussian prior gives a squared penalty because the log of exp(-beta^2/…) is -beta^2/… . Adding to RSS/2sigma^2 and clearing the constant 2sigma^2 lands precisely on the ridge objective. The eye-opener is the boxed identity: the ridge penalty strength is the ratio of noise variance to prior variance. Walk through both extremes verbally (next slide formalises them). Emphasise this is an identity, not an analogy — the ridge estimator and the Gaussian-prior MAP estimator are the same vector of numbers.</p>
+<p>State the two results as facts. A Gaussian prior is unhappy with a coefficient in proportion to beta squared, so the penalty it adds is the ridge sum of squares; a Laplace prior is unhappy in proportion to |beta|, so it adds the lasso sum of absolute values. The width of the prior becomes lambda: the narrower the prior (the more sure you are that effects are near 0), the bigger lambda. For ridge the exact exchange rate is lambda = sigma^2 / tau^2; for lasso it is lambda = 2 sigma^2 / b. Where these come from is on the optional maths slide; nobody needs to derive them. Stress the identity: same objective, same vector of numbers.</p>
 <style type="text/css">
         span.MJX_Assistive_MathML {
           position:absolute!important;
@@ -408,7 +435,7 @@ Quantitative biology and integrative omics
 </section>
 <section id="penalty-strength-prior-precision" class="slide level2 smaller">
 <h2>Penalty strength = prior precision</h2>
-<p>Read the identity <span class="math inline">\lambda = \sigma^2/\tau^2</span> as a statement about <strong>confidence</strong>. The <strong>precision</strong> of the prior is <span class="math inline">1/\tau^2</span> — how tightly it is concentrated at <span class="math inline">0</span>.</p>
+<p>Read “narrow prior means big <span class="math inline">\lambda</span>” as a statement about <strong>confidence</strong>. The <strong>precision</strong> of the prior is <span class="math inline">1/\tau^2</span> — how tightly it is concentrated at <span class="math inline">0</span>.</p>
 <table class="caption-top">
 <colgroup>
 <col style="width: 20%">
@@ -454,28 +481,7 @@ Quantitative biology and integrative omics
 <p><code>lfcShrink</code> in <em>Bulk RNA-seq with DESeq2</em> is a prior centred at 0 on each fold change: noisy low-count genes are pulled in, well-measured genes barely move.</p>
 
 <img data-src="fig09-prior-precision-family.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:55.0%"><aside class="notes">
-<p>This slide converts the algebra into intuition and is the conceptual payoff. Large lambda equals small prior variance equals high prior precision equals strong conviction that coefficients are near zero. Small lambda equals diffuse prior equals letting the data speak. The limit tau^2 to infinity is a “flat” (improper) prior, under which MAP collapses to maximum likelihood, i.e.&nbsp;ordinary least squares. This reframes cross-validation for lambda (from Ridge and lasso regression) as data-driven tuning of how strong a prior to adopt. Biologically: setting lambda large is asserting you already believe most genes barely matter. Recall lfcShrink from the bulk RNA-seq day: it puts a prior centred at 0 on every fold change, and since the likelihood is weak for low-count genes, the prior wins there; for high-count genes the data win.</p>
-<style type="text/css">
-        span.MJX_Assistive_MathML {
-          position:absolute!important;
-          clip: rect(1px, 1px, 1px, 1px);
-          padding: 1px 0 0 0!important;
-          border: 0!important;
-          height: 1px!important;
-          width: 1px!important;
-          overflow: hidden!important;
-          display:block!important;
-      }</style></aside>
-</section>
-<section id="lasso-a-laplace-prior" class="slide level2 smaller">
-<h2>Lasso = a Laplace prior</h2>
-<p>Now swap the Gaussian for a <strong>Laplace</strong> (double-exponential) prior: <span class="math inline">p(\beta_j) \propto \exp\!\big(-|\beta_j| / b\big)</span>. Its negative log is <strong>linear in <span class="math inline">|\beta_j|</span></strong>:</p>
-<p><span class="math display">-\log p(\boldsymbol\beta) \;=\; \frac{1}{b}\sum_{j=1}^p |\beta_j| \;+\; \text{const} \;=\; \frac{1}{b}\,\lVert\boldsymbol\beta\rVert_1 \;+\; \text{const}</span></p>
-<p>Add the Gaussian-noise fit term and minimise:</p>
-<p><span class="math display">\arg\min_{\boldsymbol\beta}\ \frac{1}{2\sigma^2}\,\text{RSS} \;+\; \frac{1}{b}\,\lVert\boldsymbol\beta\rVert_1 \;\;\equiv\;\; \arg\min_{\boldsymbol\beta}\ \text{RSS} \;+\; \frac{2\sigma^2}{b}\,\lVert\boldsymbol\beta\rVert_1</span></p>
-<p>which is <strong>exactly the lasso</strong>, with <span class="math inline">\lambda_{\text{lasso}} = 2\sigma^2/b</span>. Same recipe, different prior: the <strong>absolute-value penalty comes from the Laplace’s <span class="math inline">|\beta|</span> in the exponent</strong>.</p>
-<aside class="notes">
-<p>Second substitution, mechanically identical to ridge but with a Laplace prior. The key structural difference: the Laplace density has exp(-|beta|/b), so its negative log is linear in |beta|, giving the L1 penalty rather than L2. Everything else — clearing 2sigma^2, reading off lambda — is the same. Stress the parallel so students see one unified derivation with a swappable prior, not two unrelated tricks. Next slide explains why this seemingly small change (|beta| vs beta^2) produces the qualitatively different behaviour of exact zeros.</p>
+<p>This slide is the conceptual payoff. Large lambda equals small prior variance equals high prior precision equals strong conviction that coefficients are near zero. Small lambda equals diffuse prior equals letting the data speak. The limit tau^2 to infinity is a “flat” (improper) prior, under which MAP collapses to maximum likelihood, i.e.&nbsp;ordinary least squares. This reframes cross-validation for lambda (from Ridge and lasso regression) as data-driven tuning of how strong a prior to adopt. Biologically: setting lambda large is asserting you already believe most genes barely matter. Recall lfcShrink from the bulk RNA-seq day: it puts a prior centred at 0 on every fold change, and since the likelihood is weak for low-count genes, the prior wins there; for high-count genes the data win.</p>
 <style type="text/css">
         span.MJX_Assistive_MathML {
           position:absolute!important;
@@ -490,10 +496,10 @@ Quantitative biology and integrative omics
 </section>
 <section id="why-the-shape-matters-sparsity" class="slide level2 smaller">
 <h2>Why the shape matters: sparsity</h2>
-<p>The two priors differ most <strong>right at <span class="math inline">\boldsymbol\beta = 0</span></strong>:</p>
+<p>The two priors differ most <strong>right at <span class="math inline">\beta = 0</span></strong>:</p>
 <ul>
-<li><strong>Gaussian</strong> (<span class="math inline">\propto e^{-\beta^2}</span>) is <strong>smooth and flat</strong> at <span class="math inline">0</span> — its slope there is zero, so it never <em>insists</em> a coefficient be exactly <span class="math inline">0</span>. Ridge shrinks everything but keeps all <span class="math inline">\beta_j \ne 0</span>.</li>
-<li><strong>Laplace</strong> (<span class="math inline">\propto e^{-|\beta|}</span>) has a <strong>sharp cusp</strong> at <span class="math inline">0</span> — a kink that puts a lot of prior mass on “exactly zero.” Lasso therefore sets weak coefficients <strong>exactly to <span class="math inline">0</span></strong> (variable selection).</li>
+<li><strong>Gaussian:</strong> a <strong>rounded top</strong> at <span class="math inline">0</span>. Near zero its penalty bowl is almost flat, so the pull toward <span class="math inline">0</span> fades away and never finishes the job. Ridge shrinks everything but keeps every <span class="math inline">\beta \ne 0</span>.</li>
+<li><strong>Laplace:</strong> a <strong>pointed top</strong> at <span class="math inline">0</span>. Its V-shaped penalty keeps pulling just as hard right up to <span class="math inline">0</span>, so weak coefficients land <strong>exactly on <span class="math inline">0</span></strong> (variable selection).</li>
 </ul>
 
 <img data-src="fig11-cusp-zoom.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:55.0%"><p>So the biological reading is direct:</p>
@@ -502,7 +508,7 @@ Quantitative biology and integrative omics
 <li><strong>Lasso / Laplace prior:</strong> <em>“a few genes contribute, most contribute nothing”</em> — a <strong>sparse</strong> belief.</li>
 </ul>
 <aside class="notes">
-<p>This is the intuition students should leave with. The cusp of the Laplace at zero is what makes lasso select variables: the kink means there is a genuine “corner” the optimiser can land on with a coefficient at exactly zero. The Gaussian’s rounded top has zero slope at the origin, so it gently discourages large values but never pins anything to zero. Translate to biology, which is the whole point of the pairing: choosing ridge vs lasso is choosing between a polygenic model (many small effects, e.g.&nbsp;height, complex traits) and a sparse model (a handful of drivers, e.g.&nbsp;a few oncogenes). The right choice is a biological hypothesis, now made explicit as a prior.</p>
+<p>This is the intuition students should leave with: pointed top versus rounded top. The point of the Laplace at zero is what makes lasso select variables: there is a genuine corner the fit can land on with a coefficient at exactly zero. The Gaussian’s rounded top gently discourages large values but never pins anything to zero. The next demo shows it for one coefficient. Translate to biology, which is the whole point of the pairing: choosing ridge vs lasso is choosing between a polygenic model (many small effects, e.g.&nbsp;height, complex traits) and a sparse model (a handful of drivers, e.g.&nbsp;a few oncogenes). The right choice is a biological hypothesis, now made explicit as a prior.</p>
 <style type="text/css">
         span.MJX_Assistive_MathML {
           position:absolute!important;
@@ -515,13 +521,32 @@ Quantitative biology and integrative omics
           display:block!important;
       }</style></aside>
 </section>
-<section id="try-it-prior-likelihood-posterior-peak" class="slide level2">
-<h2>Try it: prior × likelihood → posterior peak</h2>
+<section id="try-it-one-coefficient-two-priors" class="slide level2">
+<h2>Try it: one coefficient, two priors</h2>
+<link rel="stylesheet" href="../demos/dist/demo.css">
+<div data-demo="penaltygeom" data-mode="prior1d"></div>
+<script src="../demos/dist/penaltygeom.js"></script>
+<aside class="notes">
+<p>One coefficient beta. Green is the prior, grey the likelihood (centred on the estimate from the data alone), purple the posterior, with its peak marked; the side panel shows the penalty the prior stands for. The slider “how sure we are that beta is near 0” narrows the prior and the readout shows the matching lambda (narrow prior = big lambda). Defaults: Gaussian prior of width 0.5 (lambda = 4), data alone say beta = 1 from n = 5 samples: the peak is at 0.56, pulled 0.44 toward 0. Click the Laplace prior at the same width (lambda about 5.7): the peak is 0.43. Now drag the data strength down to n = 2: the Laplace peak jumps to exactly 0 (“gene dropped”); it stays there until the data-alone estimate is above about 1.4. Switch back to Gaussian at n = 2: the peak is 0.33, smaller but never exactly 0, however weak the data. Point at the penalty panel: the parabola is flat at the bottom, so its pull fades near 0; the V keeps its sharp tip, so it keeps pulling and can hold beta at exactly 0.</p>
+<style type="text/css">
+        span.MJX_Assistive_MathML {
+          position:absolute!important;
+          clip: rect(1px, 1px, 1px, 1px);
+          padding: 1px 0 0 0!important;
+          border: 0!important;
+          height: 1px!important;
+          width: 1px!important;
+          overflow: hidden!important;
+          display:block!important;
+      }</style></aside>
+</section>
+<section id="try-it-two-coefficients-prior-likelihood-posterior-peak" class="slide level2">
+<h2>Try it: two coefficients, prior × likelihood → posterior peak</h2>
 <link rel="stylesheet" href="../demos/dist/demo.css">
 <div data-demo="penaltygeom" data-mode="prior" data-ols="2 0.6" data-corr="0.4" data-lambda="2" data-alpha="0"></div>
 <script src="../demos/dist/penaltygeom.js"></script>
 <aside class="notes">
-<p>Live version of the last few slides, for two coefficients. Green shading is the prior (darker = more prior belief), grey ellipses are the likelihood centred on the OLS / maximum-likelihood point, purple contours are the posterior, and the purple dot is the posterior peak (MAP), which is exactly the penalized estimate; the path panel on the right is the same ridge/lasso path as in Ridge and lasso regression. The demo fixes sigma squared at 1, so the readout shows tau squared = 1/lambda for the Gaussian and b = 2/lambda for the Laplace. Start with the Gaussian prior (ridge): the MAP sits between the prior centre and the OLS point, with both coefficients nonzero. Raise lambda: the prior tightens (a more confident prior) and pulls the MAP toward zero; lower it and the MAP slides back to OLS. Now click the Laplace prior at lambda = 2: the shading becomes diamonds, and the MAP jumps onto the beta-1 axis, so beta-2 is exactly zero (red mark) — the cusp at work. Drag the OLS point a little: the MAP stays on the axis over a whole range, while the Gaussian MAP never does. Close with the caveat slide in mind: the purple contours show a whole posterior, and MAP reports only its peak.</p>
+<p>Live version of the last few slides, for two coefficients. Green shading is the prior (darker = more prior belief), grey ellipses are the likelihood centred on the ordinary least squares (OLS) / maximum-likelihood point, purple contours are the posterior, and the purple dot is the posterior peak (MAP), which is exactly the penalized estimate; the path panel on the right is the same ridge/lasso path as in Ridge and lasso regression. The demo fixes sigma squared at 1, so the readout shows tau squared = 1/lambda for the Gaussian and b = 2/lambda for the Laplace. Start with the Gaussian prior (ridge): the MAP sits between the prior centre and the ordinary least squares point, with both coefficients nonzero. Raise lambda: the prior tightens (a more confident prior) and pulls the MAP toward zero; lower it and the MAP slides back to the ordinary least squares point. Now click the Laplace prior at lambda = 2: the shading becomes diamonds, and the MAP jumps onto the beta-1 axis, so beta-2 is exactly zero (red mark) — the cusp at work. Drag the ordinary least squares point a little: the MAP stays on the axis over a whole range, while the Gaussian MAP never does. Close with the caveat slide in mind: the purple contours show a whole posterior, and MAP reports only its peak.</p>
 <style type="text/css">
         span.MJX_Assistive_MathML {
           position:absolute!important;
@@ -556,13 +581,13 @@ Quantitative biology and integrative omics
 <tr class="odd">
 <td>“Many genes, each a small effect” (polygenic trait)</td>
 <td>Gaussian</td>
-<td>ridge (<span class="math inline">\lVert\boldsymbol\beta\rVert_2^2</span>)</td>
+<td>ridge (<span class="math inline">\sum\beta^2</span>)</td>
 <td>shrink all, keep all</td>
 </tr>
 <tr class="even">
 <td>“A few driver genes, rest irrelevant”</td>
 <td>Laplace</td>
-<td>lasso (<span class="math inline">\lVert\boldsymbol\beta\rVert_1</span>)</td>
+<td>lasso (<span class="math inline">\sum\lvert\beta\rvert</span>)</td>
 <td>select a sparse set</td>
 </tr>
 <tr class="odd">
@@ -632,14 +657,49 @@ Quantitative biology and integrative omics
 <h2>Caveat: MAP is only the peak</h2>
 <p>The equivalence is exact, but it identifies penalised regression with the <strong>peak</strong> of the posterior — not the whole thing.</p>
 <ul>
-<li>A full <strong>Bayesian</strong> analysis reports the <strong>entire posterior</strong>: the peak <em>and its width</em> (uncertainty), so you get credible intervals on each <span class="math inline">\beta_j</span>. MAP throws the width away.</li>
+<li>A full <strong>Bayesian</strong> analysis reports the <strong>entire posterior</strong>: the peak <em>and its width</em> (uncertainty), so you get credible intervals on each <span class="math inline">\beta</span>. MAP throws the width away.</li>
 <li>The prior “variance” <span class="math inline">\tau^2</span> (or scale <span class="math inline">b</span>) is usually <strong>not known</strong> in advance. Cross-validating <span class="math inline">\lambda</span> is a practical stand-in for a fully Bayesian treatment of that unknown.</li>
-<li><strong>Subtlety:</strong> under the Laplace prior, the <em>MAP</em> is sparse (exact zeros) but the <em>posterior mean</em> is <strong>not</strong> — so “lasso = Bayesian sparsity” holds for the peak, not for the averaged estimate.</li>
+<li><em>(Optional subtlety)</em> Under the Laplace prior, the <strong>peak</strong> has exact zeros but the posterior <strong>average</strong> does not: “lasso = Bayesian sparsity” holds for the peak only.</li>
 </ul>
 <p>The bridge is genuine and useful, but “penalised regression is secretly Bayesian” is a <strong>statement about the MAP point</strong>, with the honesty a real Bayesian analysis adds on top.</p>
 
 <img data-src="fig14-map-vs-posterior-mean.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:55.0%"><aside class="notes">
 <p>Intellectual honesty slide, in the spirit of the course’s “be honest about what we defer” principle. The penalty-equals-prior identity is real but partial: it matches the posterior mode, discarding the uncertainty that is arguably the whole benefit of going Bayesian. Two caveats worth stating: (1) treating tau^2/b as fixed and known is a simplification; a full hierarchical Bayesian model would put a prior on it too, and cross-validation is the frequentist workaround. (2) The Laplace-MAP is sparse but the Laplace-posterior-mean is not, so one must be careful about which “Bayesian lasso” is meant. Do not overstate the unification; present it as a clarifying viewpoint, not a replacement for either method.</p>
+<style type="text/css">
+        span.MJX_Assistive_MathML {
+          position:absolute!important;
+          clip: rect(1px, 1px, 1px, 1px);
+          padding: 1px 0 0 0!important;
+          border: 0!important;
+          height: 1px!important;
+          width: 1px!important;
+          overflow: hidden!important;
+          display:block!important;
+      }</style></aside>
+</section>
+<section id="optional-the-maths-behind-penalty-prior" class="slide level2 smaller">
+<h2>Optional: the maths behind penalty = prior</h2>
+<div title="Optional: the maths">
+<div class="callout callout-note callout-titled callout-style-default">
+<div class="callout-body">
+<div class="callout-title">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<p><strong>Optional: the maths</strong></p>
+</div>
+<div class="callout-content">
+<p><strong>Logs turn the product into a sum.</strong> The logarithm is increasing, so it does not move the peak; <span class="math inline">-\log</span> turns <em>maximise</em> into <em>minimise</em>: <span class="math display">\arg\max_{\beta}\ p(\beta\mid\text{data}) = \arg\min_{\beta}\ \big[-\log p(\text{data}\mid\beta) \;-\; \log p(\beta)\big].</span></p>
+<p><strong>Fit term.</strong> With Gaussian noise of variance <span class="math inline">\sigma^2</span>, <span class="math inline">-\log p(\text{data}\mid\beta) = \text{RSS}/2\sigma^2 + \text{const}</span>.</p>
+<p><strong>Penalty term.</strong> Gaussian prior <span class="math inline">p(\beta_j)\propto e^{-\beta_j^2/2\tau^2}</span> gives <span class="math inline">-\log p = \sum_j \beta_j^2/2\tau^2 + \text{const}</span>. Laplace prior <span class="math inline">p(\beta_j)\propto e^{-|\beta_j|/b}</span> gives <span class="math inline">\sum_j |\beta_j|/b + \text{const}</span>.</p>
+<p><strong>Exchange rate.</strong> Multiply the whole objective by <span class="math inline">2\sigma^2</span> (this does not move the minimum): <span class="math inline">\text{RSS} + \tfrac{\sigma^2}{\tau^2}\sum_j\beta_j^2</span> is ridge with <span class="math inline">\lambda = \sigma^2/\tau^2</span>; <span class="math inline">\text{RSS} + \tfrac{2\sigma^2}{b}\sum_j|\beta_j|</span> is lasso with <span class="math inline">\lambda = 2\sigma^2/b</span>.</p>
+</div>
+</div>
+</div>
+</div>
+
+<img data-src="fig06-gaussian-noise-regression.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:45.0%"><aside class="notes">
+<p>Optional slide for students who want the formulas behind the slogan; nothing in the main path or the exercise main items needs it. Take minus the log of “likelihood times prior”: the Gaussian noise gives RSS over 2 sigma^2, the Gaussian prior gives the sum of squares over 2 tau^2, the Laplace prior the sum of absolute values over b. Clearing the 2 sigma^2 gives the two lambdas. The figure shows the fit term’s origin: Gaussian noise around the line, whose minus-log is RSS / 2 sigma^2. The optional items B2 to B4 in the exercise walk through these steps.</p>
 <style type="text/css">
         span.MJX_Assistive_MathML {
           position:absolute!important;
@@ -671,24 +731,24 @@ Quantitative biology and integrative omics
 <td>maximise posterior (find the <strong>MAP</strong>)</td>
 </tr>
 <tr class="even">
-<td>fit term (RSS)</td>
-<td>negative log-<strong>likelihood</strong> (Gaussian noise)</td>
+<td>fit error (RSS)</td>
+<td>the <strong>likelihood</strong>: small RSS = data likely (Gaussian noise)</td>
 </tr>
 <tr class="odd">
-<td>penalty term</td>
-<td>negative log-<strong>prior</strong> on <span class="math inline">\boldsymbol\beta</span></td>
+<td>penalty</td>
+<td>how unlikely the <strong>prior</strong> finds <span class="math inline">\beta</span></td>
 </tr>
 <tr class="even">
-<td>ridge, <span class="math inline">\lVert\boldsymbol\beta\rVert_2^2</span></td>
-<td><strong>Gaussian</strong> prior <span class="math inline">\mathcal N(0,\tau^2)</span></td>
+<td>ridge, <span class="math inline">\sum\beta^2</span></td>
+<td><strong>Gaussian</strong> prior</td>
 </tr>
 <tr class="odd">
-<td>lasso, <span class="math inline">\lVert\boldsymbol\beta\rVert_1</span></td>
-<td><strong>Laplace</strong> prior <span class="math inline">\propto e^{-|\beta|/b}</span></td>
+<td>lasso, <span class="math inline">\sum\lvert\beta\rvert</span></td>
+<td><strong>Laplace</strong> prior</td>
 </tr>
 <tr class="even">
 <td>penalty strength <span class="math inline">\lambda</span></td>
-<td><strong>prior precision</strong> (<span class="math inline">\lambda_{\text{ridge}}=\sigma^2/\tau^2</span>)</td>
+<td><strong>prior precision</strong>: narrow prior = big <span class="math inline">\lambda</span></td>
 </tr>
 <tr class="odd">
 <td>large <span class="math inline">\lambda</span></td>
@@ -696,7 +756,7 @@ Quantitative biology and integrative omics
 </tr>
 <tr class="even">
 <td>lasso’s exact zeros</td>
-<td>Laplace <strong>cusp</strong> at <span class="math inline">0</span> (sparse belief)</td>
+<td>Laplace’s <strong>pointed top</strong> at <span class="math inline">0</span> (sparse belief)</td>
 </tr>
 </tbody>
 </table>

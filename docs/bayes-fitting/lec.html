@@ -227,12 +227,13 @@ Quantitative biology and integrative omics
 <ul>
 <li>The model is unchanged: <span class="math inline">y = a + b\,x + \text{noise}</span>. What changes is the <strong>answer</strong>: each coefficient becomes a <strong>distribution</strong>, not a single number.</li>
 <li>Put <strong>priors</strong> on the intercept <span class="math inline">a</span>, slope <span class="math inline">b</span>, and noise scale <span class="math inline">\sigma</span>; combine with the data (<strong>likelihood</strong>) to get the <strong>posterior</strong>.</li>
+<li>Two interactive demos carry the ideas: <em>many plausible lines</em> and <em>inside the sampler</em>.</li>
 <li>Read a slope as <em>“there is a 96% chance it is positive”</em> instead of a bare point estimate and a p-value.</li>
 <li><strong>Predict</strong> a new observation <strong>with uncertainty</strong> — a credible band, not just a line.</li>
 <li>Biology: does a gene’s expression rise with donor <strong>age</strong>? With only a handful of samples, honest uncertainty matters more than a single best-fit slope.</li>
 </ul>
 <aside class="notes">
-<p>The one-sentence pitch: same line, honest uncertainty. Students already know how to get the best-fit line (least squares, the normal equations from the linear algebra block). The new idea is that instead of one number per coefficient we carry a whole distribution, which lets us make probability statements about the slope and put error bars on predictions. Keep reassuring them that the model equation is identical to ordinary regression — only the machinery for answering “how confident?” is new. This is concept-plus-tooling day: understand prior/likelihood/posterior for a line, and read what brms hands back.</p>
+<p>The one-sentence pitch: same line, honest uncertainty. Students already know how to get the best-fit line (least squares from the linear algebra block, or simply lm()). The new idea is that instead of one number per coefficient we carry a whole distribution, which lets us make probability statements about the slope and put error bars on predictions. Keep reassuring them that the model equation is identical to ordinary regression — only the machinery for answering “how confident?” is new. This is concept-plus-tooling day: understand prior/likelihood/posterior for a line, and read what brms hands back. No formulas need to be evaluated by hand; the maths is collected on one optional slide at the end.</p>
 <style type="text/css">
         span.MJX_Assistive_MathML {
           position:absolute!important;
@@ -250,7 +251,7 @@ Quantitative biology and integrative omics
 <p>We measure expression of an ageing-associated gene (normalised RNA-seq, log scale) in blood from a small cohort of donors, and plot it against <strong>age</strong>.</p>
 <ul>
 <li>The cloud slopes gently <strong>upward</strong>: older donors tend to have higher expression.</li>
-<li>But there are only <strong>~15 donors</strong>, and the points are scattered. Is the upward slope <strong>real</strong>, or could a flat line fit almost as well?</li>
+<li>But there are only <strong>12 donors</strong>, and the points are scattered. Is the upward slope <strong>real</strong>, or could a flat line fit almost as well?</li>
 <li>A single best-fit line cannot answer that. We need the <strong>range of slopes</strong> the data are compatible with.</li>
 </ul>
 <p>The biological questions are really questions about <strong>uncertainty</strong>: <em>Is the slope different from zero? By how much, plausibly? What expression should we expect for a new 70-year-old, and how tightly?</em></p>
@@ -271,8 +272,9 @@ Quantitative biology and integrative omics
 </section>
 <section id="the-model-a-line-plus-noise" class="slide level2 smaller">
 <h2>The model: a line plus noise</h2>
-<p>We assume each donor’s expression <span class="math inline">y_i</span> is a straight-line function of age <span class="math inline">x_i</span> plus random scatter:</p>
-<p><span class="math display">y_i = a + b\,x_i + \varepsilon_i, \qquad \varepsilon_i \sim \mathcal{N}(0,\ \sigma^2)</span></p>
+<p>We assume each donor’s expression <span class="math inline">y</span> is a straight-line function of age <span class="math inline">x</span> plus random scatter:</p>
+<p><span class="math display">y = a + b\,x + \varepsilon, \qquad \varepsilon \sim \mathcal{N}(0,\ \sigma^2)</span></p>
+<p>Read in words: <em>the noise <span class="math inline">\varepsilon</span> is bell-shaped (Normal), centred on 0, with spread <span class="math inline">\sigma</span>.</em> Points fall on both sides of the line, mostly close to it.</p>
 <p>Three unknowns to learn from the data:</p>
 <ul>
 <li><span class="math inline">a</span> — the <strong>intercept</strong> (expression at <span class="math inline">x=0</span>, or at a centred reference age),</li>
@@ -282,7 +284,7 @@ Quantitative biology and integrative omics
 <p>This is the <em>same</em> model as ordinary linear regression. The Bayesian and least-squares approaches differ only in <strong>what they report about <span class="math inline">a</span>, <span class="math inline">b</span>, <span class="math inline">\sigma</span></strong>.</p>
 
 <img data-src="fig04-line-plus-noise.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:60.0%"><aside class="notes">
-<p>Write the model and name all three parameters, stressing that sigma is a parameter too, not a nuisance to be swept away — its size controls how confident predictions can be. Interpret the slope in biological units (change in log-expression per year) because coefficients are only meaningful with units attached. Reiterate the through-line: identical model, different accounting of uncertainty. Mention centring age (subtracting the mean) so the intercept is interpretable as expression at the average age rather than at the biologically meaningless age zero.</p>
+<p>Write the model and read it aloud in words (line plus bell-shaped noise centred on zero with spread sigma), then name all three parameters, stressing that sigma is a parameter too, not a nuisance to be swept away — its size controls how confident predictions can be. Interpret the slope in biological units (change in log-expression per year) because coefficients are only meaningful with units attached. Reiterate the through-line: identical model, different accounting of uncertainty. Mention centring age (subtracting the mean) so the intercept is interpretable as expression at the average age rather than at the biologically meaningless age zero.</p>
 <style type="text/css">
         span.MJX_Assistive_MathML {
           position:absolute!important;
@@ -295,42 +297,22 @@ Quantitative biology and integrative omics
           display:block!important;
       }</style></aside>
 </section>
-<section id="recap-the-least-squares-fit" class="slide level2 smaller">
-<h2>Recap: the least-squares fit</h2>
-<p>From the linear algebra block, the <strong>least-squares</strong> line minimises the sum of squared residuals. Stacking the data into a design matrix <span class="math inline">X</span> (a column of 1s for <span class="math inline">a</span>, a column of ages for <span class="math inline">b</span>), the best-fit coefficients solve the <strong>normal equations</strong>:</p>
-<p><span class="math display">\hat{\boldsymbol\beta} = (X^\top X)^{-1} X^\top \mathbf{y}</span></p>
-<p>In R this is one call:</p>
+<section id="least-squares-one-best-line" class="slide level2 smaller">
+<h2>Least squares: one best line</h2>
+<p>From the linear algebra block: the <strong>least-squares</strong> line is <em>the line with the smallest total squared miss</em> — add up the squared vertical distances from each point to the line, and pick the line that makes this total as small as possible. In R this is one call:</p>
 <div class="sourceCode" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a aria-hidden="true" tabindex="-1"></a>fit_ls <span class="ot">&lt;-</span> <span class="fu">lm</span>(expr <span class="sc">~</span> age, <span class="at">data =</span> donors)</span>
 <span id="cb1-2"><a aria-hidden="true" tabindex="-1"></a><span class="fu">coef</span>(fit_ls)      <span class="co"># (Intercept)  age   -&gt; point estimates of a and b</span></span>
 <span id="cb1-3"><a aria-hidden="true" tabindex="-1"></a><span class="fu">confint</span>(fit_ls)   <span class="co"># 95% confidence intervals</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<p>This gives <strong>one</strong> number for <span class="math inline">a</span> and <strong>one</strong> for <span class="math inline">b</span> (plus a confidence interval and a p-value). It is fast, familiar, and often enough.</p>
-
-<img data-src="fig05-design-matrix.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:60.0%"><aside class="notes">
-<p>Deliberately re-derive the connection to linear algebra: least squares is exactly the normal equations they solved by hand, beta_hat = (X^T X)^{-1} X^T y. Show that lm() is the production tool for it. The point of this slide is continuity — the Bayesian fit is not a replacement or a rival, it is the same fit seen through a probabilistic lens. Note in passing that under Gaussian noise the least-squares estimate coincides with the maximum-likelihood estimate; this sets up the likelihood on a later slide. Keep it short; they know this material.</p>
-<style type="text/css">
-        span.MJX_Assistive_MathML {
-          position:absolute!important;
-          clip: rect(1px, 1px, 1px, 1px);
-          padding: 1px 0 0 0!important;
-          border: 0!important;
-          height: 1px!important;
-          width: 1px!important;
-          overflow: hidden!important;
-          display:block!important;
-      }</style></aside>
-</section>
-<section id="what-least-squares-does-and-doesnt-give" class="slide level2 smaller">
-<h2>What least squares does — and doesn’t — give</h2>
-<p>Least squares hands you a <strong>point estimate</strong>: the single most-consistent <span class="math inline">a</span> and <span class="math inline">b</span>.</p>
+<p>This gives <strong>one</strong> number for <span class="math inline">a</span> and <strong>one</strong> for <span class="math inline">b</span> (plus a confidence interval and a p-value). It is fast, familiar, and often enough. But:</p>
 <ul>
-<li>A <strong>confidence interval</strong> and <strong>p-value</strong> come with it, but their interpretation is subtle: the 95% refers to the <em>procedure over hypothetical repeated experiments</em>, not to <em>this</em> slope.</li>
-<li>It gives <strong>no direct probability statement</strong> about the parameter, e.g.&nbsp;you cannot say “there is a 96% probability the slope is positive.”</li>
-<li>Incorporating <strong>prior knowledge</strong> (we already know ageing genes change slowly) is awkward.</li>
-<li>With <strong>few data points</strong>, the point estimate can look deceptively precise.</li>
+<li>The confidence interval’s 95% refers to the <em>procedure over hypothetical repeated experiments</em>, not to <em>this</em> slope.</li>
+<li>There is <strong>no direct probability statement</strong> such as “there is a 96% probability the slope is positive.”</li>
+<li><strong>Prior knowledge</strong> (ageing genes change slowly) is awkward to include, and with <strong>few data points</strong> the single line can look deceptively precise.</li>
 </ul>
-<p>The Bayesian version fixes exactly these: it returns a <strong>full distribution</strong> for each parameter, so probability statements and honest prediction bands come for free.</p>
+<p>The Bayesian version returns a <strong>full distribution</strong> for each parameter, so probability statements and honest prediction bands come for free.</p>
 <aside class="notes">
-<p>This is the motivational hinge. Be careful and correct about the frequentist confidence interval: the 95% is a property of the long-run procedure, not a probability about the fixed-but-unknown parameter. Students almost always misread a CI as “95% probability the parameter is in here” — that misreading is actually the Bayesian credible interval, which is what they will get today. So the Bayesian output matches the intuition people already wrongly attach to CIs. Also flag prior knowledge and small-n as the practical wins. Do not disparage frequentism; frame Bayes as answering a directly probabilistic question.</p>
+<p>Continuity first: least squares is the fit they already know, and lm() is the production tool for it. Say it in words, “the line with the smallest total squared miss”; the matrix form from the linear algebra block is on the optional maths slide at the end and is not needed today. The Bayesian fit is not a rival, it is the same fit seen through a probabilistic lens.</p>
+<p>Then the motivational hinge. Be careful and correct about the frequentist confidence interval: the 95% is a property of the long-run procedure, not a probability about the fixed-but-unknown parameter. Students almost always misread a CI as “95% probability the parameter is in here” — that misreading is actually the Bayesian credible interval, which is what they will get today. Also flag prior knowledge and small n as the practical wins. Do not disparage frequentism; frame Bayes as answering a directly probabilistic question.</p>
 <style type="text/css">
         span.MJX_Assistive_MathML {
           position:absolute!important;
@@ -351,7 +333,7 @@ Quantitative biology and integrative omics
 <p>Here <span class="math inline">\theta = (a, b, \sigma)</span>. The output is the <strong>posterior</strong>: a distribution over <em>all three parameters at once</em> that says which combinations are plausible given the data.</p>
 
 <img data-src="fig07-prior-likelihood-posterior.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:80.0%"><aside class="notes">
-<p>State the philosophical switch cleanly, then immediately ground it in Bayes’ theorem, which they met in the prior/likelihood/posterior unit. The key mental move: uncertainty about a parameter is itself represented by a distribution. Read the theorem in words - posterior is proportional to likelihood times prior. Stress that the posterior is joint over (a, b, sigma); we usually look at one coefficient at a time (a marginal), but the machinery handles their correlations. Keep the proportionality sign honest: the missing constant (the evidence) is what makes it a proper distribution, and is what MCMC lets us avoid computing directly.</p>
+<p>State the philosophical switch cleanly, then immediately ground it in Bayes’ theorem, which they met in the prior/likelihood/posterior unit. The key mental move: uncertainty about a parameter is itself represented by a distribution. Read the theorem in words - posterior is proportional to likelihood times prior. Stress that the posterior is joint over (a, b, sigma); we usually look at one coefficient at a time (a marginal), but the machinery handles their correlations. Keep the proportionality sign honest: the missing constant (the evidence) is just “divide by the total so it sums to 1”, exactly as in the grid tables of the Bayes unit, and it is what MCMC lets us avoid computing directly.</p>
 <style type="text/css">
         span.MJX_Assistive_MathML {
           position:absolute!important;
@@ -367,16 +349,16 @@ Quantitative biology and integrative omics
 <section id="priors-what-we-believe-before-the-data" class="slide level2 smaller">
 <h2>Priors: what we believe before the data</h2>
 <p>A prior encodes what is plausible for each parameter <strong>before</strong> seeing this dataset. Weakly-informative priors are a good default — wide enough not to force a conclusion, tight enough to rule out the absurd.</p>
-<p><span class="math display">a \sim \mathcal{N}(0,\ 5), \qquad b \sim \mathcal{N}(0,\ 0.1), \qquad \sigma \sim \text{Exponential}(1)</span></p>
 <ul>
-<li><strong>Intercept</strong> <span class="math inline">a</span>: centred, broad — expression at the mean age could be a range of values.</li>
-<li><strong>Slope</strong> <span class="math inline">b</span>: centred at <strong>0</strong> (no assumed direction) but on a biologically sane scale — ageing genes change <em>slowly</em> per year, so large slopes are implausible.</li>
-<li><strong>Noise</strong> <span class="math inline">\sigma</span>: must be <strong>positive</strong>, so an Exponential (or half-Normal) prior; mass on small-to-moderate scatter.</li>
+<li><strong>Intercept</strong> <span class="math inline">a</span>: a broad bell curve — expression at the mean age could be a wide range of values.</li>
+<li><strong>Slope</strong> <span class="math inline">b</span>: a bell curve centred at <strong>0</strong> (no assumed direction) but on a biologically sane scale — ageing genes change <em>slowly</em> per year (roughly within ±0.2 per year), so large slopes are implausible.</li>
+<li><strong>Noise</strong> <span class="math inline">\sigma</span>: must be <strong>positive</strong>, so a prior that lives only above 0 and puts most weight on small-to-moderate scatter.</li>
 </ul>
+<p>In R you write these as <code>normal(0, 5)</code>, <code>normal(0, 0.1)</code> and <code>exponential(1)</code> (next slides).</p>
 <p>A centred prior on <span class="math inline">b</span> is <strong>honest</strong>, not a thumb on the scale: it lets the data move the slope, but resists over-reacting to a few noisy points.</p>
 
 <img data-src="fig08-three-priors.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:80.0%"><aside class="notes">
-<p>Priors are where students get nervous, so demystify them: a weakly-informative prior states the scale of plausible values, not the answer. Justify each choice biologically. The slope prior centred at zero is important to explain - it is the sceptical, conservative choice; it does not assume the gene is flat, it just requires evidence to move away from flat, which regularises small-n fits. Emphasise sigma must be positive so its prior lives on the positive line (Exponential or half-Normal). Mention prior predictive checks in passing as the principled way to sanity-check priors (simulate lines from the prior and see if they are biologically ridiculous). Numbers here are illustrative for a centred, standardised-ish response.</p>
+<p>Priors are where students get nervous, so demystify them: a weakly-informative prior states the scale of plausible values, not the answer. Justify each choice biologically. The slope prior centred at zero is important to explain - it is the sceptical, conservative choice; it does not assume the gene is flat, it just requires evidence to move away from flat, which regularises small-n fits. Emphasise sigma must be positive so its prior lives on the positive line (Exponential or half-Normal). Mention prior predictive checks in passing as the principled way to sanity-check priors (simulate lines from the prior and see if they are biologically ridiculous). Numbers here are illustrative for a centred, standardised-ish response. The brms names: normal(0, 5) for the intercept, normal(0, 0.1) for the slope (sd 0.1 per year, so about 95% of the prior within ±0.2 per year), exponential(1) for sigma. The “many plausible lines” demo two slides on has a slider for the slope prior width: with all 12 donors, narrowing it from ±1 to ±0.2 per 10 years pulls the slope from 0.30 to 0.18 per 10 years.</p>
 <style type="text/css">
         span.MJX_Assistive_MathML {
           position:absolute!important;
@@ -391,14 +373,35 @@ Quantitative biology and integrative omics
 </section>
 <section id="the-likelihood-how-data-pull-on-the-parameters" class="slide level2 smaller">
 <h2>The likelihood: how data pull on the parameters</h2>
-<p>The <strong>likelihood</strong> measures how well a given <span class="math inline">(a, b, \sigma)</span> explains the observed points. Under the line-plus-Gaussian-noise model, each donor contributes a normal density:</p>
-<p><span class="math display">p(y_i \mid a, b, \sigma) = \mathcal{N}\!\left(y_i \ \middle|\ a + b\,x_i,\ \sigma^2\right)</span></p>
-<p>and, assuming donors are independent, the full likelihood is the product:</p>
-<p><span class="math display">p(\text{data} \mid a,b,\sigma) = \prod_{i=1}^{n} \mathcal{N}\!\left(y_i \ \middle|\ a + b\,x_i,\ \sigma\right)</span></p>
-<p>Maximising this product <strong>alone</strong> (ignoring priors) gives back the <strong>least-squares</strong> line — the frequentist and Bayesian fits share the same likelihood, and differ only by the prior.</p>
+<p>The <strong>likelihood</strong> asks: <em>if this candidate line were the truth, how probable would the points we actually saw be?</em></p>
+<ul>
+<li>Each point gets a bell curve centred on the line’s prediction at that age. A point close to the line sits near the top of its bell (probable); a point far away sits out in the tail (improbable).</li>
+<li>Donors are independent, so the probabilities of all points multiply together into one number for the whole line.</li>
+<li>So <strong>points far from the line make that line less believable.</strong> The line with the smallest total squared miss — the least-squares line — is the most believable one.</li>
+</ul>
+<p>The least-squares and Bayesian fits share this same likelihood; they differ only by the <strong>prior</strong>, and by keeping the whole distribution instead of only its peak.</p>
 
-<img data-src="fig09-likelihood-gaussians.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:60.0%"><aside class="notes">
-<p>Define likelihood concretely: plug a candidate line into the model and ask how probable the observed points are. Each point is a Gaussian centred on the line’s prediction for that x; independence makes the joint likelihood a product. The punchline ties the whole lecture together: maximising the Gaussian likelihood on its own reproduces least squares (minimising squared residuals is the same as maximising a Gaussian likelihood). So least squares is the “no prior / flat prior, take the peak” special case. The Bayesian answer multiplies in the prior and keeps the whole distribution instead of only its peak.</p>
+<img data-src="fig09-likelihood-gaussians.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:55.0%"><aside class="notes">
+<p>Define likelihood concretely: plug a candidate line into the model and ask how probable the observed points are. Each point is a bell curve centred on the line’s prediction for that x; independence makes the joint likelihood a product. The punchline ties the whole lecture together: the line that makes the points most probable is exactly the least-squares line, because big misses land in the tails of the bells. So least squares is the “flat prior, take the peak” special case. The formula is on the optional maths slide at the end; the next slide lets students feel it instead.</p>
+<style type="text/css">
+        span.MJX_Assistive_MathML {
+          position:absolute!important;
+          clip: rect(1px, 1px, 1px, 1px);
+          padding: 1px 0 0 0!important;
+          border: 0!important;
+          height: 1px!important;
+          width: 1px!important;
+          overflow: hidden!important;
+          display:block!important;
+      }</style></aside>
+</section>
+<section id="try-it-many-plausible-lines" class="slide level2 smaller">
+<h2>Try it: many plausible lines</h2>
+<link rel="stylesheet" href="../demos/dist/demo.css">
+<div data-demo="bayesline"></div>
+<script src="../demos/dist/bayesline.js"></script>
+<aside class="notes">
+<p>Interactive demo on 12 donors (age vs expression; the same data as the sampler demo later). Panel (a) is the likelihood slide made tangible. It starts with a flat line (height 6.2 at age 50, slope 0): the red sticks are the misses, total squared miss 10.3 against 7.1 for the best line, and the “believable” bar says this flat line is only about 20% as believable as the best line. Drag the handles or the sliders: every time a stick gets longer the bar drops. Press “best line” to jump to least squares (100%). Panel (b) is the posterior: press “show 50 posterior lines”. Each line is one plausible line given the data and a slope prior; 48 of 50 rise (exact probability 96%), slope 0.30 per 10 years, 95% credible interval −0.03 to 0.64. That is “a coefficient is a distribution”, drawn as lines. Then the slope prior slider: narrowing it to ±0.2 per 10 years pulls the slope to 0.18 and P(slope &gt; 0) to 91%. With the donors slider at 3, the narrow prior pulls a lot harder (0.47 to 0.15, P from 95% to 82%): priors matter most when data are few. Leave the bands for the prediction slides.</p>
 <style type="text/css">
         span.MJX_Assistive_MathML {
           position:absolute!important;
@@ -413,16 +416,15 @@ Quantitative biology and integrative omics
 </section>
 <section id="the-posterior-prior-likelihood" class="slide level2 smaller">
 <h2>The posterior: prior × likelihood</h2>
-<p>Multiply prior and likelihood and normalise — the result is the <strong>posterior</strong> over <span class="math inline">(a, b, \sigma)</span>:</p>
-<p><span class="math display">p(a, b, \sigma \mid \text{data}) \ \propto\ \left[\prod_{i} \mathcal{N}(y_i \mid a + b x_i,\ \sigma)\right]\ p(a)\,p(b)\,p(\sigma)</span></p>
+<p>Multiply prior and likelihood and normalise — the result is the <strong>posterior</strong> over <span class="math inline">(a, b, \sigma)</span>: how plausible each combination is, given the data.</p>
 <ul>
-<li>For a straight line with Gaussian noise there is <strong>no simple formula</strong> to write down for the full posterior, so we <strong>sample</strong> from it with <strong>MCMC</strong> (Markov-chain Monte Carlo).</li>
-<li>MCMC returns thousands of <strong>draws</strong> <span class="math inline">(a^{(k)}, b^{(k)}, \sigma^{(k)})</span> — a cloud of plausible parameter sets.</li>
+<li>For a straight line with Gaussian noise and general priors there is <strong>no simple formula</strong> for the full posterior, so we <strong>sample</strong> from it with <strong>MCMC</strong> (Markov-chain Monte Carlo).</li>
+<li>MCMC returns thousands of <strong>draws</strong>, each one a plausible <span class="math inline">(a, b, \sigma)</span> — a <strong>cloud of draws</strong>. Each draw is one plausible line, like the 50 lines in the demo.</li>
 <li>The <strong>spread</strong> of the draws <em>is</em> the uncertainty. Summaries (mean, 95% interval) are just descriptions of that cloud.</li>
 </ul>
 
 <img data-src="fig10-mcmc-draws-cloud.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:55.0%"><aside class="notes">
-<p>Assemble the posterior explicitly as prior times likelihood, normalised. Be honest that for regression the posterior has no tidy closed form once you use general priors, which is why we sample. MCMC is the engine; you can name-drop that it is a Markov chain (link to the Markov chains block conceptually - it walks parameter space so its stationary distribution is the posterior) without teaching the algorithm. The crucial intuition: we get a big table of plausible (a, b, sigma) triples, and everything we report - coefficient distributions, prediction bands, probabilities - is computed by summarising that table. No integrals by hand.</p>
+<p>Assemble the posterior in words as prior times likelihood, normalised (the formula is on the optional maths slide). Be honest that for regression the posterior has no tidy closed form once you use general priors, which is why we sample. MCMC is the engine; you can name-drop that it is a Markov chain (link to the Markov chains block conceptually - it walks parameter space so its stationary distribution is the posterior) without teaching the algorithm. The figure is the posterior for the 12 donors (intercept at age 0, slope per year): the cloud is tilted because age 0 is far from the data, so a steeper line must start lower. The crucial intuition: we get a big table of plausible (a, b, sigma) triples, and everything we report - coefficient distributions, prediction bands, probabilities - is computed by summarising that table. No integrals by hand.</p>
 <style type="text/css">
         span.MJX_Assistive_MathML {
           position:absolute!important;
@@ -479,7 +481,26 @@ Quantitative biology and integrative omics
 <p>If these fail, the numbers are unreliable — re-run with more iterations or reconsider the model, don’t interpret.</p>
 
 <img data-src="fig12-trace-plots.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:60.0%"><aside class="notes">
-<p>Instil the discipline that sampling diagnostics come before interpretation, analogous to checking residuals before trusting an lm. Give the two headline numbers: Rhat near 1 means the independent chains have mixed to the same distribution; effective sample size tells you how many near-independent draws you effectively have. Trace plots that look like fuzzy caterpillars with overlapping chains are healthy; drifting or separated chains mean non-convergence. The rule: never read coefficients off a fit that failed diagnostics. This is a common “what would you check?” question.</p>
+<p>Instil the discipline that sampling diagnostics come before interpretation, analogous to checking residuals before trusting an lm. Give the two headline numbers: Rhat near 1 means the independent chains have mixed to the same distribution; effective sample size tells you how many near-independent draws you effectively have. Trace plots that look like fuzzy caterpillars with overlapping chains are healthy; drifting or separated chains mean non-convergence. The rule: never read coefficients off a fit that failed diagnostics. This is a common “what would you check?” question. The next slide shows healthy and unhealthy chains live.</p>
+<style type="text/css">
+        span.MJX_Assistive_MathML {
+          position:absolute!important;
+          clip: rect(1px, 1px, 1px, 1px);
+          padding: 1px 0 0 0!important;
+          border: 0!important;
+          height: 1px!important;
+          width: 1px!important;
+          overflow: hidden!important;
+          display:block!important;
+      }</style></aside>
+</section>
+<section id="try-it-inside-the-sampler" class="slide level2 smaller">
+<h2>Try it: inside the sampler</h2>
+<link rel="stylesheet" href="../demos/dist/demo.css">
+<div data-demo="mcmc" data-step="0.4" data-iter="1000" data-chains="4"></div>
+<script src="../demos/dist/mcmc.js"></script>
+<aside class="notes">
+<p>The same 12 donors as the “many plausible lines” demo; intercept a and slope b, noise fixed so there are only two parameters. The orange ellipses are the true posterior (a real problem would not show us). The sampler is the simplest MCMC, random-walk Metropolis: propose a random jump of about “step size”; always accept if the posterior is higher there, sometimes if lower; if rejected, stay and record the same point again. brms uses Stan’s smarter sampler, but the output is read the same way. Press Run: four chains start in the corners, walk in (warm-up, shaded on the traces), then wander around the ellipses; the histograms fill with draws and match the orange curves — the cloud of draws from the posterior slide. Then the presets: “tiny steps” crawls, the chains have not met and R-hat is far above 1; “huge steps” rejects almost every jump, the traces become flat staircases and R-hat is again poor; “good steps” gives about 30% acceptance, overlapping fuzzy-caterpillar traces and R-hat close to 1. The point for today: only read the numbers after the chains agree. The rstan unit goes inside the sampler in more detail.</p>
 <style type="text/css">
         span.MJX_Assistive_MathML {
           position:absolute!important;
@@ -505,30 +526,30 @@ Quantitative biology and integrative omics
 </thead>
 <tbody>
 <tr class="odd">
-<td>Intercept <span class="math inline">a</span></td>
-<td>4.20</td>
-<td>[3.95, 4.45]</td>
+<td>Intercept <span class="math inline">a</span> (at age 0)</td>
+<td>4.71</td>
+<td>[2.93, 6.49]</td>
 </tr>
 <tr class="even">
-<td>slope <span class="math inline">b</span></td>
-<td>0.018</td>
-<td>[0.001, 0.035]</td>
+<td>slope <span class="math inline">b</span> (per year)</td>
+<td>0.030</td>
+<td>[−0.003, 0.064]</td>
 </tr>
 <tr class="odd">
 <td><span class="math inline">\sigma</span></td>
-<td>0.31</td>
-<td>[0.22, 0.44]</td>
+<td>0.91</td>
+<td>[0.59, 1.45]</td>
 </tr>
 </tbody>
 </table>
 <ul>
 <li>Each row is a <strong>summary of that parameter’s marginal posterior</strong> — the shape of the whole distribution, boiled down.</li>
-<li>The slope’s 95% <strong>credible interval</strong> <span class="math inline">[0.001, 0.035]</span> means: <em>given the data and priors, there is a 95% probability the true per-year change lies in this range.</em></li>
+<li>The slope’s 95% <strong>credible interval</strong> <span class="math inline">[-0.003, 0.064]</span> means: <em>given the data and priors, there is a 95% probability the true per-year change lies in this range.</em></li>
 <li>That is the plain-English reading people <strong>wrongly</strong> attach to a frequentist CI — here it is actually correct.</li>
 </ul>
 
 <img data-src="fig13-slope-posterior-ci.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:55.0%"><aside class="notes">
-<p>This table is illustrative, not computed. The teaching point: every coefficient now has a full distribution, summarised by a posterior mean and a credible interval. Hammer the interpretation contrast from earlier - the credible interval is a direct probability statement about the parameter, which is exactly the (incorrect) intuition students bring to confidence intervals. So Bayes legitimises the intuition. Point out the slope interval sits just above zero, foreshadowing the next slide’s probability-of-positive-slope computation. Note sigma also has a posterior; uncertainty about the noise scale feeds into prediction uncertainty.</p>
+<p>The numbers are for the same 12 donors as the demos. Intercept and slope come from the demos’ model (noise fixed at 1, slope prior normal(0, 0.1) per year): slope 0.030 per year is the demo’s 0.30 per 10 years, and the interval is the demo’s −0.03 to 0.64 per 10 years. A full brms fit that also estimates sigma gives nearly the same slope (0.031 per year, interval −0.002 to 0.062, P(slope &gt; 0) about 0.97); the sigma row is from that fit. The intercept is the expression at age 0, far outside the data, hence its wide interval; at age 50 the line sits at 6.2 (5.7 to 6.8). The teaching point: every coefficient now has a full distribution, summarised by a posterior mean and a credible interval. Hammer the interpretation contrast from earlier - the credible interval is a direct probability statement about the parameter, which is exactly the (incorrect) intuition students bring to confidence intervals. So Bayes legitimises the intuition. Point out that the slope interval reaches just below zero, yet the next slide gives a 96% probability that the slope is positive: an interval that touches 0 is not the same as “no effect”. Note sigma also has a posterior; uncertainty about the noise scale feeds into prediction uncertainty.</p>
 <style type="text/css">
         span.MJX_Assistive_MathML {
           position:absolute!important;
@@ -546,7 +567,7 @@ Quantitative biology and integrative omics
 <p>Because the slope is a full distribution of draws, we can ask direct biological questions by <strong>counting draws</strong>:</p>
 <div class="sourceCode" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a aria-hidden="true" tabindex="-1"></a>draws <span class="ot">&lt;-</span> <span class="fu">as_draws_df</span>(fit)</span>
 <span id="cb5-2"><a aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-3"><a aria-hidden="true" tabindex="-1"></a><span class="fu">mean</span>(draws<span class="sc">$</span>b_age <span class="sc">&gt;</span> <span class="dv">0</span>)          <span class="co"># P(slope &gt; 0 | data)  e.g. 0.98</span></span>
+<span id="cb5-3"><a aria-hidden="true" tabindex="-1"></a><span class="fu">mean</span>(draws<span class="sc">$</span>b_age <span class="sc">&gt;</span> <span class="dv">0</span>)          <span class="co"># P(slope &gt; 0 | data)  e.g. 0.96</span></span>
 <span id="cb5-4"><a aria-hidden="true" tabindex="-1"></a><span class="fu">quantile</span>(draws<span class="sc">$</span>b_age, <span class="fu">c</span>(<span class="fl">0.025</span>, <span class="fl">0.975</span>))   <span class="co"># 95% credible interval</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <ul>
 <li><code>mean(draws$b_age &gt; 0)</code> is just <em>the fraction of posterior draws with a positive slope</em> — a genuine probability that the gene’s expression <strong>increases</strong> with age.</li>
@@ -556,7 +577,7 @@ Quantitative biology and integrative omics
 <p>This is the payoff: coefficients you can <strong>reason about probabilistically</strong>.</p>
 
 <img data-src="fig14-prob-slope-positive.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:55.0%"><aside class="notes">
-<p>Show how trivially the posterior answers real questions: a probability is just a proportion of draws. P(slope &gt; 0) is the fraction of the MCMC table with positive slope - report it directly as the probability the gene goes up with age. Contrast with the frequentist detour through a null hypothesis and p-value. Emphasise the flexibility: you can ask about any threshold, including a minimum biologically relevant effect size (a ROPE-style question), which a p-value cannot address. This is the slide that makes Bayesian regression feel useful rather than philosophical.</p>
+<p>Show how trivially the posterior answers real questions: a probability is just a proportion of draws. For the 12 donors P(slope &gt; 0) is 0.96 (as in the demo: 48 of 50 lines rise; the figure shows 24 of 25 draws), and P(slope &gt; 0.01 per year) is about 0.88. P(slope &gt; 0) is the fraction of the MCMC table with positive slope - report it directly as the probability the gene goes up with age. Contrast with the frequentist detour through a null hypothesis and p-value. Emphasise the flexibility: you can ask about any threshold, including a minimum biologically relevant effect size (a ROPE-style question), which a p-value cannot address. This is the slide that makes Bayesian regression feel useful rather than philosophical.</p>
 <style type="text/css">
         span.MJX_Assistive_MathML {
           position:absolute!important;
@@ -582,11 +603,13 @@ Quantitative biology and integrative omics
 <span id="cb6-4"><a aria-hidden="true" tabindex="-1"></a><span class="fu">fitted</span>(fit, <span class="at">newdata =</span> newdata)          <span class="co"># estimate + 95% credible interval</span></span>
 <span id="cb6-5"><a aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb6-6"><a aria-hidden="true" tabindex="-1"></a><span class="co"># uncertainty for a brand-new individual (adds sigma)</span></span>
-<span id="cb6-7"><a aria-hidden="true" tabindex="-1"></a><span class="fu">predict</span>(fit, <span class="at">newdata =</span> newdata)         <span class="co"># estimate + 95% prediction interval</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb6-7"><a aria-hidden="true" tabindex="-1"></a><span class="fu">predict</span>(fit, <span class="at">newdata =</span> newdata)         <span class="co"># estimate + 95% prediction interval</span></span>
+<span id="cb6-8"><a aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-9"><a aria-hidden="true" tabindex="-1"></a><span class="fu">conditional_effects</span>(fit)                <span class="co"># mean band across all ages</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>Confusing these two is a classic error: the second band is always <strong>wider</strong> because it includes donor-to-donor scatter, not just uncertainty about the line.</p>
 
 <img data-src="fig15-two-intervals-age70.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:55.0%"><aside class="notes">
-<p>This is the single most useful practical distinction and a frequent trap. Two sources of uncertainty: (1) we do not know the true line (parameter uncertainty in a and b), giving a credible band for the mean; (2) even if we knew the line exactly, a new donor scatters around it by sigma, giving a wider prediction band for an individual. fitted() gives the first, predict() gives the second. Draw both bands: the mean band hugs the line, the prediction band is fatter and roughly parallel. Stress that reporting the narrow band when you meant an individual prediction badly understates uncertainty.</p>
+<p>This is the single most useful practical distinction and a frequent trap. Two sources of uncertainty: (1) we do not know the true line (parameter uncertainty in a and b), giving a credible band for the mean; (2) even if we knew the line exactly, a new donor scatters around it by sigma, giving a wider prediction band for an individual. fitted() gives the first, predict() gives the second; conditional_effects(fit) draws the first across all ages, and conditional_effects(fit, method = “posterior_predict”) the second. Show both bands in the demo on the next slide: the mean band hugs the line, the prediction band is fatter and roughly parallel. Stress that reporting the narrow band when you meant an individual prediction badly understates uncertainty.</p>
 <style type="text/css">
         span.MJX_Assistive_MathML {
           position:absolute!important;
@@ -599,20 +622,13 @@ Quantitative biology and integrative omics
           display:block!important;
       }</style></aside>
 </section>
-<section id="prediction-bands-over-the-whole-range" class="slide level2 smaller">
-<h2>Prediction bands over the whole range</h2>
-<p><code>conditional_effects</code> draws the fitted line with its uncertainty across all ages at once:</p>
-<div class="sourceCode" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a aria-hidden="true" tabindex="-1"></a><span class="fu">conditional_effects</span>(fit)                          <span class="co"># mean line + 95% credible band</span></span>
-<span id="cb7-2"><a aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-3"><a aria-hidden="true" tabindex="-1"></a><span class="co"># to show the wider band for individual new donors:</span></span>
-<span id="cb7-4"><a aria-hidden="true" tabindex="-1"></a><span class="fu">conditional_effects</span>(fit, <span class="at">method =</span> <span class="st">"posterior_predict"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<ul>
-<li>The shaded band is <strong>narrowest near the mean age</strong> (where the data are densest) and <strong>flares out at the extremes</strong> — we extrapolate with less confidence.</li>
-<li>Every point on the band is a summary of the <strong>posterior-predictive</strong> draws at that age.</li>
-</ul>
-
-<img data-src="fig16-prediction-bands.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:60.0%"><aside class="notes">
-<p>Reinforce visually: the uncertainty band is not constant width. It pinches near the centre of the data and flares at the ends, which is the honest statement that extrapolation beyond your donors’ ages is uncertain. Distinguish again the mean band (default) from the wider posterior-predictive band for individuals. Everything shown is derived by pushing every posterior draw through the model at each age and summarising - the same draw-counting logic as the coefficient slide, just done pointwise. This picture is the emotional payoff of the whole lecture: a fit that shows its own uncertainty.</p>
+<section id="try-it-two-kinds-of-band" class="slide level2 smaller">
+<h2>Try it: two kinds of band</h2>
+<link rel="stylesheet" href="../demos/dist/demo.css">
+<div data-demo="bayesline" data-lines="on" data-bands="both"></div>
+<script src="../demos/dist/bayesline.js"></script>
+<aside class="notes">
+<p>Same demo, now opened on panel (b) with the 50 posterior lines and both 95% bands. The blue mean band is where the average line is (what fitted() and conditional_effects(fit) give); the grey prediction band is where one new donor lands (what predict() and conditional_effects(fit, method = “posterior_predict”) give). At age 70 the mean band is about 6.0 to 7.7, the prediction band about 4.7 to 9.0: the prediction band is always wider because it adds the donor-to-donor scatter sigma. Point out that the mean band is narrowest near age 50, the middle of the donors, and flares out towards the extremes — extrapolation is less certain. Press “draw again” or “hide the 50 lines” to show that the mean band is just a summary of where the lines go. Move the donors slider down to 3: both bands widen.</p>
 <style type="text/css">
         span.MJX_Assistive_MathML {
           position:absolute!important;
@@ -730,7 +746,7 @@ Quantitative biology and integrative omics
 </tr>
 <tr class="odd">
 <td>Likelihood</td>
-<td>Gaussian; maximised alone → <strong>least-squares</strong> line</td>
+<td>points far from a line make it less believable; the most believable line is the <strong>least-squares</strong> line</td>
 </tr>
 <tr class="even">
 <td>Posterior</td>
@@ -754,9 +770,29 @@ Quantitative biology and integrative omics
 </tr>
 </tbody>
 </table>
-<p><strong>Builds on:</strong> least-squares fitting and the normal equations (<em>Least squares as projection</em>, week 3); prior / likelihood / posterior (Bayes’ theorem). <strong>Generalises to:</strong> swapping <code>family = gaussian()</code> for a count family, linking to the Poisson / negative-binomial models in <em>Error models</em> (next unit).</p>
+<p><strong>Builds on:</strong> least-squares fitting (<em>Least squares as projection</em>, week 3); prior / likelihood / posterior (Bayes’ theorem). <strong>Generalises to:</strong> other kinds of data, e.g.&nbsp;counts, by swapping <code>family = gaussian()</code> for a count family (<em>Error models</em>, next unit).</p>
 <aside class="notes">
-<p>The summary is the revision sheet. Drill the through-line one more time: identical model, priors turn parameters into distributions, Bayes combines prior and likelihood, MCMC samples the posterior, and every question - is the slope positive, predict a new donor - is answered by summarising draws. Remind them least squares is the flat-prior peak, so nothing they learned earlier is discarded. Point forward: the same brms machinery with a different family handles the overdispersed count data of Error models, which is the next unit for omics. And repeat: diagnostics before interpretation, always.</p>
+<p>The summary is the revision sheet. Drill the through-line one more time: identical model, priors turn parameters into distributions, Bayes combines prior and likelihood, MCMC samples the posterior, and every question - is the slope positive, predict a new donor - is answered by summarising draws. Remind them least squares is the flat-prior peak, so nothing they learned earlier is discarded. Point forward: the same brms machinery with a different family can also handle count data, which Error models (next unit) introduces. And repeat: diagnostics before interpretation, always.</p>
+<style type="text/css">
+        span.MJX_Assistive_MathML {
+          position:absolute!important;
+          clip: rect(1px, 1px, 1px, 1px);
+          padding: 1px 0 0 0!important;
+          border: 0!important;
+          height: 1px!important;
+          width: 1px!important;
+          overflow: hidden!important;
+          display:block!important;
+      }</style></aside>
+</section>
+<section id="optional-the-maths-behind-the-fit" class="slide level2 smaller">
+<h2>Optional: the maths behind the fit</h2>
+<p><strong>Least squares in matrix form.</strong> Stack the data into a design matrix <span class="math inline">X</span> (a column of 1s for <span class="math inline">a</span>, a column of ages for <span class="math inline">b</span>). The least-squares coefficients solve the normal equations: <span class="math inline">\hat{\boldsymbol\beta} = (X^\top X)^{-1} X^\top \mathbf{y}</span>.</p>
+<p><strong>Likelihood.</strong> Each donor contributes a Normal density, <span class="math inline">p(y_i \mid a, b, \sigma) = \mathcal{N}(y_i \mid a + b\,x_i,\ \sigma^2)</span>; independence makes the full likelihood the product <span class="math inline">\prod_{i=1}^{n} \mathcal{N}(y_i \mid a + b\,x_i,\ \sigma^2)</span>. For fixed <span class="math inline">\sigma</span> this is proportional to <span class="math inline">\exp\!\big(-\text{SSR}/2\sigma^2\big)</span> with <span class="math inline">\text{SSR}=\sum_i (y_i - a - b x_i)^2</span>, so maximising the likelihood is minimising the sum of squared residuals.</p>
+<p><strong>Posterior.</strong> <span class="math inline">p(a, b, \sigma \mid \text{data}) \propto \left[\prod_{i} \mathcal{N}(y_i \mid a + b x_i,\ \sigma^2)\right] p(a)\,p(b)\,p(\sigma)</span>, with priors <span class="math inline">a \sim \mathcal{N}(0, 5)</span>, <span class="math inline">b \sim \mathcal{N}(0, 0.1)</span>, <span class="math inline">\sigma \sim \text{Exponential}(1)</span>.</p>
+
+<img data-src="fig05-design-matrix.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:45.0%"><aside class="notes">
+<p>Optional, for students who want the formulas behind the words. Nothing in the lecture or exercises needs them. The design-matrix picture links back to the linear algebra block; the exp(-SSR/2 sigma^2) line is the one-line reason why “smaller total squared miss” means “more believable”.</p>
 <style type="text/css">
         span.MJX_Assistive_MathML {
           position:absolute!important;

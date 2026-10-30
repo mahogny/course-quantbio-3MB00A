@@ -15,17 +15,17 @@ By the end of this exercise you should be able to:
 - explain what an **error model** (likelihood) is and why every analysis assumes one,
 - match a **data type** to the right distribution — Gaussian, Poisson, exponential, negative binomial,
 - use the **mean = variance** identity of the Poisson **by hand** and as a diagnostic,
-- compute simple Poisson and exponential probabilities on toy examples,
+- read Poisson probabilities off a simulation or `dpois`, and use **mean gap = 1 / rate** for waiting times,
 - explain **overdispersion** and why RNA-seq counts need the **negative binomial**,
 - explain, concretely, **why the wrong error model misleads** (inflated false positives).
 
 In [Bulk RNA-seq with DESeq2](../bulk-rnaseq/exercise.qmd) you saw that ratios of small counts are noisy (about $n \pm \sqrt{n}$, the MA-plot fan). Here that noise gets a name: the Poisson is the counting noise, and the negative binomial adds the biological spread between replicates.
 
-This is a **concept day**. Spend most of your time reasoning about *which* distribution fits and *why*; the R section is there to confirm your hand answers and build intuition by simulation.
+This is a **concept day**. Spend most of your time reasoning about *which* distribution fits and *why*; the demos and the R section are there to confirm your answers and build intuition by simulation. No formula needs to be evaluated by hand; items marked **(optional)** are for those who want the maths.
 
 ## Background
 
-A measurement is signal plus noise. The **error model** is the probability distribution you assume the data came from given the truth; read as a function of the parameters, it is the **likelihood** (the same likelihood that feeds Bayes' theorem in the *prior, likelihood and posterior* unit).
+A measurement is signal plus noise. The **error model** is the probability distribution you assume the data came from given the truth; read as a function of the parameters, it is the **likelihood** (the same likelihood that multiplied the prior in [Bayesian vs frequentist](../bayes-intro/exercise.qmd)).
 
 **The four distributions of this unit:**
 
@@ -36,9 +36,11 @@ A measurement is signal plus noise. The **error model** is the probability distr
 | Waiting times / gaps | Exponential$(\lambda)$ | $1/\lambda$ | $1/\lambda^2$ |
 | Overdispersed counts | Negative binomial$(\mu,\phi)$ | $\mu$ | $\mu + \phi\mu^2$ |
 
-Key formulas:
-
+::: {.callout-note collapse="true" title="Optional: the maths"}
 $$P_{\text{Pois}}(X=k) = \frac{\lambda^k e^{-\lambda}}{k!}, \qquad f_{\text{Exp}}(t) = \lambda e^{-\lambda t}, \qquad P_{\text{Exp}}(T > t) = e^{-\lambda t}.$$
+
+R computes these for you: `dpois(k, lambda)` and `pexp(t, lambda, lower.tail = FALSE)`.
+:::
 
 **Poisson process:** one stream of random events at rate $\lambda$. The **number** in a fixed window is Poisson$(\lambda)$; the **waiting time** to the next event is Exponential$(\lambda)$.
 
@@ -49,13 +51,22 @@ $$P_{\text{Pois}}(X=k) = \frac{\lambda^k e^{-\lambda}}{k!}, \qquad f_{\text{Exp}
 **B1.** For each dataset, name the error model you would use and give the one-line reason:
 (a) cell diameters in micrometres; (b) reads mapped to a gene across 5 technical replicates; (c) time between neuronal spikes; (d) reads per gene across 5 biological replicates (different mice).
 
-**B2.** A gene has an average of $\lambda = 2$ reads per sample under a Poisson model. Compute $P(X=0)$, $P(X=1)$, and $P(X=2)$ by hand. What is $P(X \ge 1)$?
+**B2.** A gene has an average of $\lambda = 2$ reads per sample under a Poisson model. R's `dpois(0:4, 2)` gives the probabilities of 0, 1, 2, 3 and 4 reads:
+
+| reads | 0 | 1 | 2 | 3 | 4 |
+|---|---|---|---|---|---|
+| probability | 0.135 | 0.271 | 0.271 | 0.180 | 0.090 |
+
+(a) What are $P(X=0)$, $P(X=1)$ and $P(X=2)$? Which counts are most likely?
+(b) What is $P(X \ge 1)$, the chance of seeing the gene at all? (Use the complement.)
+(c) In about what fraction of samples would you see 2 reads or fewer?
+(d) **(optional)** Check $P(X=0)$, $P(X=1)$ and $P(X=2)$ by hand from the formula in the optional maths box above.
 
 **B3.** For a Poisson$(\lambda)$, state the mean and the variance. A colleague reports count data with sample mean $\approx 20$ and sample variance $\approx 210$. Is Poisson an adequate error model? What does the discrepancy tell you, and which distribution should they use instead?
 
 **B4.** Mutations occur along a genome at rate $\lambda = 0.5$ per megabase, modelled as a Poisson process.
 (a) What is the expected waiting distance to the next mutation?
-(b) What is $P(\text{no mutation in the next 2 Mb})$? (Two equivalent routes: the exponential survival $e^{-\lambda t}$, or the Poisson probability of zero events in a window of length 2.)
+(b) The number of mutations in a 2-Mb window is Poisson with mean $0.5 \times 2 = 1$, and `dpois(0, 1)` gives $0.37$. What is $P(\text{no mutation in the next 2 Mb})$? Explain in words why this is the same as "the gap to the next mutation is longer than 2 Mb".
 
 **B5.** A negative binomial has $\text{Var}(X) = \mu + \phi\mu^2$. For $\mu = 50$:
 (a) what is the variance when $\phi = 0$, and what distribution is that?
@@ -65,9 +76,14 @@ $$P_{\text{Pois}}(X=k) = \frac{\lambda^k e^{-\lambda}}{k!}, \qquad f_{\text{Exp}
 **B6.** True or false, with one line of reasoning each:
 (a) "A Gaussian is fine for counts as long as the mean is large." (b) "If counts are Poisson, plotting sample variance against sample mean across many genes should fall near the line $y = x$." (c) "The exponential distribution can produce negative waiting times."
 
-**B7. (waiting-time flavour)** A DNA-binding protein has a dwell time on its site that is exponential with mean $4$ seconds. (a) What is the rate $\lambda$? (b) What is $P(\text{dwell} > 4\text{ s})$? (c) Given it has already stayed 4 s, what is the probability it stays at least 4 s more — and what property does your answer illustrate?
+**B7. (waiting-time flavour)** A DNA-binding protein has a dwell time on its site that is exponential with mean $4$ seconds.
+(a) What is the rate $\lambda$ (unbindings per second)?
+(b) One protein has just bound; another has already stayed 4 s. Which of the two is more likely to still be bound 4 s from now — or are they equally likely? Which property of the exponential is this? (E6 lets you see it.)
+(c) **(optional)** Compute $P(\text{dwell} > 4\text{ s})$, and the probability that a protein that has already stayed 4 s stays at least 4 s more.
 
 ## Explore {#explore}
+
+### Poisson vs negative binomial
 
 Do B3 and B5 by hand first. The demo draws 1000 counts from a negative binomial with mean $\mu$ and dispersion $\phi$, in this unit's convention $\text{Var}(X) = \mu + \phi\mu^2$. The bars are the simulated counts, the red dots the NB probabilities, and the dashed blue outline the Poisson with the same mean.
 
@@ -93,6 +109,25 @@ Do B3 and B5 by hand first. The demo draws 1000 counts from a negative binomial 
 **E3.** With $\mu = 3$ (first draw): Poisson gives 49 zeros (theory $1000\,e^{-3} \approx 50$); mild overdispersion ($\phi = 0.1$) 69; strong ($\phi = 2$) 368, more than a third of all cells (theory $1000\,(1+\phi\mu)^{-1/\phi} \approx 378$). The theoretical mean stays at 3 throughout (the sample means stay close to it): the NB moves probability both to zero and to a long right tail.
 
 **E4.** With $\phi = 0.1$: var/mean $= 1 + \phi\mu$ is 1.5 at $\mu = 5$, 6 at $\mu = 50$ and 51 at $\mu = 500$; on log axes the NB curve peels away from the line var $= \mu$ as $\mu$ grows. At $\mu = 20$, $210 = 20 + 400\,\phi$ gives $\phi \approx 0.48$; the slider's $\phi = 0.5$ (variance 220) is closest, so the data in B3 are clearly overdispersed.
+:::
+
+### Counts and gaps: one process
+
+Do B4 first. The demo scatters random events (mutations) along a 2000-Mb genome at a given rate; the strip shows the first 10 Mb. Left: how many events fall in each window (bars) against the Poisson (red dots). Right: the gaps between neighbouring events against the exponential (red curve).
+
+```{=html}
+<div data-demo="poissonprocess" data-rate="2" data-window="1" data-view="both"></div>
+<script src="../demos/dist/poissonprocess.js"></script>
+```
+
+**E5.** At the start (2 per Mb, 1-Mb windows), read the mean and variance of the counts and the mean gap. Which identity does each illustrate? Then set the rate to 0.5 and the window to 2 Mb, as in B4. What fraction of windows have no mutation, and what is the mean gap? Compare with your B4 answers.
+
+**E6.** Still at rate 0.5, tick **memoryless** and set **already waited** to 2. The demo keeps only the gaps longer than 2 Mb and shows how much of each is left beyond 2. What fraction of gaps are longer than 2 Mb, and what is the mean of what is left? What does that say about B7(b)? Finally tick **clumped** (events in bursts): what happens to the variance of the counts and to the wait left?
+
+::: {.callout-note collapse="true" title="Solutions"}
+**E5.** At rate 2: 4077 mutations, counts with mean 2.04 and variance 2.00 (mean = variance, the Poisson signature); mean gap 0.49 Mb $\approx$ 1 / rate = 0.5. At rate 0.5 with 2-Mb windows (first draw): 998 mutations in 1000 windows, mean 1.00, variance 0.93; 36.2% of windows are empty (B4b: 0.37), and the mean gap is 2.00 Mb (B4a: 1 / 0.5 = 2).
+
+**E6.** In the first draw, 37.6% of the gaps are longer than 2 Mb (again about 0.37, B4b seen from the gap side), and what is left of them has mean 1.95 Mb, the same as all gaps (2.00). Having gone 2 Mb without a mutation does not bring the next one closer: the exponential is **memoryless**. For B7(b) this means the protein that has already stayed 4 s is just as likely to stay another 4 s as the freshly bound one. With **clumped** on, the counts have mean 1.04 but variance 3.38 (overdispersed, about 3 times the mean), and the wait left after 2 Mb is 5.78 Mb, far longer than the mean gap: a bursty process remembers, so neither the Poisson nor the exponential fits.
 :::
 
 ## In R
@@ -126,17 +161,18 @@ dpois(0, lambda * 2)        # P(0 events in 2 Mb) = e^{-1}  -> matches
 ```r
 mu <- 50
 mean(rpois(1e5, mu));            var(rpois(1e5, mu))            # ~50, ~50
-# R uses 'size' = 1/phi;  Var = mu + mu^2/size
-mean(rnbinom(1e5, mu = mu, size = 2)); var(rnbinom(1e5, mu = mu, size = 2))  # ~50, >>50
+phi <- 0.5                       # Var = mu + phi * mu^2 = 50 + 1250 = 1300
+y <- rnbinom(1e5, mu = mu, size = 1 / phi)   # R's knob is called size = 1/phi
+mean(y); var(y)                  # ~50, ~1300 >> 50
 ```
 
 ### Tasks
 
-**R1.** Confirm your **B2** hand probabilities with `dpois(0:2, 2)`, and check `1 - dpois(0, 2)` against your $P(X \ge 1)$.
+**R1.** Run `dpois(0:4, 2)` to reproduce the table in **B2**, and check `1 - dpois(0, 2)` against your $P(X \ge 1)$ and `ppois(2, 2)` against your answer to B2(c).
 
-**R2.** For **B3**, simulate `x <- rpois(1e5, 20)` and report `mean(x)` and `var(x)`. Then simulate overdispersed counts with `rnbinom(1e5, mu = 20, size = 4)` and report its variance. Which one resembles the colleague's data (mean $\approx 20$, variance $\approx 210$)? (Recall $\text{Var} = \mu + \mu^2/\text{size}$.)
+**R2.** For **B3**, simulate `x <- rpois(1e5, 20)` and report `mean(x)` and `var(x)`. Then simulate overdispersed counts with dispersion $\phi = 0.25$, `rnbinom(1e5, mu = 20, size = 1 / 0.25)`, and report its variance. Which one resembles the colleague's data (mean $\approx 20$, variance $\approx 210$)? (Recall $\text{Var} = \mu + \phi\mu^2$.)
 
-**R3.** For **B4**, verify both routes agree: `pexp(2, rate = 0.5, lower.tail = FALSE)` (exponential survival) and `dpois(0, 0.5 * 2)` (Poisson zero-count). They should give the same number.
+**R3.** For **B4**, verify both routes agree: `pexp(2, rate = 0.5, lower.tail = FALSE)` (the chance that the gap is longer than 2 Mb) and `dpois(0, 0.5 * 2)` (the chance of zero mutations in a 2-Mb window). They should give the same number.
 
 ## Hints
 
@@ -145,7 +181,7 @@ Ask two questions in order. First: **continuous or a count?** Continuous symmetr
 :::
 
 ::: {.callout-tip collapse="true" title="Hint 2 — Poisson probabilities (B2)"}
-Use $P(X=k) = \dfrac{\lambda^k e^{-\lambda}}{k!}$ with $\lambda = 2$. Note $0! = 1! = 1$ and $2! = 2$. For "at least one", use the complement: $P(X \ge 1) = 1 - P(X = 0) = 1 - e^{-\lambda}$. See [`dpois`](https://rdrr.io/r/stats/Poisson.html).
+Read the probabilities straight off the table. For "at least one", use the complement: $P(X \ge 1) = 1 - P(X = 0)$. For "2 or fewer", add the bars for 0, 1 and 2. (Optional, by hand: $P(X=k) = \lambda^k e^{-\lambda}/k!$ with $\lambda = 2$; note $0! = 1! = 1$ and $2! = 2$.) See [`dpois`](https://rdrr.io/r/stats/Poisson.html).
 :::
 
 ::: {.callout-tip collapse="true" title="Hint 3 — the mean = variance diagnostic (B3)"}
@@ -153,15 +189,15 @@ Poisson forces $\text{Var} = \text{mean}$. If the sample variance is much bigger
 :::
 
 ::: {.callout-tip collapse="true" title="Hint 4 — exponential vs Poisson for the same process (B4)"}
-For a Poisson process at rate $\lambda$: the count in a window of length $t$ is Poisson$(\lambda t)$, and the waiting distance to the next event is Exponential$(\lambda)$. "No event in length $t$" can be read either as the exponential survival $P(T > t) = e^{-\lambda t}$ or as the Poisson zero-count $P(X=0) = e^{-\lambda t}$ over that window — same number. See [`pexp`](https://rdrr.io/r/stats/Exponential.html) and [`dpois`](https://rdrr.io/r/stats/Poisson.html).
+For a Poisson process at rate $\lambda$: the mean gap to the next event is $1/\lambda$, and the count in a window of length $t$ is Poisson with mean $\lambda t$. "No mutation in the next 2 Mb" and "the next mutation is more than 2 Mb away" describe the same stretch of genome, so they must have the same probability. See [`pexp`](https://rdrr.io/r/stats/Exponential.html) and [`dpois`](https://rdrr.io/r/stats/Poisson.html).
 :::
 
 ::: {.callout-tip collapse="true" title="Hint 5 — negative binomial variance (B5)"}
-Plug into $\text{Var} = \mu + \phi\mu^2$. In R the parameter is `size` $= 1/\phi$, so $\text{Var} = \mu + \mu^2/\text{size}$. A test that assumes **less** variance than the truth makes p-values **too small** (overconfident), which produces **false positives**. See [`rnbinom`](https://rdrr.io/r/stats/NegBinomial.html).
+Plug into $\text{Var} = \mu + \phi\mu^2$ (in R, pass `size = 1/phi`). A test that assumes **less** variance than the truth makes p-values **too small** (overconfident), which produces **false positives**. See [`rnbinom`](https://rdrr.io/r/stats/NegBinomial.html).
 :::
 
 ::: {.callout-tip collapse="true" title="Hint 6 — memorylessness (B7)"}
-Mean of an exponential is $1/\lambda$, so $\lambda = 1/\text{mean}$. The survival function is $P(T > t) = e^{-\lambda t}$. Memorylessness means $P(T > s + t \mid T > s) = P(T > t)$ — the past waiting does not matter, so the "already waited 4 s" answer equals the plain $P(T > 4)$.
+Mean of an exponential is $1/\lambda$, so $\lambda = 1/\text{mean}$. For (b): in E6, compare the leftover waits of the gaps that are already long with all gaps. (Optional, for (c): $P(T > t) = e^{-\lambda t}$, and memorylessness means $P(T > s + t \mid T > s) = P(T > t)$.)
 :::
 
 ## Solutions
@@ -175,14 +211,16 @@ Mean of an exponential is $1/\lambda$, so $\lambda = 1/\text{mean}$. The surviva
 (d) **Negative binomial** — reads are counts, but *biological* replicates (different mice) vary in their true rate, so the data are overdispersed (variance > mean).
 
 **B2.** With $\lambda = 2$:
-$$P(0) = \frac{2^0 e^{-2}}{0!} = e^{-2} \approx 0.135, \quad P(1) = \frac{2^1 e^{-2}}{1!} = 2e^{-2} \approx 0.271, \quad P(2) = \frac{2^2 e^{-2}}{2!} = 2e^{-2} \approx 0.271.$$
-$P(X \ge 1) = 1 - P(0) = 1 - e^{-2} \approx 0.865$.
+(a) $P(0) \approx 0.135$, $P(1) \approx 0.271$, $P(2) \approx 0.271$. One and two reads are the most likely counts (equally likely), and about one sample in seven has no read at all.
+(b) $P(X \ge 1) = 1 - P(0) \approx 1 - 0.135 = 0.865$.
+(c) $P(X \le 2) \approx 0.135 + 0.271 + 0.271 = 0.677$: about two samples in three.
+(d) **(optional)** $P(0) = \dfrac{2^0 e^{-2}}{0!} = e^{-2} \approx 0.135$, $P(1) = \dfrac{2^1 e^{-2}}{1!} = 2e^{-2} \approx 0.271$, $P(2) = \dfrac{2^2 e^{-2}}{2!} = 2e^{-2} \approx 0.271$.
 
-**B3.** For Poisson$(\lambda)$ the mean and variance are **both** $\lambda$. The colleague's variance ($\approx 210$) is about ten times the mean ($\approx 20$), so $\text{Var} \gg \text{mean}$: the data are **overdispersed** and Poisson is **not** adequate — it would badly understate the noise. The discrepancy signals extra variation in the rate between samples (biological variability). They should use the **negative binomial**. (Here $\mu + \phi\mu^2 = 210$ with $\mu = 20$ gives $\phi \approx 0.475$, i.e. `size` $= 1/\phi \approx 2.1$.)
+**B3.** For Poisson$(\lambda)$ the mean and variance are **both** $\lambda$. The colleague's variance ($\approx 210$) is about ten times the mean ($\approx 20$), so $\text{Var} \gg \text{mean}$: the data are **overdispersed** and Poisson is **not** adequate — it would badly understate the noise. The discrepancy signals extra variation in the rate between samples (biological variability). They should use the **negative binomial**. (Here $\mu + \phi\mu^2 = 210$ with $\mu = 20$ gives $\phi \approx 0.475$.)
 
 **B4.** Rate $\lambda = 0.5$ per Mb.
 (a) Expected waiting distance $= 1/\lambda = 1/0.5 = **2$ Mb**.
-(b) $P(\text{no mutation in 2 Mb})$. Exponential route: $P(T > 2) = e^{-\lambda \cdot 2} = e^{-0.5 \cdot 2} = e^{-1} \approx 0.368$. Poisson route: events in a 2-Mb window are Poisson$(\lambda \cdot 2) = \text{Poisson}(1)$, so $P(0) = \frac{1^0 e^{-1}}{0!} = e^{-1} \approx 0.368$. **Same answer**, as they must be for one Poisson process.
+(b) $P(\text{no mutation in 2 Mb}) = $ `dpois(0, 1)` $\approx 0.37$. "No mutation in the next 2 Mb" and "the gap to the next mutation is longer than 2 Mb" are the same event, read once as a count (zero events in the window) and once as a gap, so they must have the same probability. (Optional: the exponential route gives $P(T > 2) = e^{-0.5 \cdot 2} = e^{-1} \approx 0.368$, the Poisson route $P(0) = e^{-1}$ too. E5 and E6 show both in the demo: 36% of windows empty, 38% of gaps longer than 2 Mb.)
 
 **B5.** $\text{Var} = \mu + \phi\mu^2$, $\mu = 50$.
 (a) $\phi = 0$: $\text{Var} = 50 + 0 = 50$; variance equals the mean, so this is the **Poisson**.
@@ -196,13 +234,14 @@ $P(X \ge 1) = 1 - P(0) = 1 - e^{-2} \approx 0.865$.
 
 **B7.** Exponential dwell time, mean $4$ s.
 (a) $\lambda = 1/\text{mean} = 1/4 = 0.25\text{ s}^{-1}$.
-(b) $P(\text{dwell} > 4) = e^{-\lambda \cdot 4} = e^{-0.25 \cdot 4} = e^{-1} \approx 0.368$.
-(c) By **memorylessness**, $P(T > 4 + 4 \mid T > 4) = P(T > 4) = e^{-1} \approx 0.368$ — the same as (b). The protein "does not age": having already stayed 4 s tells you nothing about the remaining dwell time.
+(b) **Equally likely.** The exponential is **memoryless**: having already stayed 4 s tells you nothing about the remaining dwell time, so the protein "does not age". E6 shows it: the gaps that are already longer than 2 Mb have, on average, as much left (1.95 Mb) as a fresh gap (2.00 Mb).
+(c) **(optional)** $P(\text{dwell} > 4) = e^{-0.25 \cdot 4} = e^{-1} \approx 0.368$, and by memorylessness $P(T > 4 + 4 \mid T > 4) = P(T > 4) = e^{-1} \approx 0.368$, the same number.
 
 **R1.**
 ```r
-dpois(0:2, 2)        # 0.1353 0.2707 0.2707  -> matches B2
+dpois(0:4, 2)        # 0.1353 0.2707 0.2707 0.1804 0.0902  -> the B2 table
 1 - dpois(0, 2)      # 0.8647               -> matches P(X>=1)
+ppois(2, 2)          # 0.6767               -> matches P(X<=2)
 ```
 
 **R2.**
@@ -210,10 +249,10 @@ dpois(0:2, 2)        # 0.1353 0.2707 0.2707  -> matches B2
 x <- rpois(1e5, 20)
 mean(x); var(x)                       # ~20, ~20  (variance = mean)
 
-y <- rnbinom(1e5, mu = 20, size = 4)  # Var = 20 + 20^2/4 = 20 + 100 = 120
+y <- rnbinom(1e5, mu = 20, size = 1 / 0.25)  # Var = 20 + 0.25 * 20^2 = 20 + 100 = 120
 mean(y); var(y)                       # ~20, ~120
 ```
-The Poisson gives variance $\approx 20$; the negative binomial with `size = 4` gives variance $\approx 120$. Neither exactly matches the colleague's variance of $210$ — that needs a smaller `size` (more dispersion): `size` $= \mu^2/(\text{Var}-\mu) = 400/190 \approx 2.1$. Either way, the overdispersed NB, not the Poisson, is the family that can reproduce a variance far above the mean.
+The Poisson gives variance $\approx 20$; the negative binomial with $\phi = 0.25$ gives variance $\approx 120$. Neither exactly matches the colleague's variance of $210$ — that needs more dispersion, $\phi \approx 0.48$ (B3, E4). Either way, the overdispersed NB, not the Poisson, is the family that can reproduce a variance far above the mean.
 
 **R3.**
 ```r
@@ -225,6 +264,7 @@ Both equal $e^{-1} \approx 0.368$, confirming the two views of the same Poisson 
 
 ## Where this leads
 
-- **Prior, likelihood and posterior:** the error model *is* the likelihood — the term that multiplies the prior to give the Bayesian posterior. Today you chose it; there you use it in Bayes' theorem.
-- **Poisson and negative binomial distributions:** a fuller treatment of count distributions and overdispersion, the statistical foundation of RNA-seq differential expression.
+- **[Bayesian vs frequentist](../bayes-intro/exercise.qmd):** the error model *is* the likelihood — the term that multiplies the prior to give the posterior. There you used it in Bayes' theorem; today you chose it.
+- **[Hierarchical models](../hierarchical/exercise.qmd):** technical and biological variation stack, the same idea as Poisson counting noise plus the extra spread of the negative binomial.
+- **[Single-cell RNA-seq: data & QC](../scrna-intro/exercise.qmd):** the same kind of counts, now per cell, with many zeros.
 - **Genomics tools:** `DESeq2` (which you ran in [Bulk RNA-seq with DESeq2](../bulk-rnaseq/exercise.qmd)) and `edgeR` are negative-binomial models with shared dispersion estimation across genes — the production-grade version of the mean-variance reasoning practised here.

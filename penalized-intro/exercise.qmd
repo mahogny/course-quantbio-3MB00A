@@ -12,62 +12,85 @@ format:
 
 By the end of this exercise you should be able to:
 
-- recognise the **p ≫ n** shape of omics data and say why it breaks ordinary least squares,
-- explain, using **rank**, why $X^\top X$ has **no inverse** when there are more predictors than samples,
-- describe how **correlated predictors** make $X^\top X$ nearly singular and coefficients unstable,
-- explain the **bias–variance tradeoff** in plain words and say which end OLS sits at,
-- do a **one-parameter ridge** calculation by hand and see the coefficient shrink as $\lambda$ grows,
-- explain why adding $\lambda I$ to $X^\top X$ **restores invertibility** (eigenvalue shift).
+- recognise the **p ≫ n** shape of omics data and say, by **counting equations and unknowns**, why it breaks ordinary least squares,
+- explain why **correlated genes** make coefficients unstable: many coefficient sets give the same predictions,
+- explain the **bias–variance tradeoff** in plain words and say which end ordinary least squares sits at,
+- use the **one-gene ridge formula** to see a coefficient shrink as $\lambda$ grows,
+- read a **shrinkage path** (coefficients against $\lambda$),
+- find the $\lambda$ that **predicts new patients best** from a training-versus-test error curve.
 
-This is a **concept day**. Most questions are reasoning, not arithmetic; the point is to internalise *why* penalization is needed before we meet the specific penalties (ridge and lasso) in later units.
+This is a **concept day**. Most questions are reasoning or plugging numbers into a given formula; the point is to see *why* penalization is needed before we meet the specific penalties (ridge and lasso) in later units.
 
 ## Background
 
-For a linear model $\mathbf{y} \approx X\boldsymbol{\beta}$ with an $n \times p$ design matrix $X$ ($n$ samples, $p$ predictors), **ordinary least squares (OLS)** minimises the squared error and solves the **normal equations**:
+A linear model predicts an outcome $y$ (say, drug response) as a weighted sum of the predictors (genes). **Ordinary least squares (OLS)**, what `lm()` does, picks the coefficients with the **smallest total squared error**: for every sample take observed minus predicted, square it, add these up, and make the total as small as possible.
+
+Every sample gives **one equation**; every coefficient is **one unknown**. Two things go wrong in biology:
+
+1. **$p > n$ (more genes than samples).** More unknowns than equations, so **infinitely many** coefficient sets fit the data perfectly. There is no single answer.
+2. **Correlated predictors** (co-regulated genes). Two genes that move together can stand in for each other, so very different coefficients give almost the same predictions. Which one ordinary least squares returns is decided by the noise: coefficients become **huge and unstable**.
+
+**Penalized regression** adds a price for coefficient size. In words:
+
+$$\text{what we minimise} \;=\; \text{fit error} \;+\; \lambda \times (\text{size of the coefficients}),\qquad \lambda \ge 0.$$
+
+With **ridge**, "size" is the sum of the squared coefficients. Among answers that fit (almost) equally well, the penalty prefers the **smallest** one, so there is one answer again and it does not swing with the noise. The price is **bias**: coefficients are shrunk toward zero. $\lambda$ is the **bias–variance dial**.
+
+::: {.callout-note collapse="true" title="Optional: the maths"}
+For a design matrix $X$ ($n$ samples × $p$ predictors), ordinary least squares minimises $\lVert\mathbf{y} - X\boldsymbol{\beta}\rVert^2$ and solves the **normal equations**
 
 $$X^\top X\,\boldsymbol{\beta} = X^\top \mathbf{y} \qquad\Longrightarrow\qquad \hat{\boldsymbol{\beta}} = (X^\top X)^{-1} X^\top \mathbf{y}.$$
 
-This only works if the $p \times p$ matrix $X^\top X$ is **invertible**. Two things go wrong in biology:
-
-1. **$p > n$ (more genes than samples).** Then $\text{rank}(X^\top X) \le n < p$, so $X^\top X$ is **singular** — no inverse, no unique solution.
-2. **Correlated predictors** (co-regulated genes). Then $X^\top X$ is **nearly singular** — it has an eigenvalue close to 0, the inverse blows up, and coefficients become huge and unstable.
-
-**Penalized regression** adds a price for coefficient size:
-
-$$\hat{\boldsymbol{\beta}} = \arg\min_{\boldsymbol{\beta}} \ \|\mathbf{y} - X\boldsymbol{\beta}\|^2 + \lambda\,(\text{size of }\boldsymbol{\beta}),\qquad \lambda \ge 0.$$
-
-Using the squared size $\|\boldsymbol{\beta}\|^2$ (ridge) changes the normal equations to
+This needs the $p \times p$ matrix $X^\top X$ to be invertible. With $p > n$, $\text{rank}(X^\top X) \le n < p$, so it is **singular**. With correlated predictors it is **nearly singular** (an eigenvalue close to 0) and the inverse blows up. Ridge minimises $\lVert\mathbf{y} - X\boldsymbol{\beta}\rVert^2 + \lambda\lVert\boldsymbol{\beta}\rVert^2$, which gives
 
 $$\hat{\boldsymbol{\beta}} = (X^\top X + \lambda I)^{-1} X^\top \mathbf{y}.$$
 
-Adding $\lambda I$ lifts every eigenvalue of $X^\top X$ by $\lambda$, so $X^\top X + \lambda I$ is **always invertible** for $\lambda > 0$. The price is **bias**: coefficients are shrunk toward zero. $\lambda$ is the **bias–variance dial**.
+Adding $\lambda I$ lifts every eigenvalue of $X^\top X$ by $\lambda$, so $X^\top X + \lambda I$ is **always invertible** for $\lambda > 0$. Items B3(d), B4(d), B5, R5 and R6 work through this.
+:::
 
 ## By hand
 
-**B1.** For each experiment, write the shape of $X$ as $n \times p$ and state whether $X^\top X$ (which is $p \times p$) can possibly be inverted for an OLS fit. Give the one-line reason.
+**B1.** For each experiment, count the equations (samples) and the unknowns (one coefficient per predictor). Can ordinary least squares find **one** best set of coefficients? Give the one-line reason.
 
 (a) 200 patients, 5 clinical variables.
 (b) 30 patients, 20,000 genes.
 (c) 50 cells, 50 genes, all measurements distinct and uncorrelated.
 
-**B2.** You have $n = 2$ samples and $p = 3$ predictors, so $\mathbf{y} \approx X\boldsymbol{\beta}$ is 2 equations in 3 unknowns. Without computing anything, explain how many $\boldsymbol{\beta}$ vectors fit the data **exactly**, and connect this to "the model is unidentifiable." (Recall the solution-space language from the Linear systems units.)
+**B2.** You have $n = 2$ samples and $p = 3$ predictors, so the model is 2 equations in 3 unknowns. Without computing anything, explain how many coefficient sets fit the data **exactly**, and connect this to "the model is unidentifiable." (Recall the solution-space language from the Linear systems units.)
 
-**B3.** Two genes are almost perfectly correlated, giving
+**B3. (two identical genes).** Genes A and B are perfectly correlated: in every patient, A and B have the same value. The true outcome is $y = 2 \times \text{A}$.
 
-$$X^\top X = \begin{pmatrix} 1 & 1 \\ 1 & 1.01 \end{pmatrix}.$$
+A model with both genes predicts
 
-(a) Compare the two columns of $X^\top X$. Is the matrix close to singular? (b) Find $(X^\top X)^{-1}$ by row-reducing $[\,X^\top X \mid I\,]$ (as in Exercise: the $2\times2$ inverse). How large are its entries? (c) What does that do to $\hat{\boldsymbol{\beta}} = (X^\top X)^{-1}X^\top\mathbf{y}$?
+prediction = a × A + b × B,
 
-**B4. (one-parameter ridge — the key calculation).** Take the simplest possible model: one predictor, no intercept, so $y \approx \beta x$ over the samples. The ridge objective is
+where a and b are the two coefficients the fit has to choose.
 
-$$f(\beta) = \sum_i (y_i - \beta x_i)^2 + \lambda \beta^2.$$
+(a) Take a patient with A = 3 and B = 3. Compute the prediction for each of these three choices:
 
-(a) Differentiate with respect to $\beta$, set to zero, and show
+| choice | a | b | prediction for A = 3, B = 3 |
+|---|---|---|---|
+| 1 | 2 | 0 | |
+| 2 | 0 | 2 | |
+| 3 | 10 | −8 | |
+
+Do the same for a patient with A = 5 and B = 5. What do you notice? Find one more choice of a and b that gives the same predictions.
+(b) Which choice is the "true" one? Can any amount of data from these patients tell them apart?
+(c) Ridge measures the size of a choice as a² + b². Compute the size of the three choices in (a) and of a = 1, b = 1. Which choice does the penalty pick?
+(d) **(optional)** The matrix view. For two genes that are *almost* perfectly correlated, $X^\top X = \begin{pmatrix} 1 & 1 \\ 1 & 1.01 \end{pmatrix}$. Compare its two columns, find $(X^\top X)^{-1}$ by row-reducing $[\,X^\top X \mid I\,]$ (as in Exercise: the $2\times2$ inverse), and say what its size does to $\hat{\boldsymbol{\beta}} = (X^\top X)^{-1}X^\top\mathbf{y}$.
+
+**B4. (one-gene ridge — the key calculation).** Take the simplest possible model: one gene $x$, no intercept, so $y \approx \beta x$. The ridge estimate is
+
 $$\hat{\beta} = \frac{\sum_i x_i y_i}{\sum_i x_i^2 + \lambda}.$$
-(b) With $\sum x_i y_i = 10$ and $\sum x_i^2 = 5$, compute $\hat{\beta}$ for $\lambda = 0,\ 5,\ 20$.
-(c) What happens to $\hat{\beta}$ as $\lambda \to \infty$? What is $\hat{\beta}$ at $\lambda = 0$, and what is that estimator called?
 
-**B5. (eigenvalue shift).** Let $X^\top X = \begin{pmatrix} 4 & 0 \\ 0 & 0 \end{pmatrix}$ (a rank-1 matrix — the second direction carries no information, as if $p > n$).
+At $\lambda = 0$ this is the ordinary least-squares slope. **Ridge just adds $\lambda$ to the bottom of the fraction.**
+
+(a) Without numbers: what does a bigger bottom do to a fraction? So what does a bigger $\lambda$ do to $\hat\beta$?
+(b) With $\sum x_i y_i = 10$ and $\sum x_i^2 = 5$, fill in $\hat{\beta}$ for $\lambda = 0,\ 5,\ 20,\ 100$.
+(c) Sketch $\hat{\beta}$ against $\lambda$. Where does the curve start, and what value does it approach as $\lambda$ grows? Does it ever reach that value?
+(d) **(optional)** Derive the formula: differentiate $f(\beta) = \sum_i (y_i - \beta x_i)^2 + \lambda \beta^2$ with respect to $\beta$ and set the derivative to zero.
+
+**B5. (optional) (eigenvalue shift).** Let $X^\top X = \begin{pmatrix} 4 & 0 \\ 0 & 0 \end{pmatrix}$ (a rank-1 matrix — the second direction carries no information, as if $p > n$).
 
 (a) What are its eigenvalues? Is it invertible?
 (b) Form $X^\top X + \lambda I$ with $\lambda = 2$. What are its eigenvalues now?
@@ -79,42 +102,116 @@ $$\hat{\beta} = \frac{\sum_i x_i y_i}{\sum_i x_i^2 + \lambda}.$$
 (b) A model predicts a constant (the overall mean) for everyone, ignoring gene expression.
 (c) Refitting the model after swapping 3 patients flips several coefficients from large positive to large negative.
 
+## Explore {#explore}
+
+Two demos from the lecture. The first fits the expression of one gene against dose with a very flexible curve; $\lambda$ makes the curve stiffer. Panel (a) shows the fit, panel (b) the **training error** and the **test error** (on new points the fit never saw) for every $\lambda$. Click or drag in panel (b) to set $\lambda$.
+
+```{=html}
+<link rel="stylesheet" href="../demos/dist/demo.css">
+<div data-demo="biasvar" data-lambda="0.001"></div>
+<script src="../demos/dist/biasvar.js"></script>
+```
+
+**E1.** At the start ($\lambda = 0.001$), read the training and test error. Why is the test error so much larger? Which label in panel (b) are you at?
+
+**E2.** Click **best λ**. Which $\lambda$ is it, and what are the two errors now? Which error went **up** compared with E1? Then drag to $\lambda \approx 300$: what does the curve look like, and what has happened to both errors?
+
+**E3.** Tick **show 20 refits** (fits to 20 other training samples). Read the "spread (variance)" and "offset (bias)" at $\lambda = 0.001$, at the best $\lambda$, and at $\lambda \approx 300$. Which one shrinks as $\lambda$ grows, and which one grows?
+
+The second demo is B3 with real noise: two genes with correlation 0.95, true model $y = \text{gene 1} + \text{gene 2}$, so the true coefficients are $(1, 1)$. Each dot is a fit to one of 50 resampled training sets of 20 samples; the table gives the ranges.
+
+```{=html}
+<link rel="stylesheet" href="../demos/dist/demo.css">
+<div data-demo="penaltygeom" data-mode="resample"></div>
+<script src="../demos/dist/penaltygeom.js"></script>
+```
+
+**E4.** (a) At the defaults (corr 0.95, ridge with $\lambda = 5$), read the range of $\beta_1$ for ordinary least squares and for ridge, and the range of $\beta_1 + \beta_2$ for ordinary least squares. What do the data pin down well, and what not? (b) Move the correlation to $0.99$ and then to $0$. How does the ordinary least squares range of $\beta_1$ change? When does the penalty matter most?
+
+::: {.callout-note collapse="true" title="Solutions"}
+**E1.** Training error 0.23, test error 1.66, about three times the noise level (0.6). The curve wiggles through the training points and has learned their noise, which does not repeat in new points. You are at the left: "← overfit (high variance)".
+
+**E2.** The best $\lambda$ is about $0.79$: test error drops to 0.68, while the training error goes **up** to 0.39. The fit gives up a little on the training points to predict new ones much better. At $\lambda \approx 300$ the curve is almost flat: training error 1.42, test error 1.34, both large. That is the right end, "underfit (high bias)". Test error has a U shape; training error only falls as $\lambda$ gets smaller.
+
+**E3.** The spread (variance) falls from 1.74 at $\lambda = 0.001$ to 0.35 at the best $\lambda$ and 0.16 at $\lambda \approx 320$. The offset (bias) grows from 0.24 at the best $\lambda$ to 1.21 at $\lambda \approx 320$. The penalty buys lower variance with higher bias; the best $\lambda$ balances the two.
+
+**E4.** (a) The ordinary least squares $\beta_1$ ranges from about $-0.3$ to $3.1$, ridge only from $0.6$ to $1.3$. But the ordinary least squares sum $\beta_1 + \beta_2$ stays between 1.6 and 2.4: the data pin down the **combined** effect of the two genes well, but not how it is **split** between them, exactly as in B3. The ordinary least squares dots (labelled OLS in the demo) lie along the dashed line $\beta_1 + \beta_2 = 2$. (b) At corr 0.99 the ordinary least squares $\beta_1$ runs from $-1.8$ to $5.4$ (and $\beta_2$ down to $-3$), while ridge stays at 0.7 to 1.2. At corr 0, ordinary least squares is already tight (0.7 to 1.5). The penalty matters most when the genes are strongly correlated.
+:::
+
 ## In R
 
-Use R to **see** the failures and the fix. These are static illustrations — the point is what the output *would* show, not to run them now.
+Use R to **see** the failures and the fix on a small simulated dataset: 20 patients, 30 genes, and only genes 1–3 really affect the outcome. All code is base R; run it.
 
-### OLS breaks when p > n
-
-```r
-set.seed(1)
-n <- 5; p <- 8                       # more predictors than samples
-X <- matrix(rnorm(n * p), n, p)
-XtX <- t(X) %*% X                    # 8 x 8, but built from only 5 samples
-
-qr(XtX)$rank                         # 5, not 8  -> rank-deficient
-solve(XtX)                           # ERROR: system is computationally singular
-```
-
-### A near-singular X^T X blows up the inverse
+### Simulate a wide dataset
 
 ```r
-XtX <- matrix(c(1, 1,
-                1, 1.01), 2, byrow = TRUE)
-solve(XtX)                           # entries around 100 -> huge, unstable
+set.seed(3)
+n <- 20; p <- 30                                # 20 patients, 30 genes
+X <- matrix(rnorm(n * p), n, p)                 # expression (already centred and scaled)
+colnames(X) <- paste0("gene", 1:p)
+true_beta <- c(2, -1.5, 1, rep(0, p - 3))       # only genes 1-3 matter
+y <- drop(X %*% true_beta + rnorm(n))           # drug response = genes 1-3 + noise
+
+# 200 new patients from the same biology, kept aside to test predictions
+X_new <- matrix(rnorm(200 * p), 200, p)
+y_new <- drop(X_new %*% true_beta + rnorm(200))
 ```
 
-### The ridge fix: add lambda to the diagonal
+### Ordinary least squares breaks when p > n
 
 ```r
-XtX <- matrix(c(4, 0,
-                0, 0), 2, byrow = TRUE)   # singular (rank 1)
-lambda <- 2
-XtX_ridge <- XtX + lambda * diag(2)       # add lambda to the diagonal
-XtX_ridge                                  # 6 0 / 0 2
-solve(XtX_ridge)                           # now invertible: diag(1/6, 1/2)
+fit <- lm(y ~ X)
+coef(fit)[2:4]            # genes 1-3 (true values 2, -1.5, 1)
+sum(is.na(coef(fit)))     # coefficients lm could not estimate
+max(abs(residuals(fit)))  # largest miss on the training patients
 ```
 
-### One-parameter ridge shrinks the coefficient
+### A ridge helper
+
+You do not need to understand the inside of this function; just call it. It returns one coefficient per gene for a given $\lambda$ (no intercept, to keep it short; the simulated data are centred around 0).
+
+```r
+ridge <- function(X, y, lambda) {
+  drop(solve(t(X) %*% X + lambda * diag(ncol(X)), t(X) %*% y))
+}
+round(ridge(X, y, lambda = 5)[1:3], 2)    # genes 1-3 at lambda = 5
+```
+
+### The shrinkage path
+
+Fit ridge for 50 values of $\lambda$ from 0.01 to 1000 and draw every coefficient against $\lambda$. Genes 1–3 are red, blue and green; the 27 genes with no real effect are grey.
+
+```r
+lambdas <- 10^seq(-2, 3, length.out = 50)              # 0.01 ... 1000
+path <- sapply(lambdas, function(l) ridge(X, y, l))    # one column per lambda
+matplot(lambdas, t(path), type = "l", lty = 1, log = "x",
+        col = c("red", "blue", "darkgreen", rep("grey", p - 3)),
+        xlab = "lambda (log scale)", ylab = "coefficient")
+abline(h = 0)
+```
+
+### Training error and test error
+
+The "typical miss" is the square root of the average squared miss (as in the demo).
+
+```r
+miss <- function(X, y, b) sqrt(mean((y - X %*% b)^2))
+train_err <- sapply(lambdas, function(l) miss(X, y, ridge(X, y, l)))
+test_err  <- sapply(lambdas, function(l) miss(X_new, y_new, ridge(X, y, l)))
+
+plot(lambdas, test_err, type = "l", log = "x", col = "red", lwd = 2,
+     ylim = c(0, max(test_err)), xlab = "lambda (log scale)", ylab = "typical miss")
+lines(lambdas, train_err, col = "blue", lwd = 2)
+legend("bottomright", c("new patients (test)", "training patients"),
+       col = c("red", "blue"), lwd = 2)
+best <- lambdas[which.min(test_err)]
+abline(v = best, lty = 2)
+best
+```
+
+### One-gene ridge shrinks the coefficient
+
+The formula from B4, with $\sum x_i y_i = 10$ and $\sum x_i^2 = 5$:
 
 ```r
 sxy <- 10; sxx <- 5                  # sum(x*y) and sum(x^2)
@@ -127,37 +224,77 @@ for (lambda in c(0, 5, 20)) {
 # lambda = 20 -> 0.4  (shrinking toward 0)
 ```
 
+### (optional) The matrix view
+
+These blocks show the linear algebra behind the lecture's optional slide.
+
+```r
+# p > n: X^T X cannot be inverted
+set.seed(1)
+X8 <- matrix(rnorm(5 * 8), 5, 8)      # 5 samples, 8 predictors
+XtX <- t(X8) %*% X8                   # 8 x 8, but built from only 5 samples
+qr(XtX)$rank                          # 5, not 8  -> rank-deficient
+solve(XtX)                            # ERROR: system is computationally singular
+```
+
+```r
+# a near-singular X^T X blows up the inverse
+XtX <- matrix(c(1, 1,
+                1, 1.01), 2, byrow = TRUE)
+solve(XtX)                            # entries around 100 -> huge, unstable
+```
+
+```r
+# the ridge fix: add lambda to the diagonal
+XtX <- matrix(c(4, 0,
+                0, 0), 2, byrow = TRUE)   # singular (rank 1)
+lambda <- 2
+XtX_ridge <- XtX + lambda * diag(2)       # add lambda to the diagonal
+XtX_ridge                                  # 6 0 / 0 2
+solve(XtX_ridge)                           # now invertible: diag(1/6, 1/2)
+```
+
 ### Tasks
 
-**R1.** Using the ridge-shift block, change $\lambda$ to $0.001$ and to $100$. Confirm that a tiny $\lambda$ barely changes $X^\top X$ (close to OLS) while a large $\lambda$ dominates the diagonal (heavy shrinkage). Relate this to the bias–variance dial.
+**R1.** Run the simulation and the `lm()` block. How many coefficients could `lm()` not estimate, and why that number? How large is the largest miss on the training patients? Compare the estimates for genes 1–3 with the true values $2, -1.5, 1$.
 
-**R2.** For the one-parameter ridge loop, add $\lambda = 100$ and $\lambda = 1000$. Describe in one sentence the trajectory of $\hat{\beta}$ as $\lambda$ grows, and name the value it approaches.
+**R2.** For the one-gene ridge loop, add $\lambda = 100$ and $\lambda = 1000$. Describe in one sentence the trajectory of $\hat{\beta}$ as $\lambda$ grows, and name the value it approaches.
 
-**R3.** In the near-singular block, change the `1.01` to `1.0001`. Predict what happens to the size of `solve(XtX)` before reading it off, then check your prediction.
+**R3.** Draw the shrinkage path. (a) At the far left ($\lambda = 0.01$), are the grey (no-effect) genes near 0? (b) What happens to all the lines as $\lambda$ grows? Does any line reach exactly 0? (c) Use `round(ridge(X, y, 0.01)[1:3], 2)` and the same at $\lambda = 5$ and $100$ to put numbers on the path for genes 1–3.
+
+**R4.** Draw the training and test errors. (a) What are the two errors at the smallest $\lambda$ (`train_err[1]`, `test_err[1]`)? (b) Which $\lambda$ predicts new patients best, and what is the test error there? (c) Why does the training error keep falling as $\lambda$ gets smaller, while the test error does not? Compare with E1–E2.
+
+**R5. (optional)** In the ridge-fix block, change $\lambda$ to $0.001$ and to $100$. Confirm that a tiny $\lambda$ barely changes $X^\top X$ (close to ordinary least squares) while a large $\lambda$ dominates the diagonal (heavy shrinkage). Relate this to the bias–variance dial.
+
+**R6. (optional)** In the near-singular block, change the `1.01` to `1.0001`. Predict what happens to the size of `solve(XtX)` before reading it off, then check your prediction.
 
 ## Hints
 
-::: {.callout-tip collapse="true" title="Hint 1 — rank and invertibility (B1, B2)"}
-$X^\top X$ is $p \times p$ but its rank cannot exceed the number of samples $n$: $\text{rank}(X^\top X) \le \min(n, p)$. A $p \times p$ matrix is invertible **only** if its rank equals $p$. So if $p > n$, the rank is at most $n < p$ and the matrix is singular. In R the rank is [`qr`](https://rdrr.io/r/base/qr.html)`(XtX)$rank`.
+::: {.callout-tip collapse="true" title="Hint 1 — counting equations and unknowns (B1, B2)"}
+Each sample is one equation, each coefficient is one unknown. With fewer equations than unknowns there are always infinitely many exact solutions. With more equations than unknowns, ordinary least squares finds one best compromise, as long as no predictor can stand in for another. Exactly as many is the knife-edge case.
 :::
 
 ::: {.callout-tip collapse="true" title="Hint 2 — infinitely many solutions (B2)"}
-Fewer independent equations than unknowns means the solution set is not a single point but a whole space of vectors, all fitting equally well. This is the same "infinitely many solutions" case you met when solving $A\mathbf{x}=\mathbf{b}$ with a rank-deficient $A$ in the Linear systems units. "Unidentifiable" just means the data cannot single out one $\boldsymbol{\beta}$.
+Fewer independent equations than unknowns means the solution set is not a single point but a whole space of vectors, all fitting equally well. This is the same "infinitely many solutions" case you met when solving a linear system with free variables in the Linear systems units. "Unidentifiable" just means the data cannot single out one set of coefficients.
 :::
 
-::: {.callout-tip collapse="true" title="Hint 3 — a nearly singular matrix and its inverse (B3)"}
-Two columns that are almost parallel make a matrix **nearly singular**: row reduction leaves an almost-zero row on the left. Here R2 $-$ R1 gives the row $(0,\ 0.01)$, and turning that $0.01$ into a $1$ means multiplying the row by $100$ — which makes the inverse's entries huge. Those large numbers multiply through to $\hat{\boldsymbol{\beta}}$, giving huge, unstable coefficients. Check with [`solve`](https://rdrr.io/r/base/solve.html). (Bonus: the determinant $ad - bc$ is the number that sits in the denominator of the inverse; here it is $0.01$.)
+::: {.callout-tip collapse="true" title="Hint 3 — identical genes (B3)"}
+Put the numbers in: with A = 3 and B = 3, choice 1 is 2 × 3 + 0 × 3. Since A and B have the same value in every patient, a × A + b × B equals (a + b) × A, so only the **sum** a + b matters for the predictions. For (c), square each coefficient and add: for a = 2, b = 0 that is 4 + 0.
 :::
 
-::: {.callout-tip collapse="true" title="Hint 4 — differentiating the ridge objective (B4)"}
-$f(\beta) = \sum_i (y_i - \beta x_i)^2 + \lambda\beta^2$. Use the chain rule term by term: $\frac{d}{d\beta}(y_i-\beta x_i)^2 = 2(y_i-\beta x_i)(-x_i)$, and $\frac{d}{d\beta}(\lambda\beta^2)=2\lambda\beta$. Set the total to zero, divide by 2, and collect the $\beta$ terms: $\beta(\sum x_i^2 + \lambda) = \sum x_i y_i$. Notice that at $\lambda = 0$ this is exactly the OLS slope $\sum x_i y_i / \sum x_i^2$.
+::: {.callout-tip collapse="true" title="Hint 4 — (optional) row-reducing a nearly singular matrix (B3d)"}
+Two columns that are almost parallel make a matrix **nearly singular**: row reduction leaves an almost-zero row on the left. Here R2 $-$ R1 gives the row $(0,\ 0.01)$, and turning that $0.01$ into a $1$ means multiplying the row by $100$ — which makes the inverse's entries huge. Check with [`solve`](https://rdrr.io/r/base/solve.html). (Bonus: the determinant $ad - bc$ is the number that sits in the denominator of the inverse; here it is $0.01$.)
 :::
 
-::: {.callout-tip collapse="true" title="Hint 5 — eigenvalue shift (B5)"}
+::: {.callout-tip collapse="true" title="Hint 5 — (optional) differentiating the ridge objective (B4d)"}
+$f(\beta) = \sum_i (y_i - \beta x_i)^2 + \lambda\beta^2$. Use the chain rule term by term: $\frac{d}{d\beta}(y_i-\beta x_i)^2 = 2(y_i-\beta x_i)(-x_i)$, and $\frac{d}{d\beta}(\lambda\beta^2)=2\lambda\beta$. Set the total to zero, divide by 2, and collect the $\beta$ terms: $\beta(\sum x_i^2 + \lambda) = \sum x_i y_i$. Notice that at $\lambda = 0$ this is exactly the ordinary least squares slope $\sum x_i y_i / \sum x_i^2$.
+:::
+
+::: {.callout-tip collapse="true" title="Hint 6 — (optional) eigenvalue shift (B5)"}
 A diagonal matrix wears its eigenvalues on the diagonal. Adding $\lambda I$ adds $\lambda$ to every diagonal entry, hence lifts **every** eigenvalue by $\lambda$ (this is the fact you proved with the identity shift in the eigenvalue unit). A matrix is invertible exactly when **none** of its eigenvalues is zero, so lifting a zero eigenvalue to $\lambda > 0$ makes an otherwise-singular matrix invertible.
 :::
 
-::: {.callout-tip collapse="true" title="Hint 6 — bias vs variance (B6)"}
+::: {.callout-tip collapse="true" title="Hint 7 — bias vs variance (B6)"}
 **Bias** = error from a model too rigid to capture the real pattern (predicts the same simple thing regardless of data → underfitting). **Variance** = error from a model so flexible it chases noise and changes wildly between samples (fits training data perfectly but generalises badly, coefficients lurch when data changes → overfitting).
 :::
 
@@ -166,15 +303,17 @@ A diagonal matrix wears its eigenvalues on the diagonal. Adding $\lambda I$ adds
 ::: {.callout-note collapse="true" title="Solution"}
 
 **B1.**
-(a) $X$ is $200 \times 5$, so $n = 200 > p = 5$. $X^\top X$ is $5\times5$ and can reach full rank 5 — **invertible** (assuming the variables are not exactly redundant). OLS is fine.
-(b) $X$ is $30 \times 20000$, so $p \gg n$. $\text{rank}(X^\top X) \le 30 \ll 20000$, so the $20000\times20000$ matrix is **singular** — **not invertible**. OLS has no unique solution.
-(c) $X$ is $50\times50$, so $n = p$. If all measurements are genuinely distinct and uncorrelated, $X$ has full rank 50 and $X^\top X$ is **invertible** — but this is the knife-edge case, and any correlation among genes would push it toward singularity.
+(a) 200 equations, 5 unknowns (6 with an intercept): many more equations than unknowns. Ordinary least squares finds **one** best fit (as long as the variables are not exact copies of each other). Ordinary least squares is fine.
+(b) 30 equations, 20,000 unknowns: far more unknowns than equations, so **infinitely many** coefficient sets fit perfectly. **No unique** answer.
+(c) 50 equations, 50 unknowns: just enough. If the measurements are genuinely distinct and uncorrelated there is one answer, which fits all 50 cells exactly (with an intercept there is one unknown too many). This is the knife-edge case: any correlation among the genes pushes it toward the unstable situation of B3.
 
-**B2.** Two equations in three unknowns: there are more free parameters (3) than constraints (2), so the exactly-fitting $\boldsymbol{\beta}$ form a whole **line** (a one-dimensional solution space) — **infinitely many** vectors fit perfectly. The data cannot pick one out, so the model is **unidentifiable**. This is the same rank-deficient "infinitely many solutions" case from the Linear systems units, and it is exactly what $p > n$ produces in general.
+**B2.** Two equations in three unknowns: there are more free parameters (3) than constraints (2), so the exactly-fitting coefficient sets form a whole **line** (a one-dimensional solution space) — **infinitely many** fit perfectly. The data cannot pick one out, so the model is **unidentifiable**. This is the same "infinitely many solutions" case from the Linear systems units, and it is exactly what $p > n$ produces in general.
 
 **B3.**
-(a) The columns $(1, 1)$ and $(1, 1.01)$ are almost identical — almost parallel — mirroring two almost-perfectly-correlated genes. With exactly parallel columns the matrix would be singular (no inverse); this one is **nearly singular**.
-(b) Row reduction:
+(a) For A = B = 3: choice 1 gives 2 × 3 + 0 × 3 = 6, choice 2 gives 0 × 3 + 2 × 3 = 6, choice 3 gives 10 × 3 − 8 × 3 = 30 − 24 = 6. For A = B = 5 all three give 10. The predictions are identical: because A = B, the prediction is (a + b) × A, and a + b = 2 for all three. Any choice with a + b = 2 works, e.g. a = 1, b = 1, or a = 3, b = −1, or a = −50, b = 52.
+(b) None of them is more "true" than the others, and **no** amount of data from these patients can tell them apart: they make identical predictions. The model is unidentifiable. With noise, ordinary least squares returns whichever split the noise happens to favour, which can be a wild one like a = 10, b = −8.
+(c) Sizes: choice 1: 2² + 0² = 4; choice 2: 0² + 2² = 4; choice 3: 10² + (−8)² = 100 + 64 = 164; a = 1, b = 1: 1 + 1 = 2. The penalty picks a = 1, b = 1, the smallest: it splits the effect evenly between the two genes. (Any other choice with a + b = 2, such as a = 1.5, b = 0.5 → 2.5, is larger.) This is how the penalty turns "infinitely many answers" into one.
+(d) **(optional)** The columns $(1, 1)$ and $(1, 1.01)$ are almost identical — almost parallel — mirroring two almost-perfectly-correlated genes, so the matrix is **nearly singular**. Row reduction:
 $$
 \left[\begin{array}{cc|cc} 1 & 1 & 1 & 0 \\ 1 & 1.01 & 0 & 1 \end{array}\right]
 \xrightarrow{\;\text{R2}\,-\,\text{R1}\;}
@@ -184,35 +323,36 @@ $$
 \xrightarrow{\;\text{R1}\,-\,\text{R2}\;}
 \left[\begin{array}{cc|cc} 1 & 0 & 101 & -100 \\ 0 & 1 & -100 & 100 \end{array}\right],
 $$
-so $(X^\top X)^{-1} = \begin{pmatrix}101 & -100\\ -100 & 100\end{pmatrix}$: entries around **100** — huge. The almost-zero row $(0,\ 0.01)$ had to be multiplied by 100.
-(c) Those large numbers multiply $X^\top\mathbf{y}$, so $\hat{\boldsymbol{\beta}}$ becomes **enormous and unstable**: a tiny change in the data (or the `1.01`) swings the coefficients wildly. This is multicollinearity. (Bonus: $\det(X^\top X) = 1.01 - 1 = 0.01$, and the inverse is $\frac{1}{0.01}\begin{pmatrix}1.01 & -1\\ -1 & 1\end{pmatrix}$.)
+so $(X^\top X)^{-1} = \begin{pmatrix}101 & -100\\ -100 & 100\end{pmatrix}$: entries around **100**. Those large numbers multiply $X^\top\mathbf{y}$, so $\hat{\boldsymbol{\beta}}$ becomes **enormous and unstable**: a tiny change in the data swings the coefficients wildly, the matrix version of (b). (Bonus: $\det(X^\top X) = 1.01 - 1 = 0.01$, and the inverse is $\frac{1}{0.01}\begin{pmatrix}1.01 & -1\\ -1 & 1\end{pmatrix}$.)
 
 **B4.**
-(a) Differentiate:
-$$f'(\beta) = \sum_i 2(y_i - \beta x_i)(-x_i) + 2\lambda\beta = -2\sum_i x_i y_i + 2\beta\sum_i x_i^2 + 2\lambda\beta.$$
-Set $f'(\beta) = 0$ and divide by 2:
-$$-\sum_i x_i y_i + \beta\Big(\sum_i x_i^2 + \lambda\Big) = 0 \quad\Longrightarrow\quad \hat{\beta} = \frac{\sum_i x_i y_i}{\sum_i x_i^2 + \lambda}.$$
+(a) A bigger bottom makes a fraction smaller. So a bigger $\lambda$ makes $\hat\beta$ smaller: it pulls the coefficient toward 0.
 (b) With $\sum x_i y_i = 10$, $\sum x_i^2 = 5$:
 
 | $\lambda$ | $\hat{\beta} = 10/(5+\lambda)$ |
 |---|---|
-| 0  | $10/5 = 2.0$ |
-| 5  | $10/10 = 1.0$ |
-| 20 | $10/25 = 0.4$ |
+| 0   | $10/5 = 2.0$ (OLS) |
+| 5   | $10/10 = 1.0$ |
+| 20  | $10/25 = 0.4$ |
+| 100 | $10/105 \approx 0.095$ |
 
-(c) As $\lambda \to \infty$ the denominator grows without bound, so $\hat{\beta} \to 0$ — heavy penalty shrinks the coefficient to nothing. At $\lambda = 0$, $\hat{\beta} = \sum x_i y_i / \sum x_i^2 = 2.0$, which is the **ordinary least squares** slope. So ridge is a family of estimators indexed by $\lambda$, with OLS at one end and zero at the other.
+(c) The curve starts at $2.0$ (the **ordinary least-squares** slope) at $\lambda = 0$ and falls smoothly toward **0** as $\lambda$ grows: halved at $\lambda = 5$, below 0.1 by $\lambda = 100$. It never reaches exactly 0, since $10$ divided by any number stays positive. So ridge is a family of estimates indexed by $\lambda$, with ordinary least squares at one end and zero at the other. This is the one-gene version of the shrinkage path in R3.
+(d) **(optional)** Differentiate:
+$$f'(\beta) = \sum_i 2(y_i - \beta x_i)(-x_i) + 2\lambda\beta = -2\sum_i x_i y_i + 2\beta\sum_i x_i^2 + 2\lambda\beta.$$
+Set $f'(\beta) = 0$ and divide by 2:
+$$-\sum_i x_i y_i + \beta\Big(\sum_i x_i^2 + \lambda\Big) = 0 \quad\Longrightarrow\quad \hat{\beta} = \frac{\sum_i x_i y_i}{\sum_i x_i^2 + \lambda}.$$
 
-**B5.**
+**B5. (optional)**
 (a) $X^\top X = \begin{pmatrix}4&0\\0&0\end{pmatrix}$ is diagonal, so its eigenvalues are the diagonal entries **4 and 0**. Because one eigenvalue is 0, the matrix is **singular — not invertible** (the second direction carries no information, like a $p>n$ dead direction).
 (b) $X^\top X + 2I = \begin{pmatrix}6&0\\0&2\end{pmatrix}$, with eigenvalues **6 and 2** — every eigenvalue lifted by $\lambda = 2$.
-(c) Now **no eigenvalue is zero**, so the matrix is **invertible**. Adding $\lambda I$ raises every eigenvalue by $\lambda$; any zero eigenvalue becomes $\lambda > 0$, so the singular case is always cured. This is exactly why the ridge normal equations $X^\top X + \lambda I$ are solvable even when $p > n$.
+(c) Now **no eigenvalue is zero**, so the matrix is **invertible**. Adding $\lambda I$ raises every eigenvalue by $\lambda$; any zero eigenvalue becomes $\lambda > 0$, so the singular case is always cured. This is exactly why the ridge formula $(X^\top X + \lambda I)^{-1}X^\top\mathbf{y}$ works even when $p > n$.
 
 **B6.**
 (a) **Variance** problem — the model is flexible enough to fit the training data perfectly but the fit does not generalise. **Overfitting.**
 (b) **Bias** problem — the model is too rigid (predicts a constant) to capture any real signal. **Underfitting.**
-(c) **Variance** problem — coefficients swinging violently when the data changes slightly is the signature of high variance (here driven by multicollinearity). **Overfitting** / instability. Shrinkage would calm this.
+(c) **Variance** problem — coefficients swinging violently when the data changes slightly is the signature of high variance (here driven by correlated genes, as in B3). **Overfitting** / instability. Shrinkage would calm this.
 
-**R1.** With $\lambda = 0.001$, $X^\top X + \lambda I \approx \begin{pmatrix}4.001&0\\0&0.001\end{pmatrix}$ — almost unchanged from the singular original, so we are essentially back at OLS (low bias, high variance; the tiny second eigenvalue still makes the inverse large). With $\lambda = 100$, the matrix is $\begin{pmatrix}104&0\\0&100\end{pmatrix}$ — dominated by the penalty, so coefficients are heavily shrunk (high bias, low variance). Sliding $\lambda$ from small to large moves you across the bias–variance dial.
+**R1.** `lm()` returns `NA` for **11** coefficients. With 20 patients it can estimate at most 20 unknowns: the intercept and 19 genes; the other $30 - 19 = 11$ genes are left out. The largest training miss is 0 (up to rounding): the model fits all 20 patients **perfectly**. The estimates for genes 1–3 are about $11.2$, $-7.0$ and $3.0$, nowhere near the true $2$, $-1.5$, $1$: a perfect fit with meaningless coefficients.
 
 **R2.** Extending the loop:
 
@@ -224,13 +364,19 @@ $$-\sum_i x_i y_i + \beta\Big(\sum_i x_i^2 + \lambda\Big) = 0 \quad\Longrightarr
 | 100 | ≈ 0.095 |
 | 1000 | ≈ 0.00995 |
 
-$\hat{\beta}$ decreases monotonically toward **0** as $\lambda$ grows — the coefficient is shrunk ever harder and approaches zero in the limit.
+$\hat{\beta}$ decreases steadily toward **0** as $\lambda$ grows — the coefficient is shrunk ever harder and approaches zero without reaching it.
 
-**R3.** With `1.0001`, the columns are even closer to parallel: row reduction now leaves the row $(0,\ 0.0001)$, which must be multiplied by 10,000. So `solve(XtX)` has entries around **10,000** (exactly $\begin{pmatrix}10001 & -10000\\ -10000 & 10000\end{pmatrix}$), 100 times larger than before. Prediction: closer to singular, larger and more unstable inverse — confirmed by running it. (Bonus: the determinant drops from $0.01$ to $0.0001$.) This is why highly correlated genes are so damaging without a penalty.
+**R3.** (a) No: at $\lambda = 0.01$ the grey genes range from about $-0.9$ to $0.9$ although their true value is 0. With so little penalty, ridge is one of the many perfect fits (the one with the smallest coefficients, which is why it differs from `lm()`), and it uses the no-effect genes to fit the noise. (b) As $\lambda$ grows all lines move smoothly toward 0, the grey ones first (at $\lambda = 5$ they are within about $\pm 0.4$), the three real genes later, so in the middle the real genes stand out from the grey bundle. By $\lambda = 1000$ everything is close to 0, but no line is exactly 0: ridge shrinks, it does not select (that is the lasso, next unit). (c) Genes 1–3: $(1.58, -1.27, 1.04)$ at $\lambda = 0.01$; $(0.88, -0.79, 0.62)$ at $\lambda = 5$; $(0.18, -0.19, 0.16)$ at $\lambda = 100$. The signs stay right; the sizes shrink, which is the bias.
+
+**R4.** (a) At $\lambda = 0.01$ the training error is about 0.005 (an almost perfect fit) and the test error 2.60. (b) The best $\lambda$ is about **3.6**, with test error **1.97** (training error 0.61 there). At $\lambda = 1000$ both are large (training 2.47, test 2.67): underfitting. (c) A smaller penalty always lets the fit get closer to the training patients, noise included, so training error keeps falling. But the noise does not repeat in new patients, so below the best $\lambda$ the test error rises again: a U shape, as in E1–E2. The test error, not the training error, is what tells you which $\lambda$ to use; cross-validation (later unit) estimates it without a separate test set.
+
+**R5. (optional)** With $\lambda = 0.001$, $X^\top X + \lambda I \approx \begin{pmatrix}4.001&0\\0&0.001\end{pmatrix}$ — almost unchanged from the singular original, so we are essentially back at ordinary least squares (low bias, high variance; the tiny second eigenvalue still makes the inverse large). With $\lambda = 100$, the matrix is $\begin{pmatrix}104&0\\0&100\end{pmatrix}$ — dominated by the penalty, so coefficients are heavily shrunk (high bias, low variance). Sliding $\lambda$ from small to large moves you across the bias–variance dial.
+
+**R6. (optional)** With `1.0001`, the columns are even closer to parallel: row reduction now leaves the row $(0,\ 0.0001)$, which must be multiplied by 10,000. So `solve(XtX)` has entries around **10,000** (exactly $\begin{pmatrix}10001 & -10000\\ -10000 & 10000\end{pmatrix}$), 100 times larger than before. Prediction: closer to singular, larger and more unstable inverse — confirmed by running it. (Bonus: the determinant drops from $0.01$ to $0.0001$.) This is why highly correlated genes are so damaging without a penalty.
 :::
 
 ## Where this leads
 
-- **Ridge and lasso (this block):** the two standard penalties. Ridge uses $\|\boldsymbol{\beta}\|^2$ (the calculation you did in B4, generalised); lasso uses $\sum|\beta_j|$ and drives coefficients **exactly to zero**, performing gene selection.
-- **Choosing $\lambda$ (this block):** **cross-validation** picks the penalty strength that minimises prediction error on held-out data, rather than guessing.
+- **Ridge and lasso (this block):** the two standard penalties. Ridge uses the sum of squared coefficients (the "size" in B3(c); B4 is its one-gene case); lasso uses the sum of absolute values and drives coefficients **exactly to zero**, performing gene selection.
+- **Choosing $\lambda$ (this block):** **cross-validation** picks the penalty strength that minimises prediction error on held-out data (the bottom of the U in R4), rather than guessing.
 - **PCA / dimensional reduction (week 2):** another route through the $p \gg n$ problem — reduce the number of predictors instead of penalizing them.

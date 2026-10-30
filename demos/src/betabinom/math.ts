@@ -75,3 +75,35 @@ export function waldCI(k: number, n: number): { est: number; lo: number; hi: num
   const p = k / n, se = Math.sqrt(p * (1 - p) / n);
   return { est: p, lo: Math.max(0, p - 1.96 * se), hi: Math.min(1, p + 1.96 * se) };
 }
+
+/** Equal-tailed 95% credible interval of the flat-prior posterior Beta(k + 1, n - k + 1). */
+export function flatCrI(k: number, n: number): { lo: number; hi: number } {
+  return { lo: betaQuantile(0.025, k + 1, n - k + 1), hi: betaQuantile(0.975, k + 1, n - k + 1) };
+}
+
+/** Binomial probability P(K = k) for K ~ Binomial(n, p). */
+export function binomPmf(k: number, n: number, p: number): number {
+  if (p <= 0) return k === 0 ? 1 : 0;
+  if (p >= 1) return k === n ? 1 : 0;
+  return Math.exp(lgamma(n + 1) - lgamma(k + 1) - lgamma(n - k + 1) + k * Math.log(p) + (n - k) * Math.log(1 - p));
+}
+
+/** Draw K ~ Binomial(n, p) from n uniforms (n is small here). */
+export function rbinom(n: number, p: number, unif: () => number): number {
+  let k = 0;
+  for (let i = 0; i < n; i++) if (unif() < p) k++;
+  return k;
+}
+
+/**
+ * Long-run share of intervals that contain p, when the experiment (n cells, true rate p)
+ * is repeated forever: the sum of P(K = k) over the k whose interval contains p.
+ */
+export function coverage(n: number, p: number, iv: (k: number) => { lo: number; hi: number }): number {
+  let s = 0;
+  for (let k = 0; k <= n; k++) {
+    const c = iv(k);
+    if (c.lo <= p && p <= c.hi) s += binomPmf(k, n, p);
+  }
+  return s;
+}

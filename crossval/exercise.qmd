@@ -17,6 +17,7 @@ By the end of this exercise you should be able to:
 - compute a **held-out MSE** by hand from a few predictions,
 - read a **CV error curve** and pick both `lambda.min` and `lambda.1se`,
 - **spot information leakage** in a described workflow and fix it,
+- see that a CV estimate is **itself noisy**, and why paired samples must stay in **one fold**,
 - run `cv.glmnet` and read `lambda.min`, `lambda.1se`, and the selected coefficients.
 
 Most of the marks in this block are for **reasoning about the workflow** — the folds, the leakage rule, reading the CV curve — so spend your time there. The R section confirms the by-hand answers (full modelling comes together in the elastic-net and chemometrics units).
@@ -25,9 +26,7 @@ Most of the marks in this block are for **reasoning about the workflow** — the
 
 **Why hold data out.** Error measured on the data you fitted is an *optimistic* estimate: a flexible model can memorise noise. To estimate performance on *future* samples, score the model on samples it never saw during fitting.
 
-**k-fold cross-validation.** Split the $n$ samples into $k$ equal folds. For each fold $f = 1,\dots,k$: hold out fold $f$, fit on the other $k-1$ folds, and record the error on fold $f$. Average the $k$ errors:
-$$\text{CV error} = \frac{1}{k}\sum_{f=1}^{k}\text{error on fold } f.$$
-Every sample is held out **exactly once**. Special case $k=n$: **leave-one-out** CV (LOOCV).
+**k-fold cross-validation.** Split the $n$ samples into $k$ equal folds. For each fold in turn: hold it out, fit on the other $k-1$ folds, and record the error on the held-out fold. The **CV error** is the average of the $k$ fold errors. Every sample is held out **exactly once**. Special case $k=n$: **leave-one-out** CV (LOOCV).
 
 **Held-out MSE.** For held-out points with true values $y_i$ and predictions $\hat y_i$,
 $$\text{MSE} = \frac{1}{n}\sum_{i}(y_i - \hat y_i)^2, \qquad \text{RMSE} = \sqrt{\text{MSE}}.$$
@@ -76,7 +75,41 @@ $$\text{MSE} = \frac{1}{n}\sum_{i}(y_i - \hat y_i)^2, \qquad \text{RMSE} = \sqrt
 
 **B7.** For each outcome, name a sensible CV metric and justify it in one line: (a) predicting a patient's age from DNA methylation; (b) predicting RNA-seq read counts of a gene; (c) classifying tumour vs normal when only 8% of samples are tumours.
 
-## Explore: leakage on pure noise {#explore}
+## Explore {#explore}
+
+### k-fold CV choosing $\lambda$
+
+The demo cross-validates a ridge model for 40 patients and 34 genes (only 4 of them carry real signal) over a grid of $\lambda$ values. Left: the samples coloured by fold, with the held-out fold outlined. Right: the held-out error against $\lambda$ for each fold (dots), the mean CV error with $\pm 1$ standard error once all folds are run, the faint training error, `lambda.min`, the "min + 1 SE" line and `lambda.1se`.
+
+```{=html}
+<link rel="stylesheet" href="../demos/dist/demo.css">
+<div data-demo="cvfolds" data-k="5" data-n="40" data-seed="1" data-pairs="off"></div>
+<script src="../demos/dist/cvfolds.js"></script>
+```
+
+**E1.** (links to **B1**) With $k = 5$, click **next fold** a few times. How many patients does each model fit on, and how many does it test on? Do the fold curves agree with each other? Then click **run all**.
+
+**E2.** (links to **B4**) After **run all**, read off `lambda.min`, its mean CV error and standard error, and the height of the "min + 1 SE" line. Apply the one-standard-error rule yourself and check that you get the demo's `lambda.1se`. Where is the grey training-error curve lowest, and why can it not be used to choose $\lambda$?
+
+**E3.** Click **reshuffle folds** five or six times (same data, new random folds). What happens to `lambda.min`? What does this say about one CV run, and about `set.seed` (**R2**)?
+
+**E4.** (links to **B2**) Compare $k = 2$ and **n (LOOCV)** with $k = 5$. How many patients does each model fit on for $k = 2$ and for LOOCV, and how many models are fitted? Reshuffle a few times for each: which $k$ moves `lambda.min` the most, and why does reshuffling do nothing for LOOCV?
+
+**E5.** Go back to $k = 5$ and tick **samples come in pairs** (each patient measured twice, so 80 samples). Run all folds and note the CV error at `lambda.min`. Then tick **keep pairs in one fold (grouped CV)**. Which of the two CV errors is honest for a *new* patient, and why is the other one too good?
+
+::: {.callout-note collapse="true" title="Solutions (E1–E5)"}
+**E1.** With $n = 40$ and $k = 5$ each fold holds 8 patients, so each model fits on 32 and tests on 8; 5 models in total. The fold curves differ a lot from each other: with 8 test patients, the error on one fold depends strongly on which patients happened to land in it. This fold-to-fold spread is what the standard-error bars measure.
+
+**E2.** `lambda.min` $= 8.9$ with mean CV error $4.93 \pm 1.21$. The "min + 1 SE" line is at $4.93 + 1.21 = 6.14$, and the largest $\lambda$ with mean CV error below $6.14$ is $25$, which is `lambda.1se` (more shrinkage, simpler model). The training error is lowest at the *smallest* $\lambda$ and keeps falling as $\lambda$ shrinks: the model is scored on the data it fitted, so choosing $\lambda$ by training error would always pick the least-shrunk, most overfitted model (compare **B6**).
+
+**E3.** `lambda.min` jumps around, between about $8.9$, $13$ and $18$, although the data are the same. A CV curve is a noisy measurement: another random split gives another minimum. So do not over-interpret the exact `lambda.min`; the 1-SE rule deliberately allows for this noise. Without `set.seed`, `cv.glmnet` makes new random folds each run, which is exactly this reshuffling.
+
+**E4.** $k = 2$: folds of 20, each model fits on only 20 patients, 2 models. LOOCV: $k = n = 40$, each model fits on 39 patients, 40 models. With $k = 2$, `lambda.min` moves the most (from about $2.2$ to $13$): each model sees only half the data and the average is over just two folds. LOOCV never moves, because every fold is a single patient, so there is only one way to make the folds.
+
+**E5.** With pairs split across folds the CV error is about $2.55$; with grouped CV it is about $5.04$. The grouped value is the honest one: a new patient has no twin in the training data. With ordinary CV the model is tested on a patient whose other sample it was trained on, so it partly "recognises" the patient, and the error looks about half as large as it really is. Keep all samples of one patient (cells, technical replicates, time points) in the same fold.
+:::
+
+### Leakage on pure noise
 
 The demo runs the B5 blunder on data that contain **no signal at all**: $n$ samples × $p$ genes of random noise, with random disease labels (half cases, half controls). A simple classifier (*nearest centroid*: a held-out sample is assigned to the class whose average profile over the $k$ selected genes is closest) is scored by 5-fold CV in two ways:
 
@@ -91,22 +124,22 @@ Since the labels are random, no method can truly predict them: an honest estimat
 <script src="../demos/dist/leakage.js"></script>
 ```
 
-**E1.** With the default $n = 40$, $p = 2000$, $k = 20$, press **Repeat 50×**. Where does each histogram sit relative to the chance line? Which of the two numbers would you report for new patients?
+**E6.** With the default $n = 40$, $p = 2000$, $k = 20$, press **Repeat 50×**. Where does each histogram sit relative to the chance line? Which of the two numbers would you report for new patients?
 
-**E2.** Keep $n = 40$, $k = 20$ and try $p = 100$, $p = 500$ and $p = 5000$ (press **Repeat 50×** after each change). How does the leaky accuracy change with $p$? Why do *more* noise genes make the leak worse?
+**E7.** Keep $n = 40$, $k = 20$ and try $p = 100$, $p = 500$ and $p = 5000$ (press **Repeat 50×** after each change). How does the leaky accuracy change with $p$? Why do *more* noise genes make the leak worse?
 
-**E3.** Set $p = 2000$, $k = 20$ and compare $n = 20$ with $n = 100$. What happens to the leaky accuracy? Does the centre of the honest histogram move? Does its width change?
+**E8.** Set $p = 2000$, $k = 20$ and compare $n = 20$ with $n = 100$. What happens to the leaky accuracy? Does the centre of the honest histogram move? Does its width change?
 
-**E4.** In the honest panel, single datasets sometimes reach 65–75%. Why is that not evidence of a real signal, and what does it say about trusting one CV run on a small study?
+**E9.** In the honest panel, single datasets sometimes reach 65–75%. Why is that not evidence of a real signal, and what does it say about trusting one CV run on a small study?
 
-::: {.callout-note collapse="true" title="Solutions"}
-**E1.** The leaky histogram piles up near the top (mean about 95–97%, almost every dataset above 90%); the honest one is centred on 50% with a spread of roughly ±10 percentage points. Only the honest number estimates performance on new patients: on new samples the labels are still random, so the true accuracy is 50%. The leaky 97% is pure leakage.
+::: {.callout-note collapse="true" title="Solutions (E6–E9)"}
+**E6.** The leaky histogram piles up near the top (mean about 95–97%, almost every dataset above 90%); the honest one is centred on 50% with a spread of roughly ±10 percentage points. Only the honest number estimates performance on new patients: on new samples the labels are still random, so the true accuracy is 50%. The leaky 97% is pure leakage.
 
-**E2.** The leaky accuracy rises with $p$: roughly 82% at $p = 100$, 92% at $p = 500$ and 98% at $p = 5000$. With more genes there are more chances for some gene to separate *these particular* 40 labels by luck, and the filter on all samples finds exactly those lucky genes, including their luck on the samples later held out. The honest estimate stays at about 50% for every $p$.
+**E7.** The leaky accuracy rises with $p$: roughly 82% at $p = 100$, 92% at $p = 500$ and 98% at $p = 5000$. With more genes there are more chances for some gene to separate *these particular* 40 labels by luck, and the filter on all samples finds exactly those lucky genes, including their luck on the samples later held out. The honest estimate stays at about 50% for every $p$.
 
-**E3.** The leaky accuracy falls as $n$ grows (about 99% at $n = 20$, about 87% at $n = 100$): with more samples a noise gene is less likely to line up with the labels by chance, so the leak is smaller, but it is still far above 50%. The honest histogram stays centred at 50%; it gets *narrower* with larger $n$ (spread roughly ±15 points at $n = 20$, ±6 at $n = 100$), because the accuracy is then averaged over more held-out samples.
+**E8.** The leaky accuracy falls as $n$ grows (about 99% at $n = 20$, about 87% at $n = 100$): with more samples a noise gene is less likely to line up with the labels by chance, so the leak is smaller, but it is still far above 50%. The honest histogram stays centred at 50%; it gets *narrower* with larger $n$ (spread roughly ±15 points at $n = 20$, ±6 at $n = 100$), because the accuracy is then averaged over more held-out samples.
 
-**E4.** The honest estimate is unbiased but noisy: with 40 held-out predictions, chance alone moves the accuracy by about ±10 points, so 65–75% turns up now and then even though there is nothing to find. One CV run on a small study is one draw from that histogram. Before believing a modest accuracy, look at its uncertainty (for example the standard error across folds) and compare it with the chance level.
+**E9.** The honest estimate is unbiased but noisy: with 40 held-out predictions, chance alone moves the accuracy by about ±10 points, so 65–75% turns up now and then even though there is nothing to find. One CV run on a small study is one draw from that histogram. Before believing a modest accuracy, look at its uncertainty (for example the standard error across folds) and compare it with the chance level.
 :::
 
 ## In R

@@ -1,0 +1,86 @@
+---
+title: "Quiz: penalties as priors"
+format:
+  html:
+    toc: true
+    code-copy: true
+    code-overflow: wrap
+    highlight-style: github
+---
+
+Short questions to test your understanding of how a penalty in regression is the same thing as a prior. No derivations: answer in words. Try each on paper first, then open the answer.
+
+---
+
+**Q1.** Penalised regression makes *fit error (RSS) + penalty* as small as possible. Which of the two terms is the **likelihood** side and which is the **prior** side?
+
+::: {.callout-tip collapse="true" title="Hint"}
+One term only looks at the data; the other only looks at the coefficients.
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+The **fit error (RSS)** is the likelihood side: with Gaussian noise, a small RSS means the data are likely under that $\beta$. The **penalty** is the prior side: it is how unlikely the prior finds $\beta$. It does not look at the data at all.
+:::
+
+---
+
+**Q2.** Penalised regression returns one vector of coefficients. Which summary of the posterior is it: the mean, the median or the peak? What does it leave out?
+
+::: {.callout-tip collapse="true" title="Hint"}
+"Most probable coefficients" is a single point on the posterior.
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+It is the **peak** of the posterior, the **MAP** estimate (*maximum a posteriori*). It leaves out the **width** of the posterior, i.e. the uncertainty: a full Bayesian analysis would also give credible intervals for each coefficient.
+:::
+
+---
+
+**Q3.** Match each penalty to its prior: ridge ($\sum\beta^2$) and lasso ($\sum|\beta|$); Gaussian prior and Laplace prior. Which prior has a **pointed** top at $\beta = 0$?
+
+::: {.callout-tip collapse="true" title="Hint"}
+Think of the penalty shapes: a smooth bowl and a V.
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+**Ridge ⇔ Gaussian** prior (penalty $\sum\beta^2$, a smooth bowl). **Lasso ⇔ Laplace** prior (penalty $\sum|\beta|$, a V). The **Laplace** prior has the pointed top at 0; the Gaussian has a rounded top.
+:::
+
+---
+
+**Q4.** You make the prior on each coefficient **narrower** ("I am now very sure effects are close to 0"). What happens to $\lambda$, and to the fitted coefficients? What happens in the opposite limit, a completely flat prior?
+
+::: {.callout-tip collapse="true" title="Hint"}
+For ridge, $\lambda = \sigma^2/\tau^2$, where $\tau^2$ is the prior variance.
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+A narrower prior (smaller $\tau^2$, higher precision) gives a **bigger $\lambda$**, so the coefficients are **shrunk harder** toward 0. A flat prior ($\tau^2 \to \infty$) gives $\lambda \to 0$: no penalty, and the estimate becomes **plain least squares** (maximum likelihood).
+:::
+
+---
+
+**Q5.** In the one-coefficient demo, the data alone say $\beta = 1$ but from only a few samples. With the Laplace prior the posterior peak lands at **exactly 0**; with the Gaussian prior it only shrinks. Explain why, using the shape of the two penalties near 0.
+
+::: {.callout-tip collapse="true" title="Hint"}
+How hard does each penalty keep pulling as $\beta$ gets close to 0?
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+The ridge penalty is a bowl that is **flat at the bottom**, so its pull toward 0 fades away as $\beta$ approaches 0 and never finishes the job: the peak is shrunk but not zero. The lasso penalty is a **V with a sharp tip**, so it keeps pulling just as hard right up to 0. When the data are weak, that pull wins and holds $\beta$ at exactly 0. This is why lasso selects variables and ridge does not.
+:::
+
+---
+
+**Q6.** For each situation, would you choose a Gaussian (ridge) or a Laplace (lasso) prior?
+(a) A complex trait where hundreds of variants each nudge the phenotype a little.
+(b) A drug response thought to be driven by two or three genes out of 20 000, and you want a short list to test in the lab.
+
+::: {.callout-tip collapse="true" title="Hint"}
+Many small effects, or a few large ones and the rest exactly zero?
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+(a) **Gaussian / ridge**: many small nonzero effects is a dense (polygenic) belief; ridge shrinks every coefficient but keeps them all.
+(b) **Laplace / lasso**: a few drivers and the rest irrelevant is a sparse belief; lasso's exact zeros give the short candidate list. Choosing the penalty is choosing a biological hypothesis.
+:::

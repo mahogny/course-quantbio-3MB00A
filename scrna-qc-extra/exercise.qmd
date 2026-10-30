@@ -1,0 +1,218 @@
+---
+title: "Exercise: single-cell QC in depth"
+format:
+  html:
+    toc: true
+    code-copy: true
+    code-overflow: wrap
+    highlight-style: github
+---
+
+## Goal
+
+By the end of this exercise you should be able to:
+
+- compute the **mitochondrial fraction** `pct.mt` by hand on a tiny matrix, and explain why a high value flags a **dying cell**,
+- apply a **combined QC filter** (genes, counts, pct.mt) and name the likely problem behind each dropped cell,
+- explain what a **doublet** is and the signature it leaves in the QC metrics,
+- recognise a doublet during **annotation**, and why a cluster of only ribosomal / mitochondrial "markers" is a quality problem rather than a cell type.
+
+This is an optional unit that extends the exercises of *Single-cell RNA-seq: data & QC* and *Cell-type annotation*. The base-R snippets can be run; the single-cell package code is read-only.
+
+## Background
+
+For each cell we compute the core QC numbers from the core unit — **total counts** (the row sum) and **genes detected** (the number of non-zero entries) — plus the **mitochondrial fraction**:
+
+$$\text{pct.mt} = 100 \times \frac{\text{counts in mitochondrial genes}}{\text{total counts}}.$$
+
+A damaged cell leaks cytoplasmic mRNA but keeps its mitochondrial mRNA, so its pct.mt rises. The **ribosomal fraction** `pct.ribo` is computed the same way from the `RPS`/`RPL` genes; it varies with cell type and is usually inspected rather than filtered on.
+
+A **doublet** is one barcode that captured **two cells**: its profile is roughly the **sum** of two cells' profiles, so it has unusually high counts and genes and can co-express markers that should be **mutually exclusive**.
+
+**Toy count matrix** (4 cells × 5 genes; `MT-1` and `MT-2` are mitochondrial):
+
+$$
+X=\begin{array}{c|ccccc}
+ & G1 & G2 & G3 & \text{MT-1} & \text{MT-2}\\\hline
+\text{Cell A} & 4 & 0 & 6 & 0 & 0\\
+\text{Cell B} & 0 & 0 & 0 & 3 & 2\\
+\text{Cell C} & 10 & 8 & 0 & 1 & 1\\
+\text{Cell D} & 0 & 0 & 1 & 0 & 0
+\end{array}
+$$
+
+Total counts are A 10, B 5, C 20, D 1; genes detected are A 2, B 2, C 4, D 1.
+
+**Toy annotation data** from *Cell-type annotation* (rows = genes, columns = cells, normalised expression). Cluster 1 = {c1, c2, c3} was labelled **T cells**, cluster 2 = {c4, c5, c6} **B cells**.
+
+|  gene   | c1 | c2 | c3 | c4 | c5 | c6 |
+|:-------:|:--:|:--:|:--:|:--:|:--:|:--:|
+| CD3D    |  9 |  7 |  8 |  0 |  0 |  3 |
+| MS4A1   |  0 |  1 |  0 |  7 |  8 |  9 |
+| ACTB    | 10 | 12 | 11 | 11 | 10 | 12 |
+
+## By hand
+
+**B1.** Compute the **mitochondrial fraction** `pct.mt` for each of the four cells in $X$. Which cell has the highest, and what does that suggest about its quality?
+
+**B2.** Suppose your QC rule is: **keep** a cell only if it has **at least 2 genes detected**, **total counts $\ge 5$**, and **pct.mt $< 50\%$**. Apply all three filters and list which cells survive. For each cell you drop, name the *likely* problem (empty droplet / dying cell / too little data).
+
+**B3.** Consider two hypothetical cells from a much larger experiment:
+
+- Cell X: total counts = 150, genes detected = 90.
+- Cell Y: total counts = 42,000, genes detected = 9,500, and it co-expresses the T-cell marker `CD3E` **and** the B-cell marker `MS4A1` (`CD20`) strongly.
+
+For **each**, say whether you would suspect an **empty droplet**, a **doublet**, or a **healthy cell**, and give your reason.
+
+**B4.** A seventh cell arrives in the annotation data with expression `CD3D = 8`, `MS4A1 = 8`, `ACTB = 11`. It co-expresses the exclusive T-cell **and** B-cell markers at high level. Should you call it a new "T/B hybrid" cell type? What is the more likely explanation, and how would you check?
+
+**B5. (concept)** In another dataset, one small cluster has no specific markers: its top genes are `RPL13`, `RPS27`, `MT-CO1` and `MT-ND4`, all with modest fold changes, and the cluster has low total counts. Is this a new cell type? What would you check?
+
+## In R
+
+### Build the toy matrix
+
+```r
+# cells in rows, genes in columns
+X <- matrix(c(4, 0, 6, 0, 0,
+              0, 0, 0, 3, 2,
+             10, 8, 0, 1, 1,
+              0, 0, 1, 0, 0),
+            nrow = 4, byrow = TRUE)
+rownames(X) <- c("A", "B", "C", "D")
+colnames(X) <- c("G1", "G2", "G3", "MT-1", "MT-2")
+```
+
+### Per-cell QC metrics with the mitochondrial fraction
+
+```r
+total_counts   <- rowSums(X)
+genes_detected <- rowSums(X > 0)
+
+mt <- grepl("^MT-", colnames(X))      # which columns are mitochondrial
+pct_mt <- 100 * rowSums(X[, mt]) / total_counts
+
+cbind(total_counts, genes_detected, round(pct_mt, 1))
+```
+
+### Apply the QC filter (B2)
+
+```r
+keep <- genes_detected >= 2 & total_counts >= 5 & pct_mt < 50
+X[keep, , drop = FALSE]               # surviving cells
+```
+
+### The annotation data
+
+```r
+expr <- matrix(
+  c( 9,  7,  8,  0,  0,  3,   # CD3D
+     0,  1,  0,  7,  8,  9,   # MS4A1
+    10, 12, 11, 11, 10, 12),  # ACTB
+  nrow = 3, byrow = TRUE,
+  dimnames = list(c("CD3D", "MS4A1", "ACTB"),
+                  c("c1","c2","c3","c4","c5","c6")))
+```
+
+### Read-only: the same steps with single-cell packages
+
+```r
+obj[["percent.mt"]]   <- PercentageFeatureSet(obj, pattern = "^MT-")
+obj[["percent.ribo"]] <- PercentageFeatureSet(obj, pattern = "^RP[SL]")
+obj <- subset(obj, subset = nFeature_RNA > 200 & percent.mt < 15)
+
+library(scDblFinder)
+sce <- scDblFinder(sce)               # doublet score and call per cell
+```
+
+### Tasks
+
+**R1.** Run the QC-metrics block and confirm the `pct.mt` values match your hand answers from **B1**.
+
+**R2.** Run the filter block (**B2**) and check the surviving cells match your by-hand list. Change the `pct_mt < 50` threshold to `pct_mt < 100`, then to `pct_mt <= 100`. When does a dropped cell come back?
+
+**R3.** Add the doublet cell from **B4** to the annotation data as a new column `c7 = c(8, 8, 11)` and confirm it is high in **both** `CD3D` and `MS4A1`. Explain in a comment why a naive marker match would mislabel it.
+
+## Hints
+
+::: {.callout-tip collapse="true" title="Hint 1 — mitochondrial fraction"}
+Add up only the mitochondrial columns (`MT-1` and `MT-2`) for a cell, divide by that cell's **total** counts, and multiply by 100. A cell whose counts are almost all mitochondrial has a compromised membrane — cytoplasmic RNA has leaked out, leaving mitochondrial RNA behind — a classic **dying-cell** signature.
+:::
+
+::: {.callout-tip collapse="true" title="Hint 2 — applying multiple filters"}
+A cell must pass **all three** conditions to be kept. Evaluate each condition per cell (TRUE/FALSE), then keep a cell only where every condition is TRUE. In R, combine conditions with `&`. Very low counts / few genes suggest an **empty droplet or near-empty** capture; very high mito suggests a **dying cell**.
+:::
+
+::: {.callout-tip collapse="true" title="Hint 3 — empty droplets vs doublets"}
+**Empty droplet:** very *low* total counts / few genes — it is mostly ambient background RNA. **Doublet:** unusually *high* counts / genes, and co-expression of markers that should be **mutually exclusive** (e.g. a T-cell marker and a B-cell marker together) — a sign two different cells landed in one droplet.
+:::
+
+::: {.callout-tip collapse="true" title="Hint 4 — the doublet in annotation"}
+`CD3D` and `MS4A1` mark **different, exclusive** lineages (T vs B). A single real cell almost never expresses both strongly. When it does, suspect a **doublet** — two cells in one droplet, whose profile is the *sum* of two types. Check with a doublet detector ([`scDblFinder`](https://bioconductor.org/packages/scDblFinder/)) and remove flagged cells before annotating.
+:::
+
+::: {.callout-tip collapse="true" title="Hint 5 — ribosomal and mitochondrial genes as markers"}
+Ribosomal protein (`RPS`/`RPL`) and mitochondrial (`MT-`) genes are expressed in nearly every cell. A cluster that is "defined" only by them has no cell-type-specific signal. Think about which QC metrics would separate it from the other clusters.
+:::
+
+## Solutions
+
+::: {.callout-note collapse="true" title="Solution"}
+
+**B1.** Mitochondrial counts are the sum of the `MT-1` and `MT-2` columns; divide by the cell total, ×100.
+
+- Cell A: $\dfrac{0+0}{10}\times100 = 0\%$
+- Cell B: $\dfrac{3+2}{5}\times100 = \dfrac{5}{5}\times100 = 100\%$
+- Cell C: $\dfrac{1+1}{20}\times100 = \dfrac{2}{20}\times100 = 10\%$
+- Cell D: $\dfrac{0}{1}\times100 = 0\%$
+
+**Cell B** has the highest mitochondrial fraction (100%) — every molecule detected is mitochondrial. That is a strong **dying/broken-cell** signature: the cytoplasmic RNA has leaked away and only mitochondrial RNA remains.
+
+**B2.** Apply the three rules (keep only if **all** hold): genes detected $\ge 2$, total counts $\ge 5$, pct.mt $< 50\%$.
+
+| Cell | genes ≥ 2? | total ≥ 5? | pct.mt < 50%? | Keep? |
+|---|---|---|---|---|
+| A | 2 ✓ | 10 ✓ | 0% ✓ | **Keep** |
+| B | 2 ✓ | 5 ✓ | 100% ✗ | Drop |
+| C | 4 ✓ | 20 ✓ | 10% ✓ | **Keep** |
+| D | 1 ✗ | 1 ✗ | 0% ✓ | Drop |
+
+Survivors: **A and C**. Reasons for the drops: **Cell B** fails on mitochondrial fraction → likely a **dying cell**. **Cell D** has just 1 count in 1 gene → **empty droplet / too little data** (almost no real RNA captured). Note that Cell B passes both count-based filters: without pct.mt it would have survived.
+
+**B3.**
+
+- **Cell X** (150 counts, 90 genes): very low counts and few genes → suspect an **empty droplet** (or a broken/near-empty cell) — mostly ambient background, little real RNA.
+- **Cell Y** (42,000 counts, 9,500 genes, co-expresses `CD3E` **and** `MS4A1`): unusually high counts/genes *and* simultaneous expression of two markers that should be mutually exclusive (T-cell and B-cell) → strong **doublet** signature: two cells captured in one droplet, giving a blended profile that could masquerade as a fake "hybrid" cell type.
+
+**B4.** Do **not** call it a new hybrid type. `CD3D` (T cell) and `MS4A1` (B cell) mark exclusive lineages that a single cell essentially never co-expresses at high level. The profile `(8, 8, 11)` looks like the **sum** of a T-cell profile and a B-cell profile — the signature of a **doublet**: two cells captured in one droplet and sequenced as one. Check by running a doublet detector (e.g. `scDblFinder` or `DoubletFinder`); if flagged, remove the cell before finalising annotation. Co-expression of two lineages' exclusive markers is a doublet until proven otherwise.
+
+**B5.** Almost certainly **not** a new cell type. Ribosomal and mitochondrial genes are on in every cell, so a cluster distinguished only by them (with modest fold changes and low counts) is most likely **low-quality or dying cells** that clustered together on their shared technical profile. Check its `percent.mt`, `percent.ribo`, total counts and genes detected against the other clusters; if it is an outlier on these, tighten the QC filter (or remove the cluster) and re-cluster.
+
+**R1–R2.**
+
+```r
+total_counts   <- rowSums(X)          # A 10, B 5, C 20, D 1
+genes_detected <- rowSums(X > 0)      # A 2,  B 2, C 4,  D 1
+mt     <- grepl("^MT-", colnames(X))
+pct_mt <- 100 * rowSums(X[, mt]) / total_counts   # A 0, B 100, C 10, D 0
+
+keep <- genes_detected >= 2 & total_counts >= 5 & pct_mt < 50
+X[keep, , drop = FALSE]               # A and C survive
+```
+
+Relaxing the mito threshold to `pct_mt < 100` does **not** bring Cell B back: its 100% is not strictly `< 100`. Only `pct_mt <= 100` (no mito filter at all) includes it — showing how sensitive the surviving set is to a threshold you must choose from the data.
+
+**R3.**
+
+```r
+expr2 <- cbind(expr, c7 = c(8, 8, 11))
+expr2[, "c7"]      # CD3D 8  MS4A1 8  ACTB 11  -> high in BOTH lineage markers
+# A naive match would see CD3D -> T cell AND MS4A1 -> B cell and might invent a
+# "T/B" type. The profile is really the sum of a T cell and a B cell: a doublet.
+```
+:::
+
+## Where this leads
+
+- **Ambient-RNA correction and doublet removal** have dedicated tools (`EmptyDrops`, `SoupX`, `scDblFinder`): they build on exactly the per-cell metrics and the "sum of two profiles" idea used here.
+- **Cell cycle & connection to PCA** (optional): `percent.mt` and `percent.ribo` are, like the cell cycle, covariates that can seize a principal component — diagnosed by correlating PC scores against them.

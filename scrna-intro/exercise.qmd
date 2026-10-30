@@ -13,8 +13,8 @@ format:
 By the end of this exercise you should be able to:
 
 - describe the **single-cell count matrix** (cells × genes, integer counts, sparse) and why it is stored sparsely,
-- compute the core **per-cell QC metrics** by hand — total counts, genes detected, and **% mitochondrial** — on a tiny matrix,
-- explain what an **empty droplet** and a **doublet** are, and the signature each leaves in the QC metrics,
+- compute the core **per-cell QC metrics** by hand — total counts and genes detected — on a tiny matrix,
+- explain what an **empty droplet** is, and the signature it leaves in the QC metrics,
 - carry out **library-size normalization** and the **log1p** transform on a small example, by hand and in R,
 - explain why we select **highly variable genes**, and why "highest variance" is the wrong criterion for count data.
 
@@ -28,9 +28,8 @@ For each cell $c$ we compute:
 
 - **total counts (library size):** $\;n_c = \sum_g X_{cg}$
 - **genes detected:** $\;\#\{g : X_{cg} > 0\}$
-- **mitochondrial fraction:** $\;\text{pct.mt}_c = 100 \times \dfrac{\sum_{g \in \text{MT}} X_{cg}}{\sum_g X_{cg}}$
 
-**QC** removes cells that are empty droplets (very low counts = ambient background), doublets (very high counts, blended profiles), or dying (high pct.mt).
+**QC** removes cells that are empty droplets or broken cells (very low counts and few genes = mostly ambient background). Unusually high counts are also suspicious.
 
 **Preprocessing** then makes cells comparable and tames the dynamic range:
 
@@ -39,11 +38,11 @@ For each cell $c$ we compute:
 
 Finally we keep the **highly variable genes** (HVGs) — genes that vary *more than expected for their mean* — because in count data variance grows with the mean, so raw variance alone just picks the highest-expressed genes.
 
-Throughout, use this tiny toy matrix of **4 cells × 5 genes**. Genes `MT-1` and `MT-2` are mitochondrial; `G1`, `G2`, `G3` are not.
+Throughout, use this tiny toy matrix of **4 cells × 5 genes**.
 
 $$
 X=\begin{array}{c|ccccc}
- & G1 & G2 & G3 & \text{MT-1} & \text{MT-2}\\\hline
+ & G1 & G2 & G3 & G4 & G5\\\hline
 \text{Cell A} & 4 & 0 & 6 & 0 & 0\\
 \text{Cell B} & 0 & 0 & 0 & 3 & 2\\
 \text{Cell C} & 10 & 8 & 0 & 1 & 1\\
@@ -55,20 +54,20 @@ $$
 
 **B1.** For **each** of the four cells, compute the **total counts** $n_c$ and the **number of genes detected**.
 
-**B2.** Compute the **mitochondrial fraction** `pct.mt` for each cell. Which cell has the highest, and what does that suggest about its quality?
+**B2.** Compare the **library sizes** from B1: what is the mean total count, and how many times larger is the biggest library than the smallest? Why does this mean raw counts cannot be compared directly between cells?
 
-**B3.** Suppose your QC rule is: **keep** a cell only if it has **at least 2 genes detected**, **total counts $\ge 5$**, and **pct.mt $< 50\%$**. Apply all three filters and list which cells survive. For each cell you drop, name the *likely* problem (empty droplet / dying cell / too little data).
+**B3.** Suppose your QC rule is: **keep** a cell only if it has **at least 2 genes detected** and **total counts $\ge 5$**. Apply both filters and list which cells survive. For each cell you drop, name the *likely* problem.
 
 **B4.** Take **Cell C** (the row `10, 8, 0, 1, 1`). **Library-size normalize** it with scale factor $s = 100$ (we use 100 instead of 10,000 so the numbers stay friendly): divide each entry by the cell's total, then multiply by 100. Then apply the **log1p** transform $\log(1+x)$ to the normalized values. (Use natural log; a calculator is fine.)
 
 **B5.** The matrix has 20 entries. **How many are zero?** What fraction is that? Explain, in one sentence each, the **two** different reasons a zero might appear in a real dataset.
 
-**B6.** Consider two hypothetical cells from a much larger experiment:
+**B6.** Consider two hypothetical cells from a much larger experiment, where most cells have 3,000–10,000 total counts:
 
 - Cell X: total counts = 150, genes detected = 90.
-- Cell Y: total counts = 42,000, genes detected = 9,500, and it co-expresses the T-cell marker `CD3E` **and** the B-cell marker `MS4A1` (`CD20`) strongly.
+- Cell Y: total counts = 6,000, genes detected = 2,400.
 
-For **each**, say whether you would suspect an **empty droplet**, a **doublet**, or a **healthy cell**, and give your reason.
+For **each**, say whether you would suspect an **empty droplet** or a **healthy cell**, and give your reason.
 
 **B7. (concept)** You have two genes measured across many cells: `ACTB` (a housekeeping gene, very high mean, similar in all cells) and `CD3E` (a T-cell marker, zero in most cells but high in T cells). `ACTB` has the larger raw variance. Which gene is more useful for distinguishing cell types, and why is ranking genes by **raw variance** a poor way to select features?
 
@@ -86,7 +85,7 @@ X <- matrix(c(4, 0, 6, 0, 0,
               0, 0, 1, 0, 0),
             nrow = 4, byrow = TRUE)
 rownames(X) <- c("A", "B", "C", "D")
-colnames(X) <- c("G1", "G2", "G3", "MT-1", "MT-2")
+colnames(X) <- c("G1", "G2", "G3", "G4", "G5")
 X
 ```
 
@@ -96,16 +95,15 @@ X
 total_counts   <- rowSums(X)          # library size per cell
 genes_detected <- rowSums(X > 0)      # count of non-zero genes per cell
 
-mt <- grepl("^MT-", colnames(X))      # which columns are mitochondrial
-pct_mt <- 100 * rowSums(X[, mt]) / total_counts
-
-cbind(total_counts, genes_detected, round(pct_mt, 1))
+cbind(total_counts, genes_detected)
+mean(total_counts)                    # B2
+max(total_counts) / min(total_counts)
 ```
 
 ### Apply the QC filter (B3)
 
 ```r
-keep <- genes_detected >= 2 & total_counts >= 5 & pct_mt < 50
+keep <- genes_detected >= 2 & total_counts >= 5
 X[keep, , drop = FALSE]               # surviving cells
 ```
 
@@ -122,8 +120,7 @@ log1p(norm)                           # log(1 + x), the standard transform
 ```r
 library(Seurat)
 obj <- CreateSeuratObject(counts, min.cells = 3, min.features = 200)
-obj[["percent.mt"]] <- PercentageFeatureSet(obj, pattern = "^MT-")
-obj <- subset(obj, subset = nFeature_RNA > 200 & percent.mt < 15)
+obj <- subset(obj, subset = nFeature_RNA > 200 & nCount_RNA > 500)
 obj <- NormalizeData(obj)                    # library-size + log1p
 obj <- FindVariableFeatures(obj, nfeatures = 2000)   # highly variable genes
 ```
@@ -132,7 +129,7 @@ obj <- FindVariableFeatures(obj, nfeatures = 2000)   # highly variable genes
 
 **R1.** Run the QC-metrics block and confirm it matches your hand answers from **B1** and **B2**.
 
-**R2.** Run the filter block (**B3**) and check the surviving cells match your by-hand list. Change the `pct_mt < 50` threshold to `pct_mt < 100` and see which cell comes back.
+**R2.** Run the filter block (**B3**) and check the surviving cells match your by-hand list. Change the `total_counts >= 5` threshold to `total_counts >= 6` and see which cell drops out.
 
 **R3.** Run the normalize + log block for Cell C (**B4**) and confirm it matches your hand computation. Then confirm that a genuine zero stays zero after `log1p` (try `log1p(0)`).
 
@@ -142,20 +139,20 @@ obj <- FindVariableFeatures(obj, nfeatures = 2000)   # highly variable genes
 **Total counts** for a cell is just the sum of its row. **Genes detected** counts how many entries in the row are strictly greater than 0 (the *number* of non-zero genes, not their sum). In R, [`rowSums`](https://rdrr.io/r/base/colSums.html)`(X)` gives totals and `rowSums(X > 0)` gives genes detected (because `X > 0` is a TRUE/FALSE matrix and TRUE counts as 1).
 :::
 
-::: {.callout-tip collapse="true" title="Hint 2 — mitochondrial fraction"}
-Add up only the mitochondrial columns (`MT-1` and `MT-2`) for a cell, divide by that cell's **total** counts, and multiply by 100. A cell whose counts are almost all mitochondrial has a compromised membrane — cytoplasmic RNA has leaked out, leaving mitochondrial RNA behind — a classic **dying-cell** signature.
+::: {.callout-tip collapse="true" title="Hint 2 — comparing library sizes"}
+The mean is the sum of the four totals divided by 4. For the ratio, divide the largest total by the smallest. If one cell simply captured 20 times more RNA, *every* gene in it looks about 20 times higher — that is a technical difference, not biology.
 :::
 
 ::: {.callout-tip collapse="true" title="Hint 3 — applying multiple filters"}
-A cell must pass **all three** conditions to be kept. Evaluate each condition per cell (TRUE/FALSE), then keep a cell only where every condition is TRUE. In R, combine conditions with `&`. Very low counts / few genes suggest an **empty droplet or near-empty** capture; very high mito suggests a **dying cell**.
+A cell must pass **both** conditions to be kept. Evaluate each condition per cell (TRUE/FALSE), then keep a cell only where every condition is TRUE. In R, combine conditions with `&`. Very low counts / few genes suggest an **empty droplet or near-empty** capture.
 :::
 
 ::: {.callout-tip collapse="true" title="Hint 4 — normalize then log"}
 Normalize **first**: divide each count by the cell's total ($n_c$) so the row sums to 1, then multiply by the scale factor $s$. Only **after** that do you apply [`log1p`](https://rdrr.io/r/base/Log.html) $=\log(1+x)$. The $+1$ is what keeps a zero at zero: $\log(1+0)=\log 1 = 0$.
 :::
 
-::: {.callout-tip collapse="true" title="Hint 5 — empty droplets vs doublets"}
-**Empty droplet:** very *low* total counts / few genes — it is mostly ambient background RNA. **Doublet:** unusually *high* counts / genes, and co-expression of markers that should be **mutually exclusive** (e.g. a T-cell marker and a B-cell marker together) — a sign two different cells landed in one droplet.
+::: {.callout-tip collapse="true" title="Hint 5 — empty droplets"}
+**Empty droplet:** very *low* total counts / few genes compared with the bulk of the cells — it is mostly ambient background RNA. A cell in the typical range for the experiment is consistent with a **healthy cell**.
 :::
 
 ::: {.callout-tip collapse="true" title="Hint 6 — why raw variance is a bad feature score"}
@@ -171,29 +168,24 @@ In count data, **variance grows with the mean** — a highly expressed gene has 
 | Cell | Row | Total counts $n_c$ | Genes detected |
 |---|---|---|---|
 | A | 4, 0, 6, 0, 0 | $4+6 = 10$ | 2 (`G1`, `G3`) |
-| B | 0, 0, 0, 3, 2 | $3+2 = 5$ | 2 (`MT-1`, `MT-2`) |
-| C | 10, 8, 0, 1, 1 | $10+8+1+1 = 20$ | 4 (`G1`, `G2`, `MT-1`, `MT-2`) |
+| B | 0, 0, 0, 3, 2 | $3+2 = 5$ | 2 (`G4`, `G5`) |
+| C | 10, 8, 0, 1, 1 | $10+8+1+1 = 20$ | 4 (`G1`, `G2`, `G4`, `G5`) |
 | D | 0, 0, 1, 0, 0 | $1$ | 1 (`G3`) |
 
-**B2.** Mitochondrial counts are the sum of the `MT-1` and `MT-2` columns; divide by the cell total, ×100.
+**B2.** Mean total count: $(10+5+20+1)/4 = 36/4 = 9$. The largest library (Cell C, 20) is $20/1 = 20$ times the smallest (Cell D, 1).
 
-- Cell A: $\dfrac{0+0}{10}\times100 = 0\%$
-- Cell B: $\dfrac{3+2}{5}\times100 = \dfrac{5}{5}\times100 = 100\%$
-- Cell C: $\dfrac{1+1}{20}\times100 = \dfrac{2}{20}\times100 = 10\%$
-- Cell D: $\dfrac{0}{1}\times100 = 0\%$
+So a gene in Cell C can look many times higher than in another cell just because Cell C's droplet captured more RNA overall — a **technical** difference (capture efficiency, sequencing depth), not biology. That is why we **library-size normalize** (B4) before comparing cells.
 
-**Cell B** has the highest mitochondrial fraction (100%) — every molecule detected is mitochondrial. That is a strong **dying/broken-cell** signature: the cytoplasmic RNA has leaked away and only mitochondrial RNA remains.
+**B3.** Apply the two rules (keep only if **both** hold): genes detected $\ge 2$, total counts $\ge 5$.
 
-**B3.** Apply the three rules (keep only if **all** hold): genes detected $\ge 2$, total counts $\ge 5$, pct.mt $< 50\%$.
+| Cell | genes ≥ 2? | total ≥ 5? | Keep? |
+|---|---|---|---|
+| A | 2 ✓ | 10 ✓ | **Keep** |
+| B | 2 ✓ | 5 ✓ | **Keep** |
+| C | 4 ✓ | 20 ✓ | **Keep** |
+| D | 1 ✗ | 1 ✗ | Drop |
 
-| Cell | genes ≥ 2? | total ≥ 5? | pct.mt < 50%? | Keep? |
-|---|---|---|---|---|
-| A | 2 ✓ | 10 ✓ | 0% ✓ | **Keep** |
-| B | 2 ✓ | 5 ✓ | 100% ✗ | Drop |
-| C | 4 ✓ | 20 ✓ | 10% ✓ | **Keep** |
-| D | 1 ✗ | 1 ✗ | 0% ✓ | Drop |
-
-Survivors: **A and C**. Reasons for the drops: **Cell B** fails on mitochondrial fraction → likely a **dying cell**. **Cell D** has just 1 count in 1 gene → **empty droplet / too little data** (almost no real RNA captured).
+Survivors: **A, B and C**. **Cell D** has just 1 count in 1 gene → **empty droplet / too little data** (almost no real RNA captured). Cell B only just passes (exactly 5 counts) — a sign that the threshold matters.
 
 **B4.** Cell C is `10, 8, 0, 1, 1` with total $n_C = 20$. Normalize (divide by 20, ×100 → i.e. ×5), then `log1p`.
 
@@ -218,8 +210,8 @@ The two reasons a zero appears:
 - **Technical zero (dropout):** the gene *is* expressed but its molecules were not captured/sequenced — a false zero from limited sensitivity.
 
 **B6.**
-- **Cell X** (150 counts, 90 genes): very low counts and few genes → suspect an **empty droplet** (or a broken/near-empty cell) — mostly ambient background, little real RNA.
-- **Cell Y** (42,000 counts, 9,500 genes, co-expresses `CD3E` **and** `MS4A1`): unusually high counts/genes *and* simultaneous expression of two markers that should be mutually exclusive (T-cell and B-cell) → strong **doublet** signature: two cells captured in one droplet, giving a blended profile that could masquerade as a fake "hybrid" cell type.
+- **Cell X** (150 counts, 90 genes): far below the typical 3,000–10,000 counts, with few genes → suspect an **empty droplet** (or a broken/near-empty cell) — mostly ambient background, little real RNA.
+- **Cell Y** (6,000 counts, 2,400 genes): right in the typical range for this experiment → consistent with a **healthy cell**; nothing in these two numbers argues for removing it.
 
 **B7.** `CD3E` is far more useful: it is off in most cells and on only in T cells, so it **separates** a cell type — exactly the signal we want. `ACTB` is high everywhere and roughly constant, so despite its large *raw* variance it tells you almost nothing about which cell is which. Ranking by raw variance is poor because in count data **variance scales with the mean**: high-mean genes look variable just from their size. HVG selection instead scores each gene by how much its variance **exceeds the mean–variance trend**, catching genes like `CD3E` that vary more than their expression level alone would predict.
 
@@ -232,21 +224,21 @@ X <- matrix(c(4, 0, 6, 0, 0,
               0, 0, 1, 0, 0),
             nrow = 4, byrow = TRUE)
 rownames(X) <- c("A", "B", "C", "D")
-colnames(X) <- c("G1", "G2", "G3", "MT-1", "MT-2")
+colnames(X) <- c("G1", "G2", "G3", "G4", "G5")
 
 total_counts   <- rowSums(X)          # A 10, B 5, C 20, D 1
 genes_detected <- rowSums(X > 0)      # A 2,  B 2, C 4,  D 1
-mt     <- grepl("^MT-", colnames(X))
-pct_mt <- 100 * rowSums(X[, mt]) / total_counts   # A 0, B 100, C 10, D 0
+mean(total_counts)                    # 9
+max(total_counts) / min(total_counts) # 20
 
-keep <- genes_detected >= 2 & total_counts >= 5 & pct_mt < 50
-X[keep, , drop = FALSE]               # A and C survive
+keep <- genes_detected >= 2 & total_counts >= 5
+X[keep, , drop = FALSE]               # A, B and C survive
 
 cellC <- X["C", ]
 log1p(cellC / sum(cellC) * 100)       # 3.93 3.71 0 1.79 1.79
 log1p(0)                              # 0  -> a true zero stays zero
 ```
-Relaxing the mito threshold to `pct_mt < 100` brings **Cell B** back (its 100% is not strictly `< 100`; use `<= 100` to include it) — showing how sensitive the surviving set is to a threshold you must choose from the data.
+Raising the count threshold to `total_counts >= 6` drops **Cell B** (exactly 5 counts) as well — showing how sensitive the surviving set is to a threshold you must choose from the data.
 :::
 
 ## Where this leads
@@ -254,4 +246,5 @@ Relaxing the mito threshold to `pct_mt < 100` brings **Cell B** back (its 100% i
 - **[Log and pseudolog transforms](../scrna-log/exercise.qmd)** (optional): why the log1p step in B4 is there, why you average counts before logging, and how the pseudocount and scale factor change low counts.
 - **Nonlinear embeddings & clustering** (next unit): the cleaned, normalized, log-transformed, HVG-selected matrix is fed to **PCA** (the eigen-decomposition of a covariance matrix you built in the linear algebra block) and then **UMAP**, to visualize and cluster cells by type.
 - **Count models (Error models, week 4):** the noisy, overdispersed counts motivate **Poisson** and **negative-binomial** models and more principled normalization — the simple library-size + log1p here is a first-pass baseline.
-- **Ambient-RNA correction and doublet removal** have dedicated tools (`EmptyDrops`, `scDblFinder`, `SoupX`); today you learned the *concepts* and the QC metrics they build on.
+- **Ambient-RNA correction** has dedicated tools (`EmptyDrops`, `SoupX`); today you learned the *concepts* and the QC metrics they build on.
+- **[Single-cell QC in depth](../scrna-qc-extra/exercise.qmd)** (optional): mitochondrial and ribosomal fractions, and doublets.

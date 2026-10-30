@@ -13,32 +13,48 @@ format:
 By the end of this exercise you should be able to:
 
 - state, in one sentence, why a **penalty** is the same thing as a **prior**,
-- turn *maximise posterior* into *minimise (negative log-likelihood + negative log-prior)* and read off the **fit term** and the **penalty term**,
-- match **ridge** ⇔ **Gaussian** prior and **lasso** ⇔ **Laplace** prior, and derive each penalty from the prior's density,
-- explain the identity $\lambda_{\text{ridge}} = \sigma^2/\tau^2$ and what it says about **prior precision**,
-- explain, from the **shape at $\beta = 0$**, why lasso produces exact zeros but ridge does not,
+- read a penalised fit as **fit term + penalty term** and say which is the **likelihood** and which the **prior**,
+- match **ridge** ⇔ **Gaussian** prior and **lasso** ⇔ **Laplace** prior (and, optionally, derive each penalty from the prior's density),
+- explain why a **narrow prior** means a **big $\lambda$** ($\lambda_{\text{ridge}} = \sigma^2/\tau^2$) and what that says about **prior precision**,
+- explain, from the **shape at $\beta = 0$** (pointed vs rounded top), why lasso produces exact zeros but ridge does not,
 - translate a **biological belief** (polygenic vs sparse) into the matching prior/penalty.
 
-This is a **concept day**. Spend most of your time on the by-hand reasoning; the R section only *illustrates* the ideas (a full `glmnet` treatment lives in **Ridge and lasso regression**).
+This is a **concept day**. Spend most of your time on the by-hand reasoning and the demos; the R section only *illustrates* the ideas (a full `glmnet` treatment lives in **Ridge and lasso regression**).
 
 ## Background
 
-**The bridge in one move.** The posterior peak (the **MAP** estimate) is
+**The bridge in words.** Penalised regression makes **fit error (RSS) + penalty** as small as possible. The Bayesian finds the **peak of the posterior** (the **MAP** estimate), where likelihood × prior is largest. These are the same thing:
+
+- the **fit term** (RSS) is the **likelihood** side: with Gaussian noise, a small RSS means the data are likely;
+- the **penalty term** is the **prior** side: *the penalty is how unlikely the prior finds $\beta$.*
+
+**The penalty is set by the prior's shape:**
+
+| Prior on each $\beta$ | How unlikely it finds $\beta$ grows like | Penalty | Method |
+|---|---|---|---|
+| Gaussian, variance $\tau^2$ | $\beta^2$ (a smooth bowl) | $\sum \beta^2$ | **ridge** |
+| Laplace, scale $b$ | $\lvert\beta\rvert$ (a V) | $\sum \lvert\beta\rvert$ | **lasso** |
+
+**The penalty strength is set by the prior's width:** for ridge, $\lambda = \sigma^2/\tau^2$ (noise variance over prior variance); for lasso, $\lambda = 2\sigma^2/b$. In words: **a large penalty is a tight, confident prior that effects are near zero.**
+
+::: {.callout-note collapse="true" title="Optional: the maths"}
+The posterior peak is
 
 $$\hat{\boldsymbol\beta}_{\text{MAP}} = \arg\max_{\boldsymbol\beta}\ p(\boldsymbol\beta\mid\text{data}) = \arg\min_{\boldsymbol\beta}\ \big[\underbrace{-\log p(\text{data}\mid\boldsymbol\beta)}_{\text{fit term}} \;+\; \underbrace{-\log p(\boldsymbol\beta)}_{\text{penalty term}}\big].$$
 
 (We may take $-\log$ because the logarithm is increasing, so it does not move the location of the peak; it turns the product prior $\times$ likelihood into a sum.)
 
-**The fit term.** With Gaussian noise, $y_i = \mathbf{x}_i^\top\boldsymbol\beta + \varepsilon_i$, $\varepsilon_i\sim\mathcal N(0,\sigma^2)$, the negative log-likelihood is $\tfrac{1}{2\sigma^2}\,\text{RSS} + \text{const}$. So the fit term is just the **residual sum of squares**.
+**The fit term.** With Gaussian noise, $y_i = \mathbf{x}_i^\top\boldsymbol\beta + \varepsilon_i$, $\varepsilon_i\sim\mathcal N(0,\sigma^2)$, the negative log-likelihood is $\tfrac{1}{2\sigma^2}\,\text{RSS} + \text{const}$.
 
-**The penalty term** is the negative log of whatever **prior** you place on the coefficients:
+**The penalty term** is the negative log of the prior:
 
-| Prior on each $\beta_j$ | density $\propto$ | $-\log$ prior $\propto$ | Penalty | Method |
-|---|---|---|---|---|
-| Gaussian $\mathcal N(0,\tau^2)$ | $e^{-\beta_j^2/2\tau^2}$ | $\sum_j \beta_j^2$ | $\lVert\boldsymbol\beta\rVert_2^2$ | **ridge** |
-| Laplace (scale $b$) | $e^{-|\beta_j|/b}$ | $\sum_j |\beta_j|$ | $\lVert\boldsymbol\beta\rVert_1$ | **lasso** |
+| Prior on each $\beta_j$ | density $\propto$ | $-\log$ prior $\propto$ | Method |
+|---|---|---|---|
+| Gaussian $\mathcal N(0,\tau^2)$ | $e^{-\beta_j^2/2\tau^2}$ | $\sum_j \beta_j^2$ | **ridge** |
+| Laplace (scale $b$) | $e^{-|\beta_j|/b}$ | $\sum_j |\beta_j|$ | **lasso** |
 
-Clearing the $\tfrac{1}{2\sigma^2}$ from the fit term gives $\lambda_{\text{ridge}} = \sigma^2/\tau^2$ and $\lambda_{\text{lasso}} = 2\sigma^2/b$. In words: **a large penalty is a tight, confident prior that effects are near zero.**
+Clearing the $\tfrac{1}{2\sigma^2}$ from the fit term gives $\lambda_{\text{ridge}} = \sigma^2/\tau^2$ and $\lambda_{\text{lasso}} = 2\sigma^2/b$.
+:::
 
 ## By hand
 
@@ -47,11 +63,11 @@ Clearing the $\tfrac{1}{2\sigma^2}$ from the fit term gives $\lambda_{\text{ridg
 (b) what does the **fit term** (RSS) correspond to?
 (c) what point summary of the posterior does penalised regression compute — the mean, the mode/peak, or the median?
 
-**B2.** Starting from the Gaussian prior density $p(\beta_j) \propto \exp\!\big(-\beta_j^2/2\tau^2\big)$, take $-\log$ and sum over $j$ to show the penalty term is $\tfrac{1}{2\tau^2}\lVert\boldsymbol\beta\rVert_2^2$ (up to a constant). Which method does this give?
+**B2. (optional)** Starting from the Gaussian prior density $p(\beta_j) \propto \exp\!\big(-\beta_j^2/2\tau^2\big)$, take $-\log$ and sum over $j$ to show the penalty term is $\tfrac{1}{2\tau^2}\lVert\boldsymbol\beta\rVert_2^2$ (up to a constant). Which method does this give?
 
-**B3.** Do the same for the Laplace prior $p(\beta_j) \propto \exp\!\big(-|\beta_j|/b\big)$: take $-\log$, sum over $j$, and read off the penalty. Which method does this give?
+**B3. (optional)** Do the same for the Laplace prior $p(\beta_j) \propto \exp\!\big(-|\beta_j|/b\big)$: take $-\log$, sum over $j$, and read off the penalty. Which method does this give?
 
-**B4.** Combine B2 with the Gaussian-noise fit term and show that
+**B4. (optional)** Combine B2 with the Gaussian-noise fit term and show that
 $$\arg\min_{\boldsymbol\beta}\ \frac{1}{2\sigma^2}\text{RSS} + \frac{1}{2\tau^2}\lVert\boldsymbol\beta\rVert_2^2 \;=\; \arg\min_{\boldsymbol\beta}\ \text{RSS} + \lambda\lVert\boldsymbol\beta\rVert_2^2$$
 and give $\lambda$ in terms of $\sigma^2$ and $\tau^2$. (Hint: multiply the whole objective by a constant that does not change the minimiser.)
 
@@ -69,7 +85,33 @@ and give $\lambda$ in terms of $\sigma^2$ and $\tau^2$. (Hint: multiply the whol
 
 ## Explore: prior, likelihood and posterior {#explore}
 
-The demo shows two coefficients $(\beta_1,\beta_2)$. Green shading is the **prior** (darker = more prior belief), grey ellipses are the **likelihood** (centred on the OLS = maximum-likelihood point, which you can drag), purple contours are the **posterior**, and the purple dot is the posterior peak, the **MAP**, which is the penalized estimate. The demo fixes $\sigma^2 = 1$, so the Gaussian prior has $\tau^2 = 1/\lambda$ and the Laplace prior has $b = 2/\lambda$. The right panel shows the MAP coefficients against $\lambda$.
+### One coefficient
+
+This demo shows a single coefficient $\beta$. Green is the **prior**, grey the **likelihood** (centred on the estimate from the data alone), purple the **posterior**, with its peak marked. The small panel on the right shows the **penalty** the prior stands for. The slider *how sure we are that β is near 0* narrows the prior; the readout shows the matching $\lambda$.
+
+```{=html}
+<link rel="stylesheet" href="../demos/dist/demo.css">
+<div data-demo="penaltygeom" data-mode="prior1d"></div>
+<script src="../demos/dist/penaltygeom.js"></script>
+```
+
+**E1.** Start from the defaults (Gaussian prior of width 0.5, data alone say $\beta = 1$ from $n = 5$ samples).
+(a) Where is the posterior peak, and how far has the prior pulled it toward 0?
+(b) Click **Laplace prior (lasso)** at the same width. Where is the peak now?
+(c) Drag *data strength* down to $n = 2$ with each prior. Which prior puts the peak **exactly** at 0?
+(d) Move *how sure we are that β is near 0* to the right. What happens to $\lambda$? (Compare B5.)
+
+**E2.** Keep the Laplace prior at $n = 2$ and slowly raise *β estimated from the data alone* from 1. Roughly where does the peak leave 0? Now switch to the Gaussian prior: can you find any setting (other than an estimate of exactly 0) where the peak is exactly 0? Use the penalty panel (bowl vs V) to explain the difference.
+
+::: {.callout-note collapse="true" title="Solutions E1–E2"}
+**E1.** (a) The peak is at about $0.56$: pulled $0.44$ toward 0. (b) With the Laplace prior ($\lambda \approx 5.7$) the peak is about $0.43$. (c) At $n = 2$ the **Laplace** peak is **exactly 0** ("gene dropped"); the Gaussian peak is $0.33$, smaller but not 0. (d) A narrower prior gives a **bigger** $\lambda$ and a stronger pull toward 0: narrow prior = big penalty, as in B5.
+
+**E2.** The Laplace peak stays at exactly 0 until the data-alone estimate is above about $1.4$; only evidence that strong escapes the prior. The Gaussian peak is never exactly 0, however weak the data: it only shrinks. The ridge penalty is a bowl that is flat at the bottom, so its pull fades as $\beta$ approaches 0 and never finishes the job. The lasso penalty is a V with a sharp tip, so it keeps pulling just as hard right up to 0 and can hold $\beta$ there (B6).
+:::
+
+### Two coefficients
+
+The demo shows two coefficients $(\beta_1,\beta_2)$. Green shading is the **prior** (darker = more prior belief), grey ellipses are the **likelihood** (centred on the ordinary least squares (OLS) point, which is also the maximum-likelihood point and which you can drag), purple contours are the **posterior**, and the purple dot is the posterior peak, the **MAP**, which is the penalized estimate. The demo fixes $\sigma^2 = 1$, so the Gaussian prior has $\tau^2 = 1/\lambda$ and the Laplace prior has $b = 2/\lambda$. The right panel shows the MAP coefficients against $\lambda$.
 
 ```{=html}
 <link rel="stylesheet" href="../demos/dist/demo.css">
@@ -77,18 +119,18 @@ The demo shows two coefficients $(\beta_1,\beta_2)$. Green shading is the **prio
 <script src="../demos/dist/penaltygeom.js"></script>
 ```
 
-**E1.** With the **Gaussian prior**, move $\lambda$ from $0.1$ to $10$. What happens to $\tau^2$, to the prior shading and to the MAP? Which estimator do you approach as $\lambda \to 0$ (compare B5)?
+**E3.** With the **Gaussian prior**, move $\lambda$ from $0.1$ to $10$. What happens to $\tau^2$, to the prior shading and to the MAP? Which estimator do you approach as $\lambda \to 0$ (compare B5)?
 
-**E2.** Switch to the **Laplace prior** at $\lambda = 2$. Where is the MAP, and is any coefficient exactly zero? Now lower $\lambda$ to $1$: is it still zero? What does that say about how strong the prior must be before it sets a coefficient to zero?
+**E4.** Switch to the **Laplace prior** at $\lambda = 2$. Where is the MAP, and is any coefficient exactly zero? Now lower $\lambda$ to $1$: is it still zero? What does that say about how strong the prior must be before it sets a coefficient to zero?
 
-**E3.** Still with the Laplace prior at $\lambda = 2$, look at the purple posterior contours where they cross the $\beta_1$ axis. Are they smooth there, as they are for the Gaussian prior? Connect what you see to B6.
+**E5.** Still with the Laplace prior at $\lambda = 2$, look at the purple posterior contours where they cross the $\beta_1$ axis. Are they smooth there, as they are for the Gaussian prior? Connect what you see to B6 and E2.
 
-::: {.callout-note collapse="true" title="Solutions"}
-**E1.** $\tau^2 = 1/\lambda$ falls from $10$ to $0.1$: the prior circles shrink tightly around $0$ (a more confident prior that effects are small). The MAP moves from close to the OLS point, about $(1.81, 0.61)$ at $\lambda = 0.1$, to about $(0.20, 0.12)$ at $\lambda = 10$: shrunk, but never exactly zero. As $\lambda \to 0$ the prior becomes flat and the MAP becomes the OLS / maximum-likelihood estimate, as in B5(b).
+::: {.callout-note collapse="true" title="Solutions E3–E5"}
+**E3.** $\tau^2 = 1/\lambda$ falls from $10$ to $0.1$: the prior circles shrink tightly around $0$ (a more confident prior that effects are small). The MAP moves from close to the ordinary least squares point, about $(1.81, 0.61)$ at $\lambda = 0.1$, to about $(0.20, 0.12)$ at $\lambda = 10$: shrunk, but never exactly zero. As $\lambda \to 0$ the prior becomes flat and the MAP becomes the ordinary least squares (maximum-likelihood) estimate, as in B5(b).
 
-**E2.** At $\lambda = 2$ the MAP is about $(1.24, 0)$: it sits on the $\beta_1$ axis and $\hat\beta_2$ is **exactly** $0$. At $\lambda = 1$ it moves off the axis to about $(1.64, 0.24)$. The Laplace prior sets a coefficient to zero only once it is strong enough compared with the evidence for that coefficient (here from $\lambda \approx 1.7$ on); weak effects are zeroed first, strong ones need a stronger prior.
+**E4.** At $\lambda = 2$ the MAP is about $(1.24, 0)$: it sits on the $\beta_1$ axis and $\hat\beta_2$ is **exactly** $0$. At $\lambda = 1$ it moves off the axis to about $(1.64, 0.24)$. The Laplace prior sets a coefficient to zero only once it is strong enough compared with the evidence for that coefficient (here from $\lambda \approx 1.7$ on); weak effects are zeroed first, strong ones need a stronger prior.
 
-**E3.** No: the Laplace posterior contours have a **crease** (a kink) along the axis, because the prior's cusp at $\beta = 0$ is carried into the posterior. The peak can sit right in that crease, which is why the MAP lands on exactly $\beta_2 = 0$. The Gaussian prior is smooth at $0$, so its posterior contours are smooth ellipses and their peak is almost never exactly on an axis (B6).
+**E5.** No: the Laplace posterior contours have a **crease** (a kink) along the axis, because the prior's cusp at $\beta = 0$ is carried into the posterior. The peak can sit right in that crease, which is why the MAP lands on exactly $\beta_2 = 0$. The Gaussian prior is smooth at $0$, so its posterior contours are smooth ellipses and their peak is almost never exactly on an axis (B6).
 :::
 
 ## In R
@@ -151,15 +193,15 @@ lambda <- cvfit$lambda.min               # small lambda = weak prior, large = st
 
 ## Hints
 
-::: {.callout-tip collapse="true" title="Hint 1 — the master equation"}
-Everything follows from taking $-\log$ of `posterior ∝ likelihood × prior`. The $-\log$ turns the product into a **sum**, and turns *maximise* into *minimise*: $-\log(\text{likelihood}) + (-\log(\text{prior}))$. The first piece is the **fit term**, the second is the **penalty term**. See the summary table on the [`dnorm`](https://rdrr.io/r/stats/Normal.html) reference for the Gaussian density form.
+::: {.callout-tip collapse="true" title="Hint 1 — the two languages (B1)"}
+`posterior ∝ likelihood × prior`. The **likelihood** asks how well $\beta$ explains the data: that is the fit term (RSS). The **prior** asks how plausible $\beta$ was beforehand: the penalty is how unlikely the prior finds $\beta$. Penalised regression returns a single best $\beta$, the top of the posterior. (Optional: taking $-\log$ turns the product into the sum *fit term + penalty term*.)
 :::
 
-::: {.callout-tip collapse="true" title="Hint 2 — negative log of a Gaussian (B2, B4)"}
+::: {.callout-tip collapse="true" title="Hint 2 — (optional) negative log of a Gaussian (B2, B4)"}
 For $p(\beta_j)\propto e^{-\beta_j^2/2\tau^2}$, $-\log p(\beta_j) = \dfrac{\beta_j^2}{2\tau^2} + \text{const}$. Summing over $j$ gives $\dfrac{1}{2\tau^2}\sum_j\beta_j^2 = \dfrac{1}{2\tau^2}\lVert\boldsymbol\beta\rVert_2^2$ — the **ridge** ($\ell_2$) penalty. To get a clean $\lambda$, multiply the *whole* objective by $2\sigma^2$: minimisers are unchanged by scaling by a positive constant.
 :::
 
-::: {.callout-tip collapse="true" title="Hint 3 — negative log of a Laplace (B3)"}
+::: {.callout-tip collapse="true" title="Hint 3 — (optional) negative log of a Laplace (B3)"}
 For $p(\beta_j)\propto e^{-|\beta_j|/b}$, $-\log p(\beta_j) = \dfrac{|\beta_j|}{b} + \text{const}$. The **absolute value** in the exponent becomes an absolute value in the penalty: $\dfrac{1}{b}\sum_j|\beta_j| = \dfrac{1}{b}\lVert\boldsymbol\beta\rVert_1$ — the **lasso** ($\ell_1$) penalty.
 :::
 
@@ -168,7 +210,7 @@ $\lambda = \sigma^2/\tau^2$, and **precision** is $1/\tau^2$. A **small** $\tau^
 :::
 
 ::: {.callout-tip collapse="true" title="Hint 5 — the cusp (B6)"}
-Compare the two densities *at the origin*. The Gaussian $e^{-\beta^2}$ has a **rounded** top with zero slope at $0$, so it never forces a coefficient to be exactly $0$. The Laplace $e^{-|\beta|}$ has a **kink / cusp** at $0$ — that corner is what lets the lasso land on coefficients that are **exactly zero**, giving variable selection.
+Compare the two densities *at the origin*. The Gaussian $e^{-\beta^2}$ has a **rounded** top at $0$, so it never forces a coefficient to be exactly $0$. The Laplace $e^{-|\beta|}$ has a **pointed top (cusp)** at $0$ — that corner is what lets the lasso land on coefficients that are **exactly zero**, giving variable selection.
 :::
 
 ::: {.callout-tip collapse="true" title="Hint 6 — biology to prior (B7)"}
@@ -184,23 +226,23 @@ Build the density grid with [`seq`](https://rdrr.io/r/base/seq.html), the Gaussi
 ::: {.callout-note collapse="true" title="Solution"}
 
 **B1.**
-(a) The penalty term is the **negative log-prior** on the coefficients — a penalty *is* a prior belief that coefficients are small.
-(b) The fit term (RSS) is the **negative log-likelihood** under Gaussian noise (up to the $\tfrac{1}{2\sigma^2}$ factor and a constant).
+(a) The penalty term is the **prior**: it measures how unlikely the prior finds $\beta$ (exactly: the negative log-prior). A penalty *is* a prior belief that coefficients are small.
+(b) The fit term (RSS) is the **likelihood** side: under Gaussian noise a small RSS means the data are likely (exactly: RSS is the negative log-likelihood up to the $\tfrac{1}{2\sigma^2}$ factor and a constant).
 (c) Penalised regression finds the **mode / peak** of the posterior — the **MAP** estimate — not the posterior mean or median.
 
-**B2.** Take the negative log of the Gaussian density:
+**B2. (optional)** Take the negative log of the Gaussian density:
 $$-\log p(\beta_j) = -\log\!\Big(c\,e^{-\beta_j^2/2\tau^2}\Big) = \frac{\beta_j^2}{2\tau^2} - \log c.$$
 The $-\log c$ is a constant (no $\boldsymbol\beta$), so drop it. Summing over $j$:
 $$-\log p(\boldsymbol\beta) = \frac{1}{2\tau^2}\sum_{j}\beta_j^2 = \frac{1}{2\tau^2}\lVert\boldsymbol\beta\rVert_2^2 + \text{const}.$$
 This is the **sum-of-squares** ($\ell_2$) penalty → **ridge**.
 
-**B3.** Same steps with the Laplace density:
+**B3. (optional)** Same steps with the Laplace density:
 $$-\log p(\beta_j) = -\log\!\Big(c\,e^{-|\beta_j|/b}\Big) = \frac{|\beta_j|}{b} - \log c.$$
 Drop the constant and sum:
 $$-\log p(\boldsymbol\beta) = \frac{1}{b}\sum_j |\beta_j| = \frac{1}{b}\lVert\boldsymbol\beta\rVert_1 + \text{const}.$$
 This is the **sum-of-absolute-values** ($\ell_1$) penalty → **lasso**.
 
-**B4.** Add the Gaussian-noise fit term $\tfrac{1}{2\sigma^2}\text{RSS}$ to the B2 penalty:
+**B4. (optional)** Add the Gaussian-noise fit term $\tfrac{1}{2\sigma^2}\text{RSS}$ to the B2 penalty:
 $$\arg\min_{\boldsymbol\beta}\ \frac{1}{2\sigma^2}\text{RSS} + \frac{1}{2\tau^2}\lVert\boldsymbol\beta\rVert_2^2.$$
 Multiplying the whole objective by the positive constant $2\sigma^2$ does not change **where** the minimum is:
 $$= \arg\min_{\boldsymbol\beta}\ \text{RSS} + \frac{2\sigma^2}{2\tau^2}\lVert\boldsymbol\beta\rVert_2^2 = \arg\min_{\boldsymbol\beta}\ \text{RSS} + \frac{\sigma^2}{\tau^2}\lVert\boldsymbol\beta\rVert_2^2.$$
@@ -210,7 +252,7 @@ So $\lambda = \dfrac{\sigma^2}{\tau^2}$ — the ridge penalty strength is the **
 (a) With $\sigma^2 = 1$: tight prior $\tau^2 = 0.01 \Rightarrow \lambda = 1/0.01 = 100$; loose prior $\tau^2 = 100 \Rightarrow \lambda = 1/100 = 0.01$. The **tight** prior ($\tau^2 = 0.01$) gives the far larger $\lambda$ and hence **much stronger shrinkage** — as it should, since a tight prior insists the coefficients are near zero.
 (b) As $\tau^2 \to \infty$, $\lambda = \sigma^2/\tau^2 \to 0$. The prior becomes flat (no information), the penalty vanishes, and the MAP reduces to **ordinary least squares** (= maximum likelihood).
 
-**B6.** Both densities are bell-ish and centred at $0$, but they behave differently at the origin. The Gaussian $e^{-\beta^2/2\tau^2}$ is **smooth with zero slope at $0$** — a rounded top — so shrinking a coefficient toward $0$ is never quite "worth" driving it all the way; ridge shrinks but leaves every $\beta_j \ne 0$. The Laplace $e^{-|\beta|/b}$ has a **sharp cusp (kink)** at $0$ because of the $|\beta|$: the penalty has a corner there. That corner means the optimum frequently sits **exactly at $\beta_j = 0$**, so the lasso performs **variable selection** (exact zeros), whereas ridge does not.
+**B6.** Both densities are bell-ish and centred at $0$, but they behave differently at the origin. The Gaussian $e^{-\beta^2/2\tau^2}$ has a **rounded top** at $0$, so shrinking a coefficient toward $0$ is never quite "worth" driving it all the way; ridge shrinks but leaves every $\beta_j \ne 0$. The Laplace $e^{-|\beta|/b}$ has a **pointed top (cusp)** at $0$ because of the $|\beta|$: the penalty has a corner there (the tip of the V). That corner means the optimum frequently sits **exactly at $\beta_j = 0$**, so the lasso performs **variable selection** (exact zeros), whereas ridge does not.
 
 **B7.**
 (a) **Gaussian / ridge** — a polygenic trait is *many small nonzero effects*, which is exactly a dense Gaussian prior that shrinks all coefficients gently without zeroing them.

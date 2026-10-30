@@ -223,13 +223,13 @@ Quantitative biology and integrative omics
 </section>
 <section id="about-this-lecture" class="slide level2">
 <h2>About this lecture</h2>
-<p>In Linear models we fit <span class="math inline">\mathbf{y} = X\boldsymbol\beta</span> by <strong>least squares</strong> — the best straight-line predictor. That works beautifully when we have many samples and few predictors. In genomics we usually have the <strong>opposite</strong>: thousands of genes, a few dozen samples. Ordinary least squares breaks. Today we fix it by <strong>penalizing</strong> large coefficients.</p>
+<p>In Linear models we fit a straight-line model by <strong>least squares</strong>. That works beautifully when we have many samples and few predictors. In genomics we usually have the <strong>opposite</strong>: thousands of genes, a few dozen samples. Ordinary least squares breaks. Today we fix it by <strong>penalizing</strong> large coefficients.</p>
 <ul>
 <li><strong>Ridge (L2):</strong> shrink all coefficients toward zero — tames collinearity, keeps every predictor.</li>
 <li><strong>Lasso (L1):</strong> shrink <em>and</em> set some coefficients <strong>exactly to zero</strong> — automatic feature selection (a sparse model).</li>
 <li><strong>Elastic net:</strong> a tunable <strong>mix</strong> of the two.</li>
 <li>The <strong>geometry</strong> behind why lasso zeros coefficients but ridge does not (a diamond vs.&nbsp;a circle).</li>
-<li>The tuning parameter <span class="math inline">\lambda</span>, and how to choose it by <strong>cross-validation</strong>.</li>
+<li>The tuning parameter <span class="math inline">\lambda</span>, and a first look at choosing it (<strong>cross-validation</strong> is the next unit).</li>
 <li>In R: the <code>glmnet</code> package. Biology: <strong>selecting a handful of predictive genes</strong> from a whole transcriptome.</li>
 </ul>
 <aside class="notes">
@@ -273,15 +273,15 @@ Quantitative biology and integrative omics
 </section>
 <section id="recall-least-squares-and-where-it-breaks" class="slide level2 smaller">
 <h2>Recall: least squares and where it breaks</h2>
-<p>Ordinary least squares (OLS) chooses <span class="math inline">\boldsymbol\beta</span> to make the <strong>residual sum of squares</strong> as small as possible:</p>
-<p><span class="math display">\hat{\boldsymbol\beta}_{\text{OLS}} = \arg\min_{\boldsymbol\beta}\ \underbrace{\sum_{i=1}^{n}\big(y_i - \mathbf{x}_i^\top\boldsymbol\beta\big)^2}_{\text{RSS} \,=\, \lVert \mathbf{y} - X\boldsymbol\beta \rVert^2}, \qquad \hat{\boldsymbol\beta}_{\text{OLS}} = (X^\top X)^{-1}X^\top \mathbf{y}.</span></p>
+<p>Ordinary least squares (OLS) picks the coefficients that make the <strong>total squared miss</strong> (the residual sum of squares, RSS) as small as possible. <em>Why penalize?</em> showed where that breaks:</p>
 <ul>
-<li>The formula needs <span class="math inline">X^\top X</span> to be <strong>invertible</strong>. When <span class="math inline">p &gt; n</span>, or when predictors are collinear, <span class="math inline">X^\top X</span> is <strong>singular</strong> (or nearly so) — no stable inverse.</li>
-<li>OLS has only one goal: fit the training data. With enough predictors it fits it <strong>perfectly</strong>, including the noise — <strong>overfitting</strong>.</li>
+<li><strong>More genes than samples (<span class="math inline">p &gt; n</span>):</strong> many different coefficient sets fit the training data <strong>perfectly</strong>, so ordinary least squares has no single answer.</li>
+<li><strong>Correlated genes:</strong> the data pin down their <strong>combined</strong> effect but not the split, so the coefficients jump around from one dataset to the next (the resampling demo).</li>
+<li>Either way ordinary least squares has only one goal, fit the training data, and with enough predictors it fits the <strong>noise</strong> too: <strong>overfitting</strong>.</li>
 </ul>
 <p>We need a second goal that competes with “fit the data”: <em>keep the coefficients small.</em></p>
 <aside class="notes">
-<p>Reconnect to Linear models and to the singular-matrix idea from Linear systems by hand: OLS relies on inverting X-transpose-X, and that inverse fails to exist (or explodes) exactly when p exceeds n or predictors are collinear — the same “no unique solution / columns (nearly) parallel” situation they met with linear systems. The conceptual pivot of the whole lecture is here: OLS optimises a single objective (fit). Penalized regression adds a second, competing objective (small coefficients). The tug-of-war between the two is regularisation. Do not write the ridge formula yet; just set up the need.</p>
+<p>A short recap of <em>Why penalize?</em>, in words. Ordinary least squares has one goal: the smallest total squared miss on the training data. It fails in two ways that students have already seen there: with more genes than samples there are infinitely many perfect fits (more unknowns than equations, the same situation as an underdetermined linear system), and with correlated genes the split of the weight between them is decided by noise (the orange OLS cloud, i.e.&nbsp;ordinary least squares, in the resampling demo). The conceptual pivot of the whole lecture is here: penalized regression adds a second, competing goal (small coefficients). The tug-of-war between the two is regularisation. The matrix version (a singular X-transpose-X) is on the optional slide at the end of <em>Why penalize?</em>; no need to show it here.</p>
 <style type="text/css">
         span.MJX_Assistive_MathML {
           position:absolute!important;
@@ -296,10 +296,13 @@ Quantitative biology and integrative omics
 </section>
 <section id="the-idea-add-a-penalty-for-big-coefficients" class="slide level2 smaller">
 <h2>The idea: add a penalty for big coefficients</h2>
-<p>Keep the fit term, but <strong>add a cost</strong> that grows with the size of the coefficients:</p>
-<p><span class="math display">\hat{\boldsymbol\beta} = \arg\min_{\boldsymbol\beta}\ \Big\{\ \underbrace{\lVert \mathbf{y} - X\boldsymbol\beta \rVert^2}_{\text{fit the data}} \ +\ \underbrace{\lambda \cdot \text{penalty}(\boldsymbol\beta)}_{\text{keep }\boldsymbol\beta\text{ small}}\ \Big\}</span></p>
+<p>Keep the fit term, but <strong>add a cost</strong> that grows with the size of the coefficients. The computer picks the coefficients that make</p>
+<blockquote>
+<p><strong>total squared miss</strong> (fit the data) <strong>+ <span class="math inline">\lambda</span> × penalty</strong> (keep the coefficients small)</p>
+</blockquote>
+<p>as small as possible.</p>
 <ul>
-<li><span class="math inline">\lambda \ge 0</span> sets the <strong>exchange rate</strong> between the two goals. <span class="math inline">\lambda = 0</span> gives plain OLS; larger <span class="math inline">\lambda</span> buys smaller coefficients at the price of some fit.</li>
+<li><span class="math inline">\lambda \ge 0</span> sets the <strong>exchange rate</strong> between the two goals. <span class="math inline">\lambda = 0</span> gives plain ordinary least squares; larger <span class="math inline">\lambda</span> buys smaller coefficients at the price of some fit.</li>
 <li>The <strong>shape</strong> of the penalty is what distinguishes the three methods:</li>
 </ul>
 <table class="caption-top">
@@ -330,7 +333,7 @@ Quantitative biology and integrative omics
 </table>
 
 <img data-src="fig05-fit-plus-penalty-1d.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:55.0%"><aside class="notes">
-<p>This is the master equation of the lecture: minimise fit plus lambda times penalty. Read it aloud as a compromise — we deliberately fit the data slightly worse in exchange for smaller, more stable coefficients. Lambda is the dial controlling that compromise. Stress that only the <em>shape</em> of the penalty differs between ridge, lasso, and elastic net; the fit term and the role of lambda are identical. Everything that follows is “what does each penalty shape do?” A small but crucial technical point coming up: the penalty is applied to standardised predictors and never to the intercept.</p>
+<p>This is the master idea of the lecture: make “squared miss plus lambda times penalty” as small as possible. Read it aloud as a compromise — we deliberately fit the data slightly worse in exchange for smaller, more stable coefficients. Lambda is the dial controlling that compromise. Stress that only the <em>shape</em> of the penalty differs between ridge, lasso, and elastic net; the fit term and the role of lambda are identical. Everything that follows is “what does each penalty shape do?” A small but crucial technical point coming up: the penalty is applied to standardised predictors and never to the intercept.</p>
 <style type="text/css">
         span.MJX_Assistive_MathML {
           position:absolute!important;
@@ -368,17 +371,15 @@ Quantitative biology and integrative omics
 </section>
 <section id="ridge-regression-l2-penalty" class="slide level2 smaller">
 <h2>Ridge regression (L2 penalty)</h2>
-<p>Penalize the <strong>sum of squared</strong> coefficients:</p>
-<p><span class="math display">\hat{\boldsymbol\beta}_{\text{ridge}} = \arg\min_{\boldsymbol\beta}\ \lVert \mathbf{y} - X\boldsymbol\beta \rVert^2 + \lambda \sum_{j=1}^{p}\beta_j^2</span></p>
-<p>This has a clean closed form — just add <span class="math inline">\lambda</span> to the diagonal of <span class="math inline">X^\top X</span>:</p>
-<p><span class="math display">\hat{\boldsymbol\beta}_{\text{ridge}} = (X^\top X + \lambda I)^{-1} X^\top \mathbf{y}</span></p>
+<p>Penalty = the <strong>sum of squared</strong> coefficients, <span class="math inline">\sum_j \beta_j^2</span>.</p>
 <ul>
-<li>Adding <span class="math inline">\lambda I</span> makes the matrix <strong>invertible again</strong>, even when <span class="math inline">X^\top X</span> alone is singular (<span class="math inline">p&gt;n</span> or collinear). This is why ridge <strong>tames collinearity</strong>.</li>
-<li>Every coefficient is <strong>shrunk toward zero</strong>, but essentially <strong>none becomes exactly zero</strong> — ridge <strong>keeps all predictors</strong>.</li>
+<li>With one predictor, ridge is the formula from <em>Why penalize?</em>: the usual slope with <span class="math inline">\lambda</span> added below the line, <span class="math inline">\hat\beta = \dfrac{\sum xy}{\sum x^2 + \lambda}</span>. Bigger <span class="math inline">\lambda</span>, bigger denominator, smaller slope — but never exactly <span class="math inline">0</span>.</li>
+<li>With many predictors the same happens to all of them: every coefficient is <strong>shrunk toward zero</strong>, none becomes <strong>exactly zero</strong>. Ridge <strong>keeps all predictors</strong>.</li>
+<li>Ridge always gives <strong>one</strong> stable answer, even when <span class="math inline">p &gt; n</span> or genes are correlated. This is why ridge <strong>tames collinearity</strong>.</li>
 </ul>
 
 <img data-src="fig07-ridge-coefficient-paths.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:60.0%"><aside class="notes">
-<p>Ridge is the gentle one. Two things to land. First, the closed form: it is OLS with lambda added to the diagonal of X-transpose-X. That single change guarantees an invertible matrix — connect straight back to the eigenvalue idea: adding lambda*I shifts every eigenvalue up by lambda, so a zero eigenvalue (singular, non-invertible) becomes lambda (invertible). That is the exact mechanism by which ridge rescues the p greater than n case and stabilises collinear predictors, which otherwise fight over a shared signal. Second: ridge shrinks everything smoothly but sets nothing exactly to zero, so the model still uses all p genes. If you want selection, ridge alone will not give it — that is lasso’s job.</p>
+<p>Ridge is the gentle one. Use the one-predictor formula students met in <em>Why penalize?</em>: lambda sits in the denominator, so as it grows the slope shrinks smoothly toward 0 but never reaches it (exercise B2 does the arithmetic: 2, 1, 0.5, …). Point at the path figure: every curve bends toward 0 as lambda grows to the right, and none touches the axis. Second point: ridge always returns one stable answer, even for p greater than n or collinear genes, which is how it rescues the cases where ordinary least squares broke. The matrix reason (adding lambda to the diagonal makes X-transpose-X invertible) is on the optional slide at the end; skip it unless asked. If you want selection, ridge alone will not give it — that is lasso’s job.</p>
 <style type="text/css">
         span.MJX_Assistive_MathML {
           position:absolute!important;
@@ -393,7 +394,7 @@ Quantitative biology and integrative omics
 </section>
 <section id="when-collinear-predictors-fight" class="slide level2 smaller">
 <h2>When collinear predictors fight</h2>
-<p>Two co-regulated genes <span class="math inline">g_1, g_2</span> carry almost the <strong>same</strong> signal. OLS is free to write</p>
+<p>Two co-regulated genes <span class="math inline">g_1, g_2</span> carry almost the <strong>same</strong> signal. Ordinary least squares is free to write</p>
 <p><span class="math display">100\,g_1 - 98\,g_2, \quad\text{or}\quad -50\,g_1 + 52\,g_2, \quad\text{or}\dots</span></p>
 <p>— wildly different coefficients that predict almost identically. The coefficients are <strong>unstable</strong>: a tiny change in the data flips them.</p>
 <ul>
@@ -402,7 +403,7 @@ Quantitative biology and integrative omics
 </ul>
 
 <img data-src="fig08-collinear-solution-valley.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:55.0%"><aside class="notes">
-<p>Make collinearity concrete with the near-duplicate-gene example: because the two genes carry the same information, OLS can trade one off against the other without hurting the fit, producing gigantic and sign-flipping coefficients. Ridge, penalising squared size, prefers to split the weight evenly between them — two moderate coefficients cost less than one huge one. Frame this as a feature, not just a fix: in biology, co-regulated genes arguably <em>should</em> receive shared, comparable weights. Contrast with what lasso will do next (arbitrarily pick one of the pair and zero the other), which is sometimes what you want and sometimes not.</p>
+<p>Make collinearity concrete with the near-duplicate-gene example: because the two genes carry the same information, ordinary least squares can trade one off against the other without hurting the fit, producing gigantic and sign-flipping coefficients. Ridge, penalising squared size, prefers to split the weight evenly between them — two moderate coefficients cost less than one huge one. Frame this as a feature, not just a fix: in biology, co-regulated genes arguably <em>should</em> receive shared, comparable weights. If students saw the resampling demo in <em>Why penalize?</em>, remind them: the ridge cloud was the tight blob near (1, 1), weight shared equally. Contrast with what lasso will do (arbitrarily pick one of the pair and zero the other), which we will see live in the demo after the geometry slides.</p>
 <style type="text/css">
         span.MJX_Assistive_MathML {
           position:absolute!important;
@@ -417,16 +418,15 @@ Quantitative biology and integrative omics
 </section>
 <section id="lasso-regression-l1-penalty" class="slide level2 smaller">
 <h2>Lasso regression (L1 penalty)</h2>
-<p>Penalize the <strong>sum of absolute values</strong> instead:</p>
-<p><span class="math display">\hat{\boldsymbol\beta}_{\text{lasso}} = \arg\min_{\boldsymbol\beta}\ \lVert \mathbf{y} - X\boldsymbol\beta \rVert^2 + \lambda \sum_{j=1}^{p}\lvert\beta_j\rvert</span></p>
+<p>Penalty = the <strong>sum of absolute values</strong>, <span class="math inline">\sum_j \lvert\beta_j\rvert</span>, instead of squares.</p>
 <ul>
 <li>One small change — squares become absolute values — has a dramatic effect: as <span class="math inline">\lambda</span> grows, coefficients are driven <strong>exactly to zero</strong>, one after another.</li>
 <li>A coefficient of exactly zero means the predictor is <strong>dropped</strong>. Lasso therefore performs <strong>automatic feature selection</strong>: it returns a <strong>sparse</strong> model using only a subset of the genes.</li>
-<li>No closed form (the <span class="math inline">|\beta|</span> kink is not differentiable at <span class="math inline">0</span>); solved numerically — which is what <code>glmnet</code> does.</li>
+<li>There is no simple formula like ridge’s; the computer <strong>searches</strong> for the best coefficients — which is what <code>glmnet</code> does.</li>
 </ul>
 
 <img data-src="fig09-lasso-coefficient-paths.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:60.0%"><aside class="notes">
-<p>Lasso is the selector. The headline: switching the penalty from squared to absolute values changes the behaviour qualitatively, not just quantitatively. Instead of shrinking everything a little, the L1 penalty sends coefficients to exactly zero as lambda increases, and a zero coefficient means that gene is out of the model. So lasso does variable selection and estimation in one step, returning a sparse, interpretable model — exactly the “few genes we can take to the bench” wish from the motivation slide. Flag that there is no tidy formula because the absolute value has a corner at zero; the solver handles it. The next two slides explain <em>why</em> the corner produces zeros.</p>
+<p>Lasso is the selector. The headline: switching the penalty from squared to absolute values changes the behaviour qualitatively, not just quantitatively. Instead of shrinking everything a little, the L1 penalty sends coefficients to exactly zero as lambda increases, and a zero coefficient means that gene is out of the model. So lasso does variable selection and estimation in one step, returning a sparse, interpretable model — exactly the “few genes we can take to the bench” wish from the motivation slide. Flag that there is no tidy formula: the absolute value has a sharp corner at zero, and the computer simply searches for the best coefficients. The next two slides explain <em>why</em> the corner produces zeros.</p>
 <style type="text/css">
         span.MJX_Assistive_MathML {
           position:absolute!important;
@@ -448,10 +448,10 @@ Quantitative biology and integrative omics
 <li><strong>Ridge → a circle</strong> (disk): <span class="math inline">\beta_1^2 + \beta_2^2 \le t</span> — smooth, round, no special points.</li>
 <li><strong>Lasso → a diamond</strong> (square on its corner): <span class="math inline">\lvert\beta_1\rvert + \lvert\beta_2\rvert \le t</span> — with <strong>sharp corners sitting on the axes</strong>.</li>
 </ul>
-<p>The RSS forms <strong>elliptical contours</strong> around the OLS solution. The penalized estimate is where the <strong>smallest ellipse first touches</strong> the budget region.</p>
+<p>The RSS forms <strong>elliptical contours</strong> around the ordinary least squares solution. The penalized estimate is where the <strong>smallest ellipse first touches</strong> the budget region.</p>
 
 <img data-src="fig10-ridge-circle-vs-lasso-diamond.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:72.0%"><aside class="notes">
-<p>This is the money slide and worth going slowly. Recast the penalty as a hard budget: minimise the fit error while keeping the coefficients inside a region of a fixed size. The shape of that region is set by the penalty. L2 gives a round disk; L1 gives a diamond with corners poking out along the axes. Now overlay the RSS contours — concentric ellipses centred on the unconstrained OLS solution — and grow them until they first touch the budget region. The touch point is the solution. On the circle the touch happens at a generic point with both coordinates nonzero. On the diamond it tends to happen at a corner. A corner lies <em>on an axis</em>, meaning one coordinate is exactly zero. That is the geometric origin of sparsity. Draw it live if you can.</p>
+<p>This is the money slide and worth going slowly. Recast the penalty as a hard budget: minimise the fit error while keeping the coefficients inside a region of a fixed size. The shape of that region is set by the penalty. L2 gives a round disk; L1 gives a diamond with corners poking out along the axes. Now overlay the RSS contours — concentric ellipses centred on the unconstrained ordinary least squares solution — and grow them until they first touch the budget region. The touch point is the solution. On the circle the touch happens at a generic point with both coordinates nonzero. On the diamond it tends to happen at a corner. A corner lies <em>on an axis</em>, meaning one coordinate is exactly zero. That is the geometric origin of sparsity. Draw it live if you can.</p>
 <style type="text/css">
         span.MJX_Assistive_MathML {
           position:absolute!important;
@@ -488,13 +488,53 @@ Quantitative biology and integrative omics
           display:block!important;
       }</style></aside>
 </section>
+<section id="try-it-circle-vs-diamond" class="slide level2">
+<h2>Try it: circle vs diamond</h2>
+<link rel="stylesheet" href="../demos/dist/demo.css">
+<div data-demo="penaltygeom" data-ols="2 0.6" data-corr="0.4" data-lambda="2" data-alpha="1"></div>
+<script src="../demos/dist/penaltygeom.js"></script>
+<aside class="notes">
+<p>Interactive demo, the live version of the last two slides (also in the exercise, E1 to E4). Grey ellipses are RSS contours around the ordinary least squares point (labelled OLS; drag it); green is the penalty region at the budget the current lambda leads to; the purple ellipse is the smallest contour that touches it, and the touching point is the penalized estimate. The right panel is the coefficient path, current lambda dashed. Start on the lasso defaults (ordinary least squares point (2, 0.6), corr 0.4, lambda 2): beta-2 is already exactly 0 and the estimate sits on the diamond’s corner on the beta-1 axis (red mark). Slide lambda down: beta-2 comes back in below about 1.7; slide it up: beta-1 also hits 0 at about 4.5. Click Ridge at lambda 2: about (0.70, 0.37), both nonzero, the touch point on the smooth circle; even at lambda 100 both are tiny but not zero. Back on lasso, drag the OLS point: over a whole band of ordinary least squares points the estimate stays on the corner.</p>
+<style type="text/css">
+        span.MJX_Assistive_MathML {
+          position:absolute!important;
+          clip: rect(1px, 1px, 1px, 1px);
+          padding: 1px 0 0 0!important;
+          border: 0!important;
+          height: 1px!important;
+          width: 1px!important;
+          overflow: hidden!important;
+          display:block!important;
+      }</style></aside>
+</section>
+<section id="try-it-lasso-on-correlated-genes" class="slide level2">
+<h2>Try it: lasso on correlated genes</h2>
+<link rel="stylesheet" href="../demos/dist/demo.css">
+<div data-demo="penaltygeom" data-mode="resample" data-method="lasso" data-corr="0.99"></div>
+<script src="../demos/dist/penaltygeom.js"></script>
+<aside class="notes">
+<p>The resampling demo from <em>Why penalize?</em>, now with the lasso. True model y = gene 1 + gene 2, true coefficients (1, 1) (the cross); each dot is one fit to a new training set of 20 samples, 50 sets, lambda 5. Correlation is set to 0.99. The orange cloud (ordinary least squares) is the same mess as before: beta-1 from about -1.8 to 5.4. The lasso dots stay within 0 to 2.3, so the penalty tames the wild values, but look where they sit: in 27 of the 50 datasets the lasso sets one gene exactly to 0 (dots on the axes), and which gene it drops changes from dataset to dataset. Two genes carrying the same signal, and lasso keeps one more or less at random. Click Ridge for contrast: a tight blob near (1, 1), beta-1 0.7 to 1.2, weight shared, nothing dropped. Click “resample 50 datasets” to show it is not a fluke. This is the weakness elastic net fixes on the next slide.</p>
+<style type="text/css">
+        span.MJX_Assistive_MathML {
+          position:absolute!important;
+          clip: rect(1px, 1px, 1px, 1px);
+          padding: 1px 0 0 0!important;
+          border: 0!important;
+          height: 1px!important;
+          width: 1px!important;
+          overflow: hidden!important;
+          display:block!important;
+      }</style></aside>
+</section>
 <section id="elastic-net-the-best-of-both" class="slide level2 smaller">
 <h2>Elastic net: the best of both</h2>
-<p>Combine <strong>both</strong> penalties, with a mixing parameter <span class="math inline">\alpha \in [0,1]</span>:</p>
-<p><span class="math display">\hat{\boldsymbol\beta}_{\text{enet}} = \arg\min_{\boldsymbol\beta}\ \lVert \mathbf{y} - X\boldsymbol\beta \rVert^2 + \lambda\Big[\, \alpha\sum_j \lvert\beta_j\rvert \;+\; (1-\alpha)\sum_j \beta_j^2 \,\Big]</span></p>
+<p>Combine <strong>both</strong> penalties; a mixing parameter <span class="math inline">\alpha</span> between <span class="math inline">0</span> and <span class="math inline">1</span> sets how much of each:</p>
+<blockquote>
+<p>penalty <span class="math inline">= \alpha \times</span> (lasso penalty) <span class="math inline">+ (1-\alpha) \times</span> (ridge penalty)</p>
+</blockquote>
 <ul>
 <li><span class="math inline">\alpha = 1</span> → pure <strong>lasso</strong>; <span class="math inline">\alpha = 0</span> → pure <strong>ridge</strong>; in between → a <strong>blend</strong>.</li>
-<li>Fixes a real lasso weakness: among a group of <strong>correlated</strong> genes, lasso tends to pick <strong>one arbitrarily</strong> and zero the rest. Elastic net’s L2 part encourages <strong>grouping</strong> — correlated genes are selected (or dropped) <strong>together</strong>.</li>
+<li>Fixes the lasso weakness from the demo: among a group of <strong>correlated</strong> genes, lasso tends to pick <strong>one arbitrarily</strong> and zero the rest. Elastic net’s L2 part encourages <strong>grouping</strong> — correlated genes are selected (or dropped) <strong>together</strong>.</li>
 <li>Also lets lasso select <strong>more than <span class="math inline">n</span></strong> predictors (pure lasso caps at <span class="math inline">n</span> when <span class="math inline">p&gt;n</span>).</li>
 </ul>
 <p>A common recipe: keep some sparsity (<span class="math inline">\alpha</span> around <span class="math inline">0.5</span>) so you still get a short gene list, but with stabler, group-aware selection.</p>
@@ -513,47 +553,18 @@ Quantitative biology and integrative omics
           display:block!important;
       }</style></aside>
 </section>
-<section id="the-tuning-parameter-lambda" class="slide level2 smaller">
-<h2>The tuning parameter <span class="math inline">\lambda</span></h2>
-<p><span class="math inline">\lambda</span> controls <strong>how hard we shrink</strong> — it trades bias against variance.</p>
+<section id="choosing-lambda-preview" class="slide level2 smaller">
+<h2>Choosing <span class="math inline">\lambda</span> (preview)</h2>
+<p><span class="math inline">\lambda</span> controls <strong>how hard we shrink</strong> — the bias–variance dial from <em>Why penalize?</em>.</p>
 <ul>
-<li><span class="math inline">\lambda \to 0</span>: back to <strong>OLS</strong> — low bias, high variance, <strong>overfits</strong>.</li>
-<li><span class="math inline">\lambda \to \infty</span>: all coefficients <span class="math inline">\to 0</span> — the model becomes a flat line at <span class="math inline">\bar y</span>: high bias, low variance, <strong>underfits</strong>.</li>
-<li>Somewhere in between is the <span class="math inline">\lambda</span> that predicts <strong>new</strong> data best.</li>
+<li><span class="math inline">\lambda \to 0</span>: back to <strong>ordinary least squares</strong> — <strong>overfits</strong> (high variance).</li>
+<li><span class="math inline">\lambda \to \infty</span>: all coefficients <span class="math inline">\to 0</span>, the model predicts the mean — <strong>underfits</strong> (high bias).</li>
+<li>Somewhere in between is the <span class="math inline">\lambda</span> that predicts <strong>new</strong> data best. Training error cannot find it (it keeps falling as <span class="math inline">\lambda \to 0</span>), so we estimate error on held-out data: <strong>cross-validation</strong>, the next unit.</li>
 </ul>
-<p>We cannot read the best <span class="math inline">\lambda</span> off the <strong>training</strong> fit — training error just keeps dropping as <span class="math inline">\lambda\to0</span>. We must estimate performance on data the model <strong>did not see</strong>.</p>
+<p><code>glmnet</code> reports two choices: <code>lambda.min</code> (lowest cross-validated error) and <code>lambda.1se</code> (the largest <span class="math inline">\lambda</span> within one standard error of it: a <strong>sparser</strong> model that predicts about as well, often preferred for a <strong>short gene list</strong>).</p>
 
-<img data-src="fig13-bias-variance-u-curve.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:60.0%"><aside class="notes">
-<p>Lambda is the single most important knob and it embodies the bias-variance trade-off, which for many students is the first time they meet that idea explicitly. Too small: essentially OLS, fits noise, great on training data and poor on new data. Too large: crushes all signal, predicts the mean. The sweet spot minimises error on <em>unseen</em> data. Crucial pedagogical warning: you cannot choose lambda by minimising training error, because training error falls monotonically as lambda shrinks toward zero — it would always pick the overfit model. You need an honest estimate of out-of-sample error, which is what cross-validation provides on the next slide. This is a first look at the idea; the full ML treatment lives elsewhere.</p>
-<style type="text/css">
-        span.MJX_Assistive_MathML {
-          position:absolute!important;
-          clip: rect(1px, 1px, 1px, 1px);
-          padding: 1px 0 0 0!important;
-          border: 0!important;
-          height: 1px!important;
-          width: 1px!important;
-          overflow: hidden!important;
-          display:block!important;
-      }</style></aside>
-</section>
-<section id="choosing-lambda-by-cross-validation" class="slide level2 smaller">
-<h2>Choosing <span class="math inline">\lambda</span> by cross-validation</h2>
-<p><strong><span class="math inline">k</span>-fold cross-validation</strong> estimates out-of-sample error honestly:</p>
-<ol type="1">
-<li>Split the samples into <span class="math inline">k</span> groups (folds), e.g.&nbsp;<span class="math inline">k = 10</span>.</li>
-<li>For each fold: <strong>train</strong> on the other <span class="math inline">k-1</span> folds, <strong>predict</strong> the held-out fold, record the error.</li>
-<li>Average the errors across folds → a <strong>cross-validated error</strong> for that <span class="math inline">\lambda</span>.</li>
-<li>Repeat over a grid of <span class="math inline">\lambda</span> values; pick the <span class="math inline">\lambda</span> with the <strong>lowest CV error</strong>.</li>
-</ol>
-<p>Two standard choices <code>glmnet</code> reports:</p>
-<ul>
-<li><code>lambda.min</code> — the <span class="math inline">\lambda</span> with <strong>minimum</strong> CV error.</li>
-<li><code>lambda.1se</code> — the <strong>largest</strong> <span class="math inline">\lambda</span> within <strong>one standard error</strong> of that minimum: a <strong>simpler, sparser</strong> model that performs about as well. Often preferred for a <strong>short gene list</strong>.</li>
-</ul>
-
-<img data-src="fig14-kfold-cross-validation.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:65.0%"><aside class="notes">
-<p>Cross-validation is the engine that turns lambda from a mystery into a data-driven choice. Walk the k-fold loop slowly: hold out a fold, train on the rest, predict the fold, and rotate so every sample is held out exactly once; average to get a fair error estimate for each candidate lambda. Then scan the lambda grid and pick the best. Introduce the two conventions glmnet gives: lambda.min is the raw minimiser; lambda.1se deliberately errs toward more shrinkage, taking the simplest model statistically indistinguishable from the best. For a biologist wanting a short, robust gene list, lambda.1se is usually the better pick because it is sparser and less likely to be a fluke of one CV split. Mention that with tiny n, CV estimates are themselves noisy — honesty about a stepping stone.</p>
+<img data-src="fig13-bias-variance-u-curve.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:55.0%"><aside class="notes">
+<p>Keep this short: it is a pointer, not the full treatment. Lambda is the bias–variance dial students turned in the biasvar demo in <em>Why penalize?</em> (too small: wiggly fit, great on training data and poor on new data; too large: a flat line). Say once, firmly, that you cannot choose lambda by training error, because it always falls as lambda shrinks and would always pick the overfit model. Cross-validation, next unit, does it honestly, with its own demo of the folds. Introduce the two names now only because the R code on the next slides uses them: lambda.min is the raw best, lambda.1se deliberately errs toward more shrinkage and gives a shorter gene list.</p>
 <style type="text/css">
         span.MJX_Assistive_MathML {
           position:absolute!important;
@@ -690,11 +701,11 @@ Quantitative biology and integrative omics
 </tbody>
 </table>
 <ul>
-<li>All three <strong>reduce variance / overfitting</strong> relative to OLS; they differ in <strong>whether and how</strong> they zero coefficients.</li>
+<li>All three <strong>reduce variance / overfitting</strong> relative to ordinary least squares; they differ in <strong>whether and how</strong> they zero coefficients.</li>
 <li>Always <strong>standardize</strong> (glmnet does it), never penalize the <strong>intercept</strong>, and choose <span class="math inline">\lambda</span> by <strong>cross-validation</strong>.</li>
 </ul>
 <aside class="notes">
-<p>A decision table to consolidate. The one-line summary: ridge shrinks and keeps everything and is often the best pure predictor; lasso shrinks and selects, giving interpretability; elastic net blends them and is the safe default for wide, correlated omics matrices. All three beat OLS on new data whenever p is large or predictors collinear, because they trade a little bias for a lot less variance. End on the three non-negotiables: standardise predictors, leave the intercept unpenalised, and pick lambda by cross-validation rather than by eye or by training error. These are the habits that keep the analysis honest.</p>
+<p>A decision table to consolidate. The one-line summary: ridge shrinks and keeps everything and is often the best pure predictor; lasso shrinks and selects, giving interpretability; elastic net blends them and is the safe default for wide, correlated omics matrices. All three beat ordinary least squares on new data whenever p is large or predictors collinear, because they trade a little bias for a lot less variance. End on the three non-negotiables: standardise predictors, leave the intercept unpenalised, and pick lambda by cross-validation rather than by eye or by training error. These are the habits that keep the analysis honest.</p>
 <style type="text/css">
         span.MJX_Assistive_MathML {
           position:absolute!important;
@@ -727,15 +738,15 @@ Quantitative biology and integrative omics
 </tr>
 <tr class="even">
 <td>General form</td>
-<td>minimize <span class="math inline">\lVert \mathbf{y}-X\boldsymbol\beta\rVert^2 + \lambda\,\text{penalty}(\boldsymbol\beta)</span></td>
+<td>make <strong>squared miss + <span class="math inline">\lambda</span> × penalty</strong> as small as possible</td>
 </tr>
 <tr class="odd">
 <td>Ridge (L2)</td>
-<td>penalty <span class="math inline">\sum\beta_j^2</span>; shrinks all, keeps all; <span class="math inline">(X^\top X+\lambda I)^{-1}X^\top\mathbf{y}</span></td>
+<td>penalty <span class="math inline">\sum\beta_j^2</span>; shrinks all, keeps all; shares weight between correlated genes</td>
 </tr>
 <tr class="even">
 <td>Lasso (L1)</td>
-<td>penalty <span class="math inline">\sum\lvert\beta_j\rvert</span>; sets some <span class="math inline">\beta_j = 0</span> → <strong>feature selection</strong></td>
+<td>penalty <span class="math inline">\sum\lvert\beta_j\rvert</span>; sets some <span class="math inline">\beta_j = 0</span> → <strong>feature selection</strong>; picks one of two correlated genes</td>
 </tr>
 <tr class="odd">
 <td>Geometry</td>
@@ -743,7 +754,7 @@ Quantitative biology and integrative omics
 </tr>
 <tr class="even">
 <td>Elastic net</td>
-<td><span class="math inline">\alpha\sum\lvert\beta_j\rvert + (1-\alpha)\sum\beta_j^2</span>; grouped selection</td>
+<td><span class="math inline">\alpha</span> mixes lasso and ridge; grouped selection</td>
 </tr>
 <tr class="odd">
 <td><span class="math inline">\lambda</span></td>
@@ -761,7 +772,54 @@ Quantitative biology and integrative omics
 </table>
 <p><strong>Next:</strong> apply this to a real wide expression matrix in the exercise, then test yourself with the quiz.</p>
 <aside class="notes">
-<p>The summary is the revision sheet. Drill the storyline once more: OLS breaks when predictors outnumber samples or are collinear; adding a penalty times lambda fixes it; the penalty shape decides behaviour — squared (ridge) shrinks and keeps all, absolute (lasso) shrinks and selects, and the mix (elastic net) does grouped selection; the geometry (round circle vs cornered diamond) explains why only lasso zeros coefficients; lambda is chosen by cross-validation, not by training error; and glmnet does all of it in a few lines. Close on the biological through-line and the caveat that a predictive gene is not a proven causal one.</p>
+<p>The summary is the revision sheet. Drill the storyline once more: ordinary least squares breaks when predictors outnumber samples or are collinear; adding a penalty times lambda fixes it; the penalty shape decides behaviour — squared (ridge) shrinks and keeps all, absolute (lasso) shrinks and selects, and the mix (elastic net) does grouped selection; the geometry (round circle vs cornered diamond) explains why only lasso zeros coefficients; lambda is chosen by cross-validation, not by training error; and glmnet does all of it in a few lines. Close on the biological through-line and the caveat that a predictive gene is not a proven causal one.</p>
+<style type="text/css">
+        span.MJX_Assistive_MathML {
+          position:absolute!important;
+          clip: rect(1px, 1px, 1px, 1px);
+          padding: 1px 0 0 0!important;
+          border: 0!important;
+          height: 1px!important;
+          width: 1px!important;
+          overflow: hidden!important;
+          display:block!important;
+      }</style></aside>
+</section>
+<section id="optional-the-maths-behind-ridge-and-lasso" class="slide level2 smaller">
+<h2>Optional: the maths behind ridge and lasso</h2>
+<p>The same objectives in matrix notation, for those who want them.</p>
+<table class="caption-top">
+<colgroup>
+<col style="width: 50%">
+<col style="width: 50%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>In words (this lecture)</th>
+<th>In matrices</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>ridge: squared miss + <span class="math inline">\lambda</span> × sum of squares</td>
+<td><span class="math inline">\hat{\boldsymbol\beta}_{\text{ridge}} = \arg\min_{\boldsymbol\beta}\ \lVert \mathbf{y} - X\boldsymbol\beta \rVert^2 + \lambda \sum_{j}\beta_j^2</span></td>
+</tr>
+<tr class="even">
+<td>ridge has a formula</td>
+<td><span class="math inline">\hat{\boldsymbol\beta}_{\text{ridge}} = (X^\top X + \lambda I)^{-1} X^\top \mathbf{y}</span>; adding <span class="math inline">\lambda I</span> lifts every eigenvalue by <span class="math inline">\lambda</span>, so it always inverts</td>
+</tr>
+<tr class="odd">
+<td>lasso: squared miss + <span class="math inline">\lambda</span> × sum of absolute values</td>
+<td><span class="math inline">\hat{\boldsymbol\beta}_{\text{lasso}} = \arg\min_{\boldsymbol\beta}\ \lVert \mathbf{y} - X\boldsymbol\beta \rVert^2 + \lambda \sum_{j}\lvert\beta_j\rvert</span> (no formula: <span class="math inline">\lvert\beta\rvert</span> has a kink at <span class="math inline">0</span>)</td>
+</tr>
+<tr class="even">
+<td>elastic net: <span class="math inline">\alpha</span> mixes the two</td>
+<td>penalty <span class="math inline">\lambda\big[\alpha\sum_j \lvert\beta_j\rvert + (1-\alpha)\sum_j \beta_j^2\big]</span></td>
+</tr>
+</tbody>
+</table>
+<aside class="notes">
+<p>Optional slide; skip it in a short session. It writes the three objectives in the argmin and norm notation, and gives the ridge closed form: the ordinary least squares formula with lambda added to the diagonal of X-transpose-X. Adding lambda times the identity shifts every eigenvalue up by lambda, so a zero eigenvalue (singular) becomes lambda (invertible); that is the matrix reason ridge rescues p &gt; n and collinear designs (more on the optional slide at the end of <em>Why penalize?</em>). The lasso has no closed form because the absolute value has a kink at zero; glmnet solves it numerically. The exercise has optional items (B3, B4) that do this by hand.</p>
 <style type="text/css">
         span.MJX_Assistive_MathML {
           position:absolute!important;

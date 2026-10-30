@@ -71,7 +71,7 @@ Fit flexibility (here: *less* shrinkage, smaller $\lambda$) against error:
 - **Training error** keeps dropping as the model grows more flexible — it can memorise.
 - **Error on new data** drops, bottoms out, then **rises again** as the model starts fitting noise.
 
-The gap between the two curves is **overfitting**. Training error is a biased, optimistic estimate of real performance, and the bias is worst exactly when $p \gg n$.
+The gap between the two curves is **overfitting**: near-perfect training error with much worse error on new data. The cure is to shrink harder (**increase $\lambda$**), use fewer features, or get more samples. You turned this dial in the bias–variance demo in *Why penalize?*
 
 $$\text{test error} \;=\; \underbrace{\text{bias}^2}_{\text{too rigid}} \;+\; \underbrace{\text{variance}}_{\text{too flexible}} \;+\; \text{irreducible noise}$$
 
@@ -80,7 +80,7 @@ We cannot see the "new data" curve directly — so we **simulate having new data
 ![](fig04-bias-variance-u.svg){width="60%" fig-align="center"}
 
 ::: notes
-The bias–variance decomposition is the theoretical backbone; keep it light — one line, one picture. The message students must leave with: a number computed on the data you fit on is not evidence. The U-shape of test error is why there is an optimal $\lambda$ in the middle — too much shrinkage underfits (high bias), too little overfits (high variance). CV is literally a way to draw that U-shaped curve using only the data you have.
+The bias–variance decomposition is the theoretical backbone; keep it light — one line, one picture, read as words. Students already played with the biasvar demo in the penalized-intro unit (training error 0.23 vs test error 1.66 at lambda 0.001, test error bottoming out at 0.68 near lambda 0.79); just remind them of it rather than re-running it. Give them a reflex: always compare training error to CV error, and a large gap means turn lambda up. The message students must leave with: a number computed on the data you fit on is not evidence. The U-shape of test error is why there is an optimal $\lambda$ in the middle — too much shrinkage underfits (high bias), too little overfits (high variance). CV is literally a way to draw that U-shaped curve using only the data you have.
 :::
 
 ## The one honest idea: hold data out {.smaller}
@@ -124,14 +124,12 @@ Split the samples into $k$ equal **folds** (typically $k = 5$ or $10$). Then, $k
 - fit the model on the **other $k-1$** folds,
 - record the error on the held-out fold.
 
-Average the $k$ errors → the **cross-validated error**. Every sample is held out **exactly once**; every model is trained on a fraction $\frac{k-1}{k}$ of the data.
-
-$$\text{CV error} = \frac{1}{k}\sum_{f=1}^{k} \text{error on fold } f$$
+The **cross-validated error** is the average of the $k$ fold errors. Every sample is held out **exactly once**; every model is trained on $k-1$ of the $k$ folds.
 
 ![](fig07-kfold-grid.svg){width="60%" fig-align="center"}
 
 ::: notes
-Draw the classic k-fold grid on the board even though a figure is coming. Key numbers to make concrete with the 80-patient example: 10-fold means 10 folds of 8 patients; each model trains on 72, tests on 8; you fit 10 models and average 10 error estimates. Trade-off: larger $k$ = more data per fit (less bias) but more computation and higher variance between folds; $k=10$ is the standard compromise. $k=n$ is a special case (next mention: LOOCV in the exercise).
+Draw the classic k-fold grid on the board even though a figure is coming. Key numbers to make concrete with the 80-patient example: 10-fold means 10 folds of 8 patients; each model trains on 72, tests on 8; you fit 10 models and average 10 error estimates. Trade-off: larger $k$ = more data per fit (less bias) but more computation and higher variance between folds; $k=10$ is the standard compromise. $k=n$ is leave-one-out CV (LOOCV); the demo two slides on has a button for it.
 :::
 
 ## Using CV to choose $\lambda$ {.smaller}
@@ -148,10 +146,20 @@ Two standard choices come out:
 
 `lambda.1se` deliberately trades a hair of accuracy for a **simpler, more reproducible** signature — often the better scientific choice.
 
-![](fig08-cv-lambda-curve.svg){width="55%" fig-align="center"}
+::: notes
+This is where penalties and CV meet. The 1se rule is worth dwelling on: the CV error has uncertainty (the error bars = standard error across folds), so many $\lambda$ values are statistically indistinguishable from the best. Among those, pick the simplest (largest $\lambda$, fewest genes). Biologically this gives a shorter, more robust gene list that is likelier to replicate — which is usually what a biomarker paper actually wants. lambda.min is fine when raw predictive accuracy is the only goal. The next slide builds this curve fold by fold.
+:::
+
+## Try it: k-fold CV choosing $\lambda$
+
+```{=html}
+<link rel="stylesheet" href="../demos/dist/demo.css">
+<div data-demo="cvfolds" data-k="5" data-n="40" data-seed="1" data-pairs="off"></div>
+<script src="../demos/dist/cvfolds.js"></script>
+```
 
 ::: notes
-This is where penalties and CV meet. The 1se rule is worth dwelling on: the CV error has uncertainty (the error bars = standard error across folds), so many $\lambda$ values are statistically indistinguishable from the best. Among those, pick the simplest (largest $\lambda$, fewest genes). Biologically this gives a shorter, more robust gene list that is likelier to replicate — which is usually what a biomarker paper actually wants. lambda.min is fine when raw predictive accuracy is the only goal.
+Interactive demo. 40 patients, 34 genes of which only 4 carry real signal; a ridge model is fitted for a grid of lambda values. Left: the samples coloured by fold, the held-out fold outlined. Right: held-out error against lambda. Click "next fold" a few times: with k = 5 each fold fits on 32 patients and tests on 8, and each fold adds one row of dots. Every fold has its own curve, and they differ a lot: that fold-to-fold spread is where the error bars come from. Click "run all": the mean CV error with ± 1 SE bars. lambda.min = 8.9 with CV error 4.93 ± 1.21; the min + 1 SE line sits at 6.14, and the largest lambda under it is lambda.1se = 25. The faint grey curve is the training error: it keeps falling as lambda shrinks, the gap from the previous slides. Now click "reshuffle folds" several times: same data, new random folds, and lambda.min jumps between about 8.9, 13 and 18 (old choices stay marked). CV is itself a noisy measurement, which is why the 1-SE rule does not chase the exact minimum and why set.seed matters. Try k = 2 (each model sees only 20 patients; lambda.min wanders from 2.2 to 13) and "n (LOOCV)" (40 fits; reshuffling cannot change anything because every fold is one patient).
 :::
 
 ## `cv.glmnet` in R {.smaller}
@@ -233,10 +241,20 @@ The gene filter already **looked at the outcome of every patient**, including th
 
 **Rule:** feature selection is part of the model. It must happen **inside** each CV fold, on the training portion only.
 
-![](fig12-leakage-schematic.svg){width="65%" fig-align="center"}
+::: notes
+This is the most important slide of the day (Ambroise & McLachlan 2002 documented exactly this selection bias in microarray classifiers). The trap is seductive because prefiltering genes feels like harmless preprocessing, not modelling. But any step that uses $y$ — supervised filtering, choosing a threshold, even scaling using the outcome — is part of fitting and must be redone inside every fold. Give the intuition: if the held-out fold helped choose the genes, it already "leaked" into the model and can no longer test it. The next slide shows it on data with no signal at all.
+:::
+
+## Try it: leakage on pure noise
+
+```{=html}
+<link rel="stylesheet" href="../demos/dist/demo.css">
+<div data-demo="leakage" data-n="40" data-p="2000" data-k="20"></div>
+<script src="../demos/dist/leakage.js"></script>
+```
 
 ::: notes
-This is the most important slide of the day (Ambroise & McLachlan 2002 documented exactly this selection bias in microarray classifiers). The trap is seductive because prefiltering genes feels like harmless preprocessing, not modelling. But any step that uses $y$ — supervised filtering, choosing a threshold, even scaling using the outcome — is part of fitting and must be redone inside every fold. Give the intuition: if the held-out fold helped choose the genes, it already "leaked" into the model and can no longer test it.
+Interactive demo. 40 samples, 2000 genes of pure noise, random disease labels (half cases): no method can truly predict them, so the honest answer is 50%. A simple nearest-centroid classifier on the top 20 genes is scored by 5-fold CV twice. Leaky: the 20 genes are picked once using all 40 samples, then CV. Honest: split first, pick the genes inside each fold on the training part only. Press "Repeat 50×": the leaky histogram piles up around 95–97%, the honest one is centred on 50% with a spread of about ±10 points. Then raise p to 5000 (leaky goes to about 98%) or drop it to 100 (about 82%): more noise genes, more lucky genes for the filter to find. The exercise (E6–E9) walks through this.
 :::
 
 ## Leakage: wrong vs right {.smaller}
@@ -287,32 +305,27 @@ Contrast the two blocks line by line. The only real difference is *where the spl
 The metric is a modelling decision, not an afterthought. For the disease classifier, plain accuracy is misleading when classes are imbalanced (95% healthy → predict "healthy" always scores 95%). AUC sidesteps this by scoring the ranking, and it needs no threshold. Deviance is the honest loss when you fit a GLM because it is the very quantity the model optimises — tie this back to the Poisson/negative-binomial error-model units. Set `type.measure` in cv.glmnet to whatever you will ultimately be judged on.
 :::
 
-## Detecting overfitting in practice {.smaller}
-
-Two cheap diagnostics:
-
-- **Train vs CV gap.** Near-perfect training error with much worse CV error = overfitting. A healthy model has a *small* gap.
-- **Fold-to-fold spread.** If CV error swings wildly between folds, the estimate is unstable — often too few samples, or correlated/grouped samples split across folds.
-
-Responses: **increase $\lambda$** (shrink harder), reduce the feature set honestly, or get more samples.
-
-![](fig15-overfit-bars.svg){width="60%" fig-align="center"}
-
-::: notes
-Give them a reflex: always compare training error to CV error. A large gap is the fingerprint of overfitting and the direct signal to turn $\lambda$ up. Unstable folds point to a data problem — most often that related samples (technical replicates, multiple cells from one patient, batches) are split across the train/test boundary, which leaks and inflates performance. That motivates the grouping pitfall next.
-:::
-
 ## Pitfalls in real omics data {.smaller}
 
 - **Grouped samples.** Cells from the same patient, technical replicates, or batches must stay **together** in one fold (grouped CV). Splitting them leaks and inflates performance.
 - **Class imbalance.** With few cases, use **stratified** folds so each fold has both classes; prefer AUC over accuracy.
-- **Small $n$.** CV estimates are themselves noisy when $n$ is small — report them with their spread, do not over-interpret the third decimal.
+- **Small $n$.** CV estimates are themselves noisy when $n$ is small: folds disagree and reshuffling moves `lambda.min`. Report the spread, do not over-interpret the third decimal.
 - **Batch effects.** A model can "predict" disease by detecting the batch it was run in. CV will not catch this if batch is confounded with outcome.
 
-![](fig16-grouped-cv.svg){width="65%" fig-align="center"}
+::: notes
+These are the failure modes that turn a technically correct CV into a misleading one. The grouping point is the most common in single-cell and repeated-measures designs: thousands of cells from one patient are not independent samples, so splitting them across folds leaks patient identity. Stratification matters whenever cases are rare. And batch confounding is a study-design problem CV cannot rescue — the fix is upstream (randomised batches), connecting to the covariate-handling ideas in the regression units. The next slide shows the grouping problem.
+:::
+
+## Try it: samples that come in pairs
+
+```{=html}
+<link rel="stylesheet" href="../demos/dist/demo.css">
+<div data-demo="cvfolds" data-k="5" data-n="40" data-seed="1" data-pairs="on" data-start="all"></div>
+<script src="../demos/dist/cvfolds.js"></script>
+```
 
 ::: notes
-These are the failure modes that turn a technically correct CV into a misleading one. The grouping point is the most common in single-cell and repeated-measures designs: thousands of cells from one patient are not independent samples, so splitting them across folds leaks patient identity. Stratification matters whenever cases are rare. And batch confounding is a study-design problem CV cannot rescue — the fix is upstream (randomised batches), connecting to the covariate-handling ideas in the regression units.
+Interactive demo, same model as before, but now each of the 40 patients was measured twice, so there are 80 samples and the two samples of a patient sit side by side in the grid. With ordinary 5-fold CV the twins are split across folds: the model is tested on a patient whose twin it was trained on, and a warning shows. The CV error at lambda.min is 2.55. Tick "keep pairs in one fold (grouped CV)": both samples of a patient now go to the same fold, and the CV error is 5.04 — about the same as with 40 independent patients, because there really is only the information of 40 patients. The dashed curve shows the other version for comparison. Splitting pairs made the model look twice as good as it is. Same for cells from one patient, technical replicates and repeated time points: the patient is the unit that goes into a fold.
 :::
 
 ## Summary {.smaller}
@@ -322,10 +335,11 @@ These are the failure modes that turn a technically correct CV into a misleading
 | Training error | optimistic — never report it as performance |
 | Hold-out | evaluate only on data unseen during fitting |
 | k-fold CV | rotate folds; every sample tested once; average |
-| Choosing $\lambda$ | CV error vs $\lambda$; `lambda.min` vs `lambda.1se` |
+| Choosing $\lambda$ | CV error vs $\lambda$; `lambda.min` vs `lambda.1se`; CV itself is noisy |
 | `cv.glmnet` | `family`, `alpha`, `nfolds`, `type.measure`; `set.seed` |
 | Train/val/test | three jobs; the test set is opened **once** |
 | Leakage | any $y$-using step goes **inside** the CV loop |
+| Grouped samples | a patient's samples stay in **one** fold |
 | Metric | MSE/RMSE, deviance, AUC — match to the outcome |
 
 **Where this leads:** these same folds are how one compares **lasso vs ridge vs elastic net**, and how chemometrics models (**PLS / OPLS**) are validated. Cross-validation is the common ruler for every penalized and latent-variable model in the course.

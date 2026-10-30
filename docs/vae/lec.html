@@ -307,14 +307,13 @@ Quantitative biology and integrative omics
 <section id="what-a-plain-autoencoder-lacks" class="slide level2 smaller">
 <h2>What a plain autoencoder lacks</h2>
 
-<img data-src="fig03-point-vs-cloud.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:78.0%"><p>A plain autoencoder places each training cell at <strong>one point</strong>. Nothing says what the decoder should do <strong>between</strong> the points:</p>
+<img data-src="fig03a-any-vs-nearby.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:80.0%"><p>A plain autoencoder only has to rebuild the <strong>training cells</strong>. It may put them anywhere in <span class="math inline">z</span> (left), and nothing says what lies <strong>between</strong> them.</p>
 <ul>
-<li>A point in a gap may decode to something that looks like no real cell.</li>
-<li>There is no notion of <strong>how sure</strong> we are about a cell’s position.</li>
-<li>So we cannot simply pick a point and <strong>generate</strong> a believable new cell.</li>
+<li>We want the right: <strong>similar cells nearby</strong>, no gaps, so a point between two cells decodes to an in-between cell.</li>
+<li>A plain autoencoder also gives <strong>no uncertainty</strong>: one point per cell, sure or not.</li>
 </ul>
 <aside class="notes">
-<p>The left panel is the problem. The decoder was only ever asked to rebuild the training cells, so it was only tested at those points; in the gaps it can do anything. And the position of a cell is a single number pair, with no error bar, even though a cell with 500 counts is far less certain than one with 20,000. The right panel is the fix on the next slide.</p>
+<p>Walk through the figure. The same ten cells from a stem → erythroid path are in both panels, coloured from blue (stem) to red (erythroid). Left: an encoder that puts each cell somewhere it can recognise it again. That is enough to rebuild every training cell, so a plain autoencoder has no reason to do better. But neighbouring stem and erythroid cells end up side by side, and most of the space is empty. Pick the open circle in a gap and decode it: the decoder was never tested there, so it can return anything, for example stem and erythroid genes both high, a profile no real cell has. Right: the encoder we want. Similar cells sit next to each other along a smooth path and the shaded band is filled; moving the open circle a little changes the cell a little, and a point between two cells decodes to an in-between cell (here: progenitor gene up, stem gene going down). A second gap: each cell is a single point, with no error bar, even though a cell with 500 counts is far less certain than one with 20,000. The next slide is the fix for both.</p>
 <style type="text/css">
         span.MJX_Assistive_MathML {
           position:absolute!important;
@@ -327,17 +326,16 @@ Quantitative biology and integrative omics
           display:block!important;
       }</style></aside>
 </section>
-<section id="variational-a-cloud-instead-of-a-point" class="slide level2">
+<section id="variational-a-cloud-instead-of-a-point" class="slide level2 smaller">
 <h2>“Variational”: a cloud instead of a point</h2>
-<p>The encoder outputs a <strong>centre</strong> and a <strong>spread</strong> for every cell: a small cloud of likely positions.</p>
-<ul>
-<li>During training, the decoder must rebuild the cell from <strong>random points inside its cloud</strong>, so every point near the cell has to decode to something like it.</li>
-<li>A <strong>penalty</strong> keeps every cloud close to one standard bell-shaped cloud around 0, so the clouds stay close together and fill the space with few gaps.</li>
-<li>The spread is a statement of <strong>uncertainty</strong>: few counts → wide cloud.</li>
+
+<img data-src="fig03b-cloud-per-cell.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:80.0%"><ul>
+<li>The encoder gives each cell a <strong>centre</strong> and a <strong>spread</strong>: a small cloud. The decoder must rebuild the cell from <strong>random draws</strong> in its cloud.</li>
+<li>A <strong>penalty</strong> keeps all clouds close to one <strong>standard cloud</strong> (dashed), so they overlap and fill the space. Few counts → <strong>wide</strong> cloud.</li>
 </ul>
-<p>In Bayesian words: the standard bell-shaped cloud is the <strong>prior</strong> for <span class="math inline">z</span>, and the cell’s cloud is an approximate <strong>posterior</strong> for where that cell sits in latent space. “Variational” names the method that finds these approximations.</p>
+<p>In Bayesian words: the standard cloud is the <strong>prior</strong> for <span class="math inline">z</span>, each cell’s cloud an approximate <strong>posterior</strong>.</p>
 <aside class="notes">
-<p>This is the whole difference between an autoencoder and a variational autoencoder, in words. Two forces act during training: rebuild the cell well (which pulls clouds apart and makes them small), and stay close to the standard cloud (which pulls them together and makes them wide). The balance gives a tidy latent space in which a point between two groups decodes to something reasonable, often an in-between profile. The link to the Bayesian block is a single sentence: prior on z, approximate posterior per cell. We do not write the penalty; it is a KL divergence, if a student asks, and the method was introduced by Kingma and Welling (2014). Reference: D. P. Kingma, M. Welling (2014), Auto-Encoding Variational Bayes, ICLR 2014, arXiv:1312.6114.</p>
+<p>Walk through the figure. Left: the same ten cells as on the previous slide, now each a small cloud instead of a point; the dot is the centre. One cell with few counts gets a wide cloud: we are less sure where it belongs. Right: one cloud blown up. During training the decoder is handed not the centre but a random draw from the cloud (a cross). It must still rebuild this cell, so every draw near the cell has to decode to something like it: the profile from the draw (top) is close to the cell’s own profile (bottom). Because neighbouring clouds overlap, the regions in between get trained too, which fills the gaps of the left panel on the previous slide. Two forces act during training: rebuild the cell well (which pulls clouds apart and makes them small), and stay close to the standard cloud (which pulls them together and makes them wide). The balance gives a tidy latent space in which a point between two groups decodes to something reasonable, often an in-between profile. The link to the Bayesian block is a single sentence: prior on z, approximate posterior per cell; “variational” names the method that finds these approximations. We do not write the penalty; it is a KL divergence, if a student asks, and the method was introduced by Kingma and Welling (2014). Reference: D. P. Kingma, M. Welling (2014), Auto-Encoding Variational Bayes, ICLR 2014, arXiv:1312.6114.</p>
 <style type="text/css">
         span.MJX_Assistive_MathML {
           position:absolute!important;

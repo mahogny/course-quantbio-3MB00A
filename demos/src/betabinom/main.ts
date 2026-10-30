@@ -4,8 +4,15 @@
 // credible interval, and, for contrast, the frequentist k/n with its 95% (Wald) CI.
 // Optional attributes: data-a, data-b (prior), data-k, data-n (data), data-truep (the
 // true fraction used by "+10 random cells"), data-seed.
+//   data-threshold="0.25"  shade the posterior area above the threshold and print
+//                          P(p > 0.25); adds a threshold slider and an on/off checkbox.
+//   data-mode="repeatci"   a different demo: repeat the experiment 100 times and stack the
+//                          100 confidence intervals, misses in red (see repeatci.ts). Uses
+//                          data-truep (default 0.3), data-n (default 20), data-seed, and
+//                          data-credible="true" to start with the credible intervals shown.
 import { svgEl, htmlEl, slider, button, presets, checkbox, scale, rng, autoMount, Slider } from "../lib/ui";
-import { betaPdf, betaQuantile, waldCI } from "./math";
+import { betaPdf, betaQuantile, betaCdf, waldCI } from "./math";
+import { mountRepeat } from "./repeatci";
 
 const NMAX = 400;
 
@@ -17,11 +24,19 @@ const CSS = `
 [data-demo="betabinom"] .prior { stroke: var(--qb-c1); }
 [data-demo="betabinom"] .lik { stroke: var(--qb-c4); }
 [data-demo="betabinom"] .post { stroke: var(--qb-c2); }
+[data-demo="betabinom"] .bb-wide { grid-template-columns: auto 1fr 3.2em; }
+[data-demo="betabinom"] .bb-thr .qb-slider-name { display: flex; align-items: center; cursor: pointer; }
+[data-demo="betabinom"] .bb-go { font-size: 1em; font-weight: 600; }
+@media (max-width: 640px) { [data-demo="betabinom"] .bb-plot { flex: none; width: 100%; height: auto; } }
 .reveal [data-demo="betabinom"] { font-size: 19px; gap: .8em; }
 .reveal [data-demo="betabinom"] .bb-plot { flex: 1 1 700px; max-width: 790px; }
 .reveal [data-demo="betabinom"] .qb-panel { flex: 0 1 320px; gap: .3em; }
 .reveal [data-demo="betabinom"] .qb-slider { grid-template-columns: 1.2em 1fr 2.4em; }
 .reveal [data-demo="betabinom"] .qb-readout { font-size: .8em; }
+.reveal [data-demo="betabinom"] .qb-slider.bb-wide { grid-template-columns: auto 1fr 2.6em; }
+.reveal [data-demo="betabinom"] .qb-big { font-size: 1.05em; }
+.reveal [data-demo="betabinom"] .qb-note { font-size: .75em; }
+.reveal [data-demo="betabinom"].bb-repeat .bb-plot { max-width: 760px; }
 `;
 
 function injectCss(): void {
@@ -34,7 +49,8 @@ function injectCss(): void {
 
 function mount(host: HTMLElement): void {
   injectCss();
-  const num = (v: string | undefined, d: number) => (v !== undefined && Number.isFinite(Number(v)) ? Number(v) : d);
+  const num = (v: string | undefined, d: number) => (v !== undefined && v.trim() !== "" && Number.isFinite(Number(v)) ? Number(v) : d);
+  if (host.dataset.mode === "repeatci") { mountRepeat(host, num); return; }
   const init = {
     a: num(host.dataset.a, 1), b: num(host.dataset.b, 1),
     k: num(host.dataset.k, 6), n: num(host.dataset.n, 20),
@@ -45,7 +61,7 @@ function mount(host: HTMLElement): void {
   let rand = rng(seed);
 
   // ---------- plot ----------
-  const W = 760, H = 490;
+  const W = 760, H = host.dataset.threshold !== undefined ? 540 : 490;
   const L = 60, R = 745, T = 30, B = 290; // density panel
   const x = scale(0, 1, L, R);
   const svg = svgEl("svg", { viewBox: `0 0 ${W} ${H}`, class: "bb-plot", role: "img",
@@ -64,6 +80,8 @@ function mount(host: HTMLElement): void {
     transform: `rotate(-90 34 ${(T + B) / 2})` }, svg).textContent = "density";
 
   const ciArea = svgEl("path", { fill: "var(--qb-c2)", "fill-opacity": 0.18, stroke: "none" }, svg);
+  const thrArea = svgEl("path", { fill: "var(--qb-c2)", "fill-opacity": 0.32, stroke: "none" }, svg);
+  const thrLine = svgEl("line", { y1: T, y2: B, stroke: "var(--qb-fg)", "stroke-width": 2, "stroke-dasharray": "6 4" }, svg);
   const priorPath = svgEl("path", { class: "prior", fill: "none", "stroke-width": 3, "stroke-dasharray": "8 5" }, svg);
   const postPath = svgEl("path", { class: "post", fill: "none", "stroke-width": 4 }, svg);
   const likPath = svgEl("path", { class: "lik", fill: "none", "stroke-width": 3.5, "stroke-dasharray": "2 6", "stroke-linecap": "round" }, svg);
@@ -96,6 +114,7 @@ function mount(host: HTMLElement): void {
   };
   const sBay = strip(yBay, "var(--qb-c2)", "");
   const sFreq = strip(yFreq, "var(--qb-c5)", "");
+  const thrText = svgEl("text", { x: L - 30, y: 525, "font-size": 24, "font-weight": 700, fill: "var(--qb-c2)" }, svg);
 
   // ---------- controls ----------
   const panel = htmlEl("div", "qb-panel");
@@ -130,6 +149,20 @@ function mount(host: HTMLElement): void {
     { label: "6/20 wrong prior", apply: () => set(40, 10, 6, 20) },
     { label: "60/200 wrong prior", apply: () => set(40, 10, 60, 200) },
   ]);
+  // optional: area under the posterior above a threshold
+  const hasThr = host.dataset.threshold !== undefined;
+  let thr = Math.min(0.99, Math.max(0.01, num(host.dataset.threshold, 0.25)));
+  let showThr = hasThr;
+  if (hasThr) {
+    // one row: [x] shade p > [----o----] 0.25
+    const lab = slider(panel, "shade p >", 0.01, 0.99, 0.01, thr, v => { thr = v; draw(); }).input.parentElement!;
+    lab.classList.add("bb-wide", "bb-thr");
+    const cb = htmlEl("input", "", "");
+    cb.type = "checkbox"; cb.checked = true;
+    cb.setAttribute("aria-label", "shade the area above the threshold");
+    cb.addEventListener("change", () => { showThr = cb.checked; cb.blur(); draw(); });
+    lab.firstElementChild!.prepend(cb, " ");
+  }
   const readout = htmlEl("div", "qb-readout", "", panel);
   host.append(svg, panel);
 
@@ -171,6 +204,16 @@ function mount(host: HTMLElement): void {
     const inside = grid.filter(p => p >= lo && p <= hi);
     const pts = [lo, ...inside, hi];
     ciArea.setAttribute("d", `M${x(lo)},${B}` + pts.map(p => `L${x(p).toFixed(1)},${y(betaPdf(p, pa, pb)).toFixed(1)}`).join("") + `L${x(hi)},${B}Z`);
+    // shaded area above the threshold = posterior probability that p > threshold
+    const pAbove = 1 - betaCdf(thr, pa, pb);
+    if (showThr) {
+      const above = [thr, ...grid.filter(p => p > thr)];
+      thrArea.setAttribute("d", `M${x(thr)},${B}` + above.map(p => `L${x(p).toFixed(1)},${y(Math.min(betaPdf(p, pa, pb), ymax)).toFixed(1)}`).join("") + `L${R},${B}Z`);
+      thrLine.setAttribute("x1", String(x(thr))); thrLine.setAttribute("x2", String(x(thr)));
+    }
+    thrArea.style.display = thrLine.style.display = showThr ? "" : "none";
+    ciArea.style.display = showThr ? "none" : "";
+    thrText.textContent = showThr ? `P(p > ${fmt(thr)}) = ${fmt(pAbove)}   (the shaded area)` : "";
     meanLine.setAttribute("x1", String(x(mean))); meanLine.setAttribute("x2", String(x(mean)));
     truthMark.setAttribute("transform", `translate(${x(trueP)}, ${B})`);
     truthMark.style.display = showTruth ? "" : "none";
@@ -198,7 +241,7 @@ function mount(host: HTMLElement): void {
       `posterior Beta(${pa}, ${pb})\n` +
       `mean ${fmt3(mean)}  CrI [${fmt(lo)}, ${fmt(hi)}]\n` +
       (w ? `k/n ${fmt3(w.est)}  CI [${fmt(w.lo)}, ${fmt(w.hi)}]\n` : `k/n (no data)\n`) +
-      `prior share of counts ${(100 * priorN / (priorN + st.n)).toFixed(0)}%`;
+      `prior share of counts ${(100 * priorN / (priorN + st.n)).toFixed(0)}%`;  // P(p > t) is printed in bold under the plot
   }
   draw();
 }

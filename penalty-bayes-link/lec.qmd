@@ -28,7 +28,7 @@ In **Ridge and lasso regression** we added a **penalty** to least squares to tam
 - **Ridge** ⇔ a **Gaussian** prior; **lasso** ⇔ a **Laplace** (double-exponential) prior.
 - The penalty strength $\lambda$ encodes **how sure** you were before seeing data — the **prior precision**.
 
-This is a **concept** day: light math, one master equation, and a change of viewpoint that makes both blocks click together.
+This is a **concept** day: no derivations, one slogan, two demos, and a change of viewpoint that makes both blocks click together.
 
 ::: notes
 The single idea for today: a penalty and a prior are two languages for the same statement. The engineer says "I penalise large coefficients to stop overfitting"; the Bayesian says "I believe a priori that coefficients are small." They write down the *same* objective and get the *same* answer. Everything else — ridge = Gaussian, lasso = Laplace, lambda = prior precision — is detail hanging off that equivalence. Stress that this reframes material students already own from Ridge and lasso regression and from Bayesian inference; nothing here is a brand-new technique, it is a unifying view.
@@ -52,17 +52,17 @@ Ground the abstraction in the canonical omics predicament: wide matrices, p far 
 
 ## Recap: the penalised objective {.smaller}
 
-From **Ridge and lasso regression**, we fit coefficients $\boldsymbol\beta$ by minimising *fit error + penalty*:
+From **Ridge and lasso regression**, we fit the coefficients $\beta$ by making this as small as possible:
 
-$$\hat{\boldsymbol\beta} = \arg\min_{\boldsymbol\beta}\ \underbrace{\sum_{i=1}^n \big(y_i - \mathbf{x}_i^\top\boldsymbol\beta\big)^2}_{\text{residual sum of squares (RSS)}} \;+\; \lambda\, \underbrace{\mathcal{P}(\boldsymbol\beta)}_{\text{penalty}}$$
+$$\underbrace{\text{RSS}}_{\text{fit error: how badly the model misses the data}} \;+\; \lambda \times \underbrace{\text{penalty}}_{\text{how big the coefficients are}}$$
 
-- **Ridge:** $\mathcal{P}(\boldsymbol\beta) = \sum_j \beta_j^2 = \lVert\boldsymbol\beta\rVert_2^2$ (sum of squares).
-- **Lasso:** $\mathcal{P}(\boldsymbol\beta) = \sum_j |\beta_j| = \lVert\boldsymbol\beta\rVert_1$ (sum of absolute values).
+- **Ridge:** penalty $= \sum \beta^2$ (sum of squares).
+- **Lasso:** penalty $= \sum |\beta|$ (sum of absolute values).
 
 $\lambda \ge 0$ dials the penalty: $\lambda = 0$ is plain least squares; large $\lambda$ shrinks coefficients hard toward $0$.
 
 ::: notes
-Pure recap, no new content — just re-establish the objective and notation so the Bayesian side has something to map onto. Remind them ridge shrinks all coefficients smoothly toward zero but keeps them nonzero, while lasso can set some exactly to zero (variable selection). Keep lambda's role vivid: it is the single knob trading fit against simplicity. We are about to reinterpret every symbol here in probability language.
+Pure recap, no new content: re-establish "fit error plus lambda times penalty" so the Bayesian side has something to map onto. RSS is the residual sum of squares, the total squared miss between the data and the fitted values. Remind them ridge shrinks all coefficients smoothly toward zero but keeps them nonzero, while lasso can set some exactly to zero (variable selection). Keep lambda's role vivid: it is the single knob trading fit against simplicity. We are about to reinterpret each piece in probability language.
 :::
 
 ## Recap: Bayes in one line {.smaller}
@@ -77,84 +77,62 @@ $$\underbrace{p(\boldsymbol\beta \mid \text{data})}_{\text{posterior}} \;\propto
 
 A quick summary of the posterior is its **peak** — the single most probable $\boldsymbol\beta$. That is the **MAP** estimate (*maximum a posteriori*), and it is where the bridge to penalties is built.
 
-![](fig04-prior-likelihood-posterior.svg){width="60%" fig-align="center"}
-
 ::: notes
 Second recap slide. Reinstate the prior/likelihood/posterior trinity from the Bayesian block. Emphasise proportionality: we drop the normalising constant p(data) because it does not depend on beta and so does not move the location of the peak. Introduce MAP gently as "the top of the posterior hill" — a point summary, in contrast to the full posterior distribution a Bayesian would ideally report. Foreshadow the caveat slide: MAP throws away the width of the posterior, which matters, but it is exactly the quantity that equals penalised regression.
 :::
 
-## The one trick: turn products into sums {.smaller}
+## The bridge: penalty = how unlikely the prior finds $\beta$ {.smaller}
 
-Maximising a product of probabilities is awkward; maximising its **logarithm** is easy and gives the same peak (log is increasing). Taking $-\log$ turns "maximise" into "minimise":
+Finding the **posterior peak** (MAP) means finding the $\beta$ that does well on **both** counts at once:
 
-$$\arg\max_{\boldsymbol\beta}\ p(\boldsymbol\beta\mid\text{data}) \;=\; \arg\min_{\boldsymbol\beta}\ \Big[\,-\log p(\text{data}\mid\boldsymbol\beta) \;-\; \log p(\boldsymbol\beta)\,\Big]$$
+| | Bayesian view | Penalised view |
+|---|---|---|
+| how well $\beta$ explains the data | **likelihood** | **fit error (RSS)**: small RSS = high likelihood |
+| how plausible $\beta$ was beforehand | **prior** | **penalty**: big penalty = the prior finds $\beta$ unlikely |
 
-$$\underbrace{\ \ \text{MAP estimate}\ \ }_{\text{find the posterior peak}} \;=\; \arg\min_{\boldsymbol\beta}\ \big[\ \underbrace{\text{(negative log-likelihood)}}_{\text{fit term}} \;+\; \underbrace{\text{(negative log-prior)}}_{\text{penalty term}}\ \big]$$
+**Slogan:** *the penalty is how unlikely the prior finds $\beta$.* Minimising "RSS + penalty" is climbing to the top of "likelihood × prior". Same answer, two languages.
 
-This already **looks like** *fit + penalty*. The rest of the lecture is just plugging in specific likelihoods and priors and reading off the terms.
-
-::: notes
-This is the mechanical heart of the equivalence and worth doing slowly. Two facts: (1) argmax is unchanged by a monotonically increasing transform, so we may take logs; (2) log turns products into sums and the minus sign flips max to min. The result is structurally already "fit term plus penalty term." Point at the two braces and say: the negative log-likelihood will become the RSS, and the negative log-prior will become the ridge or lasso penalty. Nothing subtle remains — only substitution. Reassure the less mathematical students that they do not need to reproduce this derivation, only to recognise the shape.
-:::
-
-## The likelihood of linear regression {.smaller}
-
-The standard linear model assumes the noise is **Gaussian**:
-
-$$y_i = \mathbf{x}_i^\top\boldsymbol\beta + \varepsilon_i, \qquad \varepsilon_i \sim \mathcal{N}(0,\ \sigma^2)$$
-
-So each residual is Gaussian, and the negative log-likelihood is (dropping constants that do not involve $\boldsymbol\beta$):
-
-$$-\log p(\text{data}\mid\boldsymbol\beta) \;=\; \frac{1}{2\sigma^2}\sum_{i=1}^n \big(y_i - \mathbf{x}_i^\top\boldsymbol\beta\big)^2 \;+\; \text{const} \;=\; \frac{1}{2\sigma^2}\,\text{RSS} \;+\; \text{const}$$
-
-**The fit term is just the residual sum of squares**, scaled by $1/(2\sigma^2)$. This is why ordinary least squares *is* maximum-likelihood under Gaussian noise — a fact from the **Linear regression** block, now in probability language.
-
-![](fig06-gaussian-noise-regression.svg){width="60%" fig-align="center"}
+![](fig04-prior-likelihood-posterior.svg){width="60%" fig-align="center"}
 
 ::: notes
-Connect back to a result they have already been told, perhaps without proof: least squares equals maximum likelihood when errors are Gaussian. Here is the reason in one line — the Gaussian density has exp(-residual^2 / 2 sigma^2), so its negative log is residual^2 / 2 sigma^2, and summing over independent samples gives RSS / 2 sigma^2. The 1/(2 sigma^2) prefactor will matter on the next slides because it sets the exchange rate between the fit term and the penalty term, which is where lambda comes from. Keep sigma^2 in view; do not absorb it yet.
+This replaces the derivation. Two sentences carry it. (1) With Gaussian noise, a line with a small total squared miss (RSS) is a line under which the data are likely: least squares is maximum likelihood, as in the Linear regression block. (2) A prior that says "coefficients are near 0" finds big coefficients unlikely, and the penalty is exactly that unlikeliness, written as a cost. Adding the two costs and minimising lands on the same beta as multiplying likelihood by prior and taking the peak: in the figure, the posterior peak sits between the prior peak at 0 and the likelihood peak, pulled toward 0, exactly like a penalised estimate. Students do not need to reproduce why; the optional slide near the end has the log algebra for those who want it.
 :::
 
 ## Adding a prior on the coefficients {.smaller}
 
-Now assert a **prior** on each coefficient $\beta_j$. Take them independent and centred at $0$ — encoding "before seeing data, I expect effects to be **small**, and I have no reason to prefer positive over negative."
+Now put a **prior** on each coefficient $\beta$, centred at $0$ — encoding "before seeing data, I expect effects to be **small**, and I have no reason to prefer positive over negative."
 
-$$p(\boldsymbol\beta) = \prod_{j=1}^p p(\beta_j)$$
+The **shape** of the prior is the modelling choice. Two natural bell-ish curves centred at $0$:
 
-The **shape** of $p(\beta_j)$ is the modelling choice. Two natural bell-ish curves centred at $0$:
-
-- a **Gaussian** $\mathcal{N}(0,\tau^2)$ — smoothly peaked, light-ish tails;
+- a **Gaussian** with variance $\tau^2$ — a rounded top, light-ish tails;
 - a **Laplace** (double-exponential) — a **sharp spike** at $0$ with heavier tails.
 
-Each choice, pushed through $-\log$, produces a **different penalty**. That is the whole story.
+Each shape, read as "how unlikely is this $\beta$", gives a **different penalty**. That is the whole story.
 
 ![](fig07-gaussian-vs-laplace.svg){width="60%" fig-align="center"}
 
 ::: notes
-The prior is a statement about coefficients before data. Centring at zero encodes shrinkage-toward-zero and symmetry encodes no directional preference. The variance/scale of the prior encodes how small we think effects are. Preview the punchline visually: Gaussian is a smooth hump, Laplace has a pointed cusp at zero. Tell them to hold that cusp in mind — it is the geometric reason lasso produces exact zeros while ridge does not. The next two slides do the two substitutions explicitly.
+The prior is a statement about coefficients before data. Centring at zero encodes shrinkage-toward-zero and symmetry encodes no directional preference. The variance/scale of the prior encodes how small we think effects are. Preview the punchline visually: Gaussian is a smooth hump, Laplace has a pointed cusp at zero. Tell them to hold that cusp in mind — it is the geometric reason lasso produces exact zeros while ridge does not. The next slide names the two penalties.
 :::
 
-## Ridge = a Gaussian prior {.smaller}
+## Ridge = Gaussian prior, lasso = Laplace prior {.smaller}
 
-Put a **Gaussian** prior on each coefficient: $\beta_j \sim \mathcal{N}(0,\ \tau^2)$. Its density is $\propto \exp\!\big(-\beta_j^2 / 2\tau^2\big)$, so
+| Prior on each $\beta$ | How unlikely it finds $\beta$ grows like | Penalty | Method |
+|---|---|---|---|
+| **Gaussian**, variance $\tau^2$ | $\beta^2$: a smooth bowl | $\sum \beta^2$ | **ridge** |
+| **Laplace**, scale $b$ | $\lvert\beta\rvert$: a V | $\sum \lvert\beta\rvert$ | **lasso** |
 
-$$-\log p(\boldsymbol\beta) \;=\; \frac{1}{2\tau^2}\sum_{j=1}^p \beta_j^2 \;+\; \text{const} \;=\; \frac{1}{2\tau^2}\,\lVert\boldsymbol\beta\rVert_2^2 \;+\; \text{const}$$
+These are **identities**, not analogies: the ridge estimate *is* the posterior peak under a Gaussian prior, and the lasso estimate *is* the posterior peak under a Laplace prior.
 
-Add this to the fit term from the previous slide and minimise:
-
-$$\arg\min_{\boldsymbol\beta}\ \frac{1}{2\sigma^2}\,\text{RSS} \;+\; \frac{1}{2\tau^2}\,\lVert\boldsymbol\beta\rVert_2^2 \;\;\equiv\;\; \arg\min_{\boldsymbol\beta}\ \text{RSS} \;+\; \frac{\sigma^2}{\tau^2}\,\lVert\boldsymbol\beta\rVert_2^2$$
-
-That second form (multiply through by $2\sigma^2$) is **exactly ridge regression**, with
-
-$$\boxed{\ \lambda_{\text{ridge}} = \dfrac{\sigma^2}{\tau^2}\ }$$
+The prior's width sets $\lambda$: **a narrow prior means a big $\lambda$.** For ridge, $\lambda = \sigma^2/\tau^2$ (noise variance over prior variance).
 
 ::: notes
-First concrete substitution. Gaussian prior gives a squared penalty because the log of exp(-beta^2/...) is -beta^2/... . Adding to RSS/2sigma^2 and clearing the constant 2sigma^2 lands precisely on the ridge objective. The eye-opener is the boxed identity: the ridge penalty strength is the ratio of noise variance to prior variance. Walk through both extremes verbally (next slide formalises them). Emphasise this is an identity, not an analogy — the ridge estimator and the Gaussian-prior MAP estimator are the same vector of numbers.
+State the two results as facts. A Gaussian prior is unhappy with a coefficient in proportion to beta squared, so the penalty it adds is the ridge sum of squares; a Laplace prior is unhappy in proportion to |beta|, so it adds the lasso sum of absolute values. The width of the prior becomes lambda: the narrower the prior (the more sure you are that effects are near 0), the bigger lambda. For ridge the exact exchange rate is lambda = sigma^2 / tau^2; for lasso it is lambda = 2 sigma^2 / b. Where these come from is on the optional maths slide; nobody needs to derive them. Stress the identity: same objective, same vector of numbers.
 :::
 
 ## Penalty strength = prior precision {.smaller}
 
-Read the identity $\lambda = \sigma^2/\tau^2$ as a statement about **confidence**. The **precision** of the prior is $1/\tau^2$ — how tightly it is concentrated at $0$.
+Read "narrow prior means big $\lambda$" as a statement about **confidence**. The **precision** of the prior is $1/\tau^2$ — how tightly it is concentrated at $0$.
 
 | Prior variance $\tau^2$ | Prior belief | Precision $1/\tau^2$ | $\lambda$ | Effect |
 |---|---|---|---|---|
@@ -169,31 +147,15 @@ So **choosing $\lambda$ is choosing how sure you were before the data.** A big p
 ![](fig09-prior-precision-family.svg){width="55%" fig-align="center"}
 
 ::: notes
-This slide converts the algebra into intuition and is the conceptual payoff. Large lambda equals small prior variance equals high prior precision equals strong conviction that coefficients are near zero. Small lambda equals diffuse prior equals letting the data speak. The limit tau^2 to infinity is a "flat" (improper) prior, under which MAP collapses to maximum likelihood, i.e. ordinary least squares. This reframes cross-validation for lambda (from Ridge and lasso regression) as data-driven tuning of how strong a prior to adopt. Biologically: setting lambda large is asserting you already believe most genes barely matter. Recall lfcShrink from the bulk RNA-seq day: it puts a prior centred at 0 on every fold change, and since the likelihood is weak for low-count genes, the prior wins there; for high-count genes the data win.
-:::
-
-## Lasso = a Laplace prior {.smaller}
-
-Now swap the Gaussian for a **Laplace** (double-exponential) prior: $p(\beta_j) \propto \exp\!\big(-|\beta_j| / b\big)$. Its negative log is **linear in $|\beta_j|$**:
-
-$$-\log p(\boldsymbol\beta) \;=\; \frac{1}{b}\sum_{j=1}^p |\beta_j| \;+\; \text{const} \;=\; \frac{1}{b}\,\lVert\boldsymbol\beta\rVert_1 \;+\; \text{const}$$
-
-Add the Gaussian-noise fit term and minimise:
-
-$$\arg\min_{\boldsymbol\beta}\ \frac{1}{2\sigma^2}\,\text{RSS} \;+\; \frac{1}{b}\,\lVert\boldsymbol\beta\rVert_1 \;\;\equiv\;\; \arg\min_{\boldsymbol\beta}\ \text{RSS} \;+\; \frac{2\sigma^2}{b}\,\lVert\boldsymbol\beta\rVert_1$$
-
-which is **exactly the lasso**, with $\lambda_{\text{lasso}} = 2\sigma^2/b$. Same recipe, different prior: the **absolute-value penalty comes from the Laplace's $|\beta|$ in the exponent**.
-
-::: notes
-Second substitution, mechanically identical to ridge but with a Laplace prior. The key structural difference: the Laplace density has exp(-|beta|/b), so its negative log is linear in |beta|, giving the L1 penalty rather than L2. Everything else — clearing 2sigma^2, reading off lambda — is the same. Stress the parallel so students see one unified derivation with a swappable prior, not two unrelated tricks. Next slide explains why this seemingly small change (|beta| vs beta^2) produces the qualitatively different behaviour of exact zeros.
+This slide is the conceptual payoff. Large lambda equals small prior variance equals high prior precision equals strong conviction that coefficients are near zero. Small lambda equals diffuse prior equals letting the data speak. The limit tau^2 to infinity is a "flat" (improper) prior, under which MAP collapses to maximum likelihood, i.e. ordinary least squares. This reframes cross-validation for lambda (from Ridge and lasso regression) as data-driven tuning of how strong a prior to adopt. Biologically: setting lambda large is asserting you already believe most genes barely matter. Recall lfcShrink from the bulk RNA-seq day: it puts a prior centred at 0 on every fold change, and since the likelihood is weak for low-count genes, the prior wins there; for high-count genes the data win.
 :::
 
 ## Why the shape matters: sparsity {.smaller}
 
-The two priors differ most **right at $\boldsymbol\beta = 0$**:
+The two priors differ most **right at $\beta = 0$**:
 
-- **Gaussian** ($\propto e^{-\beta^2}$) is **smooth and flat** at $0$ — its slope there is zero, so it never *insists* a coefficient be exactly $0$. Ridge shrinks everything but keeps all $\beta_j \ne 0$.
-- **Laplace** ($\propto e^{-|\beta|}$) has a **sharp cusp** at $0$ — a kink that puts a lot of prior mass on "exactly zero." Lasso therefore sets weak coefficients **exactly to $0$** (variable selection).
+- **Gaussian:** a **rounded top** at $0$. Near zero its penalty bowl is almost flat, so the pull toward $0$ fades away and never finishes the job. Ridge shrinks everything but keeps every $\beta \ne 0$.
+- **Laplace:** a **pointed top** at $0$. Its V-shaped penalty keeps pulling just as hard right up to $0$, so weak coefficients land **exactly on $0$** (variable selection).
 
 ![](fig11-cusp-zoom.svg){width="55%" fig-align="center"}
 
@@ -203,10 +165,22 @@ So the biological reading is direct:
 - **Lasso / Laplace prior:** *"a few genes contribute, most contribute nothing"* — a **sparse** belief.
 
 ::: notes
-This is the intuition students should leave with. The cusp of the Laplace at zero is what makes lasso select variables: the kink means there is a genuine "corner" the optimiser can land on with a coefficient at exactly zero. The Gaussian's rounded top has zero slope at the origin, so it gently discourages large values but never pins anything to zero. Translate to biology, which is the whole point of the pairing: choosing ridge vs lasso is choosing between a polygenic model (many small effects, e.g. height, complex traits) and a sparse model (a handful of drivers, e.g. a few oncogenes). The right choice is a biological hypothesis, now made explicit as a prior.
+This is the intuition students should leave with: pointed top versus rounded top. The point of the Laplace at zero is what makes lasso select variables: there is a genuine corner the fit can land on with a coefficient at exactly zero. The Gaussian's rounded top gently discourages large values but never pins anything to zero. The next demo shows it for one coefficient. Translate to biology, which is the whole point of the pairing: choosing ridge vs lasso is choosing between a polygenic model (many small effects, e.g. height, complex traits) and a sparse model (a handful of drivers, e.g. a few oncogenes). The right choice is a biological hypothesis, now made explicit as a prior.
 :::
 
-## Try it: prior × likelihood → posterior peak
+## Try it: one coefficient, two priors
+
+```{=html}
+<link rel="stylesheet" href="../demos/dist/demo.css">
+<div data-demo="penaltygeom" data-mode="prior1d"></div>
+<script src="../demos/dist/penaltygeom.js"></script>
+```
+
+::: notes
+One coefficient beta. Green is the prior, grey the likelihood (centred on the estimate from the data alone), purple the posterior, with its peak marked; the side panel shows the penalty the prior stands for. The slider "how sure we are that beta is near 0" narrows the prior and the readout shows the matching lambda (narrow prior = big lambda). Defaults: Gaussian prior of width 0.5 (lambda = 4), data alone say beta = 1 from n = 5 samples: the peak is at 0.56, pulled 0.44 toward 0. Click the Laplace prior at the same width (lambda about 5.7): the peak is 0.43. Now drag the data strength down to n = 2: the Laplace peak jumps to exactly 0 ("gene dropped"); it stays there until the data-alone estimate is above about 1.4. Switch back to Gaussian at n = 2: the peak is 0.33, smaller but never exactly 0, however weak the data. Point at the penalty panel: the parabola is flat at the bottom, so its pull fades near 0; the V keeps its sharp tip, so it keeps pulling and can hold beta at exactly 0.
+:::
+
+## Try it: two coefficients, prior × likelihood → posterior peak
 
 ```{=html}
 <link rel="stylesheet" href="../demos/dist/demo.css">
@@ -215,7 +189,7 @@ This is the intuition students should leave with. The cusp of the Laplace at zer
 ```
 
 ::: notes
-Live version of the last few slides, for two coefficients. Green shading is the prior (darker = more prior belief), grey ellipses are the likelihood centred on the OLS / maximum-likelihood point, purple contours are the posterior, and the purple dot is the posterior peak (MAP), which is exactly the penalized estimate; the path panel on the right is the same ridge/lasso path as in Ridge and lasso regression. The demo fixes sigma squared at 1, so the readout shows tau squared = 1/lambda for the Gaussian and b = 2/lambda for the Laplace. Start with the Gaussian prior (ridge): the MAP sits between the prior centre and the OLS point, with both coefficients nonzero. Raise lambda: the prior tightens (a more confident prior) and pulls the MAP toward zero; lower it and the MAP slides back to OLS. Now click the Laplace prior at lambda = 2: the shading becomes diamonds, and the MAP jumps onto the beta-1 axis, so beta-2 is exactly zero (red mark) — the cusp at work. Drag the OLS point a little: the MAP stays on the axis over a whole range, while the Gaussian MAP never does. Close with the caveat slide in mind: the purple contours show a whole posterior, and MAP reports only its peak.
+Live version of the last few slides, for two coefficients. Green shading is the prior (darker = more prior belief), grey ellipses are the likelihood centred on the ordinary least squares (OLS) / maximum-likelihood point, purple contours are the posterior, and the purple dot is the posterior peak (MAP), which is exactly the penalized estimate; the path panel on the right is the same ridge/lasso path as in Ridge and lasso regression. The demo fixes sigma squared at 1, so the readout shows tau squared = 1/lambda for the Gaussian and b = 2/lambda for the Laplace. Start with the Gaussian prior (ridge): the MAP sits between the prior centre and the ordinary least squares point, with both coefficients nonzero. Raise lambda: the prior tightens (a more confident prior) and pulls the MAP toward zero; lower it and the MAP slides back to the ordinary least squares point. Now click the Laplace prior at lambda = 2: the shading becomes diamonds, and the MAP jumps onto the beta-1 axis, so beta-2 is exactly zero (red mark) — the cusp at work. Drag the ordinary least squares point a little: the MAP stays on the axis over a whole range, while the Gaussian MAP never does. Close with the caveat slide in mind: the purple contours show a whole posterior, and MAP reports only its peak.
 :::
 
 ## Choosing a prior is a biological statement {.smaller}
@@ -224,8 +198,8 @@ Because the penalty *is* a prior, picking a penalty is picking a **hypothesis ab
 
 | Biological belief | Prior | Penalty | Behaviour |
 |---|---|---|---|
-| "Many genes, each a small effect" (polygenic trait) | Gaussian | ridge ($\lVert\boldsymbol\beta\rVert_2^2$) | shrink all, keep all |
-| "A few driver genes, rest irrelevant" | Laplace | lasso ($\lVert\boldsymbol\beta\rVert_1$) | select a sparse set |
+| "Many genes, each a small effect" (polygenic trait) | Gaussian | ridge ($\sum\beta^2$) | shrink all, keep all |
+| "A few driver genes, rest irrelevant" | Laplace | lasso ($\sum\lvert\beta\rvert$) | select a sparse set |
 | "Effects are small *and* mostly zero" | Gaussian + Laplace mix | **elastic net** | shrink + select |
 | "I truly know nothing" | flat | none | least squares (fails if $p\gg n$) |
 
@@ -268,9 +242,9 @@ Deliberately no new code — this is the code they already met, relabelled. glmn
 
 The equivalence is exact, but it identifies penalised regression with the **peak** of the posterior — not the whole thing.
 
-- A full **Bayesian** analysis reports the **entire posterior**: the peak *and its width* (uncertainty), so you get credible intervals on each $\beta_j$. MAP throws the width away.
+- A full **Bayesian** analysis reports the **entire posterior**: the peak *and its width* (uncertainty), so you get credible intervals on each $\beta$. MAP throws the width away.
 - The prior "variance" $\tau^2$ (or scale $b$) is usually **not known** in advance. Cross-validating $\lambda$ is a practical stand-in for a fully Bayesian treatment of that unknown.
-- **Subtlety:** under the Laplace prior, the *MAP* is sparse (exact zeros) but the *posterior mean* is **not** — so "lasso = Bayesian sparsity" holds for the peak, not for the averaged estimate.
+- *(Optional subtlety)* Under the Laplace prior, the **peak** has exact zeros but the posterior **average** does not: "lasso = Bayesian sparsity" holds for the peak only.
 
 The bridge is genuine and useful, but "penalised regression is secretly Bayesian" is a **statement about the MAP point**, with the honesty a real Bayesian analysis adds on top.
 
@@ -280,18 +254,37 @@ The bridge is genuine and useful, but "penalised regression is secretly Bayesian
 Intellectual honesty slide, in the spirit of the course's "be honest about what we defer" principle. The penalty-equals-prior identity is real but partial: it matches the posterior mode, discarding the uncertainty that is arguably the whole benefit of going Bayesian. Two caveats worth stating: (1) treating tau^2/b as fixed and known is a simplification; a full hierarchical Bayesian model would put a prior on it too, and cross-validation is the frequentist workaround. (2) The Laplace-MAP is sparse but the Laplace-posterior-mean is not, so one must be careful about which "Bayesian lasso" is meant. Do not overstate the unification; present it as a clarifying viewpoint, not a replacement for either method.
 :::
 
+## Optional: the maths behind penalty = prior {.smaller}
+
+::: {.callout-note collapse="true" title="Optional: the maths"}
+**Logs turn the product into a sum.** The logarithm is increasing, so it does not move the peak; $-\log$ turns *maximise* into *minimise*:
+$$\arg\max_{\beta}\ p(\beta\mid\text{data}) = \arg\min_{\beta}\ \big[-\log p(\text{data}\mid\beta) \;-\; \log p(\beta)\big].$$
+
+**Fit term.** With Gaussian noise of variance $\sigma^2$, $-\log p(\text{data}\mid\beta) = \text{RSS}/2\sigma^2 + \text{const}$.
+
+**Penalty term.** Gaussian prior $p(\beta_j)\propto e^{-\beta_j^2/2\tau^2}$ gives $-\log p = \sum_j \beta_j^2/2\tau^2 + \text{const}$. Laplace prior $p(\beta_j)\propto e^{-|\beta_j|/b}$ gives $\sum_j |\beta_j|/b + \text{const}$.
+
+**Exchange rate.** Multiply the whole objective by $2\sigma^2$ (this does not move the minimum): $\text{RSS} + \tfrac{\sigma^2}{\tau^2}\sum_j\beta_j^2$ is ridge with $\lambda = \sigma^2/\tau^2$; $\text{RSS} + \tfrac{2\sigma^2}{b}\sum_j|\beta_j|$ is lasso with $\lambda = 2\sigma^2/b$.
+:::
+
+![](fig06-gaussian-noise-regression.svg){width="45%" fig-align="center"}
+
+::: notes
+Optional slide for students who want the formulas behind the slogan; nothing in the main path or the exercise main items needs it. Take minus the log of "likelihood times prior": the Gaussian noise gives RSS over 2 sigma^2, the Gaussian prior gives the sum of squares over 2 tau^2, the Laplace prior the sum of absolute values over b. Clearing the 2 sigma^2 gives the two lambdas. The figure shows the fit term's origin: Gaussian noise around the line, whose minus-log is RSS / 2 sigma^2. The optional items B2 to B4 in the exercise walk through these steps.
+:::
+
 ## Summary {.smaller}
 
 | Penalised view | Bayesian view |
 |---|---|
 | minimise RSS + penalty | maximise posterior (find the **MAP**) |
-| fit term (RSS) | negative log-**likelihood** (Gaussian noise) |
-| penalty term | negative log-**prior** on $\boldsymbol\beta$ |
-| ridge, $\lVert\boldsymbol\beta\rVert_2^2$ | **Gaussian** prior $\mathcal N(0,\tau^2)$ |
-| lasso, $\lVert\boldsymbol\beta\rVert_1$ | **Laplace** prior $\propto e^{-|\beta|/b}$ |
-| penalty strength $\lambda$ | **prior precision** ($\lambda_{\text{ridge}}=\sigma^2/\tau^2$) |
+| fit error (RSS) | the **likelihood**: small RSS = data likely (Gaussian noise) |
+| penalty | how unlikely the **prior** finds $\beta$ |
+| ridge, $\sum\beta^2$ | **Gaussian** prior |
+| lasso, $\sum\lvert\beta\rvert$ | **Laplace** prior |
+| penalty strength $\lambda$ | **prior precision**: narrow prior = big $\lambda$ |
 | large $\lambda$ | tight, confident prior at $0$ |
-| lasso's exact zeros | Laplace **cusp** at $0$ (sparse belief) |
+| lasso's exact zeros | Laplace's **pointed top** at $0$ (sparse belief) |
 
 **Take-home:** a penalty is a prior in disguise. Choosing ridge vs lasso is choosing a **biological hypothesis** — polygenic vs sparse — and $\lambda$ is how strongly you hold it. **Related:** the penalties themselves in **Ridge, lasso & elastic net**; full posteriors in **Fitting equations (regression)**. **Next (week 5):** *Beyond linear models*.
 

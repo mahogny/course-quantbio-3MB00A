@@ -51,35 +51,37 @@ Two are extremes (between-group variance of 0 or infinity); one is the middle.
 **Q4.** In partial pooling, which groups shrink **most** toward the grand mean, and why?
 
 ::: {.callout-tip collapse="true" title="Hint"}
-Look at how the weight $w_i = \dfrac{n_i/\sigma^2}{n_i/\sigma^2 + 1/\tau^2}$ depends on $n_i$.
+Look at how the weight $w = \dfrac{n/\sigma^2}{n/\sigma^2 + 1/\tau^2}$ depends on the number of measurements $n$.
 :::
 
 ::: {.callout-note collapse="true" title="Answer"}
-Groups with **few** (or noisy) measurements shrink most. A small $n_i$ makes the group's own precision $n_i/\sigma^2$ small, so the weight $w_i$ on its own mean is small and it leans on the grand mean. Data-rich groups have $w_i$ near 1 and barely move.
+Groups with **few** (or noisy) measurements shrink most. A small $n$ makes the worth of the group's own data, $n/\sigma^2$, small, so the weight $w$ on its own mean is small and it leans on the grand mean. Data-rich groups have $w$ near 1 and barely move.
 :::
 
 ---
 
-**Q5.** A group has $n_i = 3$ measurements with mean $\bar y_i = 12$. The grand mean is $\hat\mu = 6$, $\sigma^2 = 6$, $\tau^2 = 1$. Compute the partial-pooling estimate $\hat\mu_i$.
+**Q5.** A group has $n = 3$ measurements with mean $\bar y = 12$. The grand mean is $\hat\mu = 6$, $\sigma^2 = 6$, $\tau^2 = 1$. Compute the partial-pooling estimate.
 
 ::: {.callout-tip collapse="true" title="Hint"}
-Compute $n_i/\sigma^2$ and $1/\tau^2$, form $w_i$, then $\hat\mu_i = w_i\bar y_i + (1-w_i)\hat\mu$.
+Compute $n/\sigma^2$ and $1/\tau^2$, form $w$, then estimate $= w\,\bar y + (1-w)\,\hat\mu$.
 :::
 
 ::: {.callout-note collapse="true" title="Answer"}
-$n_i/\sigma^2 = 3/6 = 0.5$; $1/\tau^2 = 1$. So $w_i = \dfrac{0.5}{0.5 + 1} = \dfrac{0.5}{1.5} = \tfrac13$. Then $\hat\mu_i = \tfrac13\cdot 12 + \tfrac23\cdot 6 = 4 + 4 = 8$. The estimate (8) sits between the group mean (12) and the grand mean (6), closer to 6 because the group carries relatively little information.
+$n/\sigma^2 = 3/6 = 0.5$; $1/\tau^2 = 1$. So $w = \dfrac{0.5}{0.5 + 1} = \dfrac{0.5}{1.5} = \tfrac13$. Then estimate $= \tfrac13\cdot 12 + \tfrac23\cdot 6 = 4 + 4 = 8$. The estimate (8) sits between the group mean (12) and the grand mean (6), closer to 6 because the group carries relatively little information.
 :::
 
 ---
 
-**Q6.** Write the random-effects model $y_{ij} = \mu + b_i + \varepsilon_{ij}$ and say which term is the **fixed** effect, which is the **random** effect, and what the two variances mean.
+**Q6.** A random-effects model splits each measurement into an overall mean plus two levels of variation. Name the two levels, say which part is the **fixed** effect and which the **random** effect, and what the two variances $\sigma^2$ and $\tau^2$ measure.
 
 ::: {.callout-tip collapse="true" title="Hint"}
-One term is a single number for the whole dataset; one is a draw per group.
+One part is a single number for the whole dataset; one is a draw per group.
 :::
 
 ::: {.callout-note collapse="true" title="Answer"}
-$\mu$ is the **fixed** effect (overall mean, one number). $b_i \sim \mathcal N(0,\tau^2)$ is the **random** effect (group $i$'s deviation, a draw from a shared distribution), with **between**-group variance $\tau^2$. $\varepsilon_{ij} \sim \mathcal N(0,\sigma^2)$ is the residual with **within**-group (measurement) variance $\sigma^2$.
+The two levels are the **patient (group) level** and the **measurement level**. The overall mean is the **fixed** effect (one number). Each group's offset from it is the **random** effect, a draw from a shared distribution whose spread is the **between**-group variance $\tau^2$ (biological). The noise of repeated measurements around a group's own value has the **within**-group variance $\sigma^2$ (technical).
+
+In symbols (optional): $y_{ij} = \mu + b_i + \varepsilon_{ij}$ with $b_i \sim \mathcal N(0,\tau^2)$ and $\varepsilon_{ij} \sim \mathcal N(0,\sigma^2)$.
 :::
 
 ---
@@ -103,7 +105,7 @@ Left of the bar = what varies by group; right of the bar = the grouping factor.
 :::
 
 ::: {.callout-note collapse="true" title="Answer"}
-It specifies a **fixed** effect of `treatment` (the population-level question) plus a **random intercept** `(1 | patient)` — one deviation $b_i$ per patient drawn from a shared $\mathcal N(0,\tau^2)$. The formula is **identical** in `lme4::lmer` (frequentist) and `brms::brm` (Bayesian, via Stan); brms additionally places priors on all parameters and returns a full posterior.
+It specifies a **fixed** effect of `treatment` (the population-level question) plus a **random intercept** `(1 | patient)` — one offset per patient, all drawn from a shared distribution with spread $\tau$. The formula is **identical** in `lme4::lmer` (frequentist) and `brms::brm` (Bayesian, via Stan); brms additionally places priors on all parameters and returns a full posterior.
 :::
 
 ---
@@ -111,9 +113,9 @@ It specifies a **fixed** effect of `treatment` (the population-level question) p
 **Q9.** From the Bayesian viewpoint, what *is* a random effect?
 
 ::: {.callout-tip collapse="true" title="Hint"}
-Look at the line $b_i \sim \mathcal N(0,\tau^2)$ — what role does it play?
+The patient offsets are all drawn from one shared distribution — what role does that distribution play?
 :::
 
 ::: {.callout-note collapse="true" title="Answer"}
-A random effect is a **prior** on the group-level parameters: $b_i \sim \mathcal N(0,\tau^2)$ is a prior on the group deviations, and because its width $\tau$ is estimated from the data it is an **adaptive** (hierarchical) prior. Partial pooling is exactly the posterior compromise between each group's data and this learned prior.
+A random effect is a **prior** on the group-level parameters: the shared distribution of the group offsets is a prior on them, and because its width $\tau$ is estimated from the data it is an **adaptive** (hierarchical) prior. Partial pooling is exactly the posterior compromise between each group's data and this learned prior.
 :::

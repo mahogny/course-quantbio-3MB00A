@@ -108,3 +108,81 @@ export function contour(f: (x: number, y: number) => number, level: number,
   }
   return segs;
 }
+
+// ---------------- data-mode="resample": refit on many small training sets ----------------
+// Two genes x1, x2 with correlation r, y = x1 + x2 + noise (true beta = (1, 1)), no intercept
+// (everything has mean 0 by construction). Fits use the decks' notation on the raw data:
+//   OLS  : minimise RSS;   ridge: RSS + lambda * sum beta^2;   lasso: RSS + lambda * sum |beta|.
+
+/** Sufficient statistics of one training set: A = X^T X (symmetric 2x2) and c = X^T y. */
+export interface Stats2 { a11: number; a12: number; a22: number; c1: number; c2: number }
+
+/** Standard normals for `draws` training sets of n samples: z1, z2, e per sample. */
+export function baseNormals(norm: () => number, draws: number, n: number): Float64Array[] {
+  const out: Float64Array[] = [];
+  for (let k = 0; k < draws; k++) {
+    const v = new Float64Array(3 * n);
+    for (let i = 0; i < 3 * n; i++) v[i] = norm();
+    out.push(v);
+  }
+  return out;
+}
+
+/** Turn base normals into a data set with correlation r and noise sd sigma; returns its stats and points. */
+export function makeData(z: Float64Array, r: number, sigma: number, beta: V2 = [1, 1]): { s: Stats2; x: V2[] } {
+  const n = z.length / 3, q = Math.sqrt(1 - r * r);
+  const s: Stats2 = { a11: 0, a12: 0, a22: 0, c1: 0, c2: 0 };
+  const x: V2[] = [];
+  for (let i = 0; i < n; i++) {
+    const x1 = z[3 * i], x2 = r * z[3 * i] + q * z[3 * i + 1];
+    const y = beta[0] * x1 + beta[1] * x2 + sigma * z[3 * i + 2];
+    s.a11 += x1 * x1; s.a12 += x1 * x2; s.a22 += x2 * x2; s.c1 += x1 * y; s.c2 += x2 * y;
+    x.push([x1, x2]);
+  }
+  return { s, x };
+}
+
+/** Ridge (A + lambda I)^{-1} c; lambda = 0 gives OLS. */
+export function ridgeFit(s: Stats2, lambda: number): V2 {
+  const a = s.a11 + lambda, d = s.a22 + lambda, det = a * d - s.a12 * s.a12;
+  return [(d * s.c1 - s.a12 * s.c2) / det, (-s.a12 * s.c1 + a * s.c2) / det];
+}
+
+/** Lasso, exact for two coefficients: try every pattern of zero / sign and keep the best valid one. */
+export function lassoFit(s: Stats2, lambda: number): V2 {
+  const g = lambda / 2;
+  const obj = (b: V2) => s.a11 * b[0] * b[0] + 2 * s.a12 * b[0] * b[1] + s.a22 * b[1] * b[1]
+    - 2 * (s.c1 * b[0] + s.c2 * b[1]) + lambda * (Math.abs(b[0]) + Math.abs(b[1]));
+  const cands: V2[] = [[0, 0], [soft(s.c1, g) / s.a11, 0], [0, soft(s.c2, g) / s.a22]];
+  const det = s.a11 * s.a22 - s.a12 * s.a12;
+  for (const s1 of [-1, 1]) for (const s2 of [-1, 1]) {
+    const u = s.c1 - g * s1, v = s.c2 - g * s2;
+    const b: V2 = [(s.a22 * u - s.a12 * v) / det, (-s.a12 * u + s.a11 * v) / det];
+    if (Math.sign(b[0]) === s1 && Math.sign(b[1]) === s2) cands.push(b);
+  }
+  let best = cands[0], bo = obj(best);
+  for (const b of cands) { const o = obj(b); if (o < bo - 1e-12) { best = b; bo = o; } }
+  return best;
+}
+
+// ---------------- data-mode="prior1d": one coefficient ----------------
+// sigma^2 = 1 and a standardized predictor, so RSS(beta) = n (beta - est)^2 + const and
+//   -2 log posterior = n (beta - est)^2 + penalty(beta) + const.
+// Gaussian prior with sd w:  penalty = beta^2 / w^2         -> ridge with lambda = 1 / w^2.
+// Laplace prior with sd w (scale b = w / sqrt 2): penalty = 2|beta| / b -> lasso with lambda = 2 / b.
+
+export type Prior = "gauss" | "laplace";
+
+export function lambdaOf(prior: Prior, w: number): number {
+  return prior === "gauss" ? 1 / (w * w) : 2 * Math.SQRT2 / w;
+}
+
+/** The penalty lambda*beta^2 or lambda*|beta| (= -2 log prior + const). */
+export function penalty1(prior: Prior, lambda: number, beta: number): number {
+  return prior === "gauss" ? lambda * beta * beta : lambda * Math.abs(beta);
+}
+
+/** Posterior peak (MAP) = penalized estimate. Laplace: exactly 0 when |est| <= lambda / (2n). */
+export function map1(prior: Prior, lambda: number, n: number, est: number): number {
+  return prior === "gauss" ? n * est / (n + lambda) : soft(n * est, lambda / 2) / n;
+}

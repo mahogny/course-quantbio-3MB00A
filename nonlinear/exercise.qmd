@@ -32,6 +32,14 @@ $$\text{viable} = \text{bottom} + \frac{\text{top} - \text{bottom}}{1 + (\text{d
 
 **A one-hidden-layer network**: hidden $= \text{ReLU}(A\mathbf{x} + \mathbf{b})$, output $= C\cdot\text{hidden} + d$, with $\text{ReLU}(s) = \max(0, s)$ applied to each number separately.
 
+**How to compute ReLU.** Look at the number: if it is negative, replace it by 0; otherwise keep it as it is.
+
+| $s$ | $-3$ | $-0.5$ | $0$ | $0.5$ | $2$ |
+|---|---|---|---|---|---|
+| $\text{ReLU}(s)$ | $0$ | $0$ | $0$ | $0.5$ | $2$ |
+
+On a vector, do this to each entry on its own: $\text{ReLU}\big((-1,\ 4)\big) = (0,\ 4)$. If there is something inside the brackets, compute it first: $\text{ReLU}(x - 1)$ at $x = 3$ is $\text{ReLU}(2) = 2$, at $x = 0$ it is $\text{ReLU}(-1) = 0$.
+
 ## By hand
 
 **B1.** Which of these are linear in the parameters $a, b, c$? For each linear one, name the columns of $X$.
@@ -60,14 +68,23 @@ d. (bonus) Show that $\dfrac{1}{\text{rate}} = \dfrac{1}{V} + \dfrac{K}{V}\cdot\
 
 $$A = \begin{pmatrix} 1 & -1 \\ 2 & 1 \end{pmatrix}, \quad \mathbf{b} = \begin{pmatrix} 0 \\ -3 \end{pmatrix}, \quad C = \begin{pmatrix} 3 & 2 \end{pmatrix}, \quad d = 1.$$
 
-a. Push the input $(x, y) = (1, 2)$ through it: compute $A\mathbf{x} + \mathbf{b}$, apply ReLU, then $C\cdot\text{hidden} + d$.
+a. Push the input $(x, y) = (1, 2)$ through it, in three steps: (1) compute $A\mathbf{x} + \mathbf{b}$, two numbers; (2) apply ReLU to each of them: this is the hidden layer; (3) compute $C\cdot\text{hidden} + d$, one number.
 b. Do the same **without** ReLU. Is the answer different?
 c. Compute the single matrix $CA$ and the number $C\mathbf{b} + d$. Check that $(CA)\mathbf{x} + (C\mathbf{b} + d)$ gives your answer in b.
 d. Repeat a and b for the input $(2, 0)$. Why do the two answers agree this time?
 
 **B5.** A network with one input and two hidden units computes $f(x) = \text{ReLU}(x) - 2\,\text{ReLU}(x - 1)$.
 
-a. Compute $f$ at $x = -1, 0, 1, 2, 3$ and sketch it.
+a. Compute $f$ at $x = -1, 0, 1, 2, 3$ and sketch it. Fill in a table, one column per step:
+
+| $x$ | $\text{ReLU}(x)$ | $x - 1$ | $\text{ReLU}(x - 1)$ | $f(x) = \text{ReLU}(x) - 2\,\text{ReLU}(x - 1)$ |
+|---|---|---|---|---|
+| $0.5$ (example) | $0.5$ | $-0.5$ | $0$ | $0.5 - 2 \cdot 0 = 0.5$ |
+| $-1$ | | | | |
+| $0$ | | | | |
+| $1$ | | | | |
+| $2$ | | | | |
+| $3$ | | | | |
 b. Can a straight line $f(x) = a + bx$ have this shape? Name a gene whose expression along a differentiation path looks like this.
 
 **B6.** Three cycling cells lie on a ring in two marker genes, at angles $30^\circ$, $330^\circ$ and $150^\circ$ on the unit circle: $(\cos\theta, \sin\theta)$.
@@ -111,7 +128,7 @@ Look at each parameter. If it only **multiplies** something you can compute from
 :::
 
 ::: {.callout-tip collapse="true" title="Hint 2 — the network by hand (B4, B5)"}
-Work in three steps: matrix times vector (plus $\mathbf{b}$), then replace each negative number by 0, then the row $C$ times the hidden vector (plus $d$). For $CA$, a $1\times 2$ row times a $2 \times 2$ matrix is a $1 \times 2$ row: each entry is $C$ dotted with one column of $A$.
+Work in three steps. (1) Matrix times vector, plus $\mathbf{b}$: the first entry is row 1 of $A$ dotted with $\mathbf{x}$, plus the first entry of $\mathbf{b}$; the same for row 2. (2) ReLU: every negative number becomes 0, every positive number (and 0) stays. (3) The row $C$ times the hidden vector, plus $d$: $3 \cdot (\text{first hidden}) + 2 \cdot (\text{second hidden}) + 1$. For B5, compute the inside of each ReLU first ($x$ and $x - 1$), then apply ReLU, then combine; the table does this column by column. For $CA$, a $1\times 2$ row times a $2 \times 2$ matrix is a $1 \times 2$ row: each entry is $C$ dotted with one column of $A$.
 :::
 
 ::: {.callout-tip collapse="true" title="Hint 3 — starting values (R1, R2)"}

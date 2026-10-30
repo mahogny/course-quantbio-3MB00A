@@ -13,54 +13,59 @@ format:
 By the end of this exercise you should be able to:
 
 - explain **why** ordinary least squares fails when predictors outnumber samples ($p \gg n$) or are collinear,
-- write the penalized objective $\lVert\mathbf{y}-X\boldsymbol\beta\rVert^2 + \lambda\cdot\text{penalty}(\boldsymbol\beta)$ for ridge, lasso, and elastic net,
-- compute a **ridge** estimate **by hand** on a tiny problem from $(X^\top X + \lambda I)^{-1}X^\top\mathbf{y}$, and see how $\lambda$ shrinks it,
+- describe the penalized objective in words (squared miss + $\lambda$ × penalty) and give the penalty for ridge, lasso, and elastic net,
+- compute a **ridge** estimate **by hand** on a tiny problem and see how $\lambda$ shrinks it,
 - explain, from the **geometry** (circle vs diamond), why lasso zeros coefficients and ridge does not,
+- see in a demo that, for two correlated genes, lasso keeps one more or less at random while ridge shares the weight,
 - fit all three with `glmnet` in R, choose $\lambda$ by **cross-validation**, and read off the **selected genes**.
 
 ## Background
 
-Ordinary least squares minimizes the residual sum of squares and has the closed form
-$$\hat{\boldsymbol\beta}_{\text{OLS}} = (X^\top X)^{-1}X^\top\mathbf{y},$$
-which needs $X^\top X$ to be **invertible**. When $p > n$ or predictors are collinear, $X^\top X$ is singular (or nearly so) and OLS is unstable or undefined.
+Ordinary least squares picks the coefficients with the smallest **total squared miss** (residual sum of squares, RSS). When $p > n$ there are many perfect fits and no single answer; when predictors are collinear the coefficients are unstable (see *Why penalize?*).
 
-**Penalized regression** adds a competing goal — *keep the coefficients small*:
-$$\hat{\boldsymbol\beta} = \arg\min_{\boldsymbol\beta}\ \lVert\mathbf{y}-X\boldsymbol\beta\rVert^2 + \lambda\cdot\text{penalty}(\boldsymbol\beta), \qquad \lambda \ge 0.$$
+**Penalized regression** adds a competing goal — *keep the coefficients small*. The computer picks the coefficients that make
 
-| Method | penalty | effect | closed form? |
+> **squared miss + $\lambda$ × penalty**
+
+as small as possible, with $\lambda \ge 0$ the dial between the two goals.
+
+| Method | penalty | effect | simple formula? |
 |---|---|---|---|
-| **Ridge** (L2) | $\sum_j\beta_j^2$ | shrinks all; keeps all | yes: $(X^\top X+\lambda I)^{-1}X^\top\mathbf{y}$ |
-| **Lasso** (L1) | $\sum_j\lvert\beta_j\rvert$ | shrinks; sets some to **0** | no (kink at 0) |
-| **Elastic net** | $\alpha\sum\lvert\beta_j\rvert+(1-\alpha)\sum\beta_j^2$ | grouped selection | no |
+| **Ridge** (L2) | $\sum_j\beta_j^2$ | shrinks all; keeps all | yes; with one predictor $\hat\beta = \dfrac{\sum xy}{\sum x^2+\lambda}$ |
+| **Lasso** (L1) | $\sum_j\lvert\beta_j\rvert$ | shrinks; sets some to **0** | no — the computer searches |
+| **Elastic net** | $\alpha\times$ lasso penalty $+\,(1-\alpha)\times$ ridge penalty | grouped selection | no |
 
 Key facts to keep in hand:
 
 - Standardize predictors before penalizing (glmnet does this); never penalize the intercept.
-- $\lambda=0$ → OLS; $\lambda\to\infty$ → all coefficients $\to 0$.
+- $\lambda=0$ → ordinary least squares (OLS); $\lambda\to\infty$ → all coefficients $\to 0$.
 - Choose $\lambda$ by **cross-validation** — never by training error, which just falls as $\lambda\to0$.
+
+::: {.callout-note collapse="true" title="Optional: the maths"}
+In matrix notation ordinary least squares is $\hat{\boldsymbol\beta}_{\text{OLS}} = \arg\min_{\boldsymbol\beta}\lVert\mathbf{y}-X\boldsymbol\beta\rVert^2 = (X^\top X)^{-1}X^\top\mathbf{y}$, which needs $X^\top X$ to be invertible; when $p > n$ or predictors are collinear it is singular (or nearly so). The penalized estimate is $\arg\min_{\boldsymbol\beta}\ \lVert\mathbf{y}-X\boldsymbol\beta\rVert^2 + \lambda\cdot\text{penalty}(\boldsymbol\beta)$, and ridge has the closed form $\hat{\boldsymbol\beta}_{\text{ridge}} = (X^\top X+\lambda I)^{-1}X^\top\mathbf{y}$: adding $\lambda$ to the diagonal makes the matrix invertible again. Items B3 (matrix version in its solution) and B4 use this.
+:::
 
 ## By hand
 
-**B1.** Explain in one or two sentences why OLS has **no unique** solution when you have $p = 3$ predictors but only $n = 2$ samples. (Think about the number of unknowns versus equations, and about whether $X^\top X$ can be inverted.)
+**B1.** Explain in one or two sentences why ordinary least squares has **no unique** solution when you have $p = 3$ predictors but only $n = 2$ samples. (Count the unknowns and the equations.)
 
-**B2. (ridge on a 1-D toy).** Suppose after centring there is a single predictor and $X^\top X = 4$, $X^\top\mathbf{y} = 8$ (so the OLS slope is $8/4 = 2$). The 1-D ridge estimate is
-$$\hat\beta_{\text{ridge}}(\lambda) = \frac{X^\top\mathbf{y}}{X^\top X + \lambda} = \frac{8}{4+\lambda}.$$
+**B2. (ridge on a 1-D toy).** Suppose after centring there is a single predictor with $\sum x^2 = 4$ and $\sum xy = 8$ (so the ordinary least squares slope is $8/4 = 2$). The 1-D ridge estimate is
+$$\hat\beta_{\text{ridge}}(\lambda) = \frac{\sum xy}{\sum x^2 + \lambda} = \frac{8}{4+\lambda}.$$
 Compute $\hat\beta_{\text{ridge}}$ for $\lambda = 0,\ 4,\ 12,\ \text{and as }\lambda\to\infty$. What happens to the coefficient as $\lambda$ grows?
 
-**B3. (ridge on a 2×2, by hand).** Take the standardized design
-$$X^\top X = \begin{pmatrix} 1 & 0 \\ 0 & 1 \end{pmatrix}, \qquad X^\top\mathbf{y} = \begin{pmatrix} 3 \\ 1 \end{pmatrix}.$$
-(a) Find the OLS estimate $\hat{\boldsymbol\beta}_{\text{OLS}} = (X^\top X)^{-1}X^\top\mathbf{y}$.
-(b) Find the ridge estimate at $\lambda = 1$ using $(X^\top X + \lambda I)^{-1}X^\top\mathbf{y}$. (Note $X^\top X + I = 2I$, easy to invert.)
+**B3. (ridge with two uncorrelated predictors).** Take two standardized predictors $x$ and $z$ that are **uncorrelated**, scaled so that $\sum x^2 = \sum z^2 = 1$ and $\sum xz = 0$, with $\sum xy = 3$ and $\sum zy = 1$. Because the predictors are uncorrelated, the 1-D formula from B2 applies to each coefficient separately: $\hat\beta = \dfrac{\sum xy}{1+\lambda}$ for $x$, and likewise for $z$.
+(a) Find the ordinary least squares estimates ($\lambda = 0$).
+(b) Find the ridge estimates at $\lambda = 1$.
 (c) By what factor was each coefficient shrunk? Did either become exactly zero?
 
-**B4. (collinearity and the diagonal).** For a collinear design suppose $X^\top X = \begin{pmatrix} 1 & 1 \\ 1 & 1 \end{pmatrix}$.
-(a) Show it is **singular** (its columns are parallel; row-reduce $[\,X^\top X \mid I\,]$ and see what happens) — so OLS cannot invert it.
+**B4. (optional) (collinearity and the diagonal).** For a collinear design suppose $X^\top X = \begin{pmatrix} 1 & 1 \\ 1 & 1 \end{pmatrix}$.
+(a) Show it is **singular** (its columns are parallel; row-reduce $[\,X^\top X \mid I\,]$ and see what happens) — so ordinary least squares cannot invert it.
 (b) Form $X^\top X + \lambda I$ with $\lambda = 1$ and find its inverse by row-reducing $[\,X^\top X + I \mid I\,]$. Is it now invertible?
 (c) In one sentence, connect this to the eigenvalue fact that adding $\lambda I$ shifts every eigenvalue up by $\lambda$ (recall Eigenvalues & eigenvectors).
 
 **B5. (the geometry).** Sketch, in the $(\beta_1,\beta_2)$ plane:
 (a) the ridge budget region $\beta_1^2+\beta_2^2\le t$ and the lasso budget region $\lvert\beta_1\rvert+\lvert\beta_2\rvert\le t$;
-(b) a set of elliptical RSS contours centred at an OLS solution like $(2, 0.3)$.
+(b) a set of elliptical RSS contours centred at an ordinary least squares solution like $(2, 0.3)$.
 Argue from the picture which method is likely to return a solution with $\beta_2 = 0$ **exactly**, and why the shape of the region is responsible.
 
 **B6. (reading a path plot).** A lasso `plot(fit, xvar="lambda")` shows coefficient paths against $\log\lambda$. As $\lambda$ **increases** (moving right), do the coefficients get larger or smaller? What does it mean when a path hits the horizontal axis and stays there? At the far right, how many predictors does the model use?
@@ -72,7 +77,7 @@ Argue from the picture which method is likely to return a solution with $\beta_2
 
 ## Explore: the geometry, live {#explore}
 
-The demo draws B5 for you. The grey ellipses are RSS contours around the OLS point (drag it); the green region is the penalty region $\alpha(|\beta_1|+|\beta_2|) + (1-\alpha)(\beta_1^2+\beta_2^2) \le t$, drawn at the budget $t$ that the current $\lambda$ leads to; the purple ellipse is the smallest RSS contour that touches it, and the touching point is the penalized estimate $\hat{\boldsymbol\beta}$. The slider "corr" sets the correlation between the two (standardized) predictors, which tilts and stretches the ellipses. The right panel is the coefficient path: $\hat\beta_1$ and $\hat\beta_2$ against $\lambda$, with the current $\lambda$ dashed.
+The first demo draws B5 for you. The grey ellipses are RSS contours around the ordinary least squares point (labelled OLS; drag it); the green region is the penalty region $\alpha(|\beta_1|+|\beta_2|) + (1-\alpha)(\beta_1^2+\beta_2^2) \le t$, drawn at the budget $t$ that the current $\lambda$ leads to; the purple ellipse is the smallest RSS contour that touches it, and the touching point is the penalized estimate $\hat{\boldsymbol\beta}$. The slider "corr" sets the correlation between the two (standardized) predictors, which tilts and stretches the ellipses. The right panel is the coefficient path: $\hat\beta_1$ and $\hat\beta_2$ against $\lambda$, with the current $\lambda$ dashed.
 
 ```{=html}
 <link rel="stylesheet" href="../demos/dist/demo.css">
@@ -80,22 +85,32 @@ The demo draws B5 for you. The grey ellipses are RSS contours around the OLS poi
 <script src="../demos/dist/penaltygeom.js"></script>
 ```
 
-**E1.** Start from **Reset** (lasso, OLS $= (2, 0.6)$, corr $= 0.4$). Move $\lambda$ slowly up from $0.01$. At roughly which $\lambda$ does $\hat\beta_2$ become exactly $0$, and where on the diamond is $\hat{\boldsymbol\beta}$ from then on? At which $\lambda$ is $\hat\beta_1$ also $0$?
+**E1.** Start from **Reset** (lasso, OLS point $= (2, 0.6)$, corr $= 0.4$). Move $\lambda$ slowly up from $0.01$. At roughly which $\lambda$ does $\hat\beta_2$ become exactly $0$, and where on the diamond is $\hat{\boldsymbol\beta}$ from then on? At which $\lambda$ is $\hat\beta_1$ also $0$?
 
 **E2.** Click **Ridge** at $\lambda = 2$. Is either coefficient exactly zero? Push $\lambda$ to $100$ and look at the path panel: do the ridge paths ever reach zero?
 
-**E3.** Back to **Lasso** at $\lambda = 2$. Drag the OLS point around the first quadrant. For which OLS points does the solution stay on the $\beta_1$ axis ($\hat\beta_2 = 0$)? Does the same happen for ridge?
+**E3.** Back to **Lasso** at $\lambda = 2$. Drag the OLS point around the first quadrant. For which ordinary least squares points does the solution stay on the $\beta_1$ axis ($\hat\beta_2 = 0$)? Does the same happen for ridge?
 
 **E4.** Click **Elastic net** ($\alpha = 0.5$) with the reset settings. Compare the shape of the region and the path with the lasso: does elastic net still produce exact zeros, and does $\hat\beta_2$ drop out at a smaller or larger $\lambda$ than with the lasso?
+
+The second demo is the resampling demo from *Why penalize?*, now with the lasso. Two genes with correlation 0.99 both truly matter: $y = \text{gene 1} + \text{gene 2} + \text{noise}$, so the true coefficients are $(1, 1)$ (the cross). Each dot is one fit to a new training set of 20 samples; 50 sets. Orange is ordinary least squares, the other colour the penalized fit ($\lambda = 5$).
+
+```{=html}
+<div data-demo="penaltygeom" data-mode="resample" data-method="lasso" data-corr="0.99"></div>
+```
+
+**E5.** (a) Read the note under the table: in how many of the 50 datasets does the lasso set one gene to exactly 0? Look at the dots on the axes: is it always the same gene? (b) Click **OLS vs ridge**. Is any coefficient exactly 0 now, and how wide is the range of $\hat\beta_1$? (c) What does this tell you about using lasso to decide *which* of two co-regulated genes matters? Which method from the lecture is meant to fix this?
 
 ::: {.callout-note collapse="true" title="Solutions"}
 **E1.** $\hat\beta_2$ hits zero at $\lambda \approx 1.7$. From then on $\hat{\boldsymbol\beta}$ sits on the **corner** of the diamond on the $\beta_1$ axis (the red mark), and the region shrinks along that axis as $\lambda$ grows. $\hat\beta_1$ reaches zero at $\lambda \approx 4.5$; beyond that both coefficients are exactly $0$ and the region has shrunk to the origin.
 
 **E2.** No: at $\lambda = 2$ ridge gives about $(0.70, 0.37)$, both nonzero, and the touching point is on the smooth circle, off the axes. At $\lambda = 100$ both are tiny (about $0.02$ and $0.01$) but still not zero; the ridge paths approach zero smoothly and never reach it.
 
-**E3.** The solution stays on the $\beta_1$ axis for a whole band of OLS points: roughly, whenever the OLS $\beta_2$ is small compared with $\beta_1$ (with $\lambda = 2$, about $\beta_2 < 0.7$ when $\beta_1 = 2$). Every ellipse centred in that band touches the diamond first at its corner. For ridge the touching point moves smoothly with the OLS point and lands exactly on an axis only if the OLS point itself is on that axis.
+**E3.** The solution stays on the $\beta_1$ axis for a whole band of OLS points: roughly, whenever the ordinary least squares $\beta_2$ is small compared with $\beta_1$ (with $\lambda = 2$, about $\beta_2 < 0.7$ when $\beta_1 = 2$). Every ellipse centred in that band touches the diamond first at its corner. For ridge the touching point moves smoothly with the OLS point and lands exactly on an axis only if that point itself is on that axis.
 
 **E4.** The elastic-net region is a diamond with **rounded** sides, but it keeps its corners on the axes, so it still produces exact zeros. Its $|\beta|$ part only has weight $\alpha = 0.5$, so the pull towards exactly zero is weaker and $\hat\beta_2$ drops out later: at $\lambda \approx 5.2$ instead of $\approx 1.7$, and $\hat\beta_1$ at $\lambda \approx 9$ instead of $\approx 4.5$.
+
+**E5.** (a) In 27 of the 50 datasets the lasso sets one gene to exactly 0, and the dropped gene changes from dataset to dataset: some dots sit on the $\beta_1$ axis, others on the $\beta_2$ axis. All lasso estimates stay between 0 and about 2.3, so the wild ordinary least squares values (here $\hat\beta_1$ from about $-1.8$ to $5.4$) are tamed. (b) Ridge zeroes nothing: its dots form a tight blob around $(1, 1)$, $\hat\beta_1$ from about 0.7 to 1.2 — the weight is **shared** between the two genes. (c) With near-duplicate genes the lasso's choice of which gene to keep is decided by noise, so "gene 1 was selected, gene 2 was not" says nothing about which one matters. **Elastic net** adds a ridge part that makes correlated genes enter or leave together.
 :::
 
 ## In R
@@ -159,19 +174,19 @@ selected                                   # includes "(Intercept)" + kept genes
 
 ## Hints
 
-::: {.callout-tip collapse="true" title="Hint 1 — why OLS fails when p > n (B1)"}
-OLS solves a system with one unknown per predictor. With more unknowns ($p$) than equations ($n$), the system is **underdetermined** — infinitely many $\boldsymbol\beta$ fit perfectly. Equivalently, $X^\top X$ is a $p\times p$ matrix of rank at most $n < p$, so it is **singular** and $(X^\top X)^{-1}$ does not exist. See the solution-space discussion in Linear systems by hand.
+::: {.callout-tip collapse="true" title="Hint 1 — why ordinary least squares fails when p > n (B1)"}
+Each sample gives one equation ("the prediction for this sample equals its measured value"); each predictor's coefficient is one unknown. With more unknowns ($p$) than equations ($n$), the system is **underdetermined** — infinitely many coefficient sets fit perfectly. See the solution-space discussion in Linear systems by hand.
 :::
 
 ::: {.callout-tip collapse="true" title="Hint 2 — the 1-D ridge formula (B2)"}
 Just plug into $\hat\beta(\lambda) = \dfrac{8}{4+\lambda}$. The denominator grows with $\lambda$, so the estimate shrinks monotonically toward $0$ but never quite reaches it for finite $\lambda$. That "shrinks but does not zero" behaviour is the signature of the L2 penalty.
 :::
 
-::: {.callout-tip collapse="true" title="Hint 3 — inverting 2I (B3)"}
-When $X^\top X$ is the identity, $X^\top X + \lambda I = (1+\lambda)I$, whose inverse is $\frac{1}{1+\lambda}I$. So the ridge estimate is simply $\hat{\boldsymbol\beta}_{\text{ridge}} = \frac{1}{1+\lambda}\,X^\top\mathbf{y}$ — every OLS coefficient scaled by $\frac{1}{1+\lambda}$. At $\lambda=1$ that factor is $\tfrac12$.
+::: {.callout-tip collapse="true" title="Hint 3 — two uncorrelated predictors (B3)"}
+With $\sum x^2 = 1$ the formula is $\hat\beta = \dfrac{\sum xy}{1+\lambda}$: at $\lambda = 0$ it is just $\sum xy$, and every coefficient is the ordinary least squares value times $\dfrac{1}{1+\lambda}$. At $\lambda=1$ that factor is $\tfrac12$.
 :::
 
-::: {.callout-tip collapse="true" title="Hint 4 — a singular matrix and adding lambda*I (B4)"}
+::: {.callout-tip collapse="true" title="Hint 4 — (optional) a singular matrix and adding lambda*I (B4)"}
 A matrix with parallel columns is singular (non-invertible): row reduction gives a row of zeros on the left. Adding $\lambda I$ adds $\lambda$ to each diagonal entry, which breaks the parallel columns. For the eigenvalues of $\begin{pmatrix}1&1\\1&1\end{pmatrix}$, use the symmetric pattern from Eigenvalues & eigenvectors. A zero eigenvalue means some direction is squashed to zero (singular); adding $\lambda I$ raises every eigenvalue by $\lambda$, so it becomes $\lambda > 0$ and the matrix becomes invertible.
 :::
 
@@ -191,11 +206,11 @@ On `plot(fit, xvar="lambda")` the x-axis is $\log\lambda$ increasing to the righ
 
 ::: {.callout-note collapse="true" title="Solution"}
 
-**B1.** With $p=3$ unknown coefficients but only $n=2$ data points (equations), the linear system is **underdetermined**: there are infinitely many $\boldsymbol\beta$ that fit the two points exactly. Concretely $X^\top X$ is a $3\times3$ matrix but has rank at most $2$, so it is singular and $(X^\top X)^{-1}$ does not exist — OLS has no unique solution.
+**B1.** Count: $p=3$ unknown coefficients but only $n=2$ samples, i.e. 2 equations. With more unknowns than equations the system is **underdetermined**: after the two equations are satisfied one coefficient is still free, so there are infinitely many coefficient sets that fit the two samples exactly — ordinary least squares has no unique solution.
 
 **B2.** $\hat\beta(\lambda) = \dfrac{8}{4+\lambda}$:
 
-- $\lambda=0$: $8/4 = 2$ (the OLS value).
+- $\lambda=0$: $8/4 = 2$ (the ordinary least squares value).
 - $\lambda=4$: $8/8 = 1$.
 - $\lambda=12$: $8/16 = 0.5$.
 - $\lambda\to\infty$: $\to 0$.
@@ -203,13 +218,13 @@ On `plot(fit, xvar="lambda")` the x-axis is $\log\lambda$ increasing to the righ
 The coefficient **shrinks monotonically toward $0$** as $\lambda$ grows, but stays strictly positive for any finite $\lambda$ — ridge never sets it exactly to zero.
 
 **B3.**
-(a) OLS: $(X^\top X)^{-1} = I^{-1} = I$, so $\hat{\boldsymbol\beta}_{\text{OLS}} = I\begin{pmatrix}3\\1\end{pmatrix} = \begin{pmatrix}3\\1\end{pmatrix}$.
-(b) Ridge at $\lambda=1$: $X^\top X + I = 2I$, so $(2I)^{-1} = \tfrac12 I$ and
-$$\hat{\boldsymbol\beta}_{\text{ridge}} = \tfrac12 I\begin{pmatrix}3\\1\end{pmatrix} = \begin{pmatrix}1.5\\0.5\end{pmatrix}.$$
+(a) Ordinary least squares ($\lambda = 0$): $3/1 = 3$ for $x$ and $1/1 = 1$ for $z$.
+(b) Ridge at $\lambda=1$: $3/2 = 1.5$ for $x$ and $1/2 = 0.5$ for $z$.
 (c) Each coefficient was multiplied by $\tfrac{1}{1+\lambda}=\tfrac12$ — shrunk to **half**. Neither became exactly zero; ridge shrinks proportionally but keeps both predictors.
+(Optional, the same in matrices: $X^\top X = I$ and $X^\top\mathbf{y} = (3, 1)$, so $(X^\top X + I)^{-1}X^\top\mathbf{y} = (2I)^{-1}(3,1) = \tfrac12(3,1) = (1.5, 0.5)$.)
 
-**B4.**
-(a) The two columns are both $(1,1)$ — parallel. Row reduction: $\left[\begin{array}{cc|cc} 1 & 1 & 1 & 0 \\ 1 & 1 & 0 & 1 \end{array}\right] \xrightarrow{\;\text{R2}\,-\,\text{R1}\;} \left[\begin{array}{cc|cc} 1 & 1 & 1 & 0 \\ 0 & 0 & -1 & 1 \end{array}\right]$: a zero row on the left → **singular**, so OLS cannot invert it.
+**B4.** (optional)
+(a) The two columns are both $(1,1)$ — parallel. Row reduction: $\left[\begin{array}{cc|cc} 1 & 1 & 1 & 0 \\ 1 & 1 & 0 & 1 \end{array}\right] \xrightarrow{\;\text{R2}\,-\,\text{R1}\;} \left[\begin{array}{cc|cc} 1 & 1 & 1 & 0 \\ 0 & 0 & -1 & 1 \end{array}\right]$: a zero row on the left → **singular**, so ordinary least squares cannot invert it.
 (b) $X^\top X + I = \begin{pmatrix}2&1\\1&2\end{pmatrix}$. Row reduction:
 $$
 \left[\begin{array}{cc|cc} 2 & 1 & 1 & 0 \\ 1 & 2 & 0 & 1 \end{array}\right]
@@ -225,7 +240,7 @@ so it is now **invertible**, with inverse $\tfrac13\begin{pmatrix}2&-1\\-1&2\end
 
 **B5.**
 (a) The ridge region $\beta_1^2+\beta_2^2\le t$ is a **disk / circle**; the lasso region $\lvert\beta_1\rvert+\lvert\beta_2\rvert\le t$ is a **diamond** with corners on the axes at $(\pm t,0)$ and $(0,\pm t)$.
-(b) The RSS contours are ellipses centred on the OLS point $(2,0.3)$, growing outward.
+(b) The RSS contours are ellipses centred on the ordinary least squares point $(2,0.3)$, growing outward.
 The **lasso** is the one likely to return $\beta_2 = 0$ exactly: the diamond's corner on the $\beta_1$-axis is the part sticking out toward the ellipses, so an expanding contour tends to first touch there — and that corner has $\beta_2 = 0$. The circle has no corners, so the ridge touch point sits at a generic location with both coefficients nonzero. The **shape** (corners vs. smoothness) is what creates, or prevents, sparsity.
 
 **B6.** As $\lambda$ increases (moving right), the penalty is stronger, so coefficients get **smaller**. A path that reaches the horizontal axis and stays there means that predictor's coefficient has been set to **exactly zero** — the gene is dropped from the model. At the far right (largest $\lambda$) essentially **no** predictors remain (the model collapses toward just the intercept, predicting $\bar y$).

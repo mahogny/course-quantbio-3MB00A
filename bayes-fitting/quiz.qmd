@@ -1,0 +1,83 @@
+---
+title: "Quiz: fitting equations the Bayesian way"
+format:
+  html:
+    toc: true
+    code-copy: true
+    code-overflow: wrap
+    highlight-style: github
+---
+
+Short questions to test your understanding of Bayesian regression. Try each on paper first, then open the answer. The running example is a gene whose expression may rise with donor **age**, fitted as a line $y = a + b\,x$ plus noise with spread $\sigma$.
+
+---
+
+**Q1.** Two candidate lines are drawn through the same donors. Line A passes close to every point; line B misses two points by a lot. Which line has the higher likelihood, and why?
+
+::: {.callout-tip collapse="true" title="Hint"}
+Each point gets a bell curve centred on the line. Where does a point far from the line sit on its bell?
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+**Line A.** Under bell-shaped noise a point close to the line is probable and a point far away is improbable, so points far from a line make that line less believable. Line A has the smaller sum of squared residuals and therefore the higher likelihood. The line with the smallest total squared miss — the least-squares line — is the most believable line of all.
+:::
+
+---
+
+**Q2.** Least squares and Bayesian regression use the same model and the same likelihood. What, then, is different about the answer each one gives?
+
+::: {.callout-tip collapse="true" title="Hint"}
+How many numbers do you get for the slope in each case?
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+Least squares reports **one** best line (one number per coefficient, plus a confidence interval). The Bayesian fit multiplies the likelihood by a **prior** and keeps the **whole posterior distribution** — a cloud of plausible lines. With flat priors the most plausible line in that cloud is the least-squares line.
+:::
+
+---
+
+**Q3.** The slope prior is a bell curve centred at 0. A student says: "that prior assumes the gene does not change with age, so it biases the result." Is that right?
+
+::: {.callout-tip collapse="true" title="Hint"}
+Centred at 0 is not the same as fixed at 0. When does a prior matter most?
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+No. A prior centred at 0 does not fix the slope at 0; it says "no assumed direction, and huge slopes are implausible". The data can still move the slope away from 0. The prior pulls hardest when there are **few** donors and barely matters with many; that pull is a sceptical, regularising choice, not a hidden conclusion.
+:::
+
+---
+
+**Q4.** From 4000 posterior draws of the slope, 3840 are positive. What is $P(b > 0 \mid \text{data})$, and how would you get a 95% credible interval from the same draws?
+
+::: {.callout-tip collapse="true" title="Hint"}
+A probability is a fraction of draws; an interval is a pair of quantiles.
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+$P(b>0 \mid \text{data}) = 3840/4000 = 0.96$: a 96% probability that expression rises with age. The 95% credible interval runs from the 2.5% to the 97.5% quantile of the draws, e.g. `quantile(draws$b_age, c(0.025, 0.975))`. Given the data and priors, there is a 95% probability that the slope lies in that range.
+:::
+
+---
+
+**Q5.** For a new 70-year-old donor you can report a band for the **mean** expression at age 70 or a band for **one new donor's** expression. Which is wider, and which would you quote when someone plans to measure a single new person?
+
+::: {.callout-tip collapse="true" title="Hint"}
+Even if you knew the line exactly, would a new donor land exactly on it?
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+The **prediction band for one new donor** is wider: it contains the uncertainty about the line *and* the donor-to-donor scatter $\sigma$. The mean band only contains the uncertainty about the line. For a single new person, quote the wider prediction band (`predict()`), not the mean band (`fitted()`).
+:::
+
+---
+
+**Q6.** A `brms` fit gives a nice-looking slope, but `summary(fit)` shows `Rhat = 1.12` for it and the trace plots show chains that do not overlap. What do you conclude, and what do you do?
+
+::: {.callout-tip collapse="true" title="Hint"}
+Rhat compares the chains with each other. What should it be?
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+The sampler has **not converged**: the chains disagree, so the draws do not yet describe the posterior and the slope estimate cannot be trusted, however reasonable it looks. Rhat should be about 1.00 with overlapping "fuzzy caterpillar" traces. Re-run with more iterations (or reconsider the model or priors) and only interpret the numbers once the diagnostics look healthy.
+:::

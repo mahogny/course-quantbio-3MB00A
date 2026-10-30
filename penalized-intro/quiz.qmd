@@ -19,24 +19,24 @@ Count the predictors versus the samples. What does the model need in order to ha
 :::
 
 ::: {.callout-note collapse="true" title="Answer"}
-$p$ is the number of predictors (genes) and $n$ is the number of samples (patients/cells); $p \gg n$ means **far more genes than samples**. Ordinary least squares needs $X^\top X$ to be invertible, but with $p > n$ that matrix is **singular**, so there is **no unique** solution — the model is unidentifiable.
+$p$ is the number of predictors (genes) and $n$ is the number of samples (patients/cells); $p \gg n$ means **far more genes than samples**. Each sample is one equation and each coefficient one unknown. With $p > n$ there are more unknowns than equations, so **infinitely many** sets of coefficients fit the data perfectly: there is **no unique** solution — the model is unidentifiable.
 :::
 
 ---
 
-**Q2.** In the OLS solution $\hat{\boldsymbol{\beta}} = (X^\top X)^{-1} X^\top \mathbf{y}$, which single matrix must be invertible, and what is its size?
+**Q2.** A study measures 25 patients and fits a linear model with an intercept and 40 genes. How many equations and how many unknowns are there? What will `lm()` report for some of the genes?
 
 ::: {.callout-tip collapse="true" title="Hint"}
-Look for the inverse in the formula. $X$ is $n \times p$.
+One equation per patient, one unknown per coefficient (do not forget the intercept).
 :::
 
 ::: {.callout-note collapse="true" title="Answer"}
-$X^\top X$ must be invertible. It is a **$p \times p$** matrix (one row and column per predictor), even though it is built from only $n$ samples.
+25 equations and 41 unknowns (intercept + 40 genes). There are more unknowns than equations, so infinitely many coefficient sets fit perfectly. `lm()` estimates the intercept and 24 genes and returns `NA` for the other **16**, and it fits all 25 patients exactly.
 :::
 
 ---
 
-**Q3.** Why exactly does $p > n$ make $X^\top X$ non-invertible? Use the word **rank**.
+**Q3. (optional)** In the matrix form $\hat{\boldsymbol{\beta}} = (X^\top X)^{-1} X^\top \mathbf{y}$, why exactly does $p > n$ make $X^\top X$ non-invertible? Use the word **rank**.
 
 ::: {.callout-tip collapse="true" title="Hint"}
 The rank of $X^\top X$ cannot exceed the number of samples. When is a $p\times p$ matrix invertible?
@@ -48,14 +48,14 @@ $\text{rank}(X^\top X) \le n$. A $p \times p$ matrix is invertible only if its r
 
 ---
 
-**Q4.** Suppose $p < n$, so $X^\top X$ *is* invertible. Name a common biological situation that still makes OLS coefficients huge and unstable, and say what happens to $X^\top X$.
+**Q4.** Suppose $p < n$, so there are more samples than coefficients. Name a common biological situation that still makes ordinary least squares coefficients huge and unstable, and say why.
 
 ::: {.callout-tip collapse="true" title="Hint"}
-Think about genes in the same pathway. What does that do to the columns of $X$?
+Think about genes in the same pathway. Can two genes that always move together be told apart?
 :::
 
 ::: {.callout-note collapse="true" title="Answer"}
-**Correlated predictors** — co-regulated genes move together, so their columns in $X$ are nearly the same. This makes $X^\top X$ **nearly singular** (columns nearly parallel, an eigenvalue close to 0). Inverting a near-singular matrix amplifies noise, so the coefficients become **large and unstable** (multicollinearity).
+**Correlated predictors** — co-regulated genes move together, so one can stand in for the other. Very different coefficient pairs (say $1, 1$ or $100, -98$) then give almost the same predictions: the data pin down the **sum** of the two coefficients but not the **split**. The noise decides which split ordinary least squares returns, so the coefficients become **large and unstable** (multicollinearity).
 :::
 
 ---
@@ -72,14 +72,14 @@ What do we actually want the model to do — describe this data, or predict new 
 
 ---
 
-**Q6.** Define **bias** and **variance** in one sentence each, and say which one OLS with many predictors suffers from.
+**Q6.** Define **bias** and **variance** in one sentence each, and say which one ordinary least squares with many predictors suffers from.
 
 ::: {.callout-tip collapse="true" title="Hint"}
 One comes from a model that is too rigid, the other from a model that is too flexible.
 :::
 
 ::: {.callout-note collapse="true" title="Answer"}
-**Bias** is error from a model too rigid to capture the true pattern (underfitting). **Variance** is error from a model so flexible it chases noise and changes wildly between samples (overfitting). OLS with many predictors is **low bias, high variance** — it overfits.
+**Bias** is error from a model too rigid to capture the true pattern (underfitting). **Variance** is error from a model so flexible it chases noise and changes wildly between samples (overfitting). Ordinary least squares with many predictors is **low bias, high variance** — it overfits.
 :::
 
 ---
@@ -91,12 +91,12 @@ The objective now has two competing parts. What does the second part discourage,
 :::
 
 ::: {.callout-note collapse="true" title="Answer"}
-It **charges for large coefficients**, so the fit must justify every unit of coefficient it uses; this shrinks coefficients toward zero and stabilises them. $\lambda \ge 0$ sets **how strong** the penalty is — the **bias–variance dial**: $\lambda = 0$ is OLS (low bias, high variance), large $\lambda$ heavily shrinks (high bias, low variance).
+It **charges for large coefficients**, so the fit must justify every unit of coefficient it uses; this shrinks coefficients toward zero and stabilises them. $\lambda \ge 0$ sets **how strong** the penalty is — the **bias–variance dial**: $\lambda = 0$ is ordinary least squares (low bias, high variance), large $\lambda$ heavily shrinks (high bias, low variance).
 :::
 
 ---
 
-**Q8.** The ridge penalty changes the normal equations to use $X^\top X + \lambda I$ instead of $X^\top X$. Why does this matrix have an inverse even when $p > n$?
+**Q8. (optional)** The ridge penalty changes the normal equations to use $X^\top X + \lambda I$ instead of $X^\top X$. Why does this matrix have an inverse even when $p > n$?
 
 ::: {.callout-tip collapse="true" title="Hint"}
 What does adding $\lambda I$ do to the eigenvalues? When is a matrix invertible?

@@ -1,0 +1,71 @@
+---
+title: "Quiz: single-cell QC in depth"
+format:
+  html:
+    toc: true
+    code-copy: true
+    code-overflow: wrap
+    highlight-style: github
+---
+
+Short questions on mitochondrial and ribosomal fractions and on doublets. Try each on paper first, then open the answer. These are conceptual.
+
+---
+
+**Q1.** A cell has **95% of its counts coming from mitochondrial genes**. What does this suggest about the cell, and what is the biological mechanism?
+
+::: {.callout-tip collapse="true" title="Hint"}
+Where is mitochondrial RNA physically located when the cell membrane breaks?
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+A very high mitochondrial fraction is a hallmark of a **dying or damaged cell**, so it would normally be **filtered out**. Mechanism: when the cell membrane is compromised, **cytoplasmic mRNA leaks out** of the cell, but **mitochondrial mRNA stays trapped inside the mitochondria**. The *proportion* of remaining counts that is mitochondrial therefore rises. (Thresholds are dataset-dependent — some healthy, metabolically active tissues are genuinely mito-rich.)
+:::
+
+---
+
+**Q2.** Why is the **ribosomal fraction** (`percent.ribo`) usually inspected but rarely used as a hard filter, unlike the mitochondrial fraction?
+
+::: {.callout-tip collapse="true" title="Hint"}
+Is a high ribosomal fraction a sign of damage, or can it be a property of the cell type?
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+Ribosomal protein genes are highly expressed in almost every cell, and their share **varies between cell types and states** (e.g. resting lymphocytes are ribosome-rich, activated or large cells less so). It is therefore **biology as much as quality**: a threshold could remove a real population. It is still useful as a diagnostic — next to pct.mt, as a covariate to check against principal components, and as a warning sign when a cluster's only "markers" are ribosomal or mitochondrial genes.
+:::
+
+---
+
+**Q3.** What is a **doublet**, and why is it more dangerous than simple random noise?
+
+::: {.callout-tip collapse="true" title="Hint"}
+Two cells, one barcode. What would a T-cell + B-cell doublet appear to express?
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+A **doublet** is a single barcode that captured **two cells**, so its expression is a **blend** of two profiles. It is dangerous because it does not look like noise — it looks like a plausible cell. A T-cell + B-cell doublet expresses both T-cell and B-cell markers and can masquerade as a **novel "hybrid" cell type** or a fake transitional state, leading to false biological conclusions. Its signatures are unusually high total counts/genes and co-expression of markers that should be mutually exclusive.
+:::
+
+---
+
+**Q4.** You find a small cluster that expresses both `CD3D` (a T-cell marker) and `MS4A1` (a B-cell marker) at high level. What is the most likely explanation, and what should you do?
+
+::: {.callout-tip collapse="true" title="Hint"}
+Two exclusive lineages in "one cell." What could put two cells' RNA together?
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+Most likely a **doublet** cluster — droplets that captured two cells (a T cell and a B cell), whose profile is the *sum* of both types. Do **not** call a new "T/B hybrid" type. Run a doublet detector (`scDblFinder`, `DoubletFinder`), remove flagged cells, and re-check. Co-expression of two lineages' exclusive markers is a doublet until proven otherwise.
+:::
+
+---
+
+**Q5.** Doublet detectors such as `scDblFinder` do not need any labelled doublets to start with. Where do they get examples of what a doublet looks like?
+
+::: {.callout-tip collapse="true" title="Hint"}
+A doublet is roughly the sum (or average) of two cells. You have thousands of real cells.
+:::
+
+::: {.callout-note collapse="true" title="Answer"}
+They **simulate** them: combine the profiles of random pairs of real cells to make artificial doublets, place these together with the real cells in a common space (e.g. PCA), and flag real cells that sit among or resemble the simulated doublets. Homotypic doublets (two cells of the same type) remain hard to detect this way, but they are also less harmful, because they do not create a fake cell type.
+:::

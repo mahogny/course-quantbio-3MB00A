@@ -8,7 +8,19 @@
 //   data-mode="prior"   draw the penalty as a prior (Gaussian / Laplace), the RSS as a likelihood,
 //                       and the posterior with its peak (MAP) = the penalized solution;
 //   data-ols="2 0.6"  data-corr="0.4"  data-lambda="2"  data-alpha="1".
+//
+// data-mode="resample" (resample.ts): many small training sets with two correlated genes,
+//   y = gene1 + gene2 + noise; OLS and ridge/lasso estimates as two clouds in the (beta1, beta2)
+//   plane, with their ranges. Attributes (defaults):
+//   data-corr="0.95" (0..0.99)  data-lambda="5"  data-method="ridge" | "lasso"
+//   data-n="20" (samples per set)  data-noise="1" (noise sd)  data-draws="50"  data-seed="1".
+// data-mode="prior1d" (prior1d.ts): one coefficient; prior x likelihood -> posterior with its
+//   peak, plus the penalty curve (parabola / V). Attributes (defaults):
+//   data-prior="gauss" | "laplace"  data-width="0.5" (prior sd, 0.05..3)
+//   data-n="5" (samples, 1..100)  data-est="1" (beta from the data alone, -2.5..2.5).
 import { svgEl, htmlEl, slider, presets, button, draggable, svgPoint, scale, numList, autoMount } from "../lib/ui";
+import { mountResample, RESAMPLE_STYLE } from "./resample";
+import { mountPrior1d, PRIOR1D_STYLE } from "./prior1d";
 import { V2, solve, path, pen, rss, objective, regionBoundary, ellipse, contour } from "./math";
 
 const NAME = "penaltygeom";
@@ -25,6 +37,7 @@ const STYLE = `
 .reveal [data-demo="${NAME}"] .pg-side { flex: 0 0 600px; width: 600px; gap: 8px; }
 .reveal [data-demo="${NAME}"] .qb-slider { gap: .4em; }
 .reveal [data-demo="${NAME}"] .qb-readout { font-size: 19px; padding: .3em .5em; }
+@media (max-width: 640px) { [data-demo="${NAME}"] > div[class] { flex-basis: auto; width: 100%; } }
 `;
 
 const COL = { b1: "#1f77b4", b2: "#ff7f0e", region: "#2ca02c", sol: "#9467bd", rss: "#999", ols: "#444" };
@@ -33,7 +46,7 @@ function injectStyle(): void {
   if (document.getElementById("qb-style-" + NAME)) return;
   const s = document.createElement("style");
   s.id = "qb-style-" + NAME;
-  s.textContent = STYLE;
+  s.textContent = STYLE + RESAMPLE_STYLE(NAME) + PRIOR1D_STYLE(NAME);
   document.head.appendChild(s);
 }
 
@@ -42,6 +55,12 @@ const fmtLam = (L: number) => { const v = 10 ** L; return v >= 10 ? v.toFixed(0)
 
 function mount(host: HTMLElement): void {
   injectStyle();
+  if (host.dataset.mode === "resample") return mountResample(host);
+  if (host.dataset.mode === "prior1d") return mountPrior1d(host);
+  mountGeo(host);
+}
+
+function mountGeo(host: HTMLElement): void {
   const prior = host.dataset.mode === "prior";
   const ols0 = numList(host.dataset.ols, [2, 0.6]).slice(0, 2) as V2;
   const corr0 = Number(host.dataset.corr ?? 0.4);

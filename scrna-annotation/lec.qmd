@@ -26,7 +26,7 @@ In UMAPs and clustering you turned a single-cell dataset into **clusters** — g
 - A cluster is a **cloud of cells** in gene space; annotation asks what that cloud *is*.
 - **Marker genes**: the genes a cluster switches on that the others do not — found by **differential expression** (DE) of each cluster against the rest.
 - Two routes to a label: **manual** (match markers to known cell-type signatures) and **reference-based** (let a labelled dataset vote).
-- The honest caveats: **ambiguous** clusters, **doublets**, and **continuous states** that resist discrete labels.
+- The honest caveats: **ambiguous** clusters and **continuous states** that resist discrete labels.
 - The maths underneath is the same as before: cells are **vectors**, a cluster mean is a **centroid**, and a marker is a coordinate where two groups of vectors differ.
 
 ::: notes
@@ -247,8 +247,8 @@ A balanced comparison so students choose appropriately. Manual is transparent an
 
 Not every cluster names cleanly.
 
-- **No clear markers** — a cluster's top DE genes are weak or generic (ribosomal, mitochondrial). Often low-quality cells or a clustering artefact.
-- **Mixed markers** — one cluster shows both T-cell (`CD3D`) *and* myeloid (`LYZ`) markers. Real biology? A doublet cluster? Under-clustering?
+- **No clear markers** — a cluster's top DE genes are weak or generic. Often low-quality cells or a clustering artefact.
+- **Mixed markers** — one cluster shows both T-cell (`CD3D`) *and* myeloid (`LYZ`) markers. Real biology, or two types merged by under-clustering?
 - **Resolution** — turning the clustering resolution up may split a vague blob into two clean types; too high and you over-split one type into noise.
 
 Annotation and clustering are **iterative**: an unnameable cluster is a signal to **re-cluster**, adjust resolution, or check quality control.
@@ -256,23 +256,7 @@ Annotation and clustering are **iterative**: an unnameable cluster is a signal t
 ![](fig13-clustering-resolution.svg){width="75%" fig-align="center"}
 
 ::: notes
-Set expectations: real datasets always have a couple of clusters that resist a label. Enumerate the usual culprits — a cluster dominated by ribosomal/mito genes is usually dying or stressed cells (QC problem), not a cell type; a cluster with two lineages' markers is either a doublet artefact or a signal that the resolution is wrong. The takeaway is that annotation feeds back into clustering: you rarely get the resolution right on the first try, and an ambiguous cluster is diagnostic. This reinforces that the UMAPs-and-clustering step and the annotation step are one loop, not a pipeline you run once.
-:::
-
-## Caveat: doublets {.smaller}
-
-A **doublet** is two cells captured in one droplet and sequenced as if they were one "cell."
-
-- Its expression profile is a **sum of two types** → it shows **both** sets of markers (e.g. T-cell *and* B-cell genes).
-- Doublets can form their own small cluster that looks like a fake "hybrid" cell type — a classic annotation trap.
-- Detect them with dedicated tools (**`scDblFinder`**, **`DoubletFinder`**) that flag cells looking like blends of two profiles, then remove them **before** finalising annotation.
-
-A "cell type" that co-expresses two lineages' exclusive markers should raise a **doublet** suspicion first.
-
-![](fig14-doublet-vector-sum.svg){width="55%" fig-align="center"}
-
-::: notes
-Doublets are the most common way annotation goes wrong for a beginner: a droplet catches two cells, the reads combine, and you get a profile that is literally the sum of two centroids. Because it carries both marker sets, an untrained eye may christen a new "T/B hybrid" cell type that does not exist. The linear-algebra intuition — the doublet vector is roughly the sum of two cell vectors — is worth stating. Practically: run a doublet detector, remove flagged cells, then annotate. Give the rule of thumb: exclusive markers of two distinct lineages appearing together is a doublet until proven otherwise.
+Set expectations: real datasets always have a couple of clusters that resist a label. Enumerate the usual culprits — a cluster with only generic top genes is usually low-quality cells (a QC problem), not a cell type; a cluster with two lineages' markers is often a signal that the resolution is wrong. The takeaway is that annotation feeds back into clustering: you rarely get the resolution right on the first try, and an ambiguous cluster is diagnostic. This reinforces that the UMAPs-and-clustering step and the annotation step are one loop, not a pipeline you run once.
 :::
 
 ## Caveat: continuous states vs discrete types {.smaller}
@@ -318,11 +302,11 @@ Consolidation slide: make the students see that annotation invented nothing math
 | Reading the table | `avg_log2FC`, `pct.1`, `pct.2`, `p_val_adj` |
 | Manual workflow | find markers → match to known signatures → label → check |
 | Reference-based | copy labels from a labelled atlas by similarity (correlation) |
-| Caveats | ambiguous clusters, **doublets**, continuous states |
+| Caveats | ambiguous clusters, continuous states |
 | Under the hood | cells = vectors, centroids = means, markers = separating coordinates |
 
-This closes the course. Optional follow-up in the candidate material: *Cell cycle & connection to PCA*, a continuous state that can dominate clustering.
+This closes the course. Optional follow-ups in the candidate material: *Cell cycle & connection to PCA*, a continuous state that can dominate clustering, and *[Single-cell QC in depth](../scrna-qc-extra/lec.qmd)*, including doublets — fake "hybrid" clusters.
 
 ::: notes
-The summary is the take-home map. Drill the reading of a marker table one more time because it is the concrete lab skill: fold change for effect size, pct.1/pct.2 for sensitivity/specificity, adjusted p-value for significance under massive multiple testing. Restate the two annotation routes and when to use each, and the three caveats that catch beginners. Close on the unifying idea — vectors, means, and two-group tests — and hand off to Cell-cycle analysis, where a continuous state (the cycle) is treated head-on.
+The summary is the take-home map. Drill the reading of a marker table one more time because it is the concrete lab skill: fold change for effect size, pct.1/pct.2 for sensitivity/specificity, adjusted p-value for significance under massive multiple testing. Restate the two annotation routes and when to use each, and the caveats that catch beginners. Close on the unifying idea — vectors, means, and two-group tests — and hand off to Cell-cycle analysis, where a continuous state (the cycle) is treated head-on.
 :::

@@ -297,38 +297,15 @@ Quantitative biology and integrative omics
 </section>
 <section id="least-squares-only-works-when-there-is-sufficient-data" class="slide level2 smaller">
 <h2>Least squares only works when there is sufficient data</h2>
-<p>We can’t hit <span class="math inline">\mathbf{y} = X\boldsymbol{\beta}</span> exactly (data is noisy), so <strong>ordinary least squares (OLS)</strong> picks the <span class="math inline">\boldsymbol{\beta}</span> that makes the total squared error smallest:</p>
-<p><span class="math display">\hat{\boldsymbol{\beta}} = \arg\min_{\boldsymbol{\beta}} \ \|\mathbf{y} - X\boldsymbol{\beta}\|^2</span></p>
-<p>Working this out gives the <strong>normal equations</strong>:</p>
-<p><span class="math display">X^\top X\,\boldsymbol{\beta} = X^\top \mathbf{y} \qquad\Longrightarrow\qquad \hat{\boldsymbol{\beta}} = (X^\top X)^{-1} X^\top \mathbf{y}</span></p>
-<p>Everything hinges on that inverse: we can only solve for <span class="math inline">\boldsymbol{\beta}</span> <strong>if <span class="math inline">X^\top X</span> is invertible</strong>.</p>
-
-<img data-src="fig04-least-squares-projection.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:60.0%"><aside class="notes">
-<p>State the least-squares objective in words: find the coefficients that minimise the total squared gap between prediction and truth. Don’t derive the normal equations — just present them and point at the single load-bearing object, the matrix X-transpose-X (a p by p matrix), and its inverse. The entire rest of the lecture is about when that inverse fails to exist or is untrustworthy. Students met invertibility and singular matrices in the Linear systems units and eigenvalues; lean on that vocabulary: a matrix you cannot invert is singular.</p>
-<style type="text/css">
-        span.MJX_Assistive_MathML {
-          position:absolute!important;
-          clip: rect(1px, 1px, 1px, 1px);
-          padding: 1px 0 0 0!important;
-          border: 0!important;
-          height: 1px!important;
-          width: 1px!important;
-          overflow: hidden!important;
-          display:block!important;
-      }</style></aside>
-</section>
-<section id="when-p-n-the-inverse-does-not-exist" class="slide level2 smaller">
-<h2>When p &gt; n, the inverse does not exist</h2>
-<p><span class="math inline">X^\top X</span> is a <span class="math inline">p \times p</span> matrix, but it is built from only <span class="math inline">n</span> samples. A basic fact of linear algebra:</p>
-<p><span class="math display">\text{rank}(X^\top X) \le n</span></p>
-<p>So when <strong><span class="math inline">p &gt; n</span></strong> (more genes than patients), <span class="math inline">X^\top X</span> is a <span class="math inline">p\times p</span> matrix of rank at most <span class="math inline">n &lt; p</span> — it is <strong>singular</strong>. It has <strong>no inverse</strong>.</p>
+<p>We can’t hit every <span class="math inline">y</span> exactly (data is noisy), so <strong>ordinary least squares (OLS)</strong> picks the coefficients with the <strong>smallest total squared error</strong>:</p>
 <ul>
-<li>There is <strong>no unique</strong> least-squares solution — infinitely many <span class="math inline">\boldsymbol{\beta}</span> fit the data equally (perfectly) well.</li>
-<li>The model is <strong>unidentifiable</strong>: the data cannot pin down the coefficients.</li>
+<li>For each sample, take the miss: observed <span class="math inline">y</span> minus predicted <span class="math inline">y</span>.</li>
+<li>Square the misses and add them up.</li>
+<li>Choose the <span class="math inline">\boldsymbol{\beta}</span> that makes this total as small as possible. That is what <code>lm()</code> does.</li>
 </ul>
-
-<img data-src="fig05-underdetermined-many-fits.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:60.0%"><aside class="notes">
-<p>This is the hard failure mode, and it is pure linear algebra. X-transpose-X is p by p but its rank cannot exceed n, the number of samples. When p exceeds n the matrix is rank-deficient, hence singular, hence not invertible — the normal equations have no unique solution. Give the intuition: with more unknowns than constraints, infinitely many coefficient vectors reproduce y perfectly. Connect to the Linear systems picture of “infinitely many solutions” when there are fewer independent equations than unknowns. This is not “OLS does badly” — it literally cannot return one answer.</p>
+<p>This needs <strong>enough data to pin down every coefficient</strong>. Each sample gives one equation; each coefficient is one unknown. Fewer equations than unknowns, and there is no single best answer.</p>
+<aside class="notes">
+<p>State the least-squares objective in words only: find the coefficients that minimise the total squared gap between prediction and truth. lm() solves this for them. The one idea to plant: every sample is one equation and every coefficient is one unknown, so ordinary least squares needs at least as many samples as coefficients, and the coefficients must not be able to stand in for each other. The next two slides are the two ways this fails in genomics. The matrix formula (the normal equations and the inverse) is on the optional slide at the end, for those who want the linear-algebra view.</p>
 <style type="text/css">
         span.MJX_Assistive_MathML {
           position:absolute!important;
@@ -341,18 +318,90 @@ Quantitative biology and integrative omics
           display:block!important;
       }</style></aside>
 </section>
-<section id="even-when-it-inverts-it-can-be-bad" class="slide level2 smaller">
-<h2>Even when it inverts, it can be bad</h2>
-<p>Suppose <span class="math inline">p &lt; n</span>, so <span class="math inline">X^\top X</span> <em>is</em> invertible. You are still not safe if predictors are <strong>correlated</strong> — which genes always are (co-regulated pathways, batch structure).</p>
+<section id="when-p-n-there-is-no-single-answer" class="slide level2 smaller">
+<h2>When p &gt; n, there is no single answer</h2>
+<p>Count equations and unknowns:</p>
 <ul>
-<li>Correlated columns make <span class="math inline">X^\top X</span> <strong>nearly singular</strong> (an eigenvalue close to 0).</li>
-<li>Inverting a nearly-singular matrix <strong>amplifies noise</strong>: tiny changes in the data cause huge swings in <span class="math inline">\hat{\boldsymbol{\beta}}</span>.</li>
-<li>The fitted coefficients become <strong>large, unstable, and hard to interpret</strong> — often big positive and negative values that cancel.</li>
+<li><strong>30 patients</strong> = 30 equations. <strong>20,000 genes</strong> = 20,000 unknowns.</li>
+<li>With more unknowns than equations, <strong>infinitely many</strong> sets of coefficients fit the data <strong>perfectly</strong>.</li>
+<li>The data cannot tell them apart: the model is <strong>unidentifiable</strong>. In R, <code>lm()</code> gives up and returns <code>NA</code> for every gene beyond the 29th.</li>
+</ul>
+<p>This is not “ordinary least squares does a bit worse”. It cannot return <strong>one</strong> answer at all.</p>
+
+<img data-src="fig05-underdetermined-many-fits.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:55.0%"><aside class="notes">
+<p>The hard failure mode, by counting. Two points and a curve with many free parameters: every curve in the bundle goes through both points, so all fit perfectly, and they disagree everywhere else. Same with 30 patients and 20,000 genes: 30 equations, 20,000 unknowns, infinitely many perfect fits. This is the “infinitely many solutions” case from the Linear systems units. In R, lm() estimates the intercept plus as many genes as it can (29 here) and returns NA for the rest; the exercise shows this. In linear-algebra language the matrix in the ordinary least squares formula has no inverse; that is on the optional slide at the end.</p>
+<style type="text/css">
+        span.MJX_Assistive_MathML {
+          position:absolute!important;
+          clip: rect(1px, 1px, 1px, 1px);
+          padding: 1px 0 0 0!important;
+          border: 0!important;
+          height: 1px!important;
+          width: 1px!important;
+          overflow: hidden!important;
+          display:block!important;
+      }</style></aside>
+</section>
+<section id="even-with-enough-samples-correlated-genes-are-trouble" class="slide level2 smaller">
+<h2>Even with enough samples, correlated genes are trouble</h2>
+<p>Genes in the same pathway move together. Take two genes A and B that are <strong>almost identical</strong>, and an outcome that is really <span class="math inline">2 \times</span> A. All of these predict almost the same:</p>
+<table class="caption-top">
+<thead>
+<tr class="header">
+<th>coefficient on A</th>
+<th>coefficient on B</th>
+<th>prediction</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>2</td>
+<td>0</td>
+<td>2·A</td>
+</tr>
+<tr class="even">
+<td>1</td>
+<td>1</td>
+<td>≈ 2·A</td>
+</tr>
+<tr class="odd">
+<td>100</td>
+<td>−98</td>
+<td>≈ 2·A</td>
+</tr>
+<tr class="even">
+<td>−50</td>
+<td>52</td>
+<td>≈ 2·A</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li>The data pin down the <strong>sum</strong> of the two coefficients (about 2), but not the <strong>split</strong>.</li>
+<li>A little noise decides which split ordinary least squares returns: <strong>large, unstable</strong> coefficients that flip sign from one sample to the next.</li>
 </ul>
 <p>This is <strong>multicollinearity</strong>, and in genomics it is the rule, not the exception.</p>
-
-<img data-src="fig06-multicollinearity-instability.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:55.0%"><aside class="notes">
-<p>The second, softer failure mode. Even with more samples than predictors, biology gives you highly correlated predictors — genes in the same pathway move together. Correlated columns push X-transpose-X toward singularity: one of its eigenvalues gets close to zero. Recall from the eigenvalue unit that a near-zero eigenvalue means the inverse blows up along that direction. The practical symptom is coefficients that are enormous and unstable — refit on a slightly different sample and they lurch. This motivates wanting to <em>control</em> coefficient size, which is exactly what penalization does.</p>
+<aside class="notes">
+<p>The second, softer failure mode. Even with more samples than predictors, two highly correlated genes can stand in for each other. Read the table: 100 times A minus 98 times B is about 2 times A when A and B are almost the same, and so is minus 50 A plus 52 B. The data only see the sum of the two coefficients. Which split ordinary least squares returns is decided by the noise, so refitting on slightly different patients gives wildly different coefficients that cancel each other. The next slide shows exactly this with 50 resampled datasets. (Linear-algebra view, optional slide: the matrix that ordinary least squares inverts is nearly singular.)</p>
+<style type="text/css">
+        span.MJX_Assistive_MathML {
+          position:absolute!important;
+          clip: rect(1px, 1px, 1px, 1px);
+          padding: 1px 0 0 0!important;
+          border: 0!important;
+          height: 1px!important;
+          width: 1px!important;
+          overflow: hidden!important;
+          display:block!important;
+      }</style></aside>
+</section>
+<section id="try-it-correlated-genes-resampled" class="slide level2">
+<h2>Try it: correlated genes, resampled</h2>
+<link rel="stylesheet" href="../demos/dist/demo.css">
+<div data-demo="penaltygeom" data-mode="resample"></div>
+<script src="../demos/dist/penaltygeom.js"></script>
+<aside class="notes">
+<p>Interactive demo. The true model is y = gene 1 + gene 2, so the true coefficients are (1, 1) (the cross). Each dot is one fit to a new training set of 20 samples; 50 sets. Defaults: correlation 0.95, ridge with lambda 5. The ordinary least squares dots (orange cloud, labelled OLS) spread along the dashed line beta1 + beta2 = 2: beta1 ranges from about -0.3 to 3.1, but the sum stays between 1.6 and 2.4. The data pin down the combined effect, not the split, exactly as in the table. The ridge dots sit in a tight blob near (1, 1): beta1 from 0.6 to 1.3. Push the correlation to 0.99: ordinary least squares beta1 now runs from -1.8 to 5.4 and beta2 goes down to -3, while ridge stays at 0.7 to 1.2. Pull it down to 0: ordinary least squares is already tight (0.7 to 1.5), so the penalty only matters when genes are correlated. Click “resample 50 datasets” to show it is not a fluke. Leave the lasso button for the Ridge and lasso unit.</p>
 <style type="text/css">
         span.MJX_Assistive_MathML {
           position:absolute!important;
@@ -376,7 +425,7 @@ Quantitative biology and integrative omics
 <p>The best fit to the data at hand is often the <strong>worst</strong> predictor of new data.</p>
 
 <img data-src="fig07-overfit-vs-smooth.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:65.0%"><aside class="notes">
-<p>Reframe the objective. Beginners equate “best model” with “smallest error on my data.” That is exactly wrong for prediction. With enough flexibility you interpolate the training data perfectly, but you have fit the noise, and noise does not generalise. The classic picture: a high-degree polynomial threading every point versus a smooth line — the smooth line is worse on training data but better on new data. This slide sets up the bias–variance tradeoff, which names the tension formally.</p>
+<p>Reframe the objective. Beginners equate “best model” with “smallest error on my data.” That is exactly wrong for prediction. With enough flexibility you interpolate the training data perfectly, but you have fit the noise, and noise does not generalise. The classic picture: a high-degree polynomial threading every point versus a smooth line — the smooth line is worse on training data but better on new data. This slide sets up the bias–variance tradeoff, which names the tension.</p>
 <style type="text/css">
         span.MJX_Assistive_MathML {
           position:absolute!important;
@@ -391,16 +440,35 @@ Quantitative biology and integrative omics
 </section>
 <section id="the-biasvariance-tradeoff" class="slide level2 smaller">
 <h2>The bias–variance tradeoff</h2>
-<p>Prediction error decomposes into two competing parts:</p>
+<p>Prediction error has two competing parts:</p>
 <ul>
 <li><strong>Bias</strong> — error from the model being too rigid to capture the true pattern. (Underfitting.)</li>
 <li><strong>Variance</strong> — error from the model being so flexible it chases noise, changing wildly from sample to sample. (Overfitting.)</li>
 </ul>
-<p><span class="math display">\text{expected prediction error} \;=\; \text{bias}^2 \;+\; \text{variance} \;+\; \text{irreducible noise}</span></p>
-<p>OLS with many predictors is a <strong>low-bias, high-variance</strong> machine: flexible enough to fit anything, so unstable it generalises poorly. We can often <strong>lower total error by accepting a little bias</strong> to cut variance a lot.</p>
+<p><span class="math display">\text{prediction error} \;=\; \text{bias}^2 \;+\; \text{variance} \;+\; \text{noise you cannot remove}</span></p>
+<p>Ordinary least squares with many predictors is a <strong>low-bias, high-variance</strong> machine: flexible enough to fit anything, so unstable it generalises poorly. We can often <strong>lower total error by accepting a little bias</strong> to cut variance a lot.</p>
 
-<img data-src="fig08-bias-variance-u-curve.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:60.0%"><aside class="notes">
-<p>This is the conceptual heart of the lecture. Two sources of error pull in opposite directions. A too-simple model misses the real signal (bias); a too-flexible model fits noise and swings around (variance). Total expected error is their sum plus irreducible noise. The key insight that justifies everything downstream: you can trade a small increase in bias for a large decrease in variance and come out ahead on total error. OLS in high dimensions sits at the high-variance extreme, so there is lots of variance to trade away. Penalization is the knob that makes the trade.</p>
+<img data-src="fig08-bias-variance-u-curve.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:55.0%"><aside class="notes">
+<p>This is the conceptual heart of the lecture. Two sources of error pull in opposite directions. A too-simple model misses the real signal (bias); a too-flexible model fits noise and swings around (variance). Total error is their sum plus noise that no model can remove. Read the equation as words, not as something to compute. The key insight that justifies everything downstream: you can trade a small increase in bias for a large decrease in variance and come out ahead on total error. Ordinary least squares in high dimensions sits at the high-variance extreme, so there is lots of variance to trade away. Penalization is the knob that makes the trade; the next slide lets them turn it.</p>
+<style type="text/css">
+        span.MJX_Assistive_MathML {
+          position:absolute!important;
+          clip: rect(1px, 1px, 1px, 1px);
+          padding: 1px 0 0 0!important;
+          border: 0!important;
+          height: 1px!important;
+          width: 1px!important;
+          overflow: hidden!important;
+          display:block!important;
+      }</style></aside>
+</section>
+<section id="try-it-the-biasvariance-dial" class="slide level2">
+<h2>Try it: the bias–variance dial</h2>
+<link rel="stylesheet" href="../demos/dist/demo.css">
+<div data-demo="biasvar" data-lambda="0.001"></div>
+<script src="../demos/dist/biasvar.js"></script>
+<aside class="notes">
+<p>Interactive demo. Expression of one gene at 16 doses, fitted with a very flexible curve; lambda is the penalty that makes it stiffer. Panel (a) is the fit, panel (b) the training error (blue) and test error on new points (red) for every lambda; click or drag in (b) to set lambda. Start at lambda 0.001: the curve wiggles through the points, training error 0.23 but test error 1.66, about three times the noise level of 0.6. That is overfitting. Click “best lambda” (about 0.79): test error drops to 0.68, while training error rises to 0.39. Drag to about 300: the curve is almost flat, training 1.42 and test 1.34, underfitting. Then tick “show 20 refits”: the spread of the 20 fits is the variance (1.74 at lambda 0.001, 0.35 at the best lambda, 0.16 at 320) and the offset of their average from the true curve is the bias (0.24 at the best lambda, 1.21 at 320). Training error always goes down as lambda goes down; test error has a U. Cross-validation (later unit) finds the bottom of the U without a test set.</p>
 <style type="text/css">
         span.MJX_Assistive_MathML {
           position:absolute!important;
@@ -416,7 +484,7 @@ Quantitative biology and integrative omics
 <section id="the-idea-penalizing-large-coefficients-improves-fit" class="slide level2 smaller">
 <h2>The idea: Penalizing large coefficients improves fit</h2>
 <p>Instead of minimising only the fit error, add a <strong>penalty</strong> that grows with the size of the coefficients:</p>
-<p><span class="math display">\hat{\boldsymbol{\beta}} = \arg\min_{\boldsymbol{\beta}} \ \underbrace{\|\mathbf{y} - X\boldsymbol{\beta}\|^2}_{\text{fit the data}} \;+\; \lambda\underbrace{\,\text{(size of }\boldsymbol{\beta}\text{)}}_{\text{stay small}}</span></p>
+<p><span class="math display">\text{what we minimise} \;=\; \underbrace{\text{fit error}}_{\text{fit the data}} \;+\; \lambda \times \underbrace{\text{(size of the coefficients)}}_{\text{stay small}}</span></p>
 <ul>
 <li>The first term still rewards fitting the data.</li>
 <li>The second term <strong>punishes</strong> large coefficients. <span class="math inline">\lambda \ge 0</span> sets how hard.</li>
@@ -424,7 +492,7 @@ Quantitative biology and integrative omics
 </ul>
 <p>We deliberately move <strong>away</strong> from the perfect-fit solution to buy <strong>stability</strong>.</p>
 <aside class="notes">
-<p>Here is the whole idea in one equation, stated conceptually so the specific penalty (sum of squares for ridge, sum of absolute values for lasso) can come later. We augment the objective with a term that charges for coefficient magnitude. Lambda is the price. With lambda = 0 we are back to OLS; as lambda grows, coefficients are pulled toward zero. The intuition to leave them with: the model can no longer spend coefficient magnitude freely — it must earn each unit by improving the fit more than the penalty costs. That is what stops it from chasing noise.</p>
+<p>Here is the whole idea in one line of words, so the specific penalty (sum of squares for ridge, sum of absolute values for lasso) can come later. We add a term that charges for coefficient size. Lambda is the price. With lambda = 0 we are back to ordinary least squares; as lambda grows, coefficients are pulled toward zero. The intuition to leave them with: the model can no longer spend coefficient size freely; it must earn each unit by improving the fit more than the penalty costs. That is what stops it from chasing noise.</p>
 <style type="text/css">
         span.MJX_Assistive_MathML {
           position:absolute!important;
@@ -437,16 +505,16 @@ Quantitative biology and integrative omics
           display:block!important;
       }</style></aside>
 </section>
-<section id="what-the-penalty-buys-geometrically" class="slide level2 smaller">
-<h2>What the penalty buys, geometrically</h2>
-<p>Two ways to see why shrinking coefficients helps:</p>
-<p><strong>It fixes the inverse.</strong> The penalized normal equations replace <span class="math inline">X^\top X</span> with</p>
-<p><span class="math display">X^\top X + \lambda I</span></p>
-<p>Adding <span class="math inline">\lambda</span> to the diagonal lifts every eigenvalue by <span class="math inline">\lambda &gt; 0</span>, so the matrix is <strong>always invertible</strong> — even when <span class="math inline">p &gt; n</span>. The unidentifiable problem becomes solvable.</p>
-<p><strong>It calms the variance.</strong> Shrinking coefficients toward zero makes them <strong>less sensitive</strong> to noise in any one sample. Estimates stop swinging.</p>
-
-<img data-src="fig10-eigenvalue-shift-lambdaI.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:65.0%"><aside class="notes">
-<p>Two payoffs, one from each failure mode. First, the hard failure: the penalized solution uses X-transpose-X plus lambda times the identity. Recall from the eigenvalue unit that adding lambda*I shifts every eigenvalue up by lambda; a matrix with all-positive eigenvalues is invertible. So the singular p &gt; n case becomes solvable, and there is again a unique answer. Second, the soft failure: shrinking coefficients directly reduces variance — smaller, steadier coefficients that do not lurch when you resample. This slide ties the abstract penalty back to concrete linear algebra they already own.</p>
+<section id="what-the-penalty-buys" class="slide level2 smaller">
+<h2>What the penalty buys</h2>
+<p><strong>One answer again.</strong> Among all the coefficient sets that fit (almost) equally well, the penalty prefers the one with the <strong>smallest</strong> coefficients, and there is only one of those.</p>
+<ul>
+<li>Correlated genes A and B: of 2·A, 1·A + 1·B, 100·A − 98·B, … the penalty picks <strong>1·A + 1·B</strong>, the smallest.</li>
+<li>With <span class="math inline">p &gt; n</span>: of the infinitely many perfect fits, the penalty picks one. The model can be fitted even with 20,000 genes and 30 patients.</li>
+</ul>
+<p><strong>It calms the variance.</strong> Shrinking coefficients toward zero makes them <strong>less sensitive</strong> to noise in any one sample. Estimates stop swinging, as the ridge cloud in the resampling demo showed.</p>
+<aside class="notes">
+<p>Two payoffs, one for each failure mode. First, the hard failure: when many coefficient sets fit equally well, the penalty breaks the tie by preferring small coefficients, and there is exactly one smallest. For two nearly identical genes that is splitting the effect evenly, 1 and 1, instead of 100 and -98. So p &gt; n becomes solvable again. Second, the soft failure: shrinking directly reduces variance; smaller, steadier coefficients that do not lurch when you resample (the tight ridge blob in the demo). The linear-algebra reason (adding lambda to the diagonal makes the matrix invertible) is on the optional slide at the end.</p>
 <style type="text/css">
         span.MJX_Assistive_MathML {
           position:absolute!important;
@@ -463,7 +531,7 @@ Quantitative biology and integrative omics
 <h2>The trade, made honest</h2>
 <p>Penalization is not free. By pulling coefficients toward zero we introduce <strong>bias</strong>: the estimates are systematically shrunk, so they no longer match the true values on average.</p>
 <ul>
-<li>Small <span class="math inline">\lambda</span>: close to OLS — low bias, high variance (overfits).</li>
+<li>Small <span class="math inline">\lambda</span>: close to ordinary least squares — low bias, high variance (overfits).</li>
 <li>Large <span class="math inline">\lambda</span>: heavy shrinkage — high bias, low variance (underfits, coefficients near 0).</li>
 <li><strong>Somewhere in between</strong> minimises total prediction error.</li>
 </ul>
@@ -471,7 +539,7 @@ Quantitative biology and integrative omics
 <p>Choosing <span class="math inline">\lambda</span> well (e.g.&nbsp;by <strong>cross-validation</strong>, in a later unit) is the whole game.</p>
 
 <img data-src="fig11-lambda-shrinkage-dial.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:65.0%"><aside class="notes">
-<p>Be honest about the cost, per the course’s “honest about what we defer” principle. Shrinkage biases the estimates — that is the price. So lambda is literally the bias–variance dial: turn it up and you move from the overfit OLS end toward the oversmoothed end. The sweet spot in the middle minimises total error. How to find it — cross-validation — is deferred to a later unit; name it, don’t teach it today. The takeaway: penalization does not magically improve everything; it lets you <em>choose</em> a better point on the tradeoff than OLS forces on you.</p>
+<p>Be honest about the cost, per the course’s “honest about what we defer” principle. Shrinkage biases the estimates — that is the price. So lambda is literally the bias–variance dial: turn it up and you move from the overfit ordinary least squares end toward the oversmoothed end. The sweet spot in the middle minimises total error. How to find it — cross-validation — is deferred to a later unit; name it, don’t teach it today. The takeaway: penalization does not magically improve everything; it lets you <em>choose</em> a better point on the tradeoff than ordinary least squares forces on you.</p>
 <style type="text/css">
         span.MJX_Assistive_MathML {
           position:absolute!important;
@@ -522,59 +590,7 @@ Quantitative biology and integrative omics
 <span id="cb1-9"><a aria-hidden="true" tabindex="-1"></a>fit_pen <span class="ot">&lt;-</span> <span class="fu">glmnet</span>(x, y, <span class="at">alpha =</span> <span class="dv">0</span>)   <span class="co"># alpha = 0 is ridge; alpha = 1 is lasso</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>Don’t worry about the details yet — later units unpack <code>alpha</code>, the <span class="math inline">\lambda</span> path, and choosing <span class="math inline">\lambda</span> by cross-validation. Today only the <strong>idea</strong> matters.</p>
 <aside class="notes">
-<p>Show the tool at the horizon so the code is not a surprise later, but keep it static and unrun — no package is installed at render time, and today is conceptual. The one thing to register: <code>lm()</code> gives OLS; <code>glmnet</code> adds the penalty and fits many lambdas at once. Mention that alpha picks the penalty flavour (0 = ridge, 1 = lasso) without explaining the difference — that is a later unit. Reassure them the details come later; do not let them get lost in glmnet arguments today.</p>
-<style type="text/css">
-        span.MJX_Assistive_MathML {
-          position:absolute!important;
-          clip: rect(1px, 1px, 1px, 1px);
-          padding: 1px 0 0 0!important;
-          border: 0!important;
-          height: 1px!important;
-          width: 1px!important;
-          overflow: hidden!important;
-          display:block!important;
-      }</style></aside>
-</section>
-<section id="link-back-to-the-linear-algebra-block" class="slide level2 smaller">
-<h2>Link back to the linear-algebra block</h2>
-<p>Everything today rested on machinery you already built:</p>
-<table class="caption-top">
-<colgroup>
-<col style="width: 50%">
-<col style="width: 50%">
-</colgroup>
-<thead>
-<tr class="header">
-<th>From the linear-algebra block</th>
-<th>Used here</th>
-</tr>
-</thead>
-<tbody>
-<tr class="odd">
-<td>Solving <span class="math inline">A\mathbf{x}=\mathbf{b}</span>, unique vs.&nbsp;infinite solutions</td>
-<td>when OLS has no unique <span class="math inline">\hat{\boldsymbol\beta}</span></td>
-</tr>
-<tr class="even">
-<td><strong>Rank</strong> and singular matrices</td>
-<td>why <span class="math inline">p&gt;n</span> makes <span class="math inline">X^\top X</span> non-invertible</td>
-</tr>
-<tr class="odd">
-<td>Matrix <strong>inverse</strong></td>
-<td>the normal equations <span class="math inline">\hat{\boldsymbol\beta}=(X^\top X)^{-1}X^\top\mathbf{y}</span></td>
-</tr>
-<tr class="even">
-<td><strong>Eigenvalues</strong> near zero</td>
-<td>why correlated genes make the inverse explode</td>
-</tr>
-<tr class="odd">
-<td>Adding <span class="math inline">\lambda I</span> shifts eigenvalues up</td>
-<td>why the penalty restores invertibility</td>
-</tr>
-</tbody>
-</table>
-<p>Penalized regression is applied linear algebra with a statistical purpose.</p>
-<aside class="notes">
-<p>Make the continuity explicit — this block is the payoff for the linear-algebra grind. Each row of the table is a concept they already learned, now doing real work. Rank and singularity explain the p &gt; n breakdown; the inverse is the normal-equations solution; near-zero eigenvalues explain multicollinearity blow-up; the lambda*I eigenvalue shift explains the fix. Emphasise that they are not learning new linear algebra today, they are seeing why it mattered. Reference units by topic name, never by day number.</p>
+<p>Show the tool at the horizon so the code is not a surprise later, but keep it static and unrun — no package is installed at render time, and today is conceptual. The one thing to register: <code>lm()</code> gives ordinary least squares; <code>glmnet</code> adds the penalty and fits many lambdas at once. Mention that alpha picks the penalty flavour (0 = ridge, 1 = lasso) without explaining the difference — that is a later unit. Reassure them the details come later; do not let them get lost in glmnet arguments today.</p>
 <style type="text/css">
         span.MJX_Assistive_MathML {
           position:absolute!important;
@@ -606,16 +622,16 @@ Quantitative biology and integrative omics
 <td>omics has many genes, few samples</td>
 </tr>
 <tr class="even">
-<td>OLS solution</td>
-<td><span class="math inline">\hat{\boldsymbol\beta}=(X^\top X)^{-1}X^\top\mathbf{y}</span> — needs an invertible <span class="math inline">X^\top X</span></td>
+<td>OLS</td>
+<td>picks the coefficients with the smallest total squared error; needs enough data to pin each one down</td>
 </tr>
 <tr class="odd">
 <td>Hard failure</td>
-<td><span class="math inline">p&gt;n</span> ⇒ <span class="math inline">X^\top X</span> singular ⇒ <strong>no unique</strong> solution</td>
+<td>more genes than samples ⇒ more unknowns than equations ⇒ <strong>no unique</strong> solution</td>
 </tr>
 <tr class="even">
 <td>Soft failure</td>
-<td>correlated genes ⇒ near-singular ⇒ <strong>unstable, huge</strong> coefficients</td>
+<td>correlated genes can stand in for each other ⇒ <strong>unstable, huge</strong> coefficients</td>
 </tr>
 <tr class="odd">
 <td>Real goal</td>
@@ -627,11 +643,11 @@ Quantitative biology and integrative omics
 </tr>
 <tr class="odd">
 <td><strong>Penalize</strong></td>
-<td>add <span class="math inline">\lambda\cdot(\text{coefficient size})</span> to the objective</td>
+<td>minimise fit error + <span class="math inline">\lambda</span> × (coefficient size)</td>
 </tr>
 <tr class="even">
 <td>The fix</td>
-<td><span class="math inline">X^\top X + \lambda I</span> is always invertible; coefficients shrink &amp; stabilise</td>
+<td>the penalty picks the smallest of the equally good answers; coefficients shrink &amp; stabilise</td>
 </tr>
 <tr class="odd">
 <td>The cost</td>
@@ -641,7 +657,55 @@ Quantitative biology and integrative omics
 </table>
 <p><strong>Next in this block:</strong> the specific penalties — <strong>ridge</strong> and <strong>lasso</strong> — and how to choose <span class="math inline">\lambda</span>.</p>
 <aside class="notes">
-<p>The summary is the whole argument in one table. Drill the storyline verbally one more time: omics is wide and short; OLS needs an invertible X-transpose-X; p &gt; n makes it singular (hard failure) and correlated genes make it nearly singular (soft failure); we actually care about predicting new data, not fitting this data; the bias–variance tradeoff says we can trade bias for variance; penalization does exactly that by charging for coefficient size, which also restores invertibility via lambda*I. The cost is bias, controlled by lambda. Next units make the penalty concrete (ridge, lasso) and teach choosing lambda.</p>
+<p>The summary is the whole argument in one table. Drill the storyline verbally one more time: omics is wide and short; ordinary least squares needs at least as many samples as coefficients, and coefficients that cannot stand in for each other; p &gt; n gives more unknowns than equations (hard failure) and correlated genes give many near-equal answers (soft failure); we actually care about predicting new data, not fitting this data; the bias–variance tradeoff says we can trade bias for variance; penalization does exactly that by charging for coefficient size, which also picks one answer when many fit. The cost is bias, controlled by lambda. Next units make the penalty concrete (ridge, lasso) and teach choosing lambda.</p>
+<style type="text/css">
+        span.MJX_Assistive_MathML {
+          position:absolute!important;
+          clip: rect(1px, 1px, 1px, 1px);
+          padding: 1px 0 0 0!important;
+          border: 0!important;
+          height: 1px!important;
+          width: 1px!important;
+          overflow: hidden!important;
+          display:block!important;
+      }</style></aside>
+</section>
+<section id="optional-the-maths-behind-penalization" class="slide level2 smaller">
+<h2>Optional: the maths behind penalization</h2>
+<p>The same story in the linear-algebra language of the first weeks, for those who want it.</p>
+<table class="caption-top">
+<colgroup>
+<col style="width: 50%">
+<col style="width: 50%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>In words (this lecture)</th>
+<th>In matrices</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>OLS: smallest total squared error</td>
+<td><span class="math inline">\hat{\boldsymbol\beta}=\arg\min_{\boldsymbol\beta}\lVert\mathbf{y}-X\boldsymbol\beta\rVert^2</span>, solved by the normal equations <span class="math inline">\hat{\boldsymbol\beta}=(X^\top X)^{-1}X^\top\mathbf{y}</span></td>
+</tr>
+<tr class="even">
+<td>more unknowns than equations</td>
+<td><span class="math inline">\text{rank}(X^\top X)\le n&lt;p</span>: the <span class="math inline">p\times p</span> matrix <span class="math inline">X^\top X</span> is singular, no inverse</td>
+</tr>
+<tr class="odd">
+<td>correlated genes, many near-equal answers</td>
+<td><span class="math inline">X^\top X</span> is nearly singular (an eigenvalue near 0), so its inverse blows up</td>
+</tr>
+<tr class="even">
+<td>penalty picks the smallest answer</td>
+<td>ridge: <span class="math inline">\hat{\boldsymbol\beta}=(X^\top X+\lambda I)^{-1}X^\top\mathbf{y}</span>; adding <span class="math inline">\lambda I</span> lifts every eigenvalue by <span class="math inline">\lambda</span>, so it always inverts</td>
+</tr>
+</tbody>
+</table>
+
+<img data-src="fig10-eigenvalue-shift-lambdaI.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:48.0%"><aside class="notes">
+<p>Optional slide; skip it in a short session. It translates each step of the lecture into the linear-algebra language from the first weeks: least squares as the normal equations; p &gt; n as a rank argument (X-transpose-X is p by p but built from n samples, so its rank is at most n); multicollinearity as a near-zero eigenvalue, which makes the inverse huge in that direction; and the ridge fix as the identity shift, which lifts every eigenvalue by lambda so the matrix is always invertible. The exercise has optional items (B3d, B5, R5, R6) for those who want to see this by hand and in R.</p>
 <style type="text/css">
         span.MJX_Assistive_MathML {
           position:absolute!important;
