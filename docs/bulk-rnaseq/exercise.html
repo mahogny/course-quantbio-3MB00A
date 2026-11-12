@@ -1,0 +1,3285 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.7.30">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+
+<title>Exercise: Bulk RNA-seq with DESeq2 – Quantitative biology and integrative omics</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="../site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="../site_libs/quarto-nav/headroom.min.js"></script>
+<script src="../site_libs/clipboard/clipboard.min.js"></script>
+<script src="../site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="../site_libs/quarto-search/fuse.min.js"></script>
+<script src="../site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="../">
+<script src="../site_libs/quarto-html/quarto.js" type="module"></script>
+<script src="../site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="../site_libs/quarto-html/popper.min.js"></script>
+<script src="../site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="../site_libs/quarto-html/anchor.min.js"></script>
+<link href="../site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="../site_libs/quarto-html/quarto-syntax-highlighting-662ae1889177880cb371f83234c0a158.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="../site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="../site_libs/bootstrap/bootstrap-d37fb74fd9c61f52627c5754f4dbd5bd.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "navbar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "end",
+  "type": "overlay",
+  "limit": 50,
+  "keyboard-shortcut": [
+    "f",
+    "/",
+    "s"
+  ],
+  "show-item-context": false,
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+
+  <script src="https://cdnjs.cloudflare.com/polyfill/v3/polyfill.min.js?features=es6"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js" type="text/javascript"></script>
+
+<script type="text/javascript">
+const typesetMath = (el) => {
+  if (window.MathJax) {
+    // MathJax Typeset
+    window.MathJax.typeset([el]);
+  } else if (window.katex) {
+    // KaTeX Render
+    var mathElements = el.getElementsByClassName("math");
+    var macros = [];
+    for (var i = 0; i < mathElements.length; i++) {
+      var texText = mathElements[i].firstChild;
+      if (mathElements[i].tagName == "SPAN") {
+        window.katex.render(texText.data, mathElements[i], {
+          displayMode: mathElements[i].classList.contains('display'),
+          throwOnError: false,
+          macros: macros,
+          fleqn: false
+        });
+      }
+    }
+  }
+}
+window.Quarto = {
+  typesetMath
+};
+</script>
+
+<link rel="stylesheet" href="../styles.css">
+</head>
+
+<body class="nav-sidebar docked nav-fixed quarto-light">
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+    <nav class="navbar navbar-expand-lg " data-bs-theme="dark">
+      <div class="navbar-container container-fluid">
+      <div class="navbar-brand-container mx-auto">
+    <a class="navbar-brand" href="../index.html">
+    <span class="navbar-title">Quantitative biology and integrative omics</span>
+    </a>
+  </div>
+            <div id="quarto-search" class="" title="Search"></div>
+          <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse" aria-controls="navbarCollapse" role="menu" aria-expanded="false" aria-label="Toggle navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+  <span class="navbar-toggler-icon"></span>
+</button>
+          <div class="collapse navbar-collapse" id="navbarCollapse">
+            <ul class="navbar-nav navbar-nav-scroll me-auto">
+  <li class="nav-item">
+    <a class="nav-link active" href="../index.html" aria-current="page"> 
+<span class="menu-text">Home</span></a>
+  </li>  
+  <li class="nav-item dropdown ">
+    <a class="nav-link dropdown-toggle" href="#" id="nav-menu-course-info" role="link" data-bs-toggle="dropdown" aria-expanded="false">
+ <span class="menu-text">Course info</span>
+    </a>
+    <ul class="dropdown-menu" aria-labelledby="nav-menu-course-info">    
+        <li>
+    <a class="dropdown-item" href="../courseplan.html">
+ <span class="dropdown-text">Course plan</span></a>
+  </li>  
+    </ul>
+  </li>
+</ul>
+          </div> <!-- /navcollapse -->
+            <div class="quarto-navbar-tools">
+</div>
+      </div> <!-- /container-fluid -->
+    </nav>
+  <nav class="quarto-secondary-nav">
+    <div class="container-fluid d-flex">
+      <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" role="button" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+        <i class="bi bi-layout-text-sidebar-reverse"></i>
+      </button>
+        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../videos/intro-week-3.html">Week 3: Linear models &amp; differential expression</a></li><li class="breadcrumb-item"><a href="../bulk-rnaseq/lec.html">Bulk RNA-seq with DESeq2</a></li><li class="breadcrumb-item"><a href="../bulk-rnaseq/exercise.html">Exercise</a></li></ol></nav>
+        <a class="flex-grow-1" role="navigation" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
+        </a>
+      <button type="button" class="btn quarto-search-button" aria-label="Search" onclick="window.quartoOpenSearch();">
+        <i class="bi bi-search"></i>
+      </button>
+    </div>
+  </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article page-navbar">
+<!-- sidebar -->
+  <nav id="quarto-sidebar" class="sidebar collapse collapse-horizontal quarto-sidebar-collapse-item sidebar-navigation docked overflow-auto">
+        <div class="mt-2 flex-shrink-0 align-items-center">
+        <div class="sidebar-search">
+        <div id="quarto-search" class="" title="Search"></div>
+        </div>
+        </div>
+    <div class="sidebar-menu-container"> 
+    <ul class="list-unstyled mt-1">
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../index.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Home</span></a>
+  </div>
+</li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" role="navigation" aria-expanded="true">
+ <span class="menu-text">Course info</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-1" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../courseplan.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Course plan (3MB00A)</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../elo.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Learning outcomes</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../intro/install.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Install R</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../dictionary.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Glossary</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" role="navigation" aria-expanded="true">
+ <span class="menu-text">Week 1: Linear systems, vectors, transformations</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-2" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../videos/intro-weeks-1-2.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Video: introduction to weeks 1–2</span></a>
+  </div>
+</li>
+          <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-3" role="navigation" aria-expanded="false">
+ <span class="menu-text">Linear systems by hand</span></a>
+          <a class="sidebar-item-toggle text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-3" role="navigation" aria-expanded="false" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-3" class="collapse list-unstyled sidebar-section depth2 ">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../videos/solving-systems.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Lecture (video)</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../solving-systems/lec.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Lecture (slides)</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../warmups/01-matrix-anatomy-and-arithmetic.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Exercise: reading &amp; combining matrices</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../warmups/02-matrix-vector-product.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Exercise: matrix × vector</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../warmups/05-solving-2x2.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Exercise: solving 2×2 systems</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../warmups/06-solving-3x3.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Exercise: solving 3×3 systems</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../warmups/08-inverse-2x2.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Exercise: the 2×2 inverse</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../solving-systems/quiz.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Quiz</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../solving-systems/exercise.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Exercise</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../solving-systems/exercise.html#explore" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Interactive demo</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+          <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-4" role="navigation" aria-expanded="false">
+ <span class="menu-text">Linear systems in R</span></a>
+          <a class="sidebar-item-toggle text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-4" role="navigation" aria-expanded="false" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-4" class="collapse list-unstyled sidebar-section depth2 ">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../videos/solving-systems-r.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Lecture (video)</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../solving-systems-r/lec.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Lecture (slides)</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../solving-systems-r/exercise.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Exercise</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../solving-systems-r/exercise.html#explore" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Interactive demo</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+          <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-5" role="navigation" aria-expanded="false">
+ <span class="menu-text">Vectors, dot product, projection</span></a>
+          <a class="sidebar-item-toggle text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-5" role="navigation" aria-expanded="false" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-5" class="collapse list-unstyled sidebar-section depth2 ">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../videos/vectors-projection.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Lecture (video)</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../vectors-projection/lec.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Lecture (slides)</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../vectors-projection/quiz.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Quiz</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../vectors-projection/exercise.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Exercise</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../vectors-projection/exercise.html#explore" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Interactive demo</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+          <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-6" role="navigation" aria-expanded="false">
+ <span class="menu-text">Matrices as transformations</span></a>
+          <a class="sidebar-item-toggle text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-6" role="navigation" aria-expanded="false" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-6" class="collapse list-unstyled sidebar-section depth2 ">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../videos/matrix-transforms.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Lecture (video)</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../matrix-transforms/lec.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Lecture (slides)</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../warmups/03-matrix-matrix-product.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Exercise: matrix × matrix</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../warmups/04-transpose-and-special.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Exercise: transpose &amp; special matrices</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../warmups/07-determinants.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Exercise: determinants (bonus)</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../warmups/09-mixed-drills.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Exercise: mixed review</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../matrix-transforms/exercise.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Exercise</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../matrix-transforms/exercise.html#explore" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Interactive demo</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+          <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-7" role="navigation" aria-expanded="false">
+ <span class="menu-text">Transforming images with matrices</span></a>
+          <a class="sidebar-item-toggle text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-7" role="navigation" aria-expanded="false" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-7" class="collapse list-unstyled sidebar-section depth2 ">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../videos/matrix-images.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Lecture (video)</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../matrix-images/lec.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Lecture (slides)</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../matrix-images/exercise.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Exercise</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../matrix-images/exercise.html#explore" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Interactive demo</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+          <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-8" role="navigation" aria-expanded="false">
+ <span class="menu-text">Compensation &amp; spectral unmixing</span></a>
+          <a class="sidebar-item-toggle text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-8" role="navigation" aria-expanded="false" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-8" class="collapse list-unstyled sidebar-section depth2 ">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../videos/compensation.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Lecture (video)</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../compensation/lec.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Lecture (slides)</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../compensation/exercise.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Exercise</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../compensation/exercise.html#explore" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Interactive demo</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+          <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-9" role="navigation" aria-expanded="false">
+ <span class="menu-text">Polar coordinates: measuring a ring</span></a>
+          <a class="sidebar-item-toggle text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-9" role="navigation" aria-expanded="false" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-9" class="collapse list-unstyled sidebar-section depth2 ">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../videos/polar.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Lecture (video)</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../polar/lec.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Lecture (slides)</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../polar/exercise.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Exercise</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../polar/exercise.html#explore" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Interactive demo</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-10" role="navigation" aria-expanded="true">
+ <span class="menu-text">Week 2: Bases, eigenvectors, PCA, Markov chains</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-10" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-10" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-11" role="navigation" aria-expanded="false">
+ <span class="menu-text">Eigenvalues &amp; eigenvectors</span></a>
+          <a class="sidebar-item-toggle text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-11" role="navigation" aria-expanded="false" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-11" class="collapse list-unstyled sidebar-section depth2 ">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../videos/eigen.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Lecture (video)</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../eigen/lec.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Lecture (slides)</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../eigen/quiz.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Quiz</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../eigen/exercise.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Exercise</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../eigen/exercise.html#explore" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Interactive demo</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+          <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-12" role="navigation" aria-expanded="false">
+ <span class="menu-text">Eigenvalues in R</span></a>
+          <a class="sidebar-item-toggle text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-12" role="navigation" aria-expanded="false" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-12" class="collapse list-unstyled sidebar-section depth2 ">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../videos/eigen-r.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Lecture (video)</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../eigen-r/lec.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Lecture (slides)</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../eigen-r/exercise.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Exercise</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+          <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-13" role="navigation" aria-expanded="false">
+ <span class="menu-text">Markov chains</span></a>
+          <a class="sidebar-item-toggle text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-13" role="navigation" aria-expanded="false" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-13" class="collapse list-unstyled sidebar-section depth2 ">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../videos/markov.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Lecture (video)</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../markov/lec.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Lecture (slides)</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../markov/quiz.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Quiz</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../markov/exercise.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Exercise</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../markov/exercise.html#explore" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Interactive demo</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+          <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-14" role="navigation" aria-expanded="false">
+ <span class="menu-text">Markov chains in R</span></a>
+          <a class="sidebar-item-toggle text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-14" role="navigation" aria-expanded="false" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-14" class="collapse list-unstyled sidebar-section depth2 ">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../markov-r/lec.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Lecture (slides)</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../markov-r/exercise.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Exercise</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../markov-r/exercise.html#explore" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Interactive demo</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+          <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-15" role="navigation" aria-expanded="false">
+ <span class="menu-text">Principal component analysis</span></a>
+          <a class="sidebar-item-toggle text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-15" role="navigation" aria-expanded="false" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-15" class="collapse list-unstyled sidebar-section depth2 ">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../pca/lec.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Lecture (slides)</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../pca/quiz.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Quiz</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../pca/exercise.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Exercise</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../pca/exercise.html#explore" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Interactive demo</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+          <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-16" role="navigation" aria-expanded="false">
+ <span class="menu-text">PCA in R</span></a>
+          <a class="sidebar-item-toggle text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-16" role="navigation" aria-expanded="false" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-16" class="collapse list-unstyled sidebar-section depth2 ">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../pca-r/lec.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Lecture (slides)</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../pca-r/exercise.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Exercise</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+          <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-17" role="navigation" aria-expanded="false">
+ <span class="menu-text">Choosing components &amp; pitfalls</span></a>
+          <a class="sidebar-item-toggle text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-17" role="navigation" aria-expanded="false" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-17" class="collapse list-unstyled sidebar-section depth2 ">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../pca-scree/lec.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Lecture (slides)</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../pca-scree/quiz.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Quiz</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../pca-scree/exercise.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Exercise</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../pca-scree/exercise.html#explore" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Interactive demo</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+          <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-18" role="navigation" aria-expanded="false">
+ <span class="menu-text">Fourier transform &amp; basis functions</span></a>
+          <a class="sidebar-item-toggle text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-18" role="navigation" aria-expanded="false" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-18" class="collapse list-unstyled sidebar-section depth2 ">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../fourier/lec.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Lecture (slides)</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../fourier/quiz.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Quiz</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../fourier/exercise.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Exercise</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../fourier/exercise.html#explore" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Interactive demo</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-19" role="navigation" aria-expanded="true">
+ <span class="menu-text">Week 3: Linear models &amp; differential expression</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-19" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-19" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../videos/intro-week-3.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Video: introduction to week 3</span></a>
+  </div>
+</li>
+          <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-20" role="navigation" aria-expanded="false">
+ <span class="menu-text">Least squares as projection</span></a>
+          <a class="sidebar-item-toggle text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-20" role="navigation" aria-expanded="false" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-20" class="collapse list-unstyled sidebar-section depth2 ">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../least-squares/lec.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Lecture (slides)</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../least-squares/quiz.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Quiz</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../least-squares/exercise.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Exercise</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+          <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-21" role="navigation" aria-expanded="false">
+ <span class="menu-text">Design matrices for covariates</span></a>
+          <a class="sidebar-item-toggle text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-21" role="navigation" aria-expanded="false" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-21" class="collapse list-unstyled sidebar-section depth2 ">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../covariates/lec.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Lecture (slides)</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../covariates/quiz.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Quiz</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../covariates/exercise.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Exercise</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+          <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-22" role="navigation" aria-expanded="false">
+ <span class="menu-text">Confounding &amp; Simpson’s paradox</span></a>
+          <a class="sidebar-item-toggle text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-22" role="navigation" aria-expanded="false" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-22" class="collapse list-unstyled sidebar-section depth2 ">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../confounding/lec.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Lecture (slides)</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../confounding/quiz.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Quiz</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../confounding/exercise.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Exercise</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+          <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-23" role="navigation" aria-expanded="false">
+ <span class="menu-text">Design matrices in R: limma</span></a>
+          <a class="sidebar-item-toggle text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-23" role="navigation" aria-expanded="false" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-23" class="collapse list-unstyled sidebar-section depth2 ">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../covariates-r/lec.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Lecture (slides)</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../covariates-r/exercise.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Exercise</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+          <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-24" role="navigation" aria-expanded="true">
+ <span class="menu-text">Bulk RNA-seq with DESeq2</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-24" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-24" class="collapse list-unstyled sidebar-section depth2 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../bulk-rnaseq/lec.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Lecture (slides)</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../bulk-rnaseq/quiz.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Quiz</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../bulk-rnaseq/exercise.html" class="sidebar-item-text sidebar-link active">
+ <span class="menu-text">Exercise</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../bulk-rnaseq/exercise.html#explore" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Interactive demo</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-25" role="navigation" aria-expanded="true">
+ <span class="menu-text">Week 4: Penalized models &amp; Bayesian statistics</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-25" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-25" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../videos/intro-week-4.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Video: introduction to week 4</span></a>
+  </div>
+</li>
+          <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-26" role="navigation" aria-expanded="false">
+ <span class="menu-text">Why penalize?</span></a>
+          <a class="sidebar-item-toggle text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-26" role="navigation" aria-expanded="false" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-26" class="collapse list-unstyled sidebar-section depth2 ">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../penalized-intro/lec.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Lecture (slides)</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../penalized-intro/quiz.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Quiz</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../penalized-intro/exercise.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Exercise</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../penalized-intro/exercise.html#explore" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Interactive demo</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+          <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-27" role="navigation" aria-expanded="false">
+ <span class="menu-text">Ridge, lasso &amp; elastic net</span></a>
+          <a class="sidebar-item-toggle text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-27" role="navigation" aria-expanded="false" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-27" class="collapse list-unstyled sidebar-section depth2 ">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../ridge-lasso-enet/lec.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Lecture (slides)</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../ridge-lasso-enet/quiz.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Quiz</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../ridge-lasso-enet/exercise.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Exercise</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../ridge-lasso-enet/exercise.html#explore" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Interactive demo</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+          <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-28" role="navigation" aria-expanded="false">
+ <span class="menu-text">Cross-validation &amp; model selection</span></a>
+          <a class="sidebar-item-toggle text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-28" role="navigation" aria-expanded="false" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-28" class="collapse list-unstyled sidebar-section depth2 ">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../crossval/lec.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Lecture (slides)</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../crossval/quiz.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Quiz</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../crossval/exercise.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Exercise</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../crossval/exercise.html#explore" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Interactive demo</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+          <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-29" role="navigation" aria-expanded="false">
+ <span class="menu-text">Bayesian vs frequentist</span></a>
+          <a class="sidebar-item-toggle text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-29" role="navigation" aria-expanded="false" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-29" class="collapse list-unstyled sidebar-section depth2 ">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../bayes-intro/lec.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Lecture (slides)</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../bayes-intro/quiz.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Quiz</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../bayes-intro/exercise.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Exercise</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../bayes-intro/exercise.html#explore" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Interactive demo</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+          <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-30" role="navigation" aria-expanded="false">
+ <span class="menu-text">Fitting equations (regression)</span></a>
+          <a class="sidebar-item-toggle text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-30" role="navigation" aria-expanded="false" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-30" class="collapse list-unstyled sidebar-section depth2 ">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../bayes-fitting/lec.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Lecture (slides)</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../bayes-fitting/quiz.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Quiz</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../bayes-fitting/exercise.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Exercise</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../bayes-fitting/exercise.html#explore" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Interactive demo</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+          <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-31" role="navigation" aria-expanded="false">
+ <span class="menu-text">Error models: exponential &amp; Poisson</span></a>
+          <a class="sidebar-item-toggle text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-31" role="navigation" aria-expanded="false" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-31" class="collapse list-unstyled sidebar-section depth2 ">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../error-models/lec.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Lecture (slides)</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../error-models/quiz.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Quiz</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../error-models/exercise.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Exercise</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../error-models/exercise.html#explore" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Interactive demo</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+          <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-32" role="navigation" aria-expanded="false">
+ <span class="menu-text">Hierarchical models</span></a>
+          <a class="sidebar-item-toggle text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-32" role="navigation" aria-expanded="false" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-32" class="collapse list-unstyled sidebar-section depth2 ">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../hierarchical/lec.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Lecture (slides)</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../hierarchical/quiz.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Quiz</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../hierarchical/exercise.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Exercise</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../hierarchical/exercise.html#explore" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Interactive demo</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+          <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-33" role="navigation" aria-expanded="false">
+ <span class="menu-text">Penalties as priors</span></a>
+          <a class="sidebar-item-toggle text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-33" role="navigation" aria-expanded="false" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-33" class="collapse list-unstyled sidebar-section depth2 ">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../penalty-bayes-link/lec.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Lecture (slides)</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../penalty-bayes-link/quiz.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Quiz</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../penalty-bayes-link/exercise.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Exercise</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../penalty-bayes-link/exercise.html#explore" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Interactive demo</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-34" role="navigation" aria-expanded="true">
+ <span class="menu-text">Week 5: Nonlinear models &amp; latent spaces</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-34" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-34" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../videos/intro-week-5.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Video: introduction to week 5</span></a>
+  </div>
+</li>
+          <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-35" role="navigation" aria-expanded="false">
+ <span class="menu-text">Beyond linear models</span></a>
+          <a class="sidebar-item-toggle text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-35" role="navigation" aria-expanded="false" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-35" class="collapse list-unstyled sidebar-section depth2 ">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../nonlinear/lec.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Lecture (slides)</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../nonlinear/quiz.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Quiz</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../nonlinear/exercise.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Exercise</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+          <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-36" role="navigation" aria-expanded="false">
+ <span class="menu-text">Single-cell RNA-seq: data &amp; QC</span></a>
+          <a class="sidebar-item-toggle text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-36" role="navigation" aria-expanded="false" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-36" class="collapse list-unstyled sidebar-section depth2 ">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../scrna-intro/lec.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Lecture (slides)</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../scrna-intro/quiz.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Quiz</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../scrna-intro/exercise.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Exercise</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+          <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-37" role="navigation" aria-expanded="false">
+ <span class="menu-text">Nonlinear embeddings: kNN graphs, UMAP, clustering</span></a>
+          <a class="sidebar-item-toggle text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-37" role="navigation" aria-expanded="false" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-37" class="collapse list-unstyled sidebar-section depth2 ">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../scrna-umap/lec.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Lecture (slides)</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../scrna-umap/exercise.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Exercise</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../scrna-umap/exercise.html#explore" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Interactive demo</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+          <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-38" role="navigation" aria-expanded="false">
+ <span class="menu-text">Variational autoencoders</span></a>
+          <a class="sidebar-item-toggle text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-38" role="navigation" aria-expanded="false" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-38" class="collapse list-unstyled sidebar-section depth2 ">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../vae/lec.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Lecture (slides)</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../vae/quiz.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Quiz</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../vae/exercise.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Exercise</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../vae/exercise.html#explore" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Interactive demo</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+          <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-39" role="navigation" aria-expanded="false">
+ <span class="menu-text">Cell-type annotation</span></a>
+          <a class="sidebar-item-toggle text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-39" role="navigation" aria-expanded="false" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-39" class="collapse list-unstyled sidebar-section depth2 ">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../scrna-annotation/lec.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Lecture (slides)</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../scrna-annotation/quiz.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Quiz</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../scrna-annotation/exercise.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Exercise</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-40" role="navigation" aria-expanded="true">
+ <span class="menu-text">Further reading</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-40" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-40" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-41" role="navigation" aria-expanded="false">
+ <span class="menu-text">Log and pseudolog transforms</span></a>
+          <a class="sidebar-item-toggle text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-41" role="navigation" aria-expanded="false" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-41" class="collapse list-unstyled sidebar-section depth2 ">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../scrna-log/lec.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Lecture (slides)</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../scrna-log/quiz.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Quiz</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../scrna-log/exercise.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Exercise</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../scrna-log/exercise.html#explore" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Interactive demo</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+          <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-42" role="navigation" aria-expanded="false">
+ <span class="menu-text">Introduction to R-STAN</span></a>
+          <a class="sidebar-item-toggle text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-42" role="navigation" aria-expanded="false" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-42" class="collapse list-unstyled sidebar-section depth2 ">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../rstan-intro/lec.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Lecture (slides)</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../rstan-intro/exercise.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Exercise</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../rstan-intro/exercise.html#explore" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Interactive demo</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+          <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-43" role="navigation" aria-expanded="false">
+ <span class="menu-text">A worked Bayesian case</span></a>
+          <a class="sidebar-item-toggle text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-43" role="navigation" aria-expanded="false" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-43" class="collapse list-unstyled sidebar-section depth2 ">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../bayes-case/lec.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Lecture (slides)</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../bayes-case/exercise.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Exercise</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../bayes-case/exercise.html#explore" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Interactive demo</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+          <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-44" role="navigation" aria-expanded="false">
+ <span class="menu-text">Penalized models: case &amp; pitfalls</span></a>
+          <a class="sidebar-item-toggle text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-44" role="navigation" aria-expanded="false" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-44" class="collapse list-unstyled sidebar-section depth2 ">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../penalized-case/lec.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Lecture (slides)</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../penalized-case/exercise.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Exercise</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../penalized-case/exercise.html#explore" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Interactive demo</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+          <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-45" role="navigation" aria-expanded="false">
+ <span class="menu-text">Cell cycle &amp; connection to PCA</span></a>
+          <a class="sidebar-item-toggle text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-45" role="navigation" aria-expanded="false" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-45" class="collapse list-unstyled sidebar-section depth2 ">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../scrna-cellcycle/lec.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Lecture (slides)</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../scrna-cellcycle/quiz.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Quiz</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../scrna-cellcycle/exercise.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Exercise</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+          <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-46" role="navigation" aria-expanded="false">
+ <span class="menu-text">Single-cell QC in depth</span></a>
+          <a class="sidebar-item-toggle text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-46" role="navigation" aria-expanded="false" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-46" class="collapse list-unstyled sidebar-section depth2 ">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../scrna-qc-extra/lec.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Lecture (slides)</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../scrna-qc-extra/quiz.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Quiz</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../scrna-qc-extra/exercise.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Exercise</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+          <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-47" role="navigation" aria-expanded="false">
+ <span class="menu-text">Image filters: 3×3 kernels</span></a>
+          <a class="sidebar-item-toggle text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-47" role="navigation" aria-expanded="false" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-47" class="collapse list-unstyled sidebar-section depth2 ">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../kernels/lec.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Lecture (slides)</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../kernels/quiz.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Quiz</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../kernels/exercise.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Exercise</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../kernels/exercise.html#explore" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Interactive demo</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+          <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-48" role="navigation" aria-expanded="false">
+ <span class="menu-text">Continuous-time Markov chains</span></a>
+          <a class="sidebar-item-toggle text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-48" role="navigation" aria-expanded="false" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-48" class="collapse list-unstyled sidebar-section depth2 ">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../ctmc/lec.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Lecture (slides)</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../ctmc/quiz.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Quiz</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../ctmc/exercise.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Exercise</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../ctmc/exercise.html#explore" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Interactive demo</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+          <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-49" role="navigation" aria-expanded="false">
+ <span class="menu-text">Hidden Markov models</span></a>
+          <a class="sidebar-item-toggle text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-49" role="navigation" aria-expanded="false" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-49" class="collapse list-unstyled sidebar-section depth2 ">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../hmm/lec.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Lecture (slides)</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../hmm/quiz.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Quiz</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../hmm/exercise.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Exercise</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../hmm/exercise.html#explore" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Interactive demo</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+          <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-50" role="navigation" aria-expanded="false">
+ <span class="menu-text">Fitting HMMs in R</span></a>
+          <a class="sidebar-item-toggle text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-50" role="navigation" aria-expanded="false" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-50" class="collapse list-unstyled sidebar-section depth2 ">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../hmm-r/lec.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Lecture (slides)</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../hmm-r/exercise.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Exercise</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+          <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-51" role="navigation" aria-expanded="false">
+ <span class="menu-text">The OPLS model</span></a>
+          <a class="sidebar-item-toggle text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-51" role="navigation" aria-expanded="false" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-51" class="collapse list-unstyled sidebar-section depth2 ">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../opls/lec.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Lecture (slides)</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../opls/quiz.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Quiz</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../opls/exercise.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Exercise</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+          <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-52" role="navigation" aria-expanded="false">
+ <span class="menu-text">Chemometrics I: spectra as data</span></a>
+          <a class="sidebar-item-toggle text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-52" role="navigation" aria-expanded="false" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-52" class="collapse list-unstyled sidebar-section depth2 ">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../chemometrics-1/lec.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Lecture (slides)</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../chemometrics-1/quiz.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Quiz</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../chemometrics-1/exercise.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Exercise</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+          <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-53" role="navigation" aria-expanded="false">
+ <span class="menu-text">Chemometrics II: applications</span></a>
+          <a class="sidebar-item-toggle text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-53" role="navigation" aria-expanded="false" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-53" class="collapse list-unstyled sidebar-section depth2 ">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../chemometrics-2/lec.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Lecture (slides)</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../chemometrics-2/exercise.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Exercise</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+          <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-54" role="navigation" aria-expanded="false">
+ <span class="menu-text">Multiome data integration</span></a>
+          <a class="sidebar-item-toggle text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-54" role="navigation" aria-expanded="false" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-54" class="collapse list-unstyled sidebar-section depth2 ">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../multiome/lec.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Lecture (slides)</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../multiome/exercise.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Exercise</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+      </ul>
+  </li>
+    </ul>
+    </div>
+</nav>
+<div id="quarto-sidebar-glass" class="quarto-sidebar-collapse-item" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item"></div>
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">On this page</h2>
+   
+  <ul>
+  <li><a href="#goal" id="toc-goal" class="nav-link active" data-scroll-target="#goal">Goal</a></li>
+  <li><a href="#background" id="toc-background" class="nav-link" data-scroll-target="#background">Background</a></li>
+  <li><a href="#by-hand" id="toc-by-hand" class="nav-link" data-scroll-target="#by-hand">By hand</a></li>
+  <li><a href="#explore" id="toc-explore" class="nav-link" data-scroll-target="#explore">Explore: noise in a ratio of counts</a></li>
+  <li><a href="#in-r" id="toc-in-r" class="nav-link" data-scroll-target="#in-r">In R</a>
+  <ul class="collapse">
+  <li><a href="#r1-sequencing-as-drawing-from-a-bag" id="toc-r1-sequencing-as-drawing-from-a-bag" class="nav-link" data-scroll-target="#r1-sequencing-as-drawing-from-a-bag">R1 — Sequencing as drawing from a bag</a></li>
+  <li><a href="#r2-the-n-pm-sqrtn-rule" id="toc-r2-the-n-pm-sqrtn-rule" class="nav-link" data-scroll-target="#r2-the-n-pm-sqrtn-rule">R2 — The <span class="math inline">\(n \pm \sqrt{n}\)</span> rule</a></li>
+  <li><a href="#r3-deseq2-on-the-simulated-experiment-from-covariates-r" id="toc-r3-deseq2-on-the-simulated-experiment-from-covariates-r" class="nav-link" data-scroll-target="#r3-deseq2-on-the-simulated-experiment-from-covariates-r">R3 — DESeq2 on the simulated experiment from covariates-r</a></li>
+  <li><a href="#r4-a-real-dataset-airway" id="toc-r4-a-real-dataset-airway" class="nav-link" data-scroll-target="#r4-a-real-dataset-airway">R4 — A real dataset: <code>airway</code></a></li>
+  </ul></li>
+  <li><a href="#hints" id="toc-hints" class="nav-link" data-scroll-target="#hints">Hints</a></li>
+  <li><a href="#solutions" id="toc-solutions" class="nav-link" data-scroll-target="#solutions">Solutions</a></li>
+  <li><a href="#where-this-leads" id="toc-where-this-leads" class="nav-link" data-scroll-target="#where-this-leads">Where this leads</a></li>
+  </ul>
+</nav>
+    </div>
+<!-- main -->
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default"><nav class="quarto-page-breadcrumbs quarto-title-breadcrumbs d-none d-lg-block" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../videos/intro-week-3.html">Week 3: Linear models &amp; differential expression</a></li><li class="breadcrumb-item"><a href="../bulk-rnaseq/lec.html">Bulk RNA-seq with DESeq2</a></li><li class="breadcrumb-item"><a href="../bulk-rnaseq/exercise.html">Exercise</a></li></ol></nav>
+<div class="quarto-title">
+<h1 class="title">Exercise: Bulk RNA-seq with DESeq2</h1>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<section id="goal" class="level2">
+<h2 class="anchored" data-anchor-id="goal">Goal</h2>
+<p>After this exercise you will be able to:</p>
+<ul>
+<li>Turn read counts into <strong>fractions of the RNA</strong>, and explain why a raw count means nothing without the sequencing depth.</li>
+<li>Spot the <strong>composition trap</strong>: one abundant gene that goes up makes all the others look down.</li>
+<li>Compute <strong>median-of-ratios size factors</strong> by hand, as DESeq2’s <a href="https://rdrr.io/bioc/DESeq2/man/estimateSizeFactors.html"><code>estimateSizeFactors</code></a> does.</li>
+<li>Use the rule “expect <span class="math inline">\(n\)</span>, get <span class="math inline">\(n \pm \sqrt{n}\)</span>” to judge whether a fold change could be counting noise.</li>
+<li>Simulate sequencing as drawing from a bag with <a href="https://rdrr.io/r/base/sample.html"><code>sample</code></a>, and draw the <strong>fan</strong> of fold changes between two replicates.</li>
+<li>Run <strong>DESeq2</strong> with a design formula on a simulated and a real dataset (<code>airway</code>), read <code>log2FoldChange</code>, <code>lfcSE</code> and <code>padj</code>, and compare with limma.</li>
+<li>Use <a href="https://rdrr.io/bioc/DESeq2/man/lfcShrink.html"><code>lfcShrink</code></a> and explain in one sentence what it does to low-count genes.</li>
+</ul>
+</section>
+<section id="background" class="level2">
+<h2 class="anchored" data-anchor-id="background">Background</h2>
+<p><strong>Sequencing is drawing from a bag.</strong> The library is a bag of RNA fragments. A gene that makes up a fraction <span class="math inline">\(p\)</span> of the bag gets about <span class="math inline">\(N \cdot p\)</span> of the <span class="math inline">\(N\)</span> reads, but not exactly: the draw is random.</p>
+<p><strong>Size factors.</strong> To compare samples, divide each sample’s counts by a number that says how deep it was sequenced: its <strong>size factor</strong>. The simplest choice is the total count (counts per million, CPM, is the same times <span class="math inline">\(10^6\)</span>). It fails when a few abundant genes change a lot: the fraction of the RNA is a zero-sum game (the <strong>composition trap</strong>).</p>
+<p><strong>Median of ratios</strong> (DESeq2):</p>
+<ol type="1">
+<li>Leave out every gene with a 0 in any sample.</li>
+<li>For each gene, compute its <strong>geometric mean</strong> over the samples: the product of the counts, then the <span class="math inline">\(k\)</span>-th root for <span class="math inline">\(k\)</span> samples (for 3 samples, the cube root). This is the gene’s “typical value”.</li>
+<li>Divide every count by its gene’s geometric mean: one ratio per gene and sample.</li>
+<li>The size factor of a sample is the <strong>median</strong> of its ratios over the genes.</li>
+</ol>
+<p>The median ignores the few genes that really changed. With only two samples, the ratio of the two size factors is simply the median over genes of (sample 2 / sample 1).</p>
+<p><strong>Counting noise.</strong> If you expect about <span class="math inline">\(n\)</span> reads, you get <span class="math inline">\(n \pm \sqrt{n}\)</span>. The relative noise is <span class="math inline">\(\sqrt{n} / n = 1/\sqrt{n}\)</span>: 70% at <span class="math inline">\(n = 2\)</span>, 10% at 100, 3% at 1000. A fold change between two small counts is therefore very noisy. (In <em>Error models</em>, week 4, this noise gets its name: Poisson. Real replicates spread more, which the negative binomial adds.)</p>
+<p><strong>DESeq2</strong> takes raw integer counts, a sample table and a design formula, exactly as in <em>Design matrices in R: limma</em>:</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>dds <span class="ot">&lt;-</span> <span class="fu">DESeqDataSetFromMatrix</span>(<span class="at">countData =</span> counts, <span class="at">colData =</span> samples, <span class="at">design =</span> <span class="sc">~</span> batch <span class="sc">+</span> sex <span class="sc">+</span> treatment)</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>dds <span class="ot">&lt;-</span> <span class="fu">DESeq</span>(dds)                                    <span class="co"># size factors, count model per gene, tests</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>res <span class="ot">&lt;-</span> <span class="fu">results</span>(dds, <span class="at">name =</span> <span class="st">"treatment_treat_vs_ctrl"</span>)</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>res_shr <span class="ot">&lt;-</span> <span class="fu">lfcShrink</span>(dds, <span class="at">coef =</span> <span class="st">"treatment_treat_vs_ctrl"</span>, <span class="at">type =</span> <span class="st">"apeglm"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</section>
+<section id="by-hand" class="level2">
+<h2 class="anchored" data-anchor-id="by-hand">By hand</h2>
+<p>Do these on paper. A calculator is fine.</p>
+<p><strong>B1. Counts and fractions.</strong> Three libraries of the same RNA, sequenced to different depths:</p>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>gene</th>
+<th>sample 1</th>
+<th>sample 2</th>
+<th>sample 3</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>A</td>
+<td>600</td>
+<td>1200</td>
+<td>300</td>
+</tr>
+<tr class="even">
+<td>B</td>
+<td>300</td>
+<td>600</td>
+<td>150</td>
+</tr>
+<tr class="odd">
+<td>C</td>
+<td>90</td>
+<td>180</td>
+<td>45</td>
+</tr>
+<tr class="even">
+<td>D</td>
+<td>10</td>
+<td>20</td>
+<td>5</td>
+</tr>
+</tbody>
+</table>
+<ol type="a">
+<li><p>Compute the total of each sample and the fraction of each gene. What do you notice?</p></li>
+<li><p>Compute counts per million (CPM) for gene D in each sample.</p></li>
+<li><p>A colleague computes sample 2 / sample 1 for every gene and reports “all genes are 2× up”. What went wrong?</p></li>
+<li><p>Gene G has 512 reads in a library of 10 million reads, and 512 reads in another library of 40 million. In which library is G a larger fraction of the RNA, and by what factor?</p></li>
+</ol>
+<p><strong>B2. The composition trap.</strong> In sample 1, gene A makes up half of the RNA. In sample 2, the cells make <strong>7 times</strong> more A; nothing else changes. Both samples are sequenced to 2000 reads:</p>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>gene</th>
+<th>sample 1</th>
+<th>sample 2</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>A</td>
+<td>1000</td>
+<td>1750</td>
+</tr>
+<tr class="even">
+<td>B</td>
+<td>500</td>
+<td>125</td>
+</tr>
+<tr class="odd">
+<td>C</td>
+<td>300</td>
+<td>75</td>
+</tr>
+<tr class="even">
+<td>D</td>
+<td>200</td>
+<td>50</td>
+</tr>
+</tbody>
+</table>
+<ol type="a">
+<li><p>Compute the fraction of each gene in each sample, and the fold change of the fractions (sample 2 / sample 1).</p></li>
+<li><p>Which genes look “down”? Did they really go down? What fold change do you get for A, and what is the truth?</p></li>
+<li><p>Compute the ratio sample 2 / sample 1 for each gene, and take the median. Divide sample 2 by this number. What are the fold changes now?</p></li>
+</ol>
+<p><strong>B3. Median of ratios.</strong> Five genes in three samples:</p>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>gene</th>
+<th>s1</th>
+<th>s2</th>
+<th>s3</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>A</td>
+<td>100</td>
+<td>200</td>
+<td>400</td>
+</tr>
+<tr class="even">
+<td>B</td>
+<td>50</td>
+<td>100</td>
+<td>200</td>
+</tr>
+<tr class="odd">
+<td>C</td>
+<td>30</td>
+<td>60</td>
+<td>120</td>
+</tr>
+<tr class="even">
+<td>D</td>
+<td>100</td>
+<td>200</td>
+<td>3200</td>
+</tr>
+<tr class="odd">
+<td>E</td>
+<td>8</td>
+<td>0</td>
+<td>32</td>
+</tr>
+</tbody>
+</table>
+<ol type="a">
+<li><p>Which gene is left out, and why?</p></li>
+<li><p>Compute the geometric mean of each remaining gene. (For gene A: <span class="math inline">\(100 \cdot 200 \cdot 400 = 8\,000\,000\)</span>, and the cube root of that is 200.)</p></li>
+<li><p>Divide each count by its gene’s geometric mean, and take the median per sample. These are the size factors. (With four genes, the median is the mean of the middle two.)</p></li>
+<li><p>Divide the counts of genes A and D by the size factors. Which gene changed, in which sample, and by how much?</p></li>
+<li><p>Now use the totals of the samples as size factors instead. Compute the totals, and the fraction of gene A in s1 and s3. What would you conclude about gene A, and why is it wrong?</p></li>
+</ol>
+<p><strong>B4. Which fold changes would you trust?</strong> A control and a treated sample, same depth, one sample each:</p>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>gene</th>
+<th>control</th>
+<th>treated</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>A</td>
+<td>1000</td>
+<td>1100</td>
+</tr>
+<tr class="even">
+<td>B</td>
+<td>400</td>
+<td>1600</td>
+</tr>
+<tr class="odd">
+<td>C</td>
+<td>2</td>
+<td>8</td>
+</tr>
+<tr class="even">
+<td>D</td>
+<td>1</td>
+<td>8</td>
+</tr>
+<tr class="odd">
+<td>E</td>
+<td>3</td>
+<td>0</td>
+</tr>
+<tr class="even">
+<td>F</td>
+<td>900</td>
+<td>225</td>
+</tr>
+<tr class="odd">
+<td>G</td>
+<td>100</td>
+<td>50</td>
+</tr>
+</tbody>
+</table>
+<ol type="a">
+<li><p>Compute the log2 fold change (treated / control) of each gene, and rank the genes by its size (largest first, ignoring the sign).</p></li>
+<li><p>Suppose a gene did <strong>not</strong> change. Then both counts come from the same expected value <span class="math inline">\(n\)</span>, roughly their mean. For each gene, compute <span class="math inline">\(n\)</span> and <span class="math inline">\(\sqrt{n}\)</span>, and how many <span class="math inline">\(\sqrt{n}\)</span> the counts are away from <span class="math inline">\(n\)</span>.</p></li>
+<li><p>Which genes would you believe are really changed? Which of your top 3 from (a) are likely noise?</p></li>
+<li><p>What would you need, in the experiment, to say more about gene G?</p></li>
+</ol>
+</section>
+<section id="explore" class="level2">
+<h2 class="anchored" data-anchor-id="explore">Explore: noise in a ratio of counts</h2>
+<p>The demo draws 2000 pairs of replicate counts with the same expected value <span class="math inline">\(n\)</span> (buttons from 1 to 1000). Panel (a) is a histogram of the log2 ratio of each pair; pairs with a zero get their own bars (0, <span class="math inline">\(\infty\)</span>, 0/0), and pairs at least 2-fold apart are red. Its header shows the spread of the counts against <span class="math inline">\(\sqrt{n}\)</span> and the <strong>% of pairs at least 2-fold apart</strong>. Panel (b) is a fan of 2000 genes with averages from 0.5 to 5000; red circles mark the 10 largest fold changes.</p>
+<link rel="stylesheet" href="../demos/dist/demo.css">
+<div data-demo="countratio" data-mean="2"></div>
+<script src="../demos/dist/countratio.js"></script>
+<p><strong>E1.</strong> Click through <span class="math inline">\(n\)</span> = 1, 2, 5, 10, 30 and 100. Note the % of pairs at least 2-fold apart each time. At <span class="math inline">\(n = 1\)</span> and 2, how many pairs contain a zero, and what is their ratio?</p>
+<p><strong>E2.</strong> At <span class="math inline">\(n = 100\)</span> and <span class="math inline">\(n = 1000\)</span>, compare the spread of the counts with <span class="math inline">\(\sqrt{n}\)</span> in the header. By how much must <span class="math inline">\(n\)</span> grow to halve the relative spread? Then tick <strong>add biological variation</strong>: what happens at <span class="math inline">\(n = 1000\)</span>?</p>
+<p><strong>E3.</strong> In the fan (b), what do the 10 largest fold changes (red circles) have in common? Compare the % of genes at least 2-fold apart below an average of 10 and above 100. What does that mean for a gene list sorted by fold change?</p>
+<div class="callout callout-style-default callout-note callout-titled" title="Solutions">
+<div class="callout-header d-flex align-content-center" data-bs-toggle="collapse" data-bs-target=".callout-1-contents" aria-controls="callout-1" aria-expanded="false" aria-label="Toggle callout">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+Solutions
+</div>
+<div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
+</div>
+<div id="callout-1" class="callout-1-contents callout-collapse collapse">
+<div class="callout-body-container callout-body">
+<p><strong>E1.</strong> At the defaults: 77% at <span class="math inline">\(n = 1\)</span>, 65% at 2, 37% at 5, 17% at 10, 1.3% at 30 and 0% at 100. Nothing changed between the replicates, yet at low counts most pairs look like a 2-fold change or more. At <span class="math inline">\(n = 1\)</span> and 2 many pairs contain a zero: their ratio is 0, <span class="math inline">\(\infty\)</span> or 0/0, so their log2 ratio is <span class="math inline">\(-\infty\)</span>, <span class="math inline">\(+\infty\)</span> or undefined. (That is also why the SD in the header, computed on zero-free pairs only, is not a good summary there.)</p>
+<p><strong>E2.</strong> The spread of the counts is close to <span class="math inline">\(\sqrt{n}\)</span>: about 10 at <span class="math inline">\(n = 100\)</span>, about 32 at <span class="math inline">\(n = 1000\)</span>. The relative spread goes as <span class="math inline">\(1/\sqrt{n}\)</span>, so <span class="math inline">\(n\)</span> must grow <strong>4 times</strong> to halve it. With biological variation on, the spread at <span class="math inline">\(n = 1000\)</span> no longer goes to zero: the SD of the log2 ratio stays around 0.47 and about 3% of pairs are still 2-fold apart. Real replicates differ by more than counting noise; <em>Error models</em> (week 4) adds this with the negative binomial.</p>
+<p><strong>E3.</strong> The 10 largest fold changes all belong to <strong>low-count</strong> genes (averages of about 3 to 5.5). Below an average of 10, 56% of the genes are at least 2-fold apart; above 100, none are. A list sorted by raw fold change is topped by noise; you need a test that knows the count (DESeq2’s <code>lfcSE</code> and <code>padj</code>), and a shrunken fold change for ranking (R4).</p>
+</div>
+</div>
+</div>
+</section>
+<section id="in-r" class="level2">
+<h2 class="anchored" data-anchor-id="in-r">In R</h2>
+<p>Base R is enough for R1 and R2. R3 and R4 need DESeq2, limma, apeglm and airway: install them once with <code>BiocManager::install(c("DESeq2", "limma", "apeglm", "airway"))</code> (see <em>Install R</em>).</p>
+<section id="r1-sequencing-as-drawing-from-a-bag" class="level3">
+<h3 class="anchored" data-anchor-id="r1-sequencing-as-drawing-from-a-bag">R1 — Sequencing as drawing from a bag</h3>
+<div class="sourceCode" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">1</span>)</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>G     <span class="ot">&lt;-</span> <span class="dv">2000</span>                                  <span class="co"># number of genes</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>genes <span class="ot">&lt;-</span> <span class="fu">paste0</span>(<span class="st">"g"</span>, <span class="dv">1</span><span class="sc">:</span>G)</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>p     <span class="ot">&lt;-</span> <span class="fu">exp</span>(<span class="fu">rnorm</span>(G, <span class="dv">0</span>, <span class="dv">2</span>))                   <span class="co"># some genes are rare, some very common</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>p     <span class="ot">&lt;-</span> p <span class="sc">/</span> <span class="fu">sum</span>(p)                            <span class="co"># the fraction of the bag for each gene</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>N     <span class="ot">&lt;-</span> <span class="fl">1e6</span>                                   <span class="co"># reads per sample</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>expected <span class="ot">&lt;-</span> N <span class="sc">*</span> p                              <span class="co"># expected reads per gene</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>draw_library <span class="ot">&lt;-</span> <span class="cf">function</span>() {</span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>  reads <span class="ot">&lt;-</span> <span class="fu">sample</span>(genes, N, <span class="at">replace =</span> <span class="cn">TRUE</span>, <span class="at">prob =</span> p)    <span class="co"># N fragments drawn at random</span></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">as.vector</span>(<span class="fu">table</span>(<span class="fu">factor</span>(reads, <span class="at">levels =</span> genes)))        <span class="co"># count them, keep the zeros</span></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>rep1 <span class="ot">&lt;-</span> <span class="fu">draw_library</span>()                         <span class="co"># two replicates: same bag, same depth</span></span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>rep2 <span class="ot">&lt;-</span> <span class="fu">draw_library</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<ol type="a">
+<li><p>Look at <code>head(cbind(expected, rep1, rep2))</code>. Do the counts match the expected values? Which genes match best, relative to their size?</p></li>
+<li><p>How many genes have 0 reads in <code>rep1</code>? Compute <code>lfc &lt;- log2(rep2 / rep1)</code>. How many values are not finite (<code>!is.finite(lfc)</code>), and why?</p></li>
+<li><p>Draw the fan: <code>m &lt;- (rep1 + rep2) / 2; plot(m, lfc, log = "x")</code>. Add <code>abline(h = 0)</code>. Describe the shape.</p></li>
+<li><p>Nothing changed between the replicates. Still: list the 10 genes with the largest <code>abs(lfc)</code> (among the finite ones), with their counts. How many genes look at least “2-fold changed” (<code>abs(lfc) &gt; 1</code>), and what is the largest mean count among them? Among genes with a mean count of at least 100, what is the largest <code>abs(lfc)</code>?</p></li>
+</ol>
+</section>
+<section id="r2-the-n-pm-sqrtn-rule" class="level3">
+<h3 class="anchored" data-anchor-id="r2-the-n-pm-sqrtn-rule">R2 — The <span class="math inline">\(n \pm \sqrt{n}\)</span> rule</h3>
+<p>Repeat the draw 100 times and look at the spread of each gene. <code>tabulate(sample.int(...))</code> does the same as R1’s <code>draw_library()</code>, only faster; it still takes about 20 seconds.</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>draw_fast <span class="ot">&lt;-</span> <span class="cf">function</span>() <span class="fu">tabulate</span>(<span class="fu">sample.int</span>(G, N, <span class="at">replace =</span> <span class="cn">TRUE</span>, <span class="at">prob =</span> p), <span class="at">nbins =</span> G)</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>reps <span class="ot">&lt;-</span> <span class="fu">replicate</span>(<span class="dv">100</span>, <span class="fu">draw_fast</span>())            <span class="co"># genes x 100 repeated libraries</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>mu <span class="ot">&lt;-</span> <span class="fu">rowMeans</span>(reps)                           <span class="co"># mean count of each gene</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>s  <span class="ot">&lt;-</span> <span class="fu">apply</span>(reps, <span class="dv">1</span>, sd)                       <span class="co"># its standard deviation</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<ol type="a">
+<li><p>Find the genes whose expected count is closest to 2, 100 and 1000 (<code>which.min(abs(expected - 100))</code>). For each, compare <code>s</code> with <code>sqrt(mu)</code>.</p></li>
+<li><p>Plot the variance against the mean on log–log axes: <code>plot(mu[mu &gt; 0], s[mu &gt; 0]^2, log = "xy"); abline(0, 1)</code>. What does the line <span class="math inline">\(y = x\)</span> say about the variance?</p></li>
+<li><p>Compute the relative noise <code>s / mu</code> for the three genes in (a) and compare with <span class="math inline">\(1/\sqrt{n}\)</span>. How many reads must a gene have for 10% relative noise? For 1%?</p></li>
+</ol>
+</section>
+<section id="r3-deseq2-on-the-simulated-experiment-from-covariates-r" class="level3">
+<h3 class="anchored" data-anchor-id="r3-deseq2-on-the-simulated-experiment-from-covariates-r">R3 — DESeq2 on the simulated experiment from covariates-r</h3>
+<p>This is the simulation from <em>Design matrices in R: limma</em>: 2000 genes, 12 samples, batch unbalanced against treatment, and 200 genes that truly respond to treatment. Run it, and the limma analysis, so you can compare.</p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(limma)</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">1</span>)</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>samples <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(</span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">batch     =</span> <span class="fu">factor</span>(<span class="fu">rep</span>(<span class="fu">c</span>(<span class="st">"A"</span>, <span class="st">"B"</span>), <span class="at">each =</span> <span class="dv">6</span>)),</span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">sex       =</span> <span class="fu">factor</span>(<span class="fu">rep</span>(<span class="fu">c</span>(<span class="st">"F"</span>, <span class="st">"M"</span>), <span class="at">times =</span> <span class="dv">6</span>)),</span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>  <span class="at">treatment =</span> <span class="fu">factor</span>(<span class="fu">c</span>(<span class="st">"ctrl"</span>, <span class="fu">rep</span>(<span class="st">"treat"</span>, <span class="dv">5</span>), <span class="fu">rep</span>(<span class="st">"ctrl"</span>, <span class="dv">5</span>), <span class="st">"treat"</span>)))</span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a><span class="fu">rownames</span>(samples) <span class="ot">&lt;-</span> <span class="fu">paste0</span>(<span class="st">"s"</span>, <span class="dv">1</span><span class="sc">:</span><span class="dv">12</span>)</span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>n <span class="ot">&lt;-</span> <span class="dv">2000</span></span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>lfc_treat <span class="ot">&lt;-</span> <span class="fu">rep</span>(<span class="dv">0</span>, n); lfc_treat[<span class="dv">1</span><span class="sc">:</span><span class="dv">200</span>]   <span class="ot">&lt;-</span> <span class="fu">sample</span>(<span class="fu">c</span>(<span class="sc">-</span><span class="fl">1.5</span>, <span class="fl">1.5</span>), <span class="dv">200</span>, <span class="cn">TRUE</span>)</span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a>lfc_batch <span class="ot">&lt;-</span> <span class="fu">rep</span>(<span class="dv">0</span>, n); lfc_batch[<span class="dv">101</span><span class="sc">:</span><span class="dv">600</span>] <span class="ot">&lt;-</span> <span class="fu">sample</span>(<span class="fu">c</span>(<span class="sc">-</span><span class="dv">2</span>, <span class="dv">2</span>), <span class="dv">500</span>, <span class="cn">TRUE</span>)</span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a>lfc_sex   <span class="ot">&lt;-</span> <span class="fu">rep</span>(<span class="dv">0</span>, n); lfc_sex[<span class="dv">1901</span><span class="sc">:</span><span class="dv">1950</span>] <span class="ot">&lt;-</span> <span class="dv">3</span></span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a>B <span class="ot">&lt;-</span> <span class="fu">cbind</span>(lfc_batch, lfc_sex, lfc_treat)</span>
+<span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-16"><a href="#cb4-16" aria-hidden="true" tabindex="-1"></a>X    <span class="ot">&lt;-</span> <span class="fu">model.matrix</span>(<span class="sc">~</span> batch <span class="sc">+</span> sex <span class="sc">+</span> treatment, <span class="at">data =</span> samples)</span>
+<span id="cb4-17"><a href="#cb4-17" aria-hidden="true" tabindex="-1"></a>base <span class="ot">&lt;-</span> <span class="fu">exp</span>(<span class="fu">rnorm</span>(n, <span class="fu">log</span>(<span class="dv">200</span>), <span class="dv">1</span>))              <span class="co"># baseline mean count of each gene</span></span>
+<span id="cb4-18"><a href="#cb4-18" aria-hidden="true" tabindex="-1"></a>mu   <span class="ot">&lt;-</span> base <span class="sc">*</span> <span class="dv">2</span><span class="sc">^</span>(B <span class="sc">%*%</span> <span class="fu">t</span>(X[, <span class="sc">-</span><span class="dv">1</span>]))             <span class="co"># mean count: genes x samples</span></span>
+<span id="cb4-19"><a href="#cb4-19" aria-hidden="true" tabindex="-1"></a>phi  <span class="ot">&lt;-</span> <span class="fl">0.05</span> <span class="sc">+</span> <span class="dv">2</span> <span class="sc">/</span> base                         <span class="co"># negative-binomial dispersion</span></span>
+<span id="cb4-20"><a href="#cb4-20" aria-hidden="true" tabindex="-1"></a>counts <span class="ot">&lt;-</span> <span class="fu">matrix</span>(<span class="fu">rnbinom</span>(n <span class="sc">*</span> <span class="dv">12</span>, <span class="at">mu =</span> mu, <span class="at">size =</span> <span class="dv">1</span> <span class="sc">/</span> phi), <span class="at">nrow =</span> n,</span>
+<span id="cb4-21"><a href="#cb4-21" aria-hidden="true" tabindex="-1"></a>                 <span class="at">dimnames =</span> <span class="fu">list</span>(<span class="fu">paste0</span>(<span class="st">"g"</span>, <span class="dv">1</span><span class="sc">:</span>n), <span class="fu">rownames</span>(samples)))</span>
+<span id="cb4-22"><a href="#cb4-22" aria-hidden="true" tabindex="-1"></a>truth_de <span class="ot">&lt;-</span> lfc_treat <span class="sc">!=</span> <span class="dv">0</span>                      <span class="co"># TRUE for the 200 DE genes</span></span>
+<span id="cb4-23"><a href="#cb4-23" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-24"><a href="#cb4-24" aria-hidden="true" tabindex="-1"></a><span class="co"># limma, as in covariates-r</span></span>
+<span id="cb4-25"><a href="#cb4-25" aria-hidden="true" tabindex="-1"></a>v   <span class="ot">&lt;-</span> <span class="fu">voom</span>(counts, X)</span>
+<span id="cb4-26"><a href="#cb4-26" aria-hidden="true" tabindex="-1"></a>tt  <span class="ot">&lt;-</span> <span class="fu">topTable</span>(<span class="fu">eBayes</span>(<span class="fu">lmFit</span>(v, X)), <span class="at">coef =</span> <span class="st">"treatmenttreat"</span>, <span class="at">number =</span> <span class="cn">Inf</span>)</span>
+<span id="cb4-27"><a href="#cb4-27" aria-hidden="true" tabindex="-1"></a><span class="fu">table</span>(<span class="at">limma_called =</span> tt[<span class="fu">rownames</span>(counts), <span class="st">"adj.P.Val"</span>] <span class="sc">&lt;</span> <span class="fl">0.05</span>, <span class="at">truly_DE =</span> truth_de)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>Now DESeq2 on the same counts:</p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(DESeq2)</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>dds <span class="ot">&lt;-</span> <span class="fu">DESeqDataSetFromMatrix</span>(<span class="at">countData =</span> counts, <span class="at">colData =</span> samples,</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>                              <span class="at">design =</span> <span class="sc">~</span> batch <span class="sc">+</span> sex <span class="sc">+</span> treatment)</span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>dds <span class="ot">&lt;-</span> <span class="fu">DESeq</span>(dds)</span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a><span class="fu">resultsNames</span>(dds)</span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>res <span class="ot">&lt;-</span> <span class="fu">results</span>(dds, <span class="at">name =</span> <span class="st">"treatment_treat_vs_ctrl"</span>)</span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a><span class="fu">table</span>(<span class="at">called =</span> res<span class="sc">$</span>padj <span class="sc">&lt;</span> <span class="fl">0.05</span>, <span class="at">truly_DE =</span> truth_de, <span class="at">useNA =</span> <span class="st">"ifany"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<ol type="a">
+<li><p>How does DESeq2 name the coefficients? Why is it safer to ask for one by <code>name =</code>?</p></li>
+<li><p>Compare the number of true and false calls with limma. Why are some <code>padj</code> values <code>NA</code>?</p></li>
+<li><p>Look at <code>sizeFactors(dds)</code>. Every sample was simulated with the same depth. Are the size factors close to 1? Check one by hand: <code>median(counts[, 1] / exp(rowMeans(log(counts))), na.rm = TRUE)</code> (genes with a 0 give <code>NaN</code> or <code>0</code> and need care: which genes does DESeq2 leave out?).</p></li>
+<li><p>Plot <code>plot(res$baseMean, res$lfcSE, log = "xy")</code>. Where is <code>lfcSE</code> largest? Relate it to the fan in R1.</p></li>
+<li><p>What does <code>DESeqDataSetFromMatrix(counts, samples_conf, design = ~ batch + treatment)</code> say, with the confounded <code>samples_conf</code> from covariates-r R5 (<code>samples_conf &lt;- samples; samples_conf$treatment &lt;- factor(ifelse(samples$batch == "A", "ctrl", "treat"))</code>)?</p></li>
+</ol>
+</section>
+<section id="r4-a-real-dataset-airway" class="level3">
+<h3 class="anchored" data-anchor-id="r4-a-real-dataset-airway">R4 — A real dataset: <code>airway</code></h3>
+<p>The <a href="https://bioconductor.org/packages/release/data/experiment/html/airway.html">airway</a> package has RNA-seq of four airway smooth-muscle cell lines (<code>cell</code>), each untreated or treated with dexamethasone (<code>dex</code>), a glucocorticoid.</p>
+<div class="sourceCode" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(DESeq2)</span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(airway)</span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a><span class="fu">data</span>(airway)</span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a><span class="fu">levels</span>(airway<span class="sc">$</span>dex)</span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>airway<span class="sc">$</span>dex <span class="ot">&lt;-</span> <span class="fu">relevel</span>(airway<span class="sc">$</span>dex, <span class="at">ref =</span> <span class="st">"untrt"</span>)</span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>dds_air <span class="ot">&lt;-</span> <span class="fu">DESeqDataSet</span>(airway, <span class="at">design =</span> <span class="sc">~</span> cell <span class="sc">+</span> dex)</span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a>dds_air <span class="ot">&lt;-</span> dds_air[<span class="fu">rowSums</span>(<span class="fu">counts</span>(dds_air)) <span class="sc">&gt;=</span> <span class="dv">10</span>, ]   <span class="co"># drop almost-empty genes</span></span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a>dds_air <span class="ot">&lt;-</span> <span class="fu">DESeq</span>(dds_air)</span>
+<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a>res_air <span class="ot">&lt;-</span> <span class="fu">results</span>(dds_air, <span class="at">name =</span> <span class="st">"dex_trt_vs_untrt"</span>)</span>
+<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a><span class="fu">sum</span>(res_air<span class="sc">$</span>padj <span class="sc">&lt;</span> <span class="fl">0.05</span>, <span class="at">na.rm =</span> <span class="cn">TRUE</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<ol type="a">
+<li><p>What are the levels of <code>dex</code> before <code>relevel</code>? What would have gone wrong without it?</p></li>
+<li><p>Compare <code>sizeFactors(dds_air)</code> with the total counts scaled the same way: <code>colSums(counts(dds_air)) / exp(mean(log(colSums(counts(dds_air)))))</code>. Are the two close? Which samples were sequenced deepest?</p></li>
+<li><p>Why is <code>cell</code> in the design? Compare the number of genes at <code>padj &lt; 0.05</code> with <code>design = ~ dex</code>.</p></li>
+<li><p>Draw <code>plotMA(res_air, ylim = c(-5, 5))</code>. Where do you see the fan? Where are the called genes (in colour)?</p></li>
+<li><p>Shrink the fold changes and draw the MA plot again:</p></li>
+</ol>
+<div class="sourceCode" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>res_shr <span class="ot">&lt;-</span> <span class="fu">lfcShrink</span>(dds_air, <span class="at">coef =</span> <span class="st">"dex_trt_vs_untrt"</span>, <span class="at">type =</span> <span class="st">"apeglm"</span>)</span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a><span class="fu">plotMA</span>(res_shr, <span class="at">ylim =</span> <span class="fu">c</span>(<span class="sc">-</span><span class="dv">5</span>, <span class="dv">5</span>))</span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>top_raw <span class="ot">&lt;-</span> <span class="fu">head</span>(res_air[<span class="fu">order</span>(<span class="sc">-</span><span class="fu">abs</span>(res_air<span class="sc">$</span>log2FoldChange)), <span class="fu">c</span>(<span class="st">"baseMean"</span>, <span class="st">"log2FoldChange"</span>, <span class="st">"padj"</span>)], <span class="dv">10</span>)</span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>top_shr <span class="ot">&lt;-</span> <span class="fu">head</span>(res_shr[<span class="fu">order</span>(<span class="sc">-</span><span class="fu">abs</span>(res_shr<span class="sc">$</span>log2FoldChange)), <span class="fu">c</span>(<span class="st">"baseMean"</span>, <span class="st">"log2FoldChange"</span>, <span class="st">"padj"</span>)], <span class="dv">10</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>What changed in the plot? Compare <code>baseMean</code> in <code>top_raw</code> and <code>top_shr</code>. Which list would you rather send to a colleague who wants “the genes most changed by dexamethasone”?</p>
+<ol start="6" type="a">
+<li>Draw a volcano plot: the shrunken fold change against <span class="math inline">\(-\log_{10}\)</span> <code>padj</code>.</li>
+</ol>
+<div class="sourceCode" id="cb8"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>ok  <span class="ot">&lt;-</span> <span class="sc">!</span><span class="fu">is.na</span>(res_shr<span class="sc">$</span>padj)</span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>big <span class="ot">&lt;-</span> ok <span class="sc">&amp;</span> res_shr<span class="sc">$</span>padj <span class="sc">&lt;</span> <span class="fl">0.05</span> <span class="sc">&amp;</span> <span class="fu">abs</span>(res_shr<span class="sc">$</span>log2FoldChange) <span class="sc">&gt;</span> <span class="dv">1</span></span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(res_shr<span class="sc">$</span>log2FoldChange[ok], <span class="sc">-</span><span class="fu">log10</span>(res_shr<span class="sc">$</span>padj[ok]), <span class="at">pch =</span> <span class="dv">16</span>, <span class="at">cex =</span> <span class="fl">0.4</span>,</span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>     <span class="at">col =</span> <span class="fu">ifelse</span>(big[ok], <span class="st">"red"</span>, <span class="st">"grey"</span>), <span class="at">xlab =</span> <span class="st">"log2 fold change"</span>, <span class="at">ylab =</span> <span class="st">"-log10(padj)"</span>)</span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a><span class="fu">abline</span>(<span class="at">h =</span> <span class="sc">-</span><span class="fu">log10</span>(<span class="fl">0.05</span>), <span class="at">lty =</span> <span class="dv">2</span>); <span class="fu">abline</span>(<span class="at">v =</span> <span class="fu">c</span>(<span class="sc">-</span><span class="dv">1</span>, <span class="dv">1</span>), <span class="at">lty =</span> <span class="dv">3</span>)</span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a><span class="fu">sum</span>(big); <span class="fu">sum</span>(big <span class="sc">&amp;</span> res_shr<span class="sc">$</span>log2FoldChange <span class="sc">&gt;</span> <span class="dv">0</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>How many genes are at <code>padj &lt; 0.05</code> <strong>and</strong> changed more than 2-fold, and how many of them go up? Find SPARCL1, FKBP5 and ALOX15B (<code>rowData(dds_air)$gene_name</code>) and explain where each sits.</p>
+</section>
+</section>
+<section id="hints" class="level2">
+<h2 class="anchored" data-anchor-id="hints">Hints</h2>
+<div class="callout callout-style-default callout-tip callout-titled" title="Hint 1 — fractions and CPM (B1, B2)">
+<div class="callout-header d-flex align-content-center" data-bs-toggle="collapse" data-bs-target=".callout-2-contents" aria-controls="callout-2" aria-expanded="false" aria-label="Toggle callout">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+Hint 1 — fractions and CPM (B1, B2)
+</div>
+<div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
+</div>
+<div id="callout-2" class="callout-2-contents callout-collapse collapse">
+<div class="callout-body-container callout-body">
+<p>Fraction = count / total of that sample. CPM = fraction <span class="math inline">\(\times 10^6\)</span>. A fold change of fractions is (fraction in sample 2) / (fraction in sample 1). The fractions of one sample always add up to 1.</p>
+</div>
+</div>
+</div>
+<div class="callout callout-style-default callout-tip callout-titled" title="Hint 2 — median of ratios (B2c, B3)">
+<div class="callout-header d-flex align-content-center" data-bs-toggle="collapse" data-bs-target=".callout-3-contents" aria-controls="callout-3" aria-expanded="false" aria-label="Toggle callout">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+Hint 2 — median of ratios (B2c, B3)
+</div>
+<div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
+</div>
+<div id="callout-3" class="callout-3-contents callout-collapse collapse">
+<div class="callout-body-container callout-body">
+<p>Follow the four steps in the Background. A geometric mean of 3 numbers is the cube root of their product; when the counts in a row are <span class="math inline">\(a\)</span>, <span class="math inline">\(2a\)</span>, <span class="math inline">\(4a\)</span>, the product is <span class="math inline">\(8a^3\)</span> and the geometric mean is <span class="math inline">\(2a\)</span>. The median of an even number of values is the mean of the middle two. See <a href="https://rdrr.io/bioc/DESeq2/man/estimateSizeFactors.html"><code>estimateSizeFactors</code></a> and the <a href="https://bioconductor.org/packages/release/bioc/vignettes/DESeq2/inst/doc/DESeq2.html">DESeq2 vignette</a>, section “Normalization”.</p>
+</div>
+</div>
+</div>
+<div class="callout callout-style-default callout-tip callout-titled" title="Hint 3 — log2 fold changes and the $\sqrt{n}$ rule (B4)">
+<div class="callout-header d-flex align-content-center" data-bs-toggle="collapse" data-bs-target=".callout-4-contents" aria-controls="callout-4" aria-expanded="false" aria-label="Toggle callout">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+Hint 3 — log2 fold changes and the <span class="math inline">\(\sqrt{n}\)</span> rule (B4)
+</div>
+<div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
+</div>
+<div id="callout-4" class="callout-4-contents callout-collapse collapse">
+<div class="callout-body-container callout-body">
+<p><span class="math inline">\(\log_2 4 = 2\)</span>, <span class="math inline">\(\log_2 8 = 3\)</span>, <span class="math inline">\(\log_2 0.25 = -2\)</span>, and <span class="math inline">\(\log_2 1.1 \approx 0.14\)</span>. For “how many <span class="math inline">\(\sqrt{n}\)</span> away”: <span class="math inline">\((\text{count} - n) / \sqrt{n}\)</span>. More than about 3 is hard to get from counting noise alone; 1 or 2 is common.</p>
+</div>
+</div>
+</div>
+<div class="callout callout-style-default callout-tip callout-titled" title="Hint 4 — simulating the bag (R1, R2)">
+<div class="callout-header d-flex align-content-center" data-bs-toggle="collapse" data-bs-target=".callout-5-contents" aria-controls="callout-5" aria-expanded="false" aria-label="Toggle callout">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+Hint 4 — simulating the bag (R1, R2)
+</div>
+<div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
+</div>
+<div id="callout-5" class="callout-5-contents callout-collapse collapse">
+<div class="callout-body-container callout-body">
+<p><a href="https://rdrr.io/r/base/sample.html"><code>sample</code></a><code>(genes, N, replace = TRUE, prob = p)</code> draws <span class="math inline">\(N\)</span> gene names, each with probability <span class="math inline">\(p\)</span>. <a href="https://rdrr.io/r/base/table.html"><code>table</code></a> counts them; turning the draws into a <a href="https://rdrr.io/r/base/factor.html"><code>factor</code></a> with all genes as levels keeps the genes with 0 reads. <a href="https://rdrr.io/r/base/tabulate.html"><code>tabulate</code></a> does the same for numbers 1 to <code>G</code>. <a href="https://rdrr.io/r/base/lapply.html"><code>replicate</code></a> repeats a call and puts the results side by side as columns.</p>
+</div>
+</div>
+</div>
+<div class="callout callout-style-default callout-tip callout-titled" title="Hint 5 — DESeq2 (R3, R4)">
+<div class="callout-header d-flex align-content-center" data-bs-toggle="collapse" data-bs-target=".callout-6-contents" aria-controls="callout-6" aria-expanded="false" aria-label="Toggle callout">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+Hint 5 — DESeq2 (R3, R4)
+</div>
+<div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
+</div>
+<div id="callout-6" class="callout-6-contents callout-collapse collapse">
+<div class="callout-body-container callout-body">
+<p><a href="https://rdrr.io/bioc/DESeq2/man/DESeqDataSet.html"><code>DESeqDataSetFromMatrix</code></a> takes raw integer counts, the sample table and the design. <a href="https://rdrr.io/bioc/DESeq2/man/DESeq.html"><code>DESeq</code></a> fits every gene. <a href="https://rdrr.io/bioc/DESeq2/man/results.html"><code>results</code></a><code>(dds, name = ...)</code> picks a coefficient by its name from <code>resultsNames(dds)</code>; without <code>name</code> it reports the last variable of the formula. <code>padj</code> is <code>NA</code> for genes DESeq2 does not test (too few reads, or an extreme outlier); see the vignette’s section “Independent filtering”. <a href="https://rdrr.io/bioc/DESeq2/man/plotMA.html"><code>plotMA</code></a> draws the fold change against <code>baseMean</code>.</p>
+</div>
+</div>
+</div>
+<div class="callout callout-style-default callout-tip callout-titled" title="Hint 6 — shrinkage (R4e)">
+<div class="callout-header d-flex align-content-center" data-bs-toggle="collapse" data-bs-target=".callout-7-contents" aria-controls="callout-7" aria-expanded="false" aria-label="Toggle callout">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+Hint 6 — shrinkage (R4e)
+</div>
+<div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
+</div>
+<div id="callout-7" class="callout-7-contents callout-collapse collapse">
+<div class="callout-body-container callout-body">
+<p><a href="https://rdrr.io/bioc/DESeq2/man/lfcShrink.html"><code>lfcShrink</code></a> with <code>type = "apeglm"</code> needs the <a href="https://bioconductor.org/packages/release/bioc/html/apeglm.html">apeglm</a> package and a <code>coef</code> name from <code>resultsNames</code>. It changes <code>log2FoldChange</code> and <code>lfcSE</code>, not the test.</p>
+</div>
+</div>
+</div>
+</section>
+<section id="solutions" class="level2">
+<h2 class="anchored" data-anchor-id="solutions">Solutions</h2>
+<div class="callout callout-style-default callout-note callout-titled" title="Solutions — by hand">
+<div class="callout-header d-flex align-content-center" data-bs-toggle="collapse" data-bs-target=".callout-8-contents" aria-controls="callout-8" aria-expanded="false" aria-label="Toggle callout">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+Solutions — by hand
+</div>
+<div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
+</div>
+<div id="callout-8" class="callout-8-contents callout-collapse collapse">
+<div class="callout-body-container callout-body">
+<p><strong>B1.</strong> (a) Totals 1000, 2000 and 500. The fractions are the same in all three samples: A 0.6, B 0.3, C 0.09, D 0.01. The samples differ only in depth.</p>
+<ol start="2" type="a">
+<li><p>Gene D: <span class="math inline">\(10 / 1000 \times 10^6 = 10\,000\)</span> CPM in sample 1, <span class="math inline">\(20 / 2000 \times 10^6 = 10\,000\)</span> in sample 2, <span class="math inline">\(5 / 500 \times 10^6 = 10\,000\)</span> in sample 3. The same.</p></li>
+<li><p>Sample 2 was sequenced twice as deep, so every count doubled. The ratio of raw counts measures the depth, not the biology. Divide by the size factors (here the totals) first.</p></li>
+<li><p><span class="math inline">\(512 / 10\)</span> million <span class="math inline">\(= 51.2\)</span> per million, and <span class="math inline">\(512 / 40\)</span> million <span class="math inline">\(= 12.8\)</span> per million. G is a <strong>4 times</strong> larger fraction of the RNA in the first library.</p></li>
+</ol>
+<p><strong>B2.</strong> (a)</p>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>gene</th>
+<th>fraction 1</th>
+<th>fraction 2</th>
+<th>fold change</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>A</td>
+<td>0.50</td>
+<td>0.875</td>
+<td>1.75</td>
+</tr>
+<tr class="even">
+<td>B</td>
+<td>0.25</td>
+<td>0.0625</td>
+<td>0.25</td>
+</tr>
+<tr class="odd">
+<td>C</td>
+<td>0.15</td>
+<td>0.0375</td>
+<td>0.25</td>
+</tr>
+<tr class="even">
+<td>D</td>
+<td>0.10</td>
+<td>0.025</td>
+<td>0.25</td>
+</tr>
+</tbody>
+</table>
+<ol start="2" type="a">
+<li><p>B, C and D look 4 times down (log2 FC <span class="math inline">\(-2\)</span>), but nothing happened to them. A looks 1.75 times up, but truly went up 7 times. In the tube, sample 2 had <span class="math inline">\(7000 + 500 + 300 + 200 = 8000\)</span> units of RNA for every 2000 in sample 1, so each read of sample 2 stands for 4 times as much RNA: A took most of the reads.</p></li>
+<li><p>The ratios are 1.75, 0.25, 0.25, 0.25; the median is 0.25. Sample 2 divided by 0.25: A 7000, B 500, C 300, D 200. Now B, C and D are unchanged and A is 7 times up: the truth.</p></li>
+</ol>
+<p><strong>B3.</strong> (a) Gene E: it has a 0 in s2, so its geometric mean is 0 and its ratios are useless (<span class="math inline">\(8/0\)</span>).</p>
+<ol start="2" type="a">
+<li><p>A: <span class="math inline">\(\sqrt[3]{8\,000\,000} = 200\)</span>. B: <span class="math inline">\(\sqrt[3]{1\,000\,000} = 100\)</span>. C: <span class="math inline">\(\sqrt[3]{216\,000} = 60\)</span>. D: <span class="math inline">\(\sqrt[3]{64\,000\,000} = 400\)</span>.</p></li>
+<li></li>
+</ol>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>gene</th>
+<th>s1</th>
+<th>s2</th>
+<th>s3</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>A</td>
+<td>0.5</td>
+<td>1</td>
+<td>2</td>
+</tr>
+<tr class="even">
+<td>B</td>
+<td>0.5</td>
+<td>1</td>
+<td>2</td>
+</tr>
+<tr class="odd">
+<td>C</td>
+<td>0.5</td>
+<td>1</td>
+<td>2</td>
+</tr>
+<tr class="even">
+<td>D</td>
+<td>0.25</td>
+<td>0.5</td>
+<td>8</td>
+</tr>
+<tr class="odd">
+<td><strong>median</strong></td>
+<td><strong>0.5</strong></td>
+<td><strong>1</strong></td>
+<td><strong>2</strong></td>
+</tr>
+</tbody>
+</table>
+<p>The size factors are 0.5, 1 and 2: s3 was sequenced 4 times deeper than s1.</p>
+<ol start="4" type="a">
+<li><p>A: <span class="math inline">\(100/0.5 = 200\)</span>, <span class="math inline">\(200/1 = 200\)</span>, <span class="math inline">\(400/2 = 200\)</span>. Unchanged. D: <span class="math inline">\(200\)</span>, <span class="math inline">\(200\)</span>, <span class="math inline">\(3200/2 = 1600\)</span>: <strong>8 times up in s3</strong>. The median was not fooled by D, because only one gene in four changed.</p></li>
+<li><p>Totals: 288, 560 and 3952. Fraction of A: <span class="math inline">\(100/288 = 0.35\)</span> in s1, <span class="math inline">\(400/3952 = 0.10\)</span> in s3. A would look about 3.4 times <strong>down</strong> in s3. It is wrong: D took a big fraction of s3’s reads (3200 of 3952), so every other gene’s fraction fell. That is the composition trap.</p></li>
+</ol>
+<div class="sourceCode" id="cb9"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>m <span class="ot">&lt;-</span> <span class="fu">rbind</span>(<span class="at">A =</span> <span class="fu">c</span>(<span class="dv">100</span>, <span class="dv">200</span>, <span class="dv">400</span>), <span class="at">B =</span> <span class="fu">c</span>(<span class="dv">50</span>, <span class="dv">100</span>, <span class="dv">200</span>), <span class="at">C =</span> <span class="fu">c</span>(<span class="dv">30</span>, <span class="dv">60</span>, <span class="dv">120</span>),</span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>           <span class="at">D =</span> <span class="fu">c</span>(<span class="dv">100</span>, <span class="dv">200</span>, <span class="dv">3200</span>), <span class="at">E =</span> <span class="fu">c</span>(<span class="dv">8</span>, <span class="dv">0</span>, <span class="dv">32</span>))</span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>ok <span class="ot">&lt;-</span> <span class="fu">rowSums</span>(m <span class="sc">==</span> <span class="dv">0</span>) <span class="sc">==</span> <span class="dv">0</span>                        <span class="co"># leave out genes with a 0</span></span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>gm <span class="ot">&lt;-</span> <span class="fu">exp</span>(<span class="fu">rowMeans</span>(<span class="fu">log</span>(m[ok, ])))                 <span class="co"># geometric means: 200 100 60 400</span></span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a><span class="fu">apply</span>(m[ok, ] <span class="sc">/</span> gm, <span class="dv">2</span>, median)                    <span class="co"># 0.5 1 2</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>DESeq2 gives the same: <code>sizeFactors(estimateSizeFactors(DESeqDataSetFromMatrix(m, data.frame(s = factor(1:3)), ~ 1)))</code> prints <code>0.5 1 2</code>.</p>
+<p><strong>B4.</strong> (a)</p>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>gene</th>
+<th>log2 FC</th>
+<th>rank</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>E</td>
+<td><span class="math inline">\(-\infty\)</span> (3 → 0)</td>
+<td>1</td>
+</tr>
+<tr class="even">
+<td>D</td>
+<td>3</td>
+<td>2</td>
+</tr>
+<tr class="odd">
+<td>B, C</td>
+<td>2</td>
+<td>3–4</td>
+</tr>
+<tr class="even">
+<td>F</td>
+<td><span class="math inline">\(-2\)</span></td>
+<td>5</td>
+</tr>
+<tr class="odd">
+<td>G</td>
+<td><span class="math inline">\(-1\)</span></td>
+<td>6</td>
+</tr>
+<tr class="even">
+<td>A</td>
+<td>0.14</td>
+<td>7</td>
+</tr>
+</tbody>
+</table>
+<ol start="2" type="a">
+<li></li>
+</ol>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>gene</th>
+<th><span class="math inline">\(n\)</span></th>
+<th><span class="math inline">\(\sqrt{n}\)</span></th>
+<th>distance of the counts from <span class="math inline">\(n\)</span></th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>A</td>
+<td>1050</td>
+<td>32</td>
+<td>50, about <strong>1.5</strong> <span class="math inline">\(\sqrt{n}\)</span></td>
+</tr>
+<tr class="even">
+<td>B</td>
+<td>1000</td>
+<td>32</td>
+<td>600, about <strong>19</strong> <span class="math inline">\(\sqrt{n}\)</span></td>
+</tr>
+<tr class="odd">
+<td>C</td>
+<td>5</td>
+<td>2.2</td>
+<td>3, about <strong>1.3</strong> <span class="math inline">\(\sqrt{n}\)</span></td>
+</tr>
+<tr class="even">
+<td>D</td>
+<td>4.5</td>
+<td>2.1</td>
+<td>3.5, about <strong>1.6</strong> <span class="math inline">\(\sqrt{n}\)</span></td>
+</tr>
+<tr class="odd">
+<td>E</td>
+<td>1.5</td>
+<td>1.2</td>
+<td>1.5, about <strong>1.2</strong> <span class="math inline">\(\sqrt{n}\)</span></td>
+</tr>
+<tr class="even">
+<td>F</td>
+<td>562.5</td>
+<td>24</td>
+<td>337.5, about <strong>14</strong> <span class="math inline">\(\sqrt{n}\)</span></td>
+</tr>
+<tr class="odd">
+<td>G</td>
+<td>75</td>
+<td>8.7</td>
+<td>25, about <strong>2.9</strong> <span class="math inline">\(\sqrt{n}\)</span></td>
+</tr>
+</tbody>
+</table>
+<ol start="3" type="a">
+<li><p>Trust <strong>B</strong> and <strong>F</strong>: their counts are 14–19 <span class="math inline">\(\sqrt{n}\)</span> apart, which counting noise cannot do. The top 3 by fold change, E, D and C, are all within 1–2 <span class="math inline">\(\sqrt{n}\)</span>: easily counting noise, even though their fold changes are the largest. A’s 10% change is also within the noise.</p></li>
+<li><p>G is about 3 <span class="math inline">\(\sqrt{n}\)</span> away: probably real, but real replicates vary more than counting noise alone. You need <strong>biological replicates</strong> (several control and treated samples) to see how much G varies between samples of the same group; DESeq2 uses them to estimate that extra spread.</p></li>
+</ol>
+</div>
+</div>
+</div>
+<div class="callout callout-style-default callout-note callout-titled" title="Solutions — R1 and R2 (base R)">
+<div class="callout-header d-flex align-content-center" data-bs-toggle="collapse" data-bs-target=".callout-9-contents" aria-controls="callout-9" aria-expanded="false" aria-label="Toggle callout">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+Solutions — R1 and R2 (base R)
+</div>
+<div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
+</div>
+<div id="callout-9" class="callout-9-contents callout-collapse collapse">
+<div class="callout-body-container callout-body">
+<p>Numbers from R 4.6 with <code>set.seed(1)</code>; R1 and R2 run in this order.</p>
+<p><strong>R1.</strong> (a)</p>
+<div class="sourceCode" id="cb10"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="fu">head</span>(<span class="fu">cbind</span>(<span class="at">expected =</span> <span class="fu">round</span>(expected, <span class="dv">1</span>), rep1, rep2))</span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a><span class="co">#      expected rep1 rep2</span></span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a><span class="co"># [1,]     16.6   15   22</span></span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a><span class="co"># [2,]     84.0   92   94</span></span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a><span class="co"># [3,]     10.9    7   16</span></span>
+<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a><span class="co"># [4,]   1413.7 1444 1442</span></span>
+<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a><span class="co"># [5,]    112.4  120  123</span></span>
+<span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a><span class="co"># [6,]     11.3    6    8</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>Roughly, but not exactly. Relative to their size, the big genes match best: gene 4 is off by about 2%, gene 3 by up to 40%.</p>
+<ol start="2" type="a">
+<li><p>55 genes have 0 reads in <code>rep1</code> (42 in <code>rep2</code>). 76 values of <code>lfc</code> are not finite: <span class="math inline">\(\log_2(x/0) = \infty\)</span>, <span class="math inline">\(\log_2(0/y) = -\infty\)</span>, and <span class="math inline">\(\log_2(0/0)\)</span> is <code>NaN</code>. The expected counts run from 0.09 to about 119 000, so many genes are rare.</p></li>
+<li><p>A fan (a funnel lying on its side): wide at low mean counts, narrowing towards 0 as the count grows. Everything is centred on 0 because nothing changed.</p></li>
+<li></li>
+</ol>
+<div class="sourceCode" id="cb11"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>ok  <span class="ot">&lt;-</span> <span class="fu">is.finite</span>(lfc)</span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>top <span class="ot">&lt;-</span> <span class="fu">order</span>(<span class="fu">abs</span>(lfc[ok]), <span class="at">decreasing =</span> <span class="cn">TRUE</span>)[<span class="dv">1</span><span class="sc">:</span><span class="dv">10</span>]</span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a><span class="fu">data.frame</span>(<span class="at">gene =</span> genes[ok][top], <span class="at">rep1 =</span> rep1[ok][top], <span class="at">rep2 =</span> rep2[ok][top], <span class="at">lfc =</span> <span class="fu">round</span>(lfc[ok][top], <span class="dv">2</span>))</span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a><span class="co">#     gene rep1 rep2   lfc</span></span>
+<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a><span class="co"># 1  g1134    7    1 -2.81</span></span>
+<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a><span class="co"># 2  g1544    1    7  2.81</span></span>
+<span id="cb11-7"><a href="#cb11-7" aria-hidden="true" tabindex="-1"></a><span class="co"># 3  g1705    1    7  2.81</span></span>
+<span id="cb11-8"><a href="#cb11-8" aria-hidden="true" tabindex="-1"></a><span class="co"># 4   g553    1    6  2.58</span></span>
+<span id="cb11-9"><a href="#cb11-9" aria-hidden="true" tabindex="-1"></a><span class="co"># 5  g1807    2   11  2.46</span></span>
+<span id="cb11-10"><a href="#cb11-10" aria-hidden="true" tabindex="-1"></a><span class="co"># 6   g268    1    5  2.32</span></span>
+<span id="cb11-11"><a href="#cb11-11" aria-hidden="true" tabindex="-1"></a><span class="co"># 7   g455    5    1 -2.32</span></span>
+<span id="cb11-12"><a href="#cb11-12" aria-hidden="true" tabindex="-1"></a><span class="co"># 8   g819    1    5  2.32</span></span>
+<span id="cb11-13"><a href="#cb11-13" aria-hidden="true" tabindex="-1"></a><span class="co"># 9  g1014    5    1 -2.32</span></span>
+<span id="cb11-14"><a href="#cb11-14" aria-hidden="true" tabindex="-1"></a><span class="co"># 10 g1665    5    1 -2.32</span></span>
+<span id="cb11-15"><a href="#cb11-15" aria-hidden="true" tabindex="-1"></a><span class="fu">sum</span>(<span class="fu">abs</span>(lfc[ok]) <span class="sc">&gt;</span> <span class="dv">1</span>); <span class="fu">max</span>(m[ok][<span class="fu">abs</span>(lfc[ok]) <span class="sc">&gt;</span> <span class="dv">1</span>])</span>
+<span id="cb11-16"><a href="#cb11-16" aria-hidden="true" tabindex="-1"></a><span class="co"># [1] 95</span></span>
+<span id="cb11-17"><a href="#cb11-17" aria-hidden="true" tabindex="-1"></a><span class="co"># [1] 30</span></span>
+<span id="cb11-18"><a href="#cb11-18" aria-hidden="true" tabindex="-1"></a><span class="fu">max</span>(<span class="fu">abs</span>(lfc[m <span class="sc">&gt;=</span> <span class="dv">100</span>]))</span>
+<span id="cb11-19"><a href="#cb11-19" aria-hidden="true" tabindex="-1"></a><span class="co"># [1] 0.625</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>The top 10 “fold changes” (5 to 7 times) all come from genes with 1 to 11 reads. 95 genes look at least 2-fold changed, all with a mean count of 30 or less. Among the 778 genes with a mean of at least 100, no gene changes by more than <span class="math inline">\(2^{0.63} = 1.5\)</span> times. All of it is counting noise.</p>
+<p><strong>R2.</strong> (a)</p>
+<div class="sourceCode" id="cb12"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>pick <span class="ot">&lt;-</span> <span class="fu">sapply</span>(<span class="fu">c</span>(<span class="dv">2</span>, <span class="dv">100</span>, <span class="dv">1000</span>), <span class="cf">function</span>(t) <span class="fu">which.min</span>(<span class="fu">abs</span>(expected <span class="sc">-</span> t)))</span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a><span class="fu">round</span>(<span class="fu">cbind</span>(<span class="at">expected =</span> expected[pick], <span class="at">mean =</span> mu[pick], <span class="at">sd =</span> s[pick], <span class="at">sqrt_mean =</span> <span class="fu">sqrt</span>(mu[pick])), <span class="dv">2</span>)</span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a><span class="co">#      expected    mean    sd sqrt_mean</span></span>
+<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a><span class="co"># [1,]     2.00    1.97  1.49      1.40</span></span>
+<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a><span class="co"># [2,]    99.83   99.28  9.00      9.96</span></span>
+<span id="cb12-6"><a href="#cb12-6" aria-hidden="true" tabindex="-1"></a><span class="co"># [3,]  1007.46 1003.36 27.95     31.68</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>(The three genes are g526, g266 and g1970.) In each case the standard deviation is close to <span class="math inline">\(\sqrt{\text{mean}}\)</span>. (With 100 repeats the estimate of <code>sd</code> itself wobbles by about 7%.)</p>
+<ol start="2" type="a">
+<li><p>The points lie on the line <span class="math inline">\(y = x\)</span>: the <strong>variance equals the mean</strong>. That is the <span class="math inline">\(n \pm \sqrt{n}\)</span> rule, since the standard deviation is the square root of the variance. (Fitting a line to the log–log plot gives a slope of 1.00.)</p></li>
+<li><p>Relative noise: 0.76, 0.091 and 0.028, against <span class="math inline">\(1/\sqrt{n}\)</span> = 0.71, 0.10 and 0.032. 10% relative noise needs <span class="math inline">\(1/\sqrt{n} = 0.1\)</span>, so <span class="math inline">\(n = 100\)</span> reads; 1% needs <span class="math inline">\(n = 10\,000\)</span>.</p></li>
+</ol>
+</div>
+</div>
+</div>
+<div class="callout callout-style-default callout-note callout-titled" title="Solutions — R3 and R4 (DESeq2)">
+<div class="callout-header d-flex align-content-center" data-bs-toggle="collapse" data-bs-target=".callout-10-contents" aria-controls="callout-10" aria-expanded="false" aria-label="Toggle callout">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+Solutions — R3 and R4 (DESeq2)
+</div>
+<div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
+</div>
+<div id="callout-10" class="callout-10-contents callout-collapse collapse">
+<div class="callout-body-container callout-body">
+<p>Numbers from DESeq2 1.52 (R 4.6). Messages such as “converting counts to integer mode” are harmless.</p>
+<p><strong>R3.</strong> (a) <code>"Intercept"</code>, <code>"batch_B_vs_A"</code>, <code>"sex_M_vs_F"</code>, <code>"treatment_treat_vs_ctrl"</code>: variable, level, “vs”, reference. <code>results(dds)</code> without <code>name =</code> reports the <strong>last</strong> variable of the formula, so with <code>~ treatment + batch</code> it would silently give you the batch effect.</p>
+<ol start="2" type="a">
+<li></li>
+</ol>
+<div class="sourceCode" id="cb13"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="fu">table</span>(<span class="at">called =</span> res<span class="sc">$</span>padj <span class="sc">&lt;</span> <span class="fl">0.05</span>, <span class="at">truly_DE =</span> truth_de, <span class="at">useNA =</span> <span class="st">"ifany"</span>)</span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a><span class="co">#         truly_DE</span></span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a><span class="co"># called   FALSE TRUE</span></span>
+<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a><span class="co">#   FALSE   1751   15</span></span>
+<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a><span class="co">#   TRUE      14  181</span></span>
+<span id="cb13-6"><a href="#cb13-6" aria-hidden="true" tabindex="-1"></a><span class="co">#   &lt;NA&gt;      35    4</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>195 calls: 181 true and 14 false, very close to limma’s 188 calls (177 true, 11 false). g138 gets LFC 1.37 (truth 1.5). DESeq2 does not test genes with very low counts, so their <code>padj</code> is <code>NA</code> (39 genes here). Same design matrix, nearly the same answer: for well-designed experiments with enough reads, limma-voom and DESeq2 mostly agree.</p>
+<ol start="3" type="a">
+<li></li>
+</ol>
+<div class="sourceCode" id="cb14"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="fu">round</span>(<span class="fu">sizeFactors</span>(dds), <span class="dv">2</span>)</span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a><span class="co">#   s1   s2   s3   s4   s5   s6   s7   s8   s9  s10  s11  s12</span></span>
+<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a><span class="co"># 1.00 1.03 1.01 1.04 1.01 1.03 1.00 1.02 0.99 1.01 0.98 1.03</span></span>
+<span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a>ok <span class="ot">&lt;-</span> <span class="fu">rowSums</span>(counts <span class="sc">==</span> <span class="dv">0</span>) <span class="sc">==</span> <span class="dv">0</span>                   <span class="co"># 1995 of 2000 genes</span></span>
+<span id="cb14-5"><a href="#cb14-5" aria-hidden="true" tabindex="-1"></a><span class="fu">median</span>(counts[ok, <span class="dv">1</span>] <span class="sc">/</span> <span class="fu">exp</span>(<span class="fu">rowMeans</span>(<span class="fu">log</span>(counts[ok, ]))))</span>
+<span id="cb14-6"><a href="#cb14-6" aria-hidden="true" tabindex="-1"></a><span class="co"># [1] 1.002157</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>The size factors are all close to 1, because every sample was simulated with the same depth (<code>base</code> is the same for every sample); they are not exactly 1 because of counting noise and because the treatment, batch and sex genes change the composition a little. DESeq2 leaves out every gene with a 0 in <strong>any</strong> sample (its geometric mean is 0); in the by-hand check those genes give <code>NaN</code> or <code>Inf</code>, so use <code>ok &lt;- rowSums(counts == 0) == 0</code> and compute on <code>counts[ok, ]</code>.</p>
+<ol start="4" type="a">
+<li><p><code>lfcSE</code> is largest for genes with a small <code>baseMean</code> and falls steadily as <code>baseMean</code> grows. It is the fan of R1 in another form: the fold change of a low-count gene is uncertain, and DESeq2 knows it. That is why a huge fold change built on a few reads is not called.</p></li>
+<li></li>
+</ol>
+<pre><code>Error in checkFullRank(modelMatrix) :
+  the model matrix is not full rank, so the model cannot be fit as specified.
+  One or more variables or interaction terms in the design formula are linear
+  combinations of the others and must be removed.
+
+  Please read the vignette section 'Model matrix not full rank':
+
+  vignette('DESeq2')</code></pre>
+<p>DESeq2 stops where limma gives <code>NA</code>. Both mean the same thing: batch and treatment cannot be separated.</p>
+<p><strong>R4.</strong> (a) The levels are <code>"trt"</code> and <code>"untrt"</code>: alphabetically <code>trt</code> is the reference, so without <code>relevel</code> the coefficient would be <code>dex_untrt_vs_trt</code> and every fold change would have the opposite sign.</p>
+<div class="sourceCode" id="cb16"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a><span class="fu">levels</span>(airway<span class="sc">$</span>dex)</span>
+<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a><span class="co"># [1] "trt"   "untrt"</span></span>
+<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a><span class="fu">resultsNames</span>(dds_air)</span>
+<span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a><span class="co"># [1] "Intercept"               "cell_N061011_vs_N052611"</span></span>
+<span id="cb16-5"><a href="#cb16-5" aria-hidden="true" tabindex="-1"></a><span class="co"># [3] "cell_N080611_vs_N052611" "cell_N61311_vs_N052611"</span></span>
+<span id="cb16-6"><a href="#cb16-6" aria-hidden="true" tabindex="-1"></a><span class="co"># [5] "dex_trt_vs_untrt"</span></span>
+<span id="cb16-7"><a href="#cb16-7" aria-hidden="true" tabindex="-1"></a><span class="fu">sum</span>(res_air<span class="sc">$</span>padj <span class="sc">&lt;</span> <span class="fl">0.05</span>, <span class="at">na.rm =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb16-8"><a href="#cb16-8" aria-hidden="true" tabindex="-1"></a><span class="co"># [1] 4000</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<ol start="2" type="a">
+<li></li>
+</ol>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 11%">
+<col style="width: 11%">
+<col style="width: 11%">
+<col style="width: 11%">
+<col style="width: 11%">
+<col style="width: 11%">
+<col style="width: 11%">
+<col style="width: 11%">
+<col style="width: 11%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>sample</th>
+<th>508</th>
+<th>509</th>
+<th>512</th>
+<th>513</th>
+<th>516</th>
+<th>517</th>
+<th>520</th>
+<th>521</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>sizeFactors</code></td>
+<td>1.02</td>
+<td>0.90</td>
+<td>1.18</td>
+<td>0.67</td>
+<td>1.18</td>
+<td>1.40</td>
+<td>0.92</td>
+<td>0.94</td>
+</tr>
+<tr class="even">
+<td>scaled totals</td>
+<td>0.96</td>
+<td>0.88</td>
+<td>1.18</td>
+<td>0.71</td>
+<td>1.14</td>
+<td>1.43</td>
+<td>0.89</td>
+<td>0.98</td>
+</tr>
+<tr class="odd">
+<td>million reads</td>
+<td>20.6</td>
+<td>18.8</td>
+<td>25.3</td>
+<td>15.2</td>
+<td>24.4</td>
+<td>30.8</td>
+<td>19.1</td>
+<td>21.2</td>
+</tr>
+</tbody>
+</table>
+<p>(Samples are <code>SRR1039508</code> etc.) SRR1039517 was sequenced deepest (31 M reads), SRR1039513 shallowest (15 M), a 2-fold range. The two are close but not identical: the median of ratios ignores the few very abundant genes that change with dexamethasone, the totals do not. Both say the same about which samples were sequenced deepest.</p>
+<ol start="3" type="a">
+<li><p>The four cell lines differ a lot from each other, and each was measured with and without dexamethasone. <code>cell</code> is a nuisance covariate (like batch); with it the treatment is compared <strong>within</strong> each cell line. With <code>~ cell + dex</code>: 4000 genes at <code>padj &lt; 0.05</code> (of 22 369 kept); with <code>~ dex</code>: 2694. The design is balanced, so leaving <code>cell</code> out does not create false positives as in covariates-r R4; it adds the cell-line differences to the noise and loses power. The top gene is SPARCL1 (LFC 4.6), and the classic glucocorticoid target FKBP5 has LFC 4.0.</p></li>
+<li><p>The fan: at low <code>baseMean</code> the points spread widely in both directions, at high <code>baseMean</code> they are close to 0. The called genes (coloured) stand out from the fan; at low counts even large fold changes are not called, because their <code>lfcSE</code> is large.</p></li>
+<li><p>The wide grey fan at low counts collapses onto 0; genes with many reads, and the called (red) genes, keep their fold changes. Counted by <code>baseMean</code>:</p></li>
+</ol>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th><code>baseMean</code></th>
+<th>genes</th>
+<th>raw |LFC| &gt; 2</th>
+<th>shrunken |LFC| &gt; 2</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>≤ 10</td>
+<td>6371</td>
+<td>465</td>
+<td>33</td>
+</tr>
+<tr class="even">
+<td>10–100</td>
+<td>4795</td>
+<td>109</td>
+<td>81</td>
+</tr>
+<tr class="odd">
+<td>&gt; 100</td>
+<td>11 203</td>
+<td>102</td>
+<td>98</td>
+</tr>
+</tbody>
+</table>
+<p>The top-10 lists change less than you might expect, because airway is clean data (four cell lines, low dispersion). <code>top_raw</code> has four genes with <code>baseMean</code> below 10, two of them not significant (RP11-156L14.1 with <code>padj</code> <code>NA</code>, RP11-434D9.1); both drop out of <code>top_shr</code>. GUCY2D and MCHR1 (about 6 reads each) stay: they change consistently in all four cell lines, so their <code>padj</code> is small and the evidence is not weak. Shrinking is not a filter on counts: it pulls a fold change in as far as the evidence for it is weak. The top genes in both lists are ALOX15B (LFC 9.5 raw, 11.0 shrunk), ZBTB16 and STEAP4, all known dexamethasone responders; gene names are in <code>rowData(dds_air)$gene_name</code>. Send <code>top_shr</code>: it ranks genes by fold changes you can believe. The <code>padj</code> column is identical in both, because <code>lfcShrink</code> does not change the test.</p>
+<ol start="6" type="a">
+<li>Of 18 032 tested genes, 4000 have <code>padj &lt; 0.05</code>, and 823 of those also have |LFC| &gt; 1: 454 up and 369 down. SPARCL1 (LFC 4.6, <code>padj</code> <span class="math inline">\(7 \times 10^{-132}\)</span>) is at the very top: large and extremely well supported. FKBP5 (LFC 4.0, <code>padj</code> <span class="math inline">\(9 \times 10^{-26}\)</span>) is far right but lower. ALOX15B has the largest fold change (11.0) but sits lower still (<code>padj</code> <span class="math inline">\(10^{-17}\)</span>), because it has fewer reads. Genes just above the dashed line and between the dotted lines are significant but changed less than 2-fold. A volcano plot shows size and evidence together; a list sorted by one column hides the other.</li>
+</ol>
+</div>
+</div>
+</div>
+</section>
+<section id="where-this-leads" class="level2">
+<h2 class="anchored" data-anchor-id="where-this-leads">Where this leads</h2>
+<ul>
+<li><strong><a href="../error-models/exercise.html">Error models</a></strong> (week 4): the counting noise of R2 is the <strong>Poisson</strong> distribution (variance = mean), and the extra spread between biological replicates is the <strong>negative binomial</strong>, the count model inside DESeq2.</li>
+<li><strong><a href="../penalized-intro/exercise.html">Why penalize?</a></strong>, <strong><a href="../bayes-intro/exercise.html">Bayesian vs frequentist</a></strong> and <strong><a href="../hierarchical/exercise.html">Hierarchical models</a></strong> (week 4): <code>lfcShrink</code> is a penalty on large fold changes, a prior that says “most genes change little”, and information shared across genes. These units explain how.</li>
+<li><strong><a href="../scrna-log/exercise.html">Log and pseudolog transforms</a></strong> (optional): the pseudocount table there shows the same noise of small counts, seen through a log.</li>
+</ul>
+
+
+</section>
+
+</main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Copied!");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Copied!");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+        const codeEl = trigger.previousElementSibling.cloneNode(true);
+        for (const childEl of codeEl.children) {
+          if (isCodeAnnotation(childEl)) {
+            childEl.remove();
+          }
+        }
+        return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp('/' + window.location.host + '/');
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+</div> <!-- /content -->
+
+
+
+
+</body></html>
