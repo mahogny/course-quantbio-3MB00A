@@ -57,3 +57,7 @@ Per the syllabus: an **individual written on-campus exam**. Pass (G) requires
 passing the exam; distinction (VG) requires distinction-level performance. Up to
 10 % bonus may be awarded for participation. The self-paced exercises in this
 material exist to build the by-hand and by-code fluency the exam tests.
+
+**Note for 2026:** determinants were added to the course material late, so they
+will **not be examined in 2026**. They are still worth learning: they give the
+eigenvalues (week 2) and tell you when a matrix has no inverse.

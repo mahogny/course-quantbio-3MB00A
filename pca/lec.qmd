@@ -59,7 +59,7 @@ Ground the abstraction in the data format they actually meet: a wide expression 
 
 You could plot *GENE1* against *GENE2*, then *GENE1* against *GENE3*, ...
 
-- With 20,000 genes there are about **200 million** pairwise scatter plots. Hopeless.
+- With 20,000 genes there are $20{,}000 \times 19{,}999 / 2 \approx$ **200 million** pairs of genes, one scatter plot each. Hopeless.
 - Any single gene is **noisy** and captures only a sliver of the biology.
 - The interesting signal — "these samples separate into two groups" — is usually spread **across many genes at once**, not visible in any single pair.
 
@@ -157,24 +157,49 @@ Symmetric, as promised. The large **positive** off-diagonal says the two genes s
 Walk the arithmetic slowly; the numbers are small on purpose. Emphasise the divide-by-(n-1) convention (sample covariance) matches what R's var and cov use, so their hand answer will match prcomp later. The resulting 2x2 covariance matrix is symmetric with a big positive off-diagonal, quantifying the co-regulation they saw as a tilted cloud. This is exactly the kind of symmetric matrix they diagonalised in the eigen exercises (compare with the covariance-flavour problem there). The next step is to find its eigenvectors — the principal component directions.
 :::
 
-## Step 3: eigenvectors = principal components {.smaller}
+## Step 3: the eigenvalues of $C$ {.smaller}
 
-Diagonalise $C$ (by hand: the symmetric pattern from Eigenvalues & eigenvectors).
+An eigenvector $\mathbf{v}$ satisfies $C\mathbf{v} = \lambda\mathbf{v}$, i.e. $(C - \lambda I)\,\mathbf{v} = \mathbf{0}$ with $\mathbf{v} \neq \mathbf{0}$.
 
-$C = \begin{pmatrix} 5 & 4 \\ 4 & 5 \end{pmatrix}$ has the form $\begin{pmatrix} a & b \\ b & a \end{pmatrix}$, so $C(1,1) = 9\,(1,1)$ and $C(1,-1) = 1\,(1,-1)$:
+That is only possible if $C - \lambda I$ has **no inverse**, so its **determinant is 0**:
 
-$$\lambda_1 = 9, \qquad \lambda_2 = 1,$$
+$$C - \lambda I = \begin{pmatrix} 5 - \lambda & 4 \\ 4 & 5 - \lambda \end{pmatrix}, \qquad \det(C - \lambda I) = (5 - \lambda)(5 - \lambda) - 4 \cdot 4 = 0$$
 
-with eigenvectors $\mathbf{u}_1 = \tfrac{1}{\sqrt2}(1,1)$ (for $\lambda_1$) and $\mathbf{u}_2 = \tfrac{1}{\sqrt2}(1,-1)$ (for $\lambda_2$). (This is exactly the covariance-flavour problem from the Eigenvalues & eigenvectors exercise.)
+Solve it:
 
-- $\mathbf{u}_1$ points along the $45^\circ$ **long axis** of the cloud — this is **PC1**.
-- $\mathbf{u}_2$ is **perpendicular** to it — **PC2** — along the thin direction.
-- Each eigenvalue is the **variance captured** along its PC: $9 \gg 1$, so most of the spread is along PC1.
+$$(5 - \lambda)^2 = 16 \quad\Rightarrow\quad 5 - \lambda = 4 \ \text{ or } \ 5 - \lambda = -4 \quad\Rightarrow\quad \lambda = 1 \ \text{ or } \ \lambda = 9$$
 
-![](fig08-pc-arrows.svg){width="50%" fig-align="center"}
+- The eigenvalues are **9** and **1**. Each is the **variance along its PC**, so PC1 (λ = 9) carries most of the spread.
+- Check: they add up to $5 + 5 = 10$, the total variance (the diagonal of $C$).
 
 ::: notes
-Connect straight back to the by-hand toolbox: C has the symmetric [[a, b], [b, a]] pattern, so the eigenvectors are (1,1) and (1,-1) with eigenvalues a + b = 9 and a - b = 1; verify by multiplying. (Bonus: the characteristic equation (5 - lambda)^2 - 16 = 0 gives the same.) Because this is the same matrix as the covariance-flavour problem in the eigen exercise, the answers are clean: eigenvalues 9 and 1, eigenvectors (1,1) and (1,-1), guaranteed perpendicular because C is symmetric. Stress the interpretation of the eigenvalue as variance along that direction: 9 vs 1 means PC1 captures most of the variation, so a 1-D summary would already be very good. Sanity check with trace: 5 + 5 = 10 = 9 + 1, which also equals the total variance — a fact we use for variance explained.
+This is the general recipe from Eigenvalues & eigenvectors, applied to a covariance matrix. The logic in one breath: an eigenvector is a non-zero vector that C - lambda I sends to zero; a matrix can only do that if it squashes the plane flat, which is exactly when its determinant is zero (week 1: det = 0 means no inverse, no unique solution). Write C - lambda I by subtracting lambda from the diagonal only. Expand the 2 x 2 determinant as ad - bc. Solving (5 - lambda) squared = 16 needs no quadratic formula here: take the square root, remembering both signs. Sanity check with the trace: 9 + 1 = 5 + 5 = 10, which is also the total variance used for variance explained later.
+:::
+
+## Step 3: eigenvectors = principal components {.smaller}
+
+For each eigenvalue, solve $(C - \lambda I)\,\mathbf{v} = \mathbf{0}$ for $\mathbf{v} = (x, y)$:
+
+:::: {.columns}
+::: {.column width="55%"}
+**λ = 9:** $\begin{pmatrix} -4 & 4 \\ 4 & -4 \end{pmatrix}\begin{pmatrix} x \\ y \end{pmatrix} = \mathbf{0}$ gives $-4x + 4y = 0$, so $y = x$: direction $(1, 1)$.
+
+**λ = 1:** $\begin{pmatrix} 4 & 4 \\ 4 & 4 \end{pmatrix}\begin{pmatrix} x \\ y \end{pmatrix} = \mathbf{0}$ gives $4x + 4y = 0$, so $y = -x$: direction $(1, -1)$.
+
+**Check:** $C\begin{pmatrix} 1 \\ 1 \end{pmatrix} = \begin{pmatrix} 9 \\ 9 \end{pmatrix} = 9\begin{pmatrix} 1 \\ 1 \end{pmatrix}$ ✓
+
+**Length 1:** $(1, 1)$ has length $\sqrt{2} \approx 1.41$, so **PC1** $= (0.71,\ 0.71)$ and **PC2** $= (0.71,\ -0.71)$.
+
+- PC1 lies along the **long axis** of the cloud; PC2 is **perpendicular**.
+- In R, `eigen(C)` does all of this in one call.
+:::
+::: {.column width="45%"}
+![](fig08-pc-arrows.svg){width="85%"}
+:::
+::::
+
+::: notes
+For each eigenvalue, put it back into C - lambda I and solve the homogeneous system. Both equations of each system say the same thing (that is why the determinant was 0), so one equation fixes the direction: y = x for lambda 9, y = -x for lambda 1. Always check by multiplying, as in the eigen unit. Then divide by the length so each PC has length 1; 0.71 is 1 divided by the square root of 2. The two directions are perpendicular, as promised for a symmetric matrix. Interpretation: PC1 runs along the long axis of the tilted cloud and carries variance 9; PC2 runs across it with variance 1. In practice nobody does this by hand for 20,000 genes: eigen(C), or prcomp in the next unit, does it.
 :::
 
 ## Principal components are new axes {.smaller}
@@ -187,7 +212,7 @@ The two eigenvectors form a **new, rotated coordinate system**:
 
 We have not thrown anything away yet — we have only **rotated the axes** to line up with the data cloud. Same points, new description.
 
-$$\text{PCs are orthonormal: } \mathbf{u}_i \cdot \mathbf{u}_j = 0 \ (i \neq j), \quad \|\mathbf{u}_i\| = 1.$$
+The PCs are **perpendicular** to each other (dot product 0) and each has **length 1**.
 
 ![](fig09-axis-rotation.svg){width="50%" fig-align="center"}
 
@@ -201,7 +226,9 @@ A **score** is the coordinate of a sample along a PC — its **projection** onto
 
 For a centred sample $\mathbf{x}$ and unit PC direction $\mathbf{u}$:
 
-$$\text{score} = \mathbf{x} \cdot \mathbf{u} = x_A u_A + x_B u_B$$
+$$\text{score} = \mathbf{x} \cdot \mathbf{u} = (\text{centred A}) \cdot (\text{PC1 weight for A}) + (\text{centred B}) \cdot (\text{PC1 weight for B})$$
+
+Sample s1 $= (-3, -1)$, PC1 $= (0.71, 0.71)$: score $= (-3)(0.71) + (-1)(0.71) \approx -2.83$.
 
 - The **PC1 score** tells you where the sample sits **along the long axis**.
 - Samples with similar biology get **similar scores**; different groups spread apart along PC1.
@@ -217,9 +244,9 @@ This reuses projection intuition directly from the vector-geometry unit: the sco
 
 The **loadings** of a PC are just the **entries of its eigenvector** — one weight per gene.
 
-If PC1 $= \mathbf{u} = (u_A, u_B)$, then
+For PC1 $= (0.71, 0.71)$:
 
-$$\text{PC1 score} = u_A \cdot (\text{gene A}) + u_B \cdot (\text{gene B}).$$
+$$\text{PC1 score} = 0.71 \cdot (\text{gene A}) + 0.71 \cdot (\text{gene B}).$$
 
 - A gene with a **large** loading (positive or negative) **drives** that PC.
 - A gene with a loading near **zero** barely matters for that PC.

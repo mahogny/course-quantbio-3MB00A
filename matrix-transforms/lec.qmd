@@ -26,6 +26,7 @@ In Vectors, dot product & projection a vector was a point/arrow (a sample). Toda
 - A matrix is a **function** that maps vectors to vectors.
 - The matrix–vector product $A\mathbf{x}$ is a **linear combination of the columns** of $A$ — and each output entry is a **dot product** (the tool from Vectors, dot product & projection).
 - Special transformations: **identity**, **scaling**, **rotation**.
+- The **determinant** $ad - bc$: how much $A$ scales areas.
 - **Composing** two transformations = **multiplying** their matrices.
 - All of it in R with [`%*%`](https://rdrr.io/r/base/matmult.html).
 
@@ -204,6 +205,20 @@ To *design* a transformation: decide where the axes should land, then write thos
 This is a powerful shortcut: to understand or build a matrix, just ask where the unit axes go. Multiplying A by (1,0) selects column 1; by (0,1) selects column 2. This reframes "what does this matrix do?" as "look at its columns", and reframes "build a matrix that does X" as "place the target axis images in the columns".
 :::
 
+## The determinant is an area {.smaller}
+
+The two columns of $A$ span a parallelogram: the image of the unit square. Its area is the **determinant** $\det A = ad - bc$.
+
+![](fig09b-determinant-area.svg){width="88%" fig-align="center"}
+
+- $\lvert \det A \rvert$: how much $A$ scales **areas** (left: 3 times).
+- **Negative**: the picture is also **flipped** (middle).
+- **Zero**: the columns are parallel, the plane collapses onto a line, and $A$ cannot be undone (right).
+
+::: notes
+This gives a picture for the number ad - bc that students met in Linear systems by hand, in the 2x2 inverse formula. Left panel: columns (2, 1) and (1, 2), area 3, so every shape gets 3 times bigger. Middle panel: the same columns, swapped, so the same parallelogram, but the turn from red to blue is now clockwise, and the sign flips: a mirror image. Right panel: column 2 is half of column 1, so the "parallelogram" is a line segment with area 0. That is the singular case from Linear systems by hand: no inverse, no unique solution. In R: det(A). It comes back in Transforming images with matrices (the gallery), and the formula ad - bc is the main tool in Eigenvalues & eigenvectors.
+:::
+
 ## Order matters: an everyday example
 
 Seen from above, a person stands on a grid, facing up. Two instructions: **turn left** and **step forward**.
@@ -262,7 +277,7 @@ Starts with A 2×3 and B 3×3, and C[2,3] selected: row 2 of A is (1, −2, 3), 
 ```
 
 ::: notes
-Live recap of the whole lecture in one picture. It starts at the first example, A = [[2, 0], [0, 3]] and x = (1, 1), so Ax = (2, 3). The red and blue handles are the columns of A: drag them and the grid, the unit square and the house follow, because every point is "x times column 1 plus y times column 2" (the dashed red and blue path to the green Ax). Click through the presets: Identity, Scale, Rotate 90°, Shear, Reflect (the door jumps to the other side: a mirror image), Project and Collapse (columns on one line: the plane flattens onto a line). Drag x to show the columns view of Ax. The area line is a bonus aside only. Then switch to "Order: AB vs BA": A = scale x by 2, B = rotate 90°, the example from the previous slide. Left panel: B first, then A; right panel: A first, then B. Different houses, so AB ≠ BA. Try "Swap", and try two rotations (Rotate 90° and Rotate 30°): rotations happen to commute.
+Live recap of the whole lecture in one picture. It starts at the first example, A = [[2, 0], [0, 3]] and x = (1, 1), so Ax = (2, 3). The red and blue handles are the columns of A: drag them and the grid, the unit square and the house follow, because every point is "x times column 1 plus y times column 2" (the dashed red and blue path to the green Ax). Click through the presets: Identity, Scale, Rotate 90°, Shear, Reflect (the door jumps to the other side: a mirror image), Project and Collapse (columns on one line: the plane flattens onto a line). Drag x to show the columns view of Ax. The area line is the determinant: watch it go negative for Reflect and to 0 for Collapse. Then switch to "Order: AB vs BA": A = scale x by 2, B = rotate 90°, the example from the previous slide. Left panel: B first, then A; right panel: A first, then B. Different houses, so AB ≠ BA. Try "Swap", and try two rotations (Rotate 90° and Rotate 30°): rotations happen to commute.
 :::
 
 ## Putting it together: transform a small dataset {.smaller}
@@ -304,6 +319,7 @@ This capstone block is what students should reproduce and stare at: a rotation t
 | Identity | $I\mathbf{x}=\mathbf{x}$ | `diag(2)` |
 | Scaling | diagonal matrix stretches each axis | `diag(c(2, 0.5))` |
 | Rotation | rigid; preserves length | `matrix(c(cos,-sin,sin,cos),2,byrow=TRUE)` |
+| Determinant | $ad - bc$ = area scaling; 0 = cannot be undone | `det(A)` |
 | Composition | apply $B$ then $A$ = $AB$ (order matters!) | `A %*% B` |
 
 **Next (Transforming images with matrices):** the same matrices applied to a whole microscopy image — plus shear, reflection, and why we multiply matrices. **Week 2 (Eigenvalues & eigenvectors):** some special vectors are only *scaled* by a transformation — eigenvectors.

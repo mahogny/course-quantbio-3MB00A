@@ -27,6 +27,7 @@ Today we start the linear-algebra block. By the end you will be able to:
 - Write such a system in the standard form $A\mathbf{x} = \mathbf{b}$.
 - Solve small $2\times 2$ and $3\times 3$ systems **by hand** using
   **substitution** and **Gaussian elimination**.
+- Use the **determinant** $ad - bc$ to tell whether a $2\times 2$ system has one solution.
 - **Check** a candidate solution by plugging it back in.
 
 No prior linear algebra is assumed. We build the ideas from a concrete
@@ -467,7 +468,7 @@ $$[\,A \mid I\,] \;\longrightarrow\; \cdots \;\longrightarrow\; [\,I \mid A^{-1}
 - New: after reaching the staircase, also eliminate **upwards**, then divide each row by its diagonal number. (This is called Gauss–Jordan elimination.)
 
 ::: notes
-The augmented matrix [A | b] solved for one right-hand side. [A | I] solves for the two columns of I at the same time: the first column of the result solves A x = (1, 0), the second solves A x = (0, 1), and together those columns are A^{-1}. So nothing new is being invented: it is elimination with two right-hand sides at once, carried all the way to I instead of stopping at the staircase. No determinants needed.
+The augmented matrix [A | b] solved for one right-hand side. [A | I] solves for the two columns of I at the same time: the first column of the result solves A x = (1, 0), the second solves A x = (0, 1), and together those columns are A^{-1}. So nothing new is being invented: it is elimination with two right-hand sides at once, carried all the way to I instead of stopping at the staircase. 
 :::
 
 ## Inverse by hand: our 2×2
@@ -494,7 +495,7 @@ So $A^{-1} = \begin{pmatrix} 0.6 & -0.2 \\ -0.2 & 0.4 \end{pmatrix}$. **Check:**
 **No inverse?** If elimination leaves a row of **zeros on the left**, you can never reach $I$: the matrix is **singular** (its columns point along the same line) and has no inverse.
 
 ::: notes
-Walk the four steps slowly: the first is exactly the elimination step from before, the second makes the pivot 1, the third clears the entry above the pivot, the fourth scales row 1. Every operation is applied to all four numbers in the row. Two checks students can always do: multiply A^{-1} b and compare with the earlier answer, or multiply A %*% A^{-1} and get I. The singular case connects to Linear systems in R: a zero row on the left is the same situation as "no unique solution". (The ad - bc formula for 2x2 inverses is a bonus shortcut.)
+Walk the four steps slowly: the first is exactly the elimination step from before, the second makes the pivot 1, the third clears the entry above the pivot, the fourth scales row 1. Every operation is applied to all four numbers in the row. Two checks students can always do: multiply A^{-1} b and compare with the earlier answer, or multiply A %*% A^{-1} and get I. The singular case connects to Linear systems in R: a zero row on the left is the same situation as "no unique solution". The ad - bc shortcut for 2x2 matrices comes two slides on.
 :::
 
 ## Try it: the inverse step by step
@@ -509,6 +510,24 @@ $[\,A \mid I\,]$ to $[\,I \mid A^{-1}\,]$ one row operation at a time, then the 
 
 ::: notes
 Live demo of the previous slide. Click "next": R2 − ½·R1 as before; then R2 ÷ 5/2 (the slide wrote ÷ 2.5: the pivot becomes 1); R1 − R2 clears the entry above the pivot; R1 ÷ 2. The right half is now A⁻¹ = (3/5, −1/5; −1/5, 2/5), the same as 0.6, −0.2, −0.2, 0.4, and the last step multiplies A · A⁻¹ to get I. Then click "no inverse": a row of zeros appears on the left and the demo stops there. "needs a swap" shows a 0 in a pivot spot. 3×3 and 4×4 work too; everything is exact fractions.
+:::
+
+## The $2\times2$ shortcut: the determinant {.smaller}
+
+For $A = \begin{pmatrix} a & b \\ c & d \end{pmatrix}$, one number decides everything: the **determinant**
+
+$$\det A = ad - bc$$
+
+- $\det A \neq 0$: $A$ has an inverse, and $A\mathbf{x} = \mathbf{b}$ has exactly **one** solution:
+$$A^{-1} = \frac{1}{ad - bc}\begin{pmatrix} d & -b \\ -c & a \end{pmatrix} \qquad \text{(swap } a, d\text{; negate } b, c\text{; divide by } \det A)$$
+- $\det A = 0$: the columns are **parallel**, there is **no inverse**, and **no unique solution**.
+
+Our $A = \begin{pmatrix} 2 & 1 \\ 1 & 3 \end{pmatrix}$: $\det A = 2\cdot3 - 1\cdot1 = 5$, so $A^{-1} = \frac15\begin{pmatrix} 3 & -1 \\ -1 & 2 \end{pmatrix} = \begin{pmatrix} 0.6 & -0.2 \\ -0.2 & 0.4 \end{pmatrix}$, as before. ✓
+
+$\begin{pmatrix} 1 & 2 \\ 2 & 4 \end{pmatrix}$: $\det = 1\cdot4 - 2\cdot2 = 0$. Column 2 is twice column 1: no inverse.
+
+::: notes
+The determinant is a quick test before doing any elimination: compute ad - bc. If it is not zero, there is an inverse and one solution; if it is zero, elimination would end in a zero row, the singular case from two slides back. For 2x2 matrices the formula also gives the inverse in one line: swap the diagonal, negate the off-diagonal, divide by the determinant. Check it against the elimination result on the previous slides: same matrix. The formula only works for 2x2; for bigger matrices use elimination (or solve() in R). Matrices as transformations gives the picture: det is how much A scales areas, and 0 means the plane collapses onto a line. The determinant comes back in week 2 as the main tool for finding eigenvalues.
 :::
 
 ## The same idea in R (preview) {.smaller}
@@ -544,6 +563,8 @@ lets you trust it, debug it, and work without a computer. Note byrow = TRUE so t
   back-substitute.
 - **Inverse:** row-reduce $[\,A \mid I\,]$ to $[\,I \mid A^{-1}\,]$; then $\mathbf{x} = A^{-1}\mathbf{b}$
   for any $\mathbf{b}$. A zero row on the left means no inverse.
+- **Determinant** of a $2\times2$: $ad - bc$. Zero means parallel columns,
+  no inverse, no unique solution.
 - **Always check** by substituting back into the original equations.
 - Biology hook: recovering cell-type amounts from bulk measurements.
 

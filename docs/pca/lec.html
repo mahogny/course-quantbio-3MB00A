@@ -252,7 +252,7 @@ Quantitative biology and integrative omics
 <h2>Why not just look at genes one at a time?</h2>
 <p>You could plot <em>GENE1</em> against <em>GENE2</em>, then <em>GENE1</em> against <em>GENE3</em>, …</p>
 <ul>
-<li>With 20,000 genes there are about <strong>200 million</strong> pairwise scatter plots. Hopeless.</li>
+<li>With 20,000 genes there are <span class="math inline">20{,}000 \times 19{,}999 / 2 \approx</span> <strong>200 million</strong> pairs of genes, one scatter plot each. Hopeless.</li>
 <li>Any single gene is <strong>noisy</strong> and captures only a sliver of the biology.</li>
 <li>The interesting signal — “these samples separate into two groups” — is usually spread <strong>across many genes at once</strong>, not visible in any single pair.</li>
 </ul>
@@ -438,20 +438,49 @@ Quantitative biology and integrative omics
           display:block!important;
       }</style></aside>
 </section>
+<section id="step-3-the-eigenvalues-of-c" class="slide level2 smaller">
+<h2>Step 3: the eigenvalues of <span class="math inline">C</span></h2>
+<p>An eigenvector <span class="math inline">\mathbf{v}</span> satisfies <span class="math inline">C\mathbf{v} = \lambda\mathbf{v}</span>, i.e.&nbsp;<span class="math inline">(C - \lambda I)\,\mathbf{v} = \mathbf{0}</span> with <span class="math inline">\mathbf{v} \neq \mathbf{0}</span>.</p>
+<p>That is only possible if <span class="math inline">C - \lambda I</span> has <strong>no inverse</strong>, so its <strong>determinant is 0</strong>:</p>
+<p><span class="math display">C - \lambda I = \begin{pmatrix} 5 - \lambda &amp; 4 \\ 4 &amp; 5 - \lambda \end{pmatrix}, \qquad \det(C - \lambda I) = (5 - \lambda)(5 - \lambda) - 4 \cdot 4 = 0</span></p>
+<p>Solve it:</p>
+<p><span class="math display">(5 - \lambda)^2 = 16 \quad\Rightarrow\quad 5 - \lambda = 4 \ \text{ or } \ 5 - \lambda = -4 \quad\Rightarrow\quad \lambda = 1 \ \text{ or } \ \lambda = 9</span></p>
+<ul>
+<li>The eigenvalues are <strong>9</strong> and <strong>1</strong>. Each is the <strong>variance along its PC</strong>, so PC1 (λ = 9) carries most of the spread.</li>
+<li>Check: they add up to <span class="math inline">5 + 5 = 10</span>, the total variance (the diagonal of <span class="math inline">C</span>).</li>
+</ul>
+<aside class="notes">
+<p>This is the general recipe from Eigenvalues &amp; eigenvectors, applied to a covariance matrix. The logic in one breath: an eigenvector is a non-zero vector that C - lambda I sends to zero; a matrix can only do that if it squashes the plane flat, which is exactly when its determinant is zero (week 1: det = 0 means no inverse, no unique solution). Write C - lambda I by subtracting lambda from the diagonal only. Expand the 2 x 2 determinant as ad - bc. Solving (5 - lambda) squared = 16 needs no quadratic formula here: take the square root, remembering both signs. Sanity check with the trace: 9 + 1 = 5 + 5 = 10, which is also the total variance used for variance explained later.</p>
+<style type="text/css">
+        span.MJX_Assistive_MathML {
+          position:absolute!important;
+          clip: rect(1px, 1px, 1px, 1px);
+          padding: 1px 0 0 0!important;
+          border: 0!important;
+          height: 1px!important;
+          width: 1px!important;
+          overflow: hidden!important;
+          display:block!important;
+      }</style></aside>
+</section>
 <section id="step-3-eigenvectors-principal-components" class="slide level2 smaller">
 <h2>Step 3: eigenvectors = principal components</h2>
-<p>Diagonalise <span class="math inline">C</span> (by hand: the symmetric pattern from Eigenvalues &amp; eigenvectors).</p>
-<p><span class="math inline">C = \begin{pmatrix} 5 &amp; 4 \\ 4 &amp; 5 \end{pmatrix}</span> has the form <span class="math inline">\begin{pmatrix} a &amp; b \\ b &amp; a \end{pmatrix}</span>, so <span class="math inline">C(1,1) = 9\,(1,1)</span> and <span class="math inline">C(1,-1) = 1\,(1,-1)</span>:</p>
-<p><span class="math display">\lambda_1 = 9, \qquad \lambda_2 = 1,</span></p>
-<p>with eigenvectors <span class="math inline">\mathbf{u}_1 = \tfrac{1}{\sqrt2}(1,1)</span> (for <span class="math inline">\lambda_1</span>) and <span class="math inline">\mathbf{u}_2 = \tfrac{1}{\sqrt2}(1,-1)</span> (for <span class="math inline">\lambda_2</span>). (This is exactly the covariance-flavour problem from the Eigenvalues &amp; eigenvectors exercise.)</p>
+<p>For each eigenvalue, solve <span class="math inline">(C - \lambda I)\,\mathbf{v} = \mathbf{0}</span> for <span class="math inline">\mathbf{v} = (x, y)</span>:</p>
+<div class="columns">
+<div class="column" style="width:55%;">
+<p><strong>λ = 9:</strong> <span class="math inline">\begin{pmatrix} -4 &amp; 4 \\ 4 &amp; -4 \end{pmatrix}\begin{pmatrix} x \\ y \end{pmatrix} = \mathbf{0}</span> gives <span class="math inline">-4x + 4y = 0</span>, so <span class="math inline">y = x</span>: direction <span class="math inline">(1, 1)</span>.</p>
+<p><strong>λ = 1:</strong> <span class="math inline">\begin{pmatrix} 4 &amp; 4 \\ 4 &amp; 4 \end{pmatrix}\begin{pmatrix} x \\ y \end{pmatrix} = \mathbf{0}</span> gives <span class="math inline">4x + 4y = 0</span>, so <span class="math inline">y = -x</span>: direction <span class="math inline">(1, -1)</span>.</p>
+<p><strong>Check:</strong> <span class="math inline">C\begin{pmatrix} 1 \\ 1 \end{pmatrix} = \begin{pmatrix} 9 \\ 9 \end{pmatrix} = 9\begin{pmatrix} 1 \\ 1 \end{pmatrix}</span> ✓</p>
+<p><strong>Length 1:</strong> <span class="math inline">(1, 1)</span> has length <span class="math inline">\sqrt{2} \approx 1.41</span>, so <strong>PC1</strong> <span class="math inline">= (0.71,\ 0.71)</span> and <strong>PC2</strong> <span class="math inline">= (0.71,\ -0.71)</span>.</p>
 <ul>
-<li><span class="math inline">\mathbf{u}_1</span> points along the <span class="math inline">45^\circ</span> <strong>long axis</strong> of the cloud — this is <strong>PC1</strong>.</li>
-<li><span class="math inline">\mathbf{u}_2</span> is <strong>perpendicular</strong> to it — <strong>PC2</strong> — along the thin direction.</li>
-<li>Each eigenvalue is the <strong>variance captured</strong> along its PC: <span class="math inline">9 \gg 1</span>, so most of the spread is along PC1.</li>
+<li>PC1 lies along the <strong>long axis</strong> of the cloud; PC2 is <strong>perpendicular</strong>.</li>
+<li>In R, <code>eigen(C)</code> does all of this in one call.</li>
 </ul>
-
-<img data-src="fig08-pc-arrows.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:50.0%"><aside class="notes">
-<p>Connect straight back to the by-hand toolbox: C has the symmetric [[a, b], [b, a]] pattern, so the eigenvectors are (1,1) and (1,-1) with eigenvalues a + b = 9 and a - b = 1; verify by multiplying. (Bonus: the characteristic equation (5 - lambda)^2 - 16 = 0 gives the same.) Because this is the same matrix as the covariance-flavour problem in the eigen exercise, the answers are clean: eigenvalues 9 and 1, eigenvectors (1,1) and (1,-1), guaranteed perpendicular because C is symmetric. Stress the interpretation of the eigenvalue as variance along that direction: 9 vs 1 means PC1 captures most of the variation, so a 1-D summary would already be very good. Sanity check with trace: 5 + 5 = 10 = 9 + 1, which also equals the total variance — a fact we use for variance explained.</p>
+</div><div class="column" style="width:45%;">
+<p><img data-src="fig08-pc-arrows.svg" style="width:85.0%"></p>
+</div></div>
+<aside class="notes">
+<p>For each eigenvalue, put it back into C - lambda I and solve the homogeneous system. Both equations of each system say the same thing (that is why the determinant was 0), so one equation fixes the direction: y = x for lambda 9, y = -x for lambda 1. Always check by multiplying, as in the eigen unit. Then divide by the length so each PC has length 1; 0.71 is 1 divided by the square root of 2. The two directions are perpendicular, as promised for a symmetric matrix. Interpretation: PC1 runs along the long axis of the tilted cloud and carries variance 9; PC2 runs across it with variance 1. In practice nobody does this by hand for 20,000 genes: eigen(C), or prcomp in the next unit, does it.</p>
 <style type="text/css">
         span.MJX_Assistive_MathML {
           position:absolute!important;
@@ -473,7 +502,7 @@ Quantitative biology and integrative omics
 <li>In general, PC<span class="math inline">k</span> is orthogonal to all earlier PCs and captures the largest remaining variance.</li>
 </ul>
 <p>We have not thrown anything away yet — we have only <strong>rotated the axes</strong> to line up with the data cloud. Same points, new description.</p>
-<p><span class="math display">\text{PCs are orthonormal: } \mathbf{u}_i \cdot \mathbf{u}_j = 0 \ (i \neq j), \quad \|\mathbf{u}_i\| = 1.</span></p>
+<p>The PCs are <strong>perpendicular</strong> to each other (dot product 0) and each has <strong>length 1</strong>.</p>
 
 <img data-src="fig09-axis-rotation.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:50.0%"><aside class="notes">
 <p>Emphasise that rotating to the PC axes is loss-less: no information is discarded, we have merely re-expressed each sample in a coordinate system aligned with the cloud instead of aligned with the genes. The PCs are orthonormal — mutually perpendicular and unit length — because they are eigenvectors of a symmetric matrix, normalised. Dimension reduction (the payoff) comes when we choose to keep only the first few PCs and drop the rest; that is a later choice, not part of the rotation itself. Keep the two ideas separate in their minds: rotate (exact), then optionally truncate (approximate). Callback: this is the same rotation matrix that turned the cell image in Transforming images with matrices, now applied to a cloud of samples instead of pixels — and, as with the image, rotating it back recovers everything.</p>
@@ -493,7 +522,8 @@ Quantitative biology and integrative omics
 <h2>Scores: projecting samples onto a PC</h2>
 <p>A <strong>score</strong> is the coordinate of a sample along a PC — its <strong>projection</strong> onto that PC direction (dot product with the unit eigenvector).</p>
 <p>For a centred sample <span class="math inline">\mathbf{x}</span> and unit PC direction <span class="math inline">\mathbf{u}</span>:</p>
-<p><span class="math display">\text{score} = \mathbf{x} \cdot \mathbf{u} = x_A u_A + x_B u_B</span></p>
+<p><span class="math display">\text{score} = \mathbf{x} \cdot \mathbf{u} = (\text{centred A}) \cdot (\text{PC1 weight for A}) + (\text{centred B}) \cdot (\text{PC1 weight for B})</span></p>
+<p>Sample s1 <span class="math inline">= (-3, -1)</span>, PC1 <span class="math inline">= (0.71, 0.71)</span>: score <span class="math inline">= (-3)(0.71) + (-1)(0.71) \approx -2.83</span>.</p>
 <ul>
 <li>The <strong>PC1 score</strong> tells you where the sample sits <strong>along the long axis</strong>.</li>
 <li>Samples with similar biology get <strong>similar scores</strong>; different groups spread apart along PC1.</li>
@@ -517,8 +547,8 @@ Quantitative biology and integrative omics
 <section id="loadings-how-much-each-gene-contributes" class="slide level2 smaller">
 <h2>Loadings: how much each gene contributes</h2>
 <p>The <strong>loadings</strong> of a PC are just the <strong>entries of its eigenvector</strong> — one weight per gene.</p>
-<p>If PC1 <span class="math inline">= \mathbf{u} = (u_A, u_B)</span>, then</p>
-<p><span class="math display">\text{PC1 score} = u_A \cdot (\text{gene A}) + u_B \cdot (\text{gene B}).</span></p>
+<p>For PC1 <span class="math inline">= (0.71, 0.71)</span>:</p>
+<p><span class="math display">\text{PC1 score} = 0.71 \cdot (\text{gene A}) + 0.71 \cdot (\text{gene B}).</span></p>
 <ul>
 <li>A gene with a <strong>large</strong> loading (positive or negative) <strong>drives</strong> that PC.</li>
 <li>A gene with a loading near <strong>zero</strong> barely matters for that PC.</li>
