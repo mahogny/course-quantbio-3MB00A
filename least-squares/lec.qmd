@@ -148,6 +148,26 @@ Subtract: $2b = 5$, so $b = 2.5$ and $a = 0.5$. A **square** 2 × 2 system: solv
 The normal equations are named for "normal" in the sense of perpendicular. Start from the picture: the residual is orthogonal to the plane, so its dot product with each column of X is zero. Check it on the board with the best fit r = (0.5, -1, 0.5): 1·r = 0.5 - 1 + 0.5 = 0 and x·r = 0 - 1 + 1 = 0. For the line through the first and last point, y = 1 + 2.5x, r = (0, -1.5, 0) and 1·r = -1.5, so it is not the best fit. Biological reading: residuals summing to zero is the intercept's job, no trend with x is the slope's job; with more columns (sex, batch, age) there is one such condition per column. Walk through the entries: the top-left 3 is 1·1 (the number of samples), the off-diagonal 3 is 1·x (the sum of the hours), the 5 is x·x (0 + 1 + 4). On the right, 9 is the sum of y and 14 is x·y = 0 + 2 + 12. The trick: we started with 3 equations and 2 unknowns, multiplying by X transpose leaves 2 equations and 2 unknowns, always square, one equation per coefficient. Solve by elimination as in Solving linear equation systems.
 :::
 
+## R formulas: include or omit the intercept
+
+The formula tells `lm` **which coefficients to fit**:
+
+| R formula | Model | Columns of $X$ |
+|---|---|---|
+| `y ~ x + 1` | $y \approx a + bx$ | a column of 1's and the observed $x$ values |
+| `y ~ x + 0` | $y \approx bx$ | only the observed $x$ values |
+| `y ~ 1` | $y \approx a$ | only a column of 1's |
+
+- **`+ 1` includes an intercept**: R estimates $a$; it does not fix $a=1$.
+- **`+ 0` omits the intercept**: the fitted line must pass through the origin.
+
+R includes an intercept by default: **`y ~ x` means `y ~ x + 1`**.
+We write `+ 1` explicitly below so both coefficients are visible in the formula.
+
+::: notes
+Formula syntax is a recipe for the model, not ordinary arithmetic. The 1 requests a constant column whose coefficient is estimated. The 0 removes that column; it does not change any observed x values. For this numeric predictor, omitting the intercept gives the line y = bx. Later, factors without an intercept give group-mean columns instead. Distinguish the special formula term 1 from a predictor x whose measured values happen to be all 1: with x = (1, 1, 1), the formula y ~ x + 1 still requests two coefficients, but the two columns are identical. This is the dependent-column example later in the deck.
+:::
+
 ## In R: this is what `lm` does {.smaller}
 
 ```r
@@ -160,7 +180,7 @@ solve(t(X) %*% X, t(X) %*% y)         # normal equations
 #    0.5
 # x  2.5
 
-fit <- lm(y ~ x)
+fit <- lm(y ~ x + 1)
 coef(fit)                             # (Intercept) 0.5   x 2.5
 fitted(fit)                           # 0.5 3.0 5.5  = X %*% beta, the projection
 resid(fit)                            # 0.5 -1.0 0.5
@@ -223,9 +243,9 @@ Both rows say **$a+b=3$**. There is only one independent equation for two coeffi
 $X^\mathsf{T}X$ has no inverse. $(a,b)=(3,0)$ or $(2,1)$ gives the same fit $(3,3,3)$.
 
 ```r
-x <- c(1, 1, 1)
+x <- c(1, 1, 1)  # observed x values: all samples at the same time
 y <- c(1, 2, 6)
-fit <- lm(y ~ x)
+fit <- lm(y ~ x + 1)
 coef(fit)       # (Intercept) 3   x NA
 fitted(fit)     # 3 3 3
 ```
@@ -241,7 +261,7 @@ Keep the distinction between the two systems explicit. The first is the original
 | Concept | Key fact | R |
 |---|---|---|
 | Over-determined | more samples than coefficients: no exact $\boldsymbol\beta$ | `solve(X, y)` fails |
-| Least squares | minimise the sum of squared residuals $\lVert\mathbf{y} - X\boldsymbol\beta\rVert^2$ | `lm(y ~ x)` |
+| Least squares | minimise the sum of squared residuals $\lVert\mathbf{y} - X\boldsymbol\beta\rVert^2$ | `lm(y ~ x + 1)` |
 | Geometry | fitted values $\hat{\mathbf{y}} = X\boldsymbol\beta$ = **projection** of $\mathbf{y}$ onto the column space of $X$ | `fitted(fit)` |
 | Orthogonality | residual has dot product 0 with **every column** of $X$ | `t(X) %*% resid(fit)` |
 | Normal equations | $X^\mathsf{T}X\boldsymbol\beta = X^\mathsf{T}\mathbf{y}$: square, one equation per coefficient | `solve(t(X) %*% X, t(X) %*% y)` |

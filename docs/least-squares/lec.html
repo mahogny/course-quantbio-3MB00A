@@ -415,6 +415,59 @@ X^\mathsf{T}\mathbf{y} = \begin{pmatrix} 9 \\ 14 \end{pmatrix}
           display:block!important;
       }</style></aside>
 </section>
+<section id="r-formulas-include-or-omit-the-intercept" class="slide level2">
+<h2>R formulas: include or omit the intercept</h2>
+<p>The formula tells <code>lm</code> <strong>which coefficients to fit</strong>:</p>
+<table class="caption-top">
+<colgroup>
+<col style="width: 33%">
+<col style="width: 33%">
+<col style="width: 33%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>R formula</th>
+<th>Model</th>
+<th>Columns of <span class="math inline">X</span></th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>y ~ x + 1</code></td>
+<td><span class="math inline">y \approx a + bx</span></td>
+<td>a column of 1’s and the observed <span class="math inline">x</span> values</td>
+</tr>
+<tr class="even">
+<td><code>y ~ x + 0</code></td>
+<td><span class="math inline">y \approx bx</span></td>
+<td>only the observed <span class="math inline">x</span> values</td>
+</tr>
+<tr class="odd">
+<td><code>y ~ 1</code></td>
+<td><span class="math inline">y \approx a</span></td>
+<td>only a column of 1’s</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li><strong><code>+ 1</code> includes an intercept</strong>: R estimates <span class="math inline">a</span>; it does not fix <span class="math inline">a=1</span>.</li>
+<li><strong><code>+ 0</code> omits the intercept</strong>: the fitted line must pass through the origin.</li>
+</ul>
+<p>R includes an intercept by default: <strong><code>y ~ x</code> means <code>y ~ x + 1</code></strong>. We write <code>+ 1</code> explicitly below so both coefficients are visible in the formula.</p>
+<aside class="notes">
+<p>Formula syntax is a recipe for the model, not ordinary arithmetic. The 1 requests a constant column whose coefficient is estimated. The 0 removes that column; it does not change any observed x values. For this numeric predictor, omitting the intercept gives the line y = bx. Later, factors without an intercept give group-mean columns instead. Distinguish the special formula term 1 from a predictor x whose measured values happen to be all 1: with x = (1, 1, 1), the formula y ~ x + 1 still requests two coefficients, but the two columns are identical. This is the dependent-column example later in the deck.</p>
+<style type="text/css">
+        span.MJX_Assistive_MathML {
+          position:absolute!important;
+          clip: rect(1px, 1px, 1px, 1px);
+          padding: 1px 0 0 0!important;
+          border: 0!important;
+          height: 1px!important;
+          width: 1px!important;
+          overflow: hidden!important;
+          display:block!important;
+      }</style></aside>
+</section>
 <section id="in-r-this-is-what-lm-does" class="slide level2 smaller">
 <h2>In R: this is what <code>lm</code> does</h2>
 <div class="sourceCode" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a aria-hidden="true" tabindex="-1"></a>x <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="dv">1</span>, <span class="dv">2</span>)</span>
@@ -426,7 +479,7 @@ X^\mathsf{T}\mathbf{y} = \begin{pmatrix} 9 \\ 14 \end{pmatrix}
 <span id="cb1-7"><a aria-hidden="true" tabindex="-1"></a><span class="co">#    0.5</span></span>
 <span id="cb1-8"><a aria-hidden="true" tabindex="-1"></a><span class="co"># x  2.5</span></span>
 <span id="cb1-9"><a aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-10"><a aria-hidden="true" tabindex="-1"></a>fit <span class="ot">&lt;-</span> <span class="fu">lm</span>(y <span class="sc">~</span> x)</span>
+<span id="cb1-10"><a aria-hidden="true" tabindex="-1"></a>fit <span class="ot">&lt;-</span> <span class="fu">lm</span>(y <span class="sc">~</span> x <span class="sc">+</span> <span class="dv">1</span>)</span>
 <span id="cb1-11"><a aria-hidden="true" tabindex="-1"></a><span class="fu">coef</span>(fit)                             <span class="co"># (Intercept) 0.5   x 2.5</span></span>
 <span id="cb1-12"><a aria-hidden="true" tabindex="-1"></a><span class="fu">fitted</span>(fit)                           <span class="co"># 0.5 3.0 5.5  = X %*% beta, the projection</span></span>
 <span id="cb1-13"><a aria-hidden="true" tabindex="-1"></a><span class="fu">resid</span>(fit)                            <span class="co"># 0.5 -1.0 0.5</span></span>
@@ -494,9 +547,9 @@ X^\mathsf{T}\mathbf{y} = \begin{pmatrix} 9 \\ 14 \end{pmatrix}
 \begin{cases}3a+3b=9\\3a+3b=9.\end{cases}
 </span></p>
 <p>Both rows say <strong><span class="math inline">a+b=3</span></strong>. There is only one independent equation for two coefficients: <span class="math inline">X^\mathsf{T}X</span> has no inverse. <span class="math inline">(a,b)=(3,0)</span> or <span class="math inline">(2,1)</span> gives the same fit <span class="math inline">(3,3,3)</span>.</p>
-<div class="sourceCode" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a aria-hidden="true" tabindex="-1"></a>x <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="dv">1</span>, <span class="dv">1</span>, <span class="dv">1</span>)</span>
+<div class="sourceCode" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a aria-hidden="true" tabindex="-1"></a>x <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="dv">1</span>, <span class="dv">1</span>, <span class="dv">1</span>)  <span class="co"># observed x values: all samples at the same time</span></span>
 <span id="cb3-2"><a aria-hidden="true" tabindex="-1"></a>y <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="dv">1</span>, <span class="dv">2</span>, <span class="dv">6</span>)</span>
-<span id="cb3-3"><a aria-hidden="true" tabindex="-1"></a>fit <span class="ot">&lt;-</span> <span class="fu">lm</span>(y <span class="sc">~</span> x)</span>
+<span id="cb3-3"><a aria-hidden="true" tabindex="-1"></a>fit <span class="ot">&lt;-</span> <span class="fu">lm</span>(y <span class="sc">~</span> x <span class="sc">+</span> <span class="dv">1</span>)</span>
 <span id="cb3-4"><a aria-hidden="true" tabindex="-1"></a><span class="fu">coef</span>(fit)       <span class="co"># (Intercept) 3   x NA</span></span>
 <span id="cb3-5"><a aria-hidden="true" tabindex="-1"></a><span class="fu">fitted</span>(fit)     <span class="co"># 3 3 3</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p><strong>The fitted values are unique; the intercept and slope cannot be determined separately.</strong></p>
@@ -538,7 +591,7 @@ X^\mathsf{T}\mathbf{y} = \begin{pmatrix} 9 \\ 14 \end{pmatrix}
 <tr class="even">
 <td>Least squares</td>
 <td>minimise the sum of squared residuals <span class="math inline">\lVert\mathbf{y} - X\boldsymbol\beta\rVert^2</span></td>
-<td><code>lm(y ~ x)</code></td>
+<td><code>lm(y ~ x + 1)</code></td>
 </tr>
 <tr class="odd">
 <td>Geometry</td>
