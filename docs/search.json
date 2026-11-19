@@ -4810,7 +4810,7 @@
     "href": "least-squares/lec.html#when-xmathsftx-cannot-be-inverted",
     "title": "Least squares as projection",
     "section": "When X^\\mathsf{T}X cannot be inverted",
-    "text": "When X^\\mathsf{T}X cannot be inverted\nThe projection \\hat{\\mathbf{y}} always exists. But \\boldsymbol\\beta is unique only when the columns of X are independent.\n\nAll samples measured at the same time, \\mathbf{x} = (1, 1, 1): the two columns are identical, the “plane” is only a line.\n\nx &lt;- c(1, 1, 1)\nX &lt;- cbind(1, x)\nt(X) %*% X                  # 3 3 / 3 3: singular\nsolve(t(X) %*% X, t(X) %*% y)\n# Error ... system is exactly singular\ncoef(lm(y ~ x))             # (Intercept) 3   x NA\n\nAny a + b = 3 gives the same fitted values: Case 3, infinitely many \\boldsymbol\\beta.\nDependent columns in real designs (batch = treatment, the dummy trap) and more columns than samples are next in Design matrices for covariates. Fixing p &gt; n with a penalty comes in the penalized-models block.\n\n\nSame three cases as in Linear systems in R, one more time. The fitted values are still well defined: the shadow on a line is the shadow on a line, however you describe the line. What breaks is the split between a and b. lm handles this by dropping the redundant column and printing NA, which students will meet again in the covariates deck. The penalized-models block adds a penalty to make X transpose X invertible again (ridge literally adds a number to its diagonal). Just plant the seed here.",
+    "text": "When X^\\mathsf{T}X cannot be inverted\nWe still fit y \\approx a + bx, but now all three samples have x = 1. The measured values are still \\mathbf{y} = (1, 2, 6):\n\n\\begin{aligned}\na + b\\times 1 &\\approx 1 \\\\\na + b\\times 1 &\\approx 2 \\\\\na + b\\times 1 &\\approx 6\n\\end{aligned}\n\nEvery prediction is the same number, a+b. The best constant is the mean:\n\n\\boxed{a+b = \\frac{1+2+6}{3} = 3}\n\n(a,b)=(3,0), (2,1) or (0,3) all predict (3,3,3), with the same residuals. We can estimate a+b, but cannot determine a and b separately.\n\nWrite the model first, then substitute x = 1 in each observation. The approximate signs matter: the observations disagree, so there is no exact fit. Least squares chooses the shared prediction 3, the mean from the previous slide. Ask: if the intercept increases by 1 and the slope decreases by 1, does any prediction change? No. This is Case 3 for the coefficients: infinitely many coefficient pairs give the same best fit. With no variation in time, the measurements cannot tell us a time trend. The original three-point example had different times; here only the x values have changed.",
     "crumbs": [
       "Home",
       "Week 3: Linear models & differential expression",
@@ -16579,6 +16579,19 @@
       "Home",
       "Course info",
       "Course plan (3MB00A)"
+    ]
+  },
+  {
+    "objectID": "least-squares/lec.html#why-the-inverse-fails",
+    "href": "least-squares/lec.html#why-the-inverse-fails",
+    "title": "Least squares as projection",
+    "section": "Why the inverse fails",
+    "text": "Why the inverse fails\nThe intercept column and the x column are now identical:\n\nX = \\begin{pmatrix}1 & 1 \\\\ 1 & 1 \\\\ 1 & 1\\end{pmatrix},\n\\qquad\nX^\\mathsf{T}X = \\begin{pmatrix}3 & 3 \\\\ 3 & 3\\end{pmatrix}.\n\nThe normal equations repeat one constraint, rather than determining two coefficients:\n\n\\begin{aligned}\n3a + 3b &= 9 \\\\\n3a + 3b &= 9\n\\end{aligned}\n\\qquad\\Longrightarrow\\qquad a+b=3.\n\nx &lt;- c(1, 1, 1)\ny &lt;- c(1, 2, 6)\nfit &lt;- lm(y ~ x)\ncoef(fit)       # (Intercept) 3   x NA\nfitted(fit)     # 3 3 3\nlm drops the redundant slope (NA). The fitted values are unique; the coefficient pair is not.\n\nThe two columns span a line instead of a plane. The projection still exists and is unique; what fails is the split between the intercept and slope. The matrix has determinant zero, so solve(t(X) %% X, t(X) %% y) would fail. Keep that implementation detail off the slide: the two identical normal equations already explain why there is no inverse. R chooses the intercept-only representation, a = 3, and marks the unidentifiable slope NA; this does not establish that the biological slope is zero. Dependent columns in real designs (batch = treatment, the dummy trap) and more columns than samples are next in Design matrices for covariates. Penalties come later in the penalized-models block.",
+    "crumbs": [
+      "Home",
+      "Week 3: Linear models & differential expression",
+      "Least squares as projection",
+      "Lecture (slides)"
     ]
   }
 ]

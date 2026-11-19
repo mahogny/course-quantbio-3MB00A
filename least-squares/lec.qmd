@@ -194,26 +194,64 @@ mean(y)           # 3
 A small but satisfying special case: the average is a least-squares fit, and it is literally the projection formula from Week 1. This is also why an intercept-only model is the baseline every other model is compared against: adding columns can only shrink the residual (the plane contains the line), never grow it. If time is short, skip this slide; the exercise has it as a problem.
 :::
 
-## When $X^\mathsf{T}X$ cannot be inverted {.smaller}
+## When $X^\mathsf{T}X$ cannot be inverted
 
-The projection $\hat{\mathbf{y}}$ always exists. But $\boldsymbol\beta$ is **unique** only when the columns of $X$ are **independent**.
+We still fit $y \approx a + bx$, but now **all three samples have $x = 1$**.
+The measured values are still $\mathbf{y} = (1, 2, 6)$:
 
-- All samples measured at the same time, $\mathbf{x} = (1, 1, 1)$: the two columns are identical, the "plane" is only a line.
+$$
+\begin{aligned}
+ a + b\times 1 &\approx 1 \\
+ a + b\times 1 &\approx 2 \\
+ a + b\times 1 &\approx 6
+\end{aligned}
+$$
+
+Every prediction is the **same number, $a+b$**. The best constant is the mean:
+
+$$
+\boxed{a+b = \frac{1+2+6}{3} = 3}
+$$
+
+$(a,b)=(3,0)$, $(2,1)$ or $(0,3)$ all predict $(3,3,3)$, with the same residuals.
+**We can estimate $a+b$, but cannot determine $a$ and $b$ separately.**
+
+::: notes
+Write the model first, then substitute x = 1 in each observation. The approximate signs matter: the observations disagree, so there is no exact fit. Least squares chooses the shared prediction 3, the mean from the previous slide. Ask: if the intercept increases by 1 and the slope decreases by 1, does any prediction change? No. This is Case 3 for the coefficients: infinitely many coefficient pairs give the same best fit. With no variation in time, the measurements cannot tell us a time trend. The original three-point example had different times; here only the x values have changed.
+:::
+
+## Why the inverse fails {.smaller}
+
+The intercept column and the $x$ column are now **identical**:
+
+$$
+X = \begin{pmatrix}1 & 1 \\ 1 & 1 \\ 1 & 1\end{pmatrix},
+\qquad
+X^\mathsf{T}X = \begin{pmatrix}3 & 3 \\ 3 & 3\end{pmatrix}.
+$$
+
+The normal equations repeat **one constraint**, rather than determining two coefficients:
+
+$$
+\begin{aligned}
+3a + 3b &= 9 \\
+3a + 3b &= 9
+\end{aligned}
+\qquad\Longrightarrow\qquad a+b=3.
+$$
 
 ```r
 x <- c(1, 1, 1)
-X <- cbind(1, x)
-t(X) %*% X                  # 3 3 / 3 3: singular
-solve(t(X) %*% X, t(X) %*% y)
-# Error ... system is exactly singular
-coef(lm(y ~ x))             # (Intercept) 3   x NA
+y <- c(1, 2, 6)
+fit <- lm(y ~ x)
+coef(fit)       # (Intercept) 3   x NA
+fitted(fit)     # 3 3 3
 ```
 
-- Any $a + b = 3$ gives the **same** fitted values: Case 3, infinitely many $\boldsymbol\beta$.
-- Dependent columns in real designs (batch = treatment, the dummy trap) and **more columns than samples** are next in *Design matrices for covariates*. Fixing $p > n$ with a penalty comes in the penalized-models block.
+`lm` drops the redundant slope (`NA`). The **fitted values are unique**; the coefficient pair is not.
 
 ::: notes
-Same three cases as in Linear systems in R, one more time. The fitted values are still well defined: the shadow on a line is the shadow on a line, however you describe the line. What breaks is the split between a and b. lm handles this by dropping the redundant column and printing NA, which students will meet again in the covariates deck. The penalized-models block adds a penalty to make X transpose X invertible again (ridge literally adds a number to its diagonal). Just plant the seed here.
+The two columns span a line instead of a plane. The projection still exists and is unique; what fails is the split between the intercept and slope. The matrix has determinant zero, so solve(t(X) %*% X, t(X) %*% y) would fail. Keep that implementation detail off the slide: the two identical normal equations already explain why there is no inverse. R chooses the intercept-only representation, a = 3, and marks the unidentifiable slope NA; this does not establish that the biological slope is zero. Dependent columns in real designs (batch = treatment, the dummy trap) and more columns than samples are next in Design matrices for covariates. Penalties come later in the penalized-models block.
 :::
 
 ## Summary {.smaller}

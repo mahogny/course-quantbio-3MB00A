@@ -473,24 +473,59 @@ X^\mathsf{T}\mathbf{y} = \begin{pmatrix} 9 \\ 14 \end{pmatrix}
           display:block!important;
       }</style></aside>
 </section>
-<section id="when-xmathsftx-cannot-be-inverted" class="slide level2 smaller">
+<section id="when-xmathsftx-cannot-be-inverted" class="slide level2">
 <h2>When <span class="math inline">X^\mathsf{T}X</span> cannot be inverted</h2>
-<p>The projection <span class="math inline">\hat{\mathbf{y}}</span> always exists. But <span class="math inline">\boldsymbol\beta</span> is <strong>unique</strong> only when the columns of <span class="math inline">X</span> are <strong>independent</strong>.</p>
-<ul>
-<li>All samples measured at the same time, <span class="math inline">\mathbf{x} = (1, 1, 1)</span>: the two columns are identical, the “plane” is only a line.</li>
-</ul>
-<div class="sourceCode" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a aria-hidden="true" tabindex="-1"></a>x <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="dv">1</span>, <span class="dv">1</span>, <span class="dv">1</span>)</span>
-<span id="cb3-2"><a aria-hidden="true" tabindex="-1"></a>X <span class="ot">&lt;-</span> <span class="fu">cbind</span>(<span class="dv">1</span>, x)</span>
-<span id="cb3-3"><a aria-hidden="true" tabindex="-1"></a><span class="fu">t</span>(X) <span class="sc">%*%</span> X                  <span class="co"># 3 3 / 3 3: singular</span></span>
-<span id="cb3-4"><a aria-hidden="true" tabindex="-1"></a><span class="fu">solve</span>(<span class="fu">t</span>(X) <span class="sc">%*%</span> X, <span class="fu">t</span>(X) <span class="sc">%*%</span> y)</span>
-<span id="cb3-5"><a aria-hidden="true" tabindex="-1"></a><span class="co"># Error ... system is exactly singular</span></span>
-<span id="cb3-6"><a aria-hidden="true" tabindex="-1"></a><span class="fu">coef</span>(<span class="fu">lm</span>(y <span class="sc">~</span> x))             <span class="co"># (Intercept) 3   x NA</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<ul>
-<li>Any <span class="math inline">a + b = 3</span> gives the <strong>same</strong> fitted values: Case 3, infinitely many <span class="math inline">\boldsymbol\beta</span>.</li>
-<li>Dependent columns in real designs (batch = treatment, the dummy trap) and <strong>more columns than samples</strong> are next in <em>Design matrices for covariates</em>. Fixing <span class="math inline">p &gt; n</span> with a penalty comes in the penalized-models block.</li>
-</ul>
+<p>We still fit <span class="math inline">y \approx a + bx</span>, but now <strong>all three samples have <span class="math inline">x = 1</span></strong>. The measured values are still <span class="math inline">\mathbf{y} = (1, 2, 6)</span>:</p>
+<p><span class="math display">
+\begin{aligned}
+a + b\times 1 &amp;\approx 1 \\
+a + b\times 1 &amp;\approx 2 \\
+a + b\times 1 &amp;\approx 6
+\end{aligned}
+</span></p>
+<p>Every prediction is the <strong>same number, <span class="math inline">a+b</span></strong>. The best constant is the mean:</p>
+<p><span class="math display">
+\boxed{a+b = \frac{1+2+6}{3} = 3}
+</span></p>
+<p><span class="math inline">(a,b)=(3,0)</span>, <span class="math inline">(2,1)</span> or <span class="math inline">(0,3)</span> all predict <span class="math inline">(3,3,3)</span>, with the same residuals. <strong>We can estimate <span class="math inline">a+b</span>, but cannot determine <span class="math inline">a</span> and <span class="math inline">b</span> separately.</strong></p>
 <aside class="notes">
-<p>Same three cases as in Linear systems in R, one more time. The fitted values are still well defined: the shadow on a line is the shadow on a line, however you describe the line. What breaks is the split between a and b. lm handles this by dropping the redundant column and printing NA, which students will meet again in the covariates deck. The penalized-models block adds a penalty to make X transpose X invertible again (ridge literally adds a number to its diagonal). Just plant the seed here.</p>
+<p>Write the model first, then substitute x = 1 in each observation. The approximate signs matter: the observations disagree, so there is no exact fit. Least squares chooses the shared prediction 3, the mean from the previous slide. Ask: if the intercept increases by 1 and the slope decreases by 1, does any prediction change? No.&nbsp;This is Case 3 for the coefficients: infinitely many coefficient pairs give the same best fit. With no variation in time, the measurements cannot tell us a time trend. The original three-point example had different times; here only the x values have changed.</p>
+<style type="text/css">
+        span.MJX_Assistive_MathML {
+          position:absolute!important;
+          clip: rect(1px, 1px, 1px, 1px);
+          padding: 1px 0 0 0!important;
+          border: 0!important;
+          height: 1px!important;
+          width: 1px!important;
+          overflow: hidden!important;
+          display:block!important;
+      }</style></aside>
+</section>
+<section id="why-the-inverse-fails" class="slide level2 smaller">
+<h2>Why the inverse fails</h2>
+<p>The intercept column and the <span class="math inline">x</span> column are now <strong>identical</strong>:</p>
+<p><span class="math display">
+X = \begin{pmatrix}1 &amp; 1 \\ 1 &amp; 1 \\ 1 &amp; 1\end{pmatrix},
+\qquad
+X^\mathsf{T}X = \begin{pmatrix}3 &amp; 3 \\ 3 &amp; 3\end{pmatrix}.
+</span></p>
+<p>The normal equations repeat <strong>one constraint</strong>, rather than determining two coefficients:</p>
+<p><span class="math display">
+\begin{aligned}
+3a + 3b &amp;= 9 \\
+3a + 3b &amp;= 9
+\end{aligned}
+\qquad\Longrightarrow\qquad a+b=3.
+</span></p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a aria-hidden="true" tabindex="-1"></a>x <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="dv">1</span>, <span class="dv">1</span>, <span class="dv">1</span>)</span>
+<span id="cb3-2"><a aria-hidden="true" tabindex="-1"></a>y <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="dv">1</span>, <span class="dv">2</span>, <span class="dv">6</span>)</span>
+<span id="cb3-3"><a aria-hidden="true" tabindex="-1"></a>fit <span class="ot">&lt;-</span> <span class="fu">lm</span>(y <span class="sc">~</span> x)</span>
+<span id="cb3-4"><a aria-hidden="true" tabindex="-1"></a><span class="fu">coef</span>(fit)       <span class="co"># (Intercept) 3   x NA</span></span>
+<span id="cb3-5"><a aria-hidden="true" tabindex="-1"></a><span class="fu">fitted</span>(fit)     <span class="co"># 3 3 3</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p><code>lm</code> drops the redundant slope (<code>NA</code>). The <strong>fitted values are unique</strong>; the coefficient pair is not.</p>
+<aside class="notes">
+<p>The two columns span a line instead of a plane. The projection still exists and is unique; what fails is the split between the intercept and slope. The matrix has determinant zero, so solve(t(X) %<em>% X, t(X) %</em>% y) would fail. Keep that implementation detail off the slide: the two identical normal equations already explain why there is no inverse. R chooses the intercept-only representation, a = 3, and marks the unidentifiable slope NA; this does not establish that the biological slope is zero. Dependent columns in real designs (batch = treatment, the dummy trap) and more columns than samples are next in Design matrices for covariates. Penalties come later in the penalized-models block.</p>
 <style type="text/css">
         span.MJX_Assistive_MathML {
           position:absolute!important;
