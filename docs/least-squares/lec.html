@@ -473,59 +473,35 @@ X^\mathsf{T}\mathbf{y} = \begin{pmatrix} 9 \\ 14 \end{pmatrix}
           display:block!important;
       }</style></aside>
 </section>
-<section id="when-xmathsftx-cannot-be-inverted" class="slide level2">
+<section id="when-xmathsftx-cannot-be-inverted" class="slide level2 smaller">
 <h2>When <span class="math inline">X^\mathsf{T}X</span> cannot be inverted</h2>
-<p>We still fit <span class="math inline">y \approx a + bx</span>, but now <strong>all three samples have <span class="math inline">x = 1</span></strong>. The measured values are still <span class="math inline">\mathbf{y} = (1, 2, 6)</span>:</p>
+<p>Fit <span class="math inline">y \approx a+bx</span> to <span class="math inline">\mathbf{y}=(1,2,6)</span>, now with <strong>all <span class="math inline">x=1</span></strong>. The data and model are:</p>
 <p><span class="math display">
-\begin{aligned}
-a + b\times 1 &amp;\approx 1 \\
-a + b\times 1 &amp;\approx 2 \\
-a + b\times 1 &amp;\approx 6
-\end{aligned}
+\underbrace{\begin{pmatrix}1&amp;1\\1&amp;1\\1&amp;1\end{pmatrix}}_{X}
+\underbrace{\begin{pmatrix}a\\b\end{pmatrix}}_{\boldsymbol\beta}
+\approx
+\underbrace{\begin{pmatrix}1\\2\\6\end{pmatrix}}_{\mathbf{y}}.
 </span></p>
-<p>Every prediction is the <strong>same number, <span class="math inline">a+b</span></strong>. The best constant is the mean:</p>
+<p>To find the <strong>least-squares fit</strong>, form <span class="math inline">X^\mathsf{T}X\boldsymbol\beta=X^\mathsf{T}\mathbf{y}</span>:</p>
 <p><span class="math display">
-\boxed{a+b = \frac{1+2+6}{3} = 3}
+\begin{pmatrix}3&amp;3\\3&amp;3\end{pmatrix}
+\begin{pmatrix}a\\b\end{pmatrix}
+=
+\begin{pmatrix}1+2+6\\1+2+6\end{pmatrix}
+=
+\begin{pmatrix}9\\9\end{pmatrix}
+\quad\Longrightarrow\quad
+\begin{cases}3a+3b=9\\3a+3b=9.\end{cases}
 </span></p>
-<p><span class="math inline">(a,b)=(3,0)</span>, <span class="math inline">(2,1)</span> or <span class="math inline">(0,3)</span> all predict <span class="math inline">(3,3,3)</span>, with the same residuals. <strong>We can estimate <span class="math inline">a+b</span>, but cannot determine <span class="math inline">a</span> and <span class="math inline">b</span> separately.</strong></p>
-<aside class="notes">
-<p>Write the model first, then substitute x = 1 in each observation. The approximate signs matter: the observations disagree, so there is no exact fit. Least squares chooses the shared prediction 3, the mean from the previous slide. Ask: if the intercept increases by 1 and the slope decreases by 1, does any prediction change? No.&nbsp;This is Case 3 for the coefficients: infinitely many coefficient pairs give the same best fit. With no variation in time, the measurements cannot tell us a time trend. The original three-point example had different times; here only the x values have changed.</p>
-<style type="text/css">
-        span.MJX_Assistive_MathML {
-          position:absolute!important;
-          clip: rect(1px, 1px, 1px, 1px);
-          padding: 1px 0 0 0!important;
-          border: 0!important;
-          height: 1px!important;
-          width: 1px!important;
-          overflow: hidden!important;
-          display:block!important;
-      }</style></aside>
-</section>
-<section id="why-the-inverse-fails" class="slide level2 smaller">
-<h2>Why the inverse fails</h2>
-<p>The intercept column and the <span class="math inline">x</span> column are now <strong>identical</strong>:</p>
-<p><span class="math display">
-X = \begin{pmatrix}1 &amp; 1 \\ 1 &amp; 1 \\ 1 &amp; 1\end{pmatrix},
-\qquad
-X^\mathsf{T}X = \begin{pmatrix}3 &amp; 3 \\ 3 &amp; 3\end{pmatrix}.
-</span></p>
-<p>The normal equations repeat <strong>one constraint</strong>, rather than determining two coefficients:</p>
-<p><span class="math display">
-\begin{aligned}
-3a + 3b &amp;= 9 \\
-3a + 3b &amp;= 9
-\end{aligned}
-\qquad\Longrightarrow\qquad a+b=3.
-</span></p>
+<p>Both rows say <strong><span class="math inline">a+b=3</span></strong>. There is only one independent equation for two coefficients: <span class="math inline">X^\mathsf{T}X</span> has no inverse. <span class="math inline">(a,b)=(3,0)</span> or <span class="math inline">(2,1)</span> gives the same fit <span class="math inline">(3,3,3)</span>.</p>
 <div class="sourceCode" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a aria-hidden="true" tabindex="-1"></a>x <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="dv">1</span>, <span class="dv">1</span>, <span class="dv">1</span>)</span>
 <span id="cb3-2"><a aria-hidden="true" tabindex="-1"></a>y <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="dv">1</span>, <span class="dv">2</span>, <span class="dv">6</span>)</span>
 <span id="cb3-3"><a aria-hidden="true" tabindex="-1"></a>fit <span class="ot">&lt;-</span> <span class="fu">lm</span>(y <span class="sc">~</span> x)</span>
 <span id="cb3-4"><a aria-hidden="true" tabindex="-1"></a><span class="fu">coef</span>(fit)       <span class="co"># (Intercept) 3   x NA</span></span>
 <span id="cb3-5"><a aria-hidden="true" tabindex="-1"></a><span class="fu">fitted</span>(fit)     <span class="co"># 3 3 3</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<p><code>lm</code> drops the redundant slope (<code>NA</code>). The <strong>fitted values are unique</strong>; the coefficient pair is not.</p>
+<p><strong>The fitted values are unique; the intercept and slope cannot be determined separately.</strong></p>
 <aside class="notes">
-<p>The two columns span a line instead of a plane. The projection still exists and is unique; what fails is the split between the intercept and slope. The matrix has determinant zero, so solve(t(X) %<em>% X, t(X) %</em>% y) would fail. Keep that implementation detail off the slide: the two identical normal equations already explain why there is no inverse. R chooses the intercept-only representation, a = 3, and marks the unidentifiable slope NA; this does not establish that the biological slope is zero. Dependent columns in real designs (batch = treatment, the dummy trap) and more columns than samples are next in Design matrices for covariates. Penalties come later in the penalized-models block.</p>
+<p>Keep the distinction between the two systems explicit. The first is the original data-fitting problem: three observations and two coefficients, with no exact solution. The second is the normal-equation system that determines the least-squares coefficients. It is obtained by multiplying by X transpose, as on the earlier normal-equations slide. Here both rows of X transpose are (1, 1, 1), so both entries of X transpose y are the sum 1 + 2 + 6 = 9. Every entry of X transpose X is 3. Thus both normal equations impose the same condition a + b = 3. There is no contradiction with the different observed values: the normal equations specify the best approximation, not an exact fit to each observation. The previous example used x = (0, 1, 2); this example changes x to (1, 1, 1) while keeping y. The columns of X are identical, so their span is a line and the projection is still unique. R drops the redundant slope and reports NA; it has not established that the biological slope is zero. Dependent columns in real designs and more columns than samples come next in Design matrices for covariates.</p>
 <style type="text/css">
         span.MJX_Assistive_MathML {
           position:absolute!important;

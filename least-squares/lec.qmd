@@ -194,51 +194,33 @@ mean(y)           # 3
 A small but satisfying special case: the average is a least-squares fit, and it is literally the projection formula from Week 1. This is also why an intercept-only model is the baseline every other model is compared against: adding columns can only shrink the residual (the plane contains the line), never grow it. If time is short, skip this slide; the exercise has it as a problem.
 :::
 
-## When $X^\mathsf{T}X$ cannot be inverted
+## When $X^\mathsf{T}X$ cannot be inverted {.smaller}
 
-We still fit $y \approx a + bx$, but now **all three samples have $x = 1$**.
-The measured values are still $\mathbf{y} = (1, 2, 6)$:
-
-$$
-\begin{aligned}
- a + b\times 1 &\approx 1 \\
- a + b\times 1 &\approx 2 \\
- a + b\times 1 &\approx 6
-\end{aligned}
-$$
-
-Every prediction is the **same number, $a+b$**. The best constant is the mean:
+Fit $y \approx a+bx$ to $\mathbf{y}=(1,2,6)$, now with **all $x=1$**.
+The data and model are:
 
 $$
-\boxed{a+b = \frac{1+2+6}{3} = 3}
+\underbrace{\begin{pmatrix}1&1\\1&1\\1&1\end{pmatrix}}_{X}
+\underbrace{\begin{pmatrix}a\\b\end{pmatrix}}_{\boldsymbol\beta}
+\approx
+\underbrace{\begin{pmatrix}1\\2\\6\end{pmatrix}}_{\mathbf{y}}.
 $$
 
-$(a,b)=(3,0)$, $(2,1)$ or $(0,3)$ all predict $(3,3,3)$, with the same residuals.
-**We can estimate $a+b$, but cannot determine $a$ and $b$ separately.**
-
-::: notes
-Write the model first, then substitute x = 1 in each observation. The approximate signs matter: the observations disagree, so there is no exact fit. Least squares chooses the shared prediction 3, the mean from the previous slide. Ask: if the intercept increases by 1 and the slope decreases by 1, does any prediction change? No. This is Case 3 for the coefficients: infinitely many coefficient pairs give the same best fit. With no variation in time, the measurements cannot tell us a time trend. The original three-point example had different times; here only the x values have changed.
-:::
-
-## Why the inverse fails {.smaller}
-
-The intercept column and the $x$ column are now **identical**:
+To find the **least-squares fit**, form $X^\mathsf{T}X\boldsymbol\beta=X^\mathsf{T}\mathbf{y}$:
 
 $$
-X = \begin{pmatrix}1 & 1 \\ 1 & 1 \\ 1 & 1\end{pmatrix},
-\qquad
-X^\mathsf{T}X = \begin{pmatrix}3 & 3 \\ 3 & 3\end{pmatrix}.
+\begin{pmatrix}3&3\\3&3\end{pmatrix}
+\begin{pmatrix}a\\b\end{pmatrix}
+=
+\begin{pmatrix}1+2+6\\1+2+6\end{pmatrix}
+=
+\begin{pmatrix}9\\9\end{pmatrix}
+\quad\Longrightarrow\quad
+\begin{cases}3a+3b=9\\3a+3b=9.\end{cases}
 $$
 
-The normal equations repeat **one constraint**, rather than determining two coefficients:
-
-$$
-\begin{aligned}
-3a + 3b &= 9 \\
-3a + 3b &= 9
-\end{aligned}
-\qquad\Longrightarrow\qquad a+b=3.
-$$
+Both rows say **$a+b=3$**. There is only one independent equation for two coefficients:
+$X^\mathsf{T}X$ has no inverse. $(a,b)=(3,0)$ or $(2,1)$ gives the same fit $(3,3,3)$.
 
 ```r
 x <- c(1, 1, 1)
@@ -248,10 +230,10 @@ coef(fit)       # (Intercept) 3   x NA
 fitted(fit)     # 3 3 3
 ```
 
-`lm` drops the redundant slope (`NA`). The **fitted values are unique**; the coefficient pair is not.
+**The fitted values are unique; the intercept and slope cannot be determined separately.**
 
 ::: notes
-The two columns span a line instead of a plane. The projection still exists and is unique; what fails is the split between the intercept and slope. The matrix has determinant zero, so solve(t(X) %*% X, t(X) %*% y) would fail. Keep that implementation detail off the slide: the two identical normal equations already explain why there is no inverse. R chooses the intercept-only representation, a = 3, and marks the unidentifiable slope NA; this does not establish that the biological slope is zero. Dependent columns in real designs (batch = treatment, the dummy trap) and more columns than samples are next in Design matrices for covariates. Penalties come later in the penalized-models block.
+Keep the distinction between the two systems explicit. The first is the original data-fitting problem: three observations and two coefficients, with no exact solution. The second is the normal-equation system that determines the least-squares coefficients. It is obtained by multiplying by X transpose, as on the earlier normal-equations slide. Here both rows of X transpose are (1, 1, 1), so both entries of X transpose y are the sum 1 + 2 + 6 = 9. Every entry of X transpose X is 3. Thus both normal equations impose the same condition a + b = 3. There is no contradiction with the different observed values: the normal equations specify the best approximation, not an exact fit to each observation. The previous example used x = (0, 1, 2); this example changes x to (1, 1, 1) while keeping y. The columns of X are identical, so their span is a line and the projection is still unique. R drops the redundant slope and reports NA; it has not established that the biological slope is zero. Dependent columns in real designs and more columns than samples come next in Design matrices for covariates.
 :::
 
 ## Summary {.smaller}
