@@ -2073,10 +2073,10 @@ This material is not included in the course, but it is relevant if you want to l
 <section id="background" class="level2">
 <h2 class="anchored" data-anchor-id="background">Background</h2>
 <p>The cell cycle is a coordinated transcriptional program. As a cell moves toward division it turns on <strong>S-phase</strong> genes (DNA replication: <em>PCNA</em>, <em>MCM</em> family, <em>TYMS</em>) and then <strong>G2/M</strong> genes (mitosis: <em>TOP2A</em>, <em>MKI67</em>, <em>CCNB1/2</em>, <em>CDK1</em>). Because hundreds of genes move <strong>together</strong>, the cycle contributes a large amount of <strong>covariance</strong> — and PCA finds directions of large covariance. So a top principal component often <strong>is</strong> the cell cycle, and clustering (built on the PCA embedding) can end up grouping cells by <em>how much they divide</em> rather than <em>what they are</em>.</p>
-<p><strong>Scoring a phase.</strong> For a gene set <span class="math inline">\(\mathcal{S}\)</span> and cell <span class="math inline">\(c\)</span>, the plain module score is the average expression of the set,</p>
-<p><span class="math display">\[\text{Score}_{\mathcal{S}}(c) = \frac{1}{|\mathcal{S}|}\sum_{g\in\mathcal{S}} x_{gc},\]</span></p>
-<p>where <span class="math inline">\(x_{gc}\)</span> is log-normalised expression. The <strong>background-corrected</strong> score (the <code>AddModuleScore</code> / <code>CellCycleScoring</code> idea) subtracts the average of a set of expression-matched <strong>control</strong> genes,</p>
-<p><span class="math display">\[\text{Score}_{\mathcal{S}}(c) = \overline{x}_{\mathcal{S}}(c) - \overline{x}_{\text{ctrl}}(c),\]</span></p>
+<p><strong>Scoring a phase.</strong> For a gene set <span class="math inline">\(S\)</span> and cell <span class="math inline">\(c\)</span>, the plain module score is the average expression of the set,</p>
+<p><span class="math display">\[\text{Score}_{S}(c) = \frac{1}{n_S}\sum_{\text{genes } g \text{ in } S} x_{gc},\]</span></p>
+<p>where <span class="math inline">\(n_S\)</span> is the number of genes in the set and <span class="math inline">\(x_{gc}\)</span> is log-normalised expression. The <strong>background-corrected</strong> score (the <code>AddModuleScore</code> / <code>CellCycleScoring</code> idea) subtracts the average of a set of expression-matched <strong>control</strong> genes,</p>
+<p><span class="math display">\[\text{Score}_{S}(c) = \overline{x}_{S}(c) - \overline{x}_{\text{ctrl}}(c),\]</span></p>
 <p>so a score near 0 means “no more than background” and a clearly positive score means the program is on.</p>
 <p><strong>Assigning the phase.</strong> With <span class="math inline">\(\text{Score}_S\)</span> and <span class="math inline">\(\text{Score}_{G2M}\)</span>: if both are low (near/below 0) call it <strong>G1</strong>; otherwise take the phase of the <strong>larger positive</strong> score.</p>
 <p><strong>Removing it.</strong> If the cycle is a nuisance, regress it out <strong>per gene</strong> before PCA: <span class="math display">\[x_{gc} = \beta_{0g} + \beta_{1g}\,\text{Score}_S(c) + \beta_{2g}\,\text{Score}_{G2M}(c) + \varepsilon_{gc},\]</span> and feed the <strong>residuals</strong> <span class="math inline">\(\varepsilon_{gc}\)</span> to PCA. Only do this when proliferation is not part of the answer you want.</p>
@@ -2243,7 +2243,7 @@ Hint 3 — background correction (B3)
 </div>
 <div id="callout-3" class="callout-3-contents callout-collapse collapse">
 <div class="callout-body-container callout-body">
-<p>Subtract the control average from the marker average: <span class="math inline">\(\overline{x}_{\mathcal{S}} - \overline{x}_{\text{ctrl}}\)</span>. A <strong>positive</strong> result means the markers are above the background level the cell would show anyway, so the program is <strong>on</strong>.</p>
+<p>Subtract the control average from the marker average: <span class="math inline">\(\overline{x}_{S} - \overline{x}_{\text{ctrl}}\)</span>. A <strong>positive</strong> result means the markers are above the background level the cell would show anyway, so the program is <strong>on</strong>.</p>
 </div>
 </div>
 </div>
@@ -2344,7 +2344,7 @@ Solution
 <div class="callout-body-container callout-body">
 <p><strong>B1.</strong> In bulk RNA-seq the signal is averaged over millions of cells so cell-cycle differences cancel; in single-cell data every cell has a definite phase, so cell-cycle variation is preserved and becomes one of the largest axes of variation.</p>
 <p><strong>B2.</strong> Plain S-phase score <span class="math inline">\(= \dfrac{2.0 + 1.6 + 2.4 + 2.0}{4} = \dfrac{8.0}{4} = 2.0\)</span>.</p>
-<p><strong>B3.</strong> Background-corrected score <span class="math inline">\(= \overline{x}_{\mathcal{S}} - \overline{x}_{\text{ctrl}} = 2.0 - 1.4 = 0.6\)</span>. This is clearly positive, so the <strong>S program is on</strong> in this cell.</p>
+<p><strong>B3.</strong> Background-corrected score <span class="math inline">\(= \overline{x}_{S} - \overline{x}_{\text{ctrl}} = 2.0 - 1.4 = 0.6\)</span>. This is clearly positive, so the <strong>S program is on</strong> in this cell.</p>
 <p><strong>B4.</strong> - Cell A: <span class="math inline">\(\text{Score}_S = 0.61\)</span> (positive) beats <span class="math inline">\(\text{Score}_{G2M} = -0.10\)</span> → <strong>S</strong>. - Cell B: <span class="math inline">\(\text{Score}_{G2M} = 0.55\)</span> (positive) beats <span class="math inline">\(\text{Score}_S = -0.04\)</span> → <strong>G2M</strong>. - Cell C: both scores negative → <strong>G1</strong>.</p>
 <p><strong>B5.</strong> PC1 most likely represents the <strong>cell cycle</strong> (specifically a G2/M-heavy division signature — <em>MKI67</em>, <em>TOP2A</em>, <em>CCNB1</em>, <em>CDK1</em> are G2/M markers, <em>PCNA</em> is S-phase). To confirm, compute the <strong>correlation</strong> between each cell’s PC1 score and its <code>G2M.Score</code> (and <code>S.Score</code>); a high value confirms PC1 tracks the cycle.</p>
 <p><strong>B6.</strong> <strong>Cluster 1</strong> is the likely artefact: it is almost entirely S + G2M cells (389 of 404), so it appears to be grouping cells by <em>division state</em> rather than by identity. You should not immediately delete it because some real cell types are genuinely highly proliferative (e.g.&nbsp;transit-amplifying or progenitor cells) — the one-phase cluster is a flag to investigate (check its marker genes, or re-cluster after regressing out the cycle), not a guaranteed technical artefact.</p>

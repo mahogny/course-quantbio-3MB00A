@@ -25,13 +25,13 @@ This is an **applied concept** day. The R below is shown for understanding and i
 
 The cell cycle is a coordinated transcriptional program. As a cell moves toward division it turns on **S-phase** genes (DNA replication: *PCNA*, *MCM* family, *TYMS*) and then **G2/M** genes (mitosis: *TOP2A*, *MKI67*, *CCNB1/2*, *CDK1*). Because hundreds of genes move **together**, the cycle contributes a large amount of **covariance** — and PCA finds directions of large covariance. So a top principal component often **is** the cell cycle, and clustering (built on the PCA embedding) can end up grouping cells by *how much they divide* rather than *what they are*.
 
-**Scoring a phase.** For a gene set $\mathcal{S}$ and cell $c$, the plain module score is the average expression of the set,
+**Scoring a phase.** For a gene set $S$ and cell $c$, the plain module score is the average expression of the set,
 
-$$\text{Score}_{\mathcal{S}}(c) = \frac{1}{|\mathcal{S}|}\sum_{g\in\mathcal{S}} x_{gc},$$
+$$\text{Score}_{S}(c) = \frac{1}{n_S}\sum_{\text{genes } g \text{ in } S} x_{gc},$$
 
-where $x_{gc}$ is log-normalised expression. The **background-corrected** score (the `AddModuleScore` / `CellCycleScoring` idea) subtracts the average of a set of expression-matched **control** genes,
+where $n_S$ is the number of genes in the set and $x_{gc}$ is log-normalised expression. The **background-corrected** score (the `AddModuleScore` / `CellCycleScoring` idea) subtracts the average of a set of expression-matched **control** genes,
 
-$$\text{Score}_{\mathcal{S}}(c) = \overline{x}_{\mathcal{S}}(c) - \overline{x}_{\text{ctrl}}(c),$$
+$$\text{Score}_{S}(c) = \overline{x}_{S}(c) - \overline{x}_{\text{ctrl}}(c),$$
 
 so a score near 0 means "no more than background" and a clearly positive score means the program is on.
 
@@ -150,7 +150,7 @@ The plain score is just the mean of the listed values: add the four numbers and 
 :::
 
 ::: {.callout-tip collapse="true" title="Hint 3 — background correction (B3)"}
-Subtract the control average from the marker average: $\overline{x}_{\mathcal{S}} - \overline{x}_{\text{ctrl}}$. A **positive** result means the markers are above the background level the cell would show anyway, so the program is **on**.
+Subtract the control average from the marker average: $\overline{x}_{S} - \overline{x}_{\text{ctrl}}$. A **positive** result means the markers are above the background level the cell would show anyway, so the program is **on**.
 :::
 
 ::: {.callout-tip collapse="true" title="Hint 4 — assigning a phase (B4)"}
@@ -181,7 +181,7 @@ If the correlation is still high after regressing out, the correction did not ta
 
 **B2.** Plain S-phase score $= \dfrac{2.0 + 1.6 + 2.4 + 2.0}{4} = \dfrac{8.0}{4} = 2.0$.
 
-**B3.** Background-corrected score $= \overline{x}_{\mathcal{S}} - \overline{x}_{\text{ctrl}} = 2.0 - 1.4 = 0.6$. This is clearly positive, so the **S program is on** in this cell.
+**B3.** Background-corrected score $= \overline{x}_{S} - \overline{x}_{\text{ctrl}} = 2.0 - 1.4 = 0.6$. This is clearly positive, so the **S program is on** in this cell.
 
 **B4.**
 - Cell A: $\text{Score}_S = 0.61$ (positive) beats $\text{Score}_{G2M} = -0.10$ → **S**.
