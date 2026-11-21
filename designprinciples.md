@@ -4,9 +4,8 @@ The principles below govern how we build course material in this repository. The
 exist to keep us honest as the material scales — every new exercise, lecture, and
 chapter should be checked against them.
 
-See [audience.md](audience.md) for who we are designing for, [elo.md](elo.md) for
-what we are trying to teach, and [courseplan.md](courseplan.md) for the formal
-syllabus.
+See [audience.md](audience.md) for who we are designing for, and [courseplan.md](courseplan.md) for the formal
+syllabus and learning outcomes.
 
 ## 1. Method ↔ biology pairing
 

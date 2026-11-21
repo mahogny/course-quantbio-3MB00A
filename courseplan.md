@@ -89,4 +89,4 @@ exam opportunities under the original syllabus, for up to two years.
 
 ## Literature
 
-The reading list is not available online; contact the department.
+No literature is needed for this course. All material is on this website: lectures, exercises and quizzes.

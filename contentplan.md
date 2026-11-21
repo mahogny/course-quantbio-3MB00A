@@ -3,8 +3,7 @@
 A working week-by-week draft of the course content. This is a planning document,
 not a contract: weeks will shift, merge, and split as the
 [method ↔ biology pairings](designprinciples.md) become clearer. See
-[elo.md](elo.md) for the learning outcomes and [courseplan.md](courseplan.md) for
-the official syllabus.
+[courseplan.md](courseplan.md) for the official syllabus and learning outcomes.
 
 Open questions are marked **[?]**.
 
