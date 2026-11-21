@@ -60,7 +60,7 @@ Start with the instrument, not the maths. Most students have never seen a cytome
 Walk the light path left to right: cells in single file, the laser hits one cell at a time, the scattered and emitted light is collected, dichroic mirrors split it by colour, filters narrow each band, and a photomultiplier (PMT) per band turns light into a number. FSC and SSC need no stain. Each FL detector is meant for one dye, which is exactly the assumption that breaks down later today.
 :::
 
-## What the data look like {.smaller}
+## The data are a table: one row per cell, one column per detector {.smaller}
 
 One real sample: 10 000 cells, one **row per cell**, one **column per detector**.
 
@@ -93,7 +93,7 @@ A flow cytometer measures thousands of cells per second, each stained with sever
 This unit is a second biological use of "undo a known matrix with its inverse", after the misalignment slide in Transforming images with matrices. It needs only matrix-vector products, solve(), and the idea that the columns of a matrix are where the axes land. Flow cytometry is used in immunology and haematology every day (immunophenotyping, sorting); compensation is a step every user meets.
 :::
 
-## Common scenario: two dyes, two detectors {.smaller}
+## One dye's light leaks into another dye's detector: spillover {.smaller}
 
 ![](fig02-spectra.png){width="78%" fig-align="center"}
 
@@ -105,7 +105,7 @@ This unit is a second biological use of "undo a known matrix with its inverse", 
 Emission spectra are broad, so filters cannot fully separate them. FITC into the PE detector is the classic case, typically around 10 to 30 percent depending on the instrument; PE leaks only slightly back into the FITC detector. The curves here are schematic shapes, not measured spectra. Without correction, FITC-positive cells look partly PE-positive, and a researcher would report a double-positive population that does not exist.
 :::
 
-## The spillover matrix {.smaller}
+## A spillover matrix $S$ mixes the dyes: measured = $S$ × true {.smaller}
 
 Each detector sees a **mix** of the two dyes:
 
@@ -128,7 +128,7 @@ S %*% c(1000, 0)                                  # 1000, 250
 Same reading as in Matrices as transformations: the columns of a matrix are where the axes land. Here the "axes" are the pure dyes: one unit of pure FITC lands at column 1, one unit of pure PE at column 2. Each column is scaled so that the dye's own (main) detector is 1. Each row is one detector, adding up its share of every dye. This is a linear model: double the dye, double every detector signal.
 :::
 
-## Before: what the cytometer records {.smaller}
+## Spillover tilts FITC-positive cells into a false PE signal {.smaller}
 
 Four simulated populations, 1600 cells, one cell per **column** (like the pixels in Transforming images with matrices):
 
@@ -152,7 +152,7 @@ measured <- S %*% true + noise(ncol(true))
 One %*% applies the spillover to all 1600 cells. The FITC+ population (green) should lie flat along the x-axis, but in the measured data it is tilted: the brighter the FITC, the more false PE. That tilt has slope 0.25, column 1 of S. The PE+ population hardly moves, because PE leaks only 2 percent back. Real cytometry data are usually shown on log-like axes; we use linear axes so the matrix action is a straight-line tilt.
 :::
 
-## Estimating the spillover from a control {.smaller}
+## A single-stained control measures the spillover directly {.smaller}
 
 :::: {.columns}
 ::: {.column width="52%"}
@@ -179,7 +179,7 @@ coef(fit)[2]                                      # slope 0.249: about 0.25
 This is how instruments and software build S in practice: one single-stained control per dye, and a regression (or a ratio of medians) between the dye's own detector and every other detector. In real life we do not know the true S; the slope recovers 0.249, close to the 0.25 used in the simulation. A control that is too dim gives a poor estimate, which is why controls should be at least as bright as the samples.
 :::
 
-## Compensation: undo the matrix {.smaller}
+## Multiplying by the inverse of $S$ removes the spillover {.smaller}
 
 If measured $= S\,\text{true}$, then true $= S^{-1}\,\text{measured}$: the same `solve()` as in Linear systems in R.
 
@@ -208,7 +208,7 @@ Compensation literally means multiplying by the inverse of the spillover matrix.
 Same simulated cells as on the previous slides (true spillover 0.25 and 0.02). Left: what the cytometer records. Right: the cells after multiplying by the inverse of the spillover we guess with the sliders. Start at "No compensation": both plots are the same and the green FITC+ population tilts up, slope about 0.25. Drag s21 slowly up and ask the class when to stop: the dark green line through the FITC+ cells flattens, and its median PE comes down to that of the unstained cells (dashed line). Go past it, to "Over": the line tilts down and FITC+ cells get negative PE, which no real cell can have. The orange PE+ population only tilts slightly, so s12 is small; set it the same way. Point out the readout: S has the guesses off the diagonal, and its inverse has negative entries of about the same size, the "subtract 25 percent" of the previous slide. "Reveal true S" shows the values used to simulate. In real data the truth is unknown; the flat single-positive population is the check.
 :::
 
-## Why it works: columns and the inverse {.smaller}
+## The inverse tilts the axes back, but detector noise remains {.smaller}
 
 - $S^{-1}S = I$: undoing after doing changes nothing. Check: `solve(S) %*% S` is the identity.
 - In pictures: $S$ **tilts** the FITC axis (column 1 points along $(1, 0.25)$); $S^{-1}$ tilts it back to $(1, 0)$.
@@ -222,7 +222,7 @@ $$\begin{pmatrix} a & b \\ c & d \end{pmatrix}^{-1} = \frac{1}{ad - bc}\begin{pm
 The 2 x 2 inverse formula is worth knowing by heart: swap the diagonal, negate the off-diagonal, divide by the determinant. With det close to 1 (dyes well separated) the inverse is close to the identity with small corrections. The last bullet sets up the problem slide: the inverse also acts on the noise. With det(S) near 1 the inverse barely changes the noise, so the compensated spread (sd 45) is just the true spread (33) plus detector noise (30).
 :::
 
-## When compensation fails: similar dyes {.smaller}
+## Dyes with similar colours make compensation amplify noise {.smaller}
 
 :::: {.columns}
 ::: {.column width="44%"}

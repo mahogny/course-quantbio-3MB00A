@@ -33,7 +33,7 @@ Your data almost never arrive as one flat list of independent numbers. They come
 The one sentence to leave the room with: measurements taken on the same biological unit are not independent, and a model that ignores that will report false confidence. Everything else today — replicates, pooling, shrinkage, random effects — is machinery for respecting that grouping. This builds directly on the Bayesian ideas of prior, likelihood and posterior: a hierarchical model is, in effect, a model that learns its own prior for the group-level parameters from the data.
 :::
 
-## A biology picture first {.smaller}
+## Problem: Repeated samples from one patient are not independent {.smaller}
 
 You measure a blood biomarker to compare **treated vs control** patients. But you don't get one number per patient — you draw **several samples per patient**, and each sample is assayed.
 
@@ -50,7 +50,7 @@ The honest answer is *somewhere between*, and today's model is exactly what puts
 Anchor everything in this concrete design before any equation. The tension is entirely captured by the question "30 or 6?". Naively treating all 30 as independent (this is pseudoreplication) exaggerates your sample size and shrinks your p-values dishonestly. Treating each patient as a single averaged number throws away the within-patient information and the fact that some patients were measured more than others. The hierarchical model keeps all 30 numbers but counts them correctly. Keep the biomarker example running through the whole lecture.
 :::
 
-## The replicate question {.smaller}
+## Only biological replicates add to your sample size {.smaller}
 
 Before any statistics, ask of every number: **what is being repeated?**
 
@@ -69,7 +69,7 @@ The number that limits your ability to **generalise** to new patients is the num
 This distinction is the conceptual core and where most real errors live. Technical replicates reduce measurement error about a single unit; biological replicates are what let you say anything about the population. A study with 3 mice measured 100 times each has n = 3 for the biological question, not 300. Students with a wet-lab background usually recognise this immediately from grant/reviewer feedback; students from a pure data background often have not internalised it. Tie it to the earlier Poisson / negative binomial idea that different sources of variation stack.
 :::
 
-## Pseudoreplication {.smaller}
+## Pseudoreplication makes results look too certain {.smaller}
 
 **Pseudoreplication** = analysing technical replicates (or repeated measures within a unit) as if they were independent biological replicates.
 
@@ -87,7 +87,7 @@ A classic tell in a paper: "n = 240 cells from 3 animals, p < 0.001." The releva
 Give the name and make it stick — pseudoreplication (Hurlbert's term) is a citable, recognised problem, not a nitpick. The mechanism is simply that within-unit measurements are positively correlated, so each additional one carries less than a full data point's worth of new information; standard formulas that assume independence divide by too large an n. The "240 cells from 3 animals" pattern is worth having them memorise as a red flag they will genuinely see in seminars. The fix is not to throw data away but to model the grouping, which is the rest of the lecture. The "counting cells vs counting patients" demo after the ICC slide shows how large the damage is: 41% false positives instead of 5% at modest clustering.
 :::
 
-## Three ways to handle grouped data {.smaller}
+## Partial pooling sits between pooling all and none {.smaller}
 
 Say each patient has their own true mean and you want to estimate it.
 
@@ -103,7 +103,7 @@ Partial pooling is the "have your cake and eat it": patient-specific, but stabil
 Frame these as the two extremes and the middle. Complete pooling assumes all patients are identical (between-patient variance = 0). No pooling assumes patients tell you nothing about each other (between-patient variance = infinity). Neither is usually true. Partial pooling estimates *how* similar patients are from the data and lets that estimate set the compromise. Emphasise "borrow strength": a patient with only two noisy measurements gets rescued toward the group, while a patient with twenty measurements barely moves.
 :::
 
-## Partial pooling and shrinkage {.smaller}
+## Small groups are pulled most toward the mean {.smaller}
 
 The partial-pooling estimate for a patient is a **weighted average** of its own mean and the grand mean:
 
@@ -130,7 +130,7 @@ The pull toward the grand mean is **shrinkage**: strongest when a patient has **
 The weighted average carries the whole idea; read the weight as plain arithmetic, no derivation needed. The patient's own data are worth more with more measurements and less noise (n / sigma^2); the crowd is worth more when patients are alike (1 / tau^2, large when tau^2 is small). w is the patient's share of the total worth. A data-rich patient leans on itself; a data-poor patient leans on the crowd. Work the example aloud: both worths are 0.5, so w = 0.5 and the estimate sits halfway between 10 and 6, at 8 (exercise B3). The two extremes from the previous slide come back in the demo two slides on: drag tau^2 to 0 and everyone collapses onto the grand mean (complete pooling); drag it to infinity and everyone keeps their own mean (no pooling). Shrinkage is not a fudge — it is the estimate that minimises expected error when groups genuinely share a distribution, echoing the Bayesian posterior-mean idea from earlier in this block.
 :::
 
-## Shrinkage, drawn {.smaller}
+## Shrinkage pulls noisy estimates toward the mean {.smaller}
 
 ![](fig07-shrinkage-dumbbell.svg){width="70%" fig-align="center"}
 
@@ -158,7 +158,7 @@ The dumbbell / caterpillar picture is the single most memorable image for shrink
 Eight simulated patients with between 1 and 20 measurements each, using the numbers from the exercise: within-patient variance sigma^2 = 8, true between-patient variance tau^2 = 2, overall mean 6. Open dots are the raw patient means, filled dots the partially pooled estimates, the green tick is the true patient mean (we only know it because we simulated it), and the weight w is printed on the right. Start at the true tau^2 and point at the n = 1 patient: w = 0.2, it moves most; the n = 20 patients barely move. Drag tau^2 down to 0: every filled dot collapses onto the grand mean (complete pooling). Drag it to infinity: filled dots sit on the open dots (no pooling). Then read the error box and the red curve: total squared error against the truth is usually lowest somewhere in between — that is the payoff of shrinkage. Press "new data" a few times to show this holds on most, not all, data sets, and that individual patients can get worse while the total improves.
 :::
 
-## Random effects: the two-level model {.smaller}
+## Patient offsets share one spread, learned from the data {.smaller}
 
 Each measurement = **overall mean** + **patient level** + **measurement level**:
 
@@ -174,7 +174,7 @@ The move that makes it *hierarchical*: the patient offsets are not free numbers 
 Two levels, two spreads: sigma lives between measurements of one patient (technical), tau lives between patients (biological). This is exactly the biological/technical distinction from earlier, now as a model. Walk the figure: overall mean, each patient's offset, then the measurements scattered around each patient. The crucial and initially strange idea is that the patient offsets are treated as draws from one shared distribution rather than as ordinary parameters we estimate freely — that shared distribution is what couples the patients together and produces partial pooling automatically. Because tau is learned from the data, the model discovers how much to pool. Contrast "fixed effect" (one number for the whole dataset) with "random effect" (one draw per group from a common pool). The equation version is on the optional slide at the end.
 :::
 
-## The variance partition (ICC) {.smaller}
+## The ICC tells how much the grouping matters {.smaller}
 
 The two variances answer "how correlated are two measurements from the *same* patient?"
 
@@ -236,7 +236,7 @@ ranef(fit)       # the shrunken per-patient offsets
 Keep this static — nothing is installed at render time — and read the formula syntax aloud because it is the part students actually reuse. Everything left of the bar is what varies by group (here just 1, the intercept); everything right of the bar is the grouping factor. summary() reports the two variance components, which are tau^2 and sigma^2 from the two-level picture, plus the fixed-effect estimate and its (correctly widened) standard error. ranef() returns the partially pooled patient offsets — those are the shrunken estimates from the dumbbell picture. lme4 is the standard non-Bayesian entry point; the next slide gives the Bayesian version.
 :::
 
-## The Bayesian version: brms / Stan {.smaller}
+## A random effect is a prior learned from the data {.smaller}
 
 The **same formula**, now fully Bayesian — priors on every parameter, a posterior for each:
 

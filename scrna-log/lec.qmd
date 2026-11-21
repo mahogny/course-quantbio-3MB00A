@@ -61,7 +61,7 @@ The log does not make variance perfectly constant (genes near 0 stay low), but i
 Second reason: heteroskedasticity. For count data the variance is tied to the mean (overdispersion; the negative binomial, with variance mu + mu^2 / theta, comes properly in Error models in week 4). So a highly expressed gene is "variable" just because it is big. After log1p, the genes that vary because of biology (the markers, on in one cell type and off in the other) rise to the top. This is exactly what highly variable gene selection needs. Be honest about the right panel: very lowly expressed genes have small log variance, and the curve is a hump, not flat. Variance-stabilising transforms are approximate; that is fine for PCA.
 :::
 
-## Raw counts: PCA sees a few genes {.smaller}
+## Without the log, a few high genes dominate PCA {.smaller}
 
 ![](fig04-pca.png){width="78%" fig-align="center"}
 
@@ -111,7 +111,7 @@ $$\log_{10}(2 \cdot 1000) = 3.30 \quad\text{but}\quad 2 \cdot \log_{10} 1000 = 6
 Same test as for polar coordinates in week 1: a matrix map always passes it, so the log is not a matrix. Most of single-cell preprocessing is linear: adding up UMIs, dividing by the library size, averaging cells into a pseudobulk sample. These are meaningful on counts. After the log, a sum of logs is the log of a product, which usually means nothing biologically. The next slide shows the most common case: averaging.
 :::
 
-## Average, then log ≠ log, then average
+## The mean of the logs is at most the log of the mean
 
 Four cells of one cluster, counts for one gene: $0, 1, 3, 15$.
 
@@ -128,7 +128,7 @@ Four cells of one cluster, counts for one gene: $0, 1, 3, 15$.
 Concrete version of "not linear". The mean of log values is the log of the geometric mean, which is pulled down by small values; for 1, 10, 100 the arithmetic mean is 37 but the geometric mean is 10 (exercise B3). Pseudobulk is the standard way to do differential expression between conditions with replicates: sum counts over cells within each sample and cell type, then use bulk tools on the summed counts. Summing is linear, so it must happen on counts. Several tools report a log fold change computed from mean log-normalized values; that is a different number from the log of the ratio of mean expression, and the two can disagree a lot for lowly expressed genes.
 :::
 
-## The zero problem, and the pseudolog
+## Adding 1 before the log keeps zeros as zeros
 
 We will often work with gene RNA counts. When genes are "off", we have 0 counts.
 
@@ -192,7 +192,7 @@ Read the figure first: with c = 0.1, the step from 0 to 1 count is 3.5 log2 unit
 Simulated counts in the same spirit as our data: 200 cells (100 T, 100 B) with sequencing depths from about 1,300 to 12,600 UMIs, 60 background genes, 4 very high genes and 10 cell-type markers. Panel (a) is the curve from the previous slide, with the 0 and 1 UMI points and the size of the step between them. Panel (b) shows every cell for a gene with mean 0.35 (73% zeros) and one with mean 30. Panel (c) is the variance after the log for every gene, against its mean; the dashed line marks the 10 most variable genes, which is what highly variable gene selection would pick. Start at c = 1: all 10 top genes are markers. Click c = 0.01: the zeros of the low gene drop to log 0.01 = -4.6, the step from 0 to 1 UMI becomes 4.6, and background genes with many zeros climb into the top 10 (5 of 10). Click c = 10 and 100: everything below about c counts is squashed, the low gene's variance goes to 0, and the very high genes take over the top 10, as on raw counts. Switching to base 2 only rescales the axis (variances by about 2.1), the ranking does not change. Finally tick "normalize first": the step from 0 to 1 UMI now depends on the depth of the cell, which is the next slide.
 :::
 
-## The pseudocount meets the scale factor
+## The scale factor sets each cell's pseudocount
 
 Seurat's `NormalizeData` computes $\log\!\big(1 + \tfrac{x}{n} \cdot 10{,}000\big)$ for a cell with $n$ UMIs. Rewrite it:
 
@@ -211,7 +211,7 @@ Changing the scale factor (10,000 vs $10^6$ for CPM) changes the pseudocount. Ah
 The first term, log(10000 / n), is a per-cell shift that is the same for every gene; the second is a log with pseudocount n / 10000 in raw counts. So a single UMI in a small cell becomes a large value (2.40), and in a big cell a small one (0.41). Ahlmann-Eltze and Huber, "Comparison of transformations for single-cell RNA-seq data", Nature Methods 20, 665-672 (2023): they write the shifted logarithm log(y/s + y0) and show it approximates the variance-stabilising transform of the negative binomial when y0 = 1/(4 alpha). With the 10,000 scale factor and about 5,000 UMIs per cell the pseudocount is 0.5, i.e. alpha = 0.5, close to real data; CPM gives a pseudocount around 0.005, i.e. alpha = 50, far too large. They also found that this simple shifted log followed by PCA performed as well as or better than more sophisticated transforms in their benchmarks.
 :::
 
-## Log axis, or log values? {.smaller}
+## A log axis silently drops the zeros {.smaller}
 
 ![](fig06-plot-zeros.png){width="78%" fig-align="center"}
 

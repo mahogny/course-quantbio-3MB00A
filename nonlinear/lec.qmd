@@ -59,7 +59,7 @@ $$X = \begin{pmatrix} 1 & 22 & 484 \\ 1 & 24 & 576 \\ 1 & 26 & 676 \\ \vdots & \
 The single most useful idea of the first half: lm only needs the prediction to be a weighted sum of columns that you can compute from the data. What the columns are is up to you: temp, temp squared, log of dose, a dummy for treatment. The curve is curved in temp, but the prediction is still X times beta, so everything from Design matrices for covariates and least squares applies unchanged, including the exact solution in one step. The I() in the formula tells R to square temp arithmetically instead of reading ^ as formula syntax. The data are simulated (script make-nonlinear-figs.R); the optimum is at minus b over 2c.
 :::
 
-## Linear or not? A quick test {.smaller}
+## A model is linear if parameters only multiply data {.smaller}
 
 Ask: **is every parameter only multiplying something I can compute from the data?**
 
@@ -163,7 +163,7 @@ R reports success both times. Plot the fit, and try several starts.
 The right panel is the whole story. For every fixed P the model is linear (a Fourier basis with known period, so lm gives the best m, a and b). Plotting the best SSE against P shows a landscape with one deep valley at about 24 h and many shallow dips at short periods. The search only walks downhill from where it starts, so a start at 12 h settles in the shallow dip near 10.7 h. Nothing in the R output says that this is wrong: the fit converged. The defence is to plot the fitted curve over the data, compare several starting values, or, as here, scan the nonlinear parameter on a grid first. Neural networks have this problem in a much bigger landscape, which is one reason two trainings of the same network give different answers.
 :::
 
-## A neural network: matrix, bend, matrix {.smaller}
+## A neural network is a matrix, a bend, then a matrix {.smaller}
 
 ![](fig05-network.svg){width="70%" fig-align="center"}
 
@@ -205,7 +205,7 @@ Check: $(2, 1)\cdot(1, 2) = 4$, the "without the bend" answer.
 This is the key link to week 1: composition is matrix multiplication. Stacking linear maps never leaves the set of linear maps; you just get another matrix. With shifts, C(Ax + b) + d = (CA)x + (Cb + d), still a line or plane. This is why every neural network has a nonlinearity between layers. ReLU is the most common; older networks used S-shaped curves (the logistic function: the same S-shape as the Hill curve on a log-dose axis), and the choice matters less than having one at all.
 :::
 
-## Bends add up to curves {.smaller}
+## Many bends let a network follow any smooth curve {.smaller}
 
 ![](fig06-relu-hinges.svg){width="96%" fig-align="center"}
 
@@ -219,7 +219,7 @@ One input (log dose), three hidden units. Each unit is a **hinge**: flat, then r
 This connects both halves. Left: three ReLU units with hinges at log dose −1, −0.25 and 0.5 (in the training of a real network the hinge positions are learned too; here they are fixed by hand). Right: with fixed hinges, the best output weights come from lm on the three hinge columns plus an intercept; the result is a piecewise straight line close to the Hill curve. Compared with nls: the Hill fit has 4 parameters, each with a meaning; the network has weights that mean nothing on their own, but it did not need us to know the shape of the curve. That trade (meaning vs flexibility) is the theme of the week. Overfitting is the same problem as in Penalized linear models, and the same tools apply: penalties (weight decay is ridge) and held-out data.
 :::
 
-## Flat vs curved latent spaces {.smaller}
+## Some data need a curved map, not a flat one like PCA {.smaller}
 
 ![](fig07-ring-pca.svg){width="96%" fig-align="center"}
 

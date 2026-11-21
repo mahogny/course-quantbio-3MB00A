@@ -32,7 +32,7 @@ Many things in biology grow or spread **outwards from a centre**: a drop of anti
 This unit ends week 1 and reuses the setup from Transforming images with matrices (image as img[x, y], pixel coordinates as a 2 x N matrix). The new idea is a coordinate change that is not linear, and the payoff is a real measurement that clinical microbiology labs make every day. The plate photo is from the CDC Public Health Image Library (PHIL #10785, Gilda L. Jones, 1972), public domain.
 :::
 
-## Biology: the disk diffusion test {.smaller}
+## The clear zone around an antibiotic disk shows how well it works {.smaller}
 
 :::: {.columns}
 ::: {.column width="48%"}
@@ -55,7 +55,7 @@ Diffusion spreads equally in all directions, so the zones are (nearly) circles. 
 This is the standard antimicrobial susceptibility test in clinical microbiology, and its result decides which antibiotic a patient gets. A bigger zone means the drug stops growth further from the disk, so the bacterium is more sensitive. In the lab the zone is usually read by eye with a ruler or calliper; automated plate readers do exactly what we do today: find each disk, then measure the zone around it. The disk numbers are ours; the photo does not say which drugs these are, so today we measure diameters, not S/R calls.
 :::
 
-## Polar coordinates {.smaller}
+## A point can be described by its distance and angle from a centre {.smaller}
 
 :::: {.columns}
 ::: {.column width="50%"}
@@ -88,7 +88,7 @@ atan2(dy, dx) * 180 / pi   # theta = 53.1 degrees
 r is Pythagoras, and the "back again" formulas are the same cos and sin that appear in the rotation matrix. Use atan2, not atan: atan(dy / dx) cannot tell (1, 1) from (-1, -1) because the ratio is the same, so it only covers half the circle. atan2(dy, dx) looks at both signs and returns an angle between -180 and 180 degrees. Note the argument order: y first. Angles in R are in radians; multiply by 180/pi to get degrees.
 :::
 
-## Polar coordinates are not a matrix {.smaller}
+## Polar coordinates turn circles into lines, which no matrix can do {.smaller}
 
 ![](fig04-not-linear.png){width="82%" fig-align="center"}
 
@@ -100,7 +100,7 @@ r is Pythagoras, and the "back again" formulas are the same cos and sin that app
 This is the conceptual point of the unit. A linear map satisfies f(a + b) = f(a) + f(b) and f(c a) = c f(a). For polar coordinates, f(2 p) = (2r, theta): theta does not scale. Also (1, 0) has theta = 0 and (0, 1) has theta = 90, but their sum (1, 1) has theta = 45, not 90. So there is no matrix for it, and we compute r and theta with sqrt and atan2 instead of %*%. The upside is the right panel: around the right centre, a circle is the simplest possible shape, a horizontal line.
 :::
 
-## Every pixel gets a distance {.smaller}
+## Brightness against distance from the disk shows the zone edge {.smaller}
 
 Load the plate as in Transforming images with matrices, then compute $r$ for **every** pixel around disk 5:
 
@@ -122,7 +122,7 @@ plot(r[near], img[near], pch = 16, cex = 0.3)     # grey level against distance
 No loop: r is computed for all 360 000 pixels in one vectorised line, just like A %*% xy moved every pixel at once. img[near] works because as.vector(img) has the same pixel order as the columns of xy. Reading the scatter: the dark disk (r < 13), the bright clear zone, a sharp drop at the zone edge near r = 53, then the darker lawn. Beyond r = 60 the cloud splits in two: towards the upper right the 80-pixel circle reaches into the next zone (disk 4). Ask students to find that in the left panel.
 :::
 
-## The radial profile: average over the angle {.smaller}
+## Averaging over the angle gives a profile whose drop is the edge {.smaller}
 
 Group the pixels by distance and average: one number per radius.
 
@@ -142,7 +142,7 @@ edge                                              # 53 pixels
 Averaging over theta throws away direction and keeps distance: 360 000 pixels become 81 numbers, and the noise from scratches and streaks averages out. The edge is where the profile crosses a threshold halfway between the zone (about 0.9) and the lawn (about 0.3); rr >= 16 skips the dark disk itself. The disk gives us a free ruler: it is 6 mm across and about 26.8 pixels in this photo, so 1 mm is about 4.5 pixels. Zone diameter = 2 * edge, converted to mm.
 :::
 
-## Unwrapping: work backwards from (r, θ) {.smaller}
+## Unwrapping turns the circular zone edge into a straight line {.smaller}
 
 To turn the ring into a **picture** in $(\theta, r)$, go backwards: for each $(r, \theta)$ on a grid, compute $x, y$ and look up the nearest pixel.
 
@@ -177,7 +177,7 @@ This is the "work backwards" trick mentioned at the end of Transforming images w
 The same unwrapping as on the previous slide, live, with bilinear interpolation instead of round(). The demo starts with the centre about 11 pixels off disk 5. Point out the result first: in the strip (theta across, r up) the zone edge is a wave, not a line, and in the profile the drop is smeared out over many radii. Ask the class which way to move the centre: where the wave is highest, the edge is furthest away, so move towards that angle (0 degrees is to the right, 90 degrees is up). Drag the red cross, or press anywhere on the photo. When the centre is right the edge in the strip is flat, the profile drop is steep and it lies on the grey curve (the best centre). "Snap to best centre" first finds the dark paper disk, then nudges the centre until the edge is flattest. Then change the threshold: the yellow pixels are those brighter than the threshold, and the red line is the edge per angle, as in apply(u, 2, ...). Disk 4 stays wavy even at the best centre: the zone itself is not round (next slide). Disk 11 has a fuzzy edge: watch how far the edge moves with the threshold. Disk 7 is the smallest zone.
 :::
 
-## A zone that is not round {.smaller}
+## For a zone that is not round, find the edge at each angle {.smaller}
 
 Disk 4 sits near the plate edge, between two other zones. Find the edge **separately for every angle**, one column of the strip at a time:
 
@@ -198,7 +198,7 @@ range(edge_at)                                    # 69 to 83 pixels: not a circl
 apply(u4, 2, ...) runs the edge rule down each column, i.e. each direction. The edge lies between 69 and 83 pixels (31 to 37 mm as a diameter). The shortest radius points up and to the right, towards the plate rim, where only a thin strip of lawn is left; the longest points down and to the left, towards disk 5, where the two zones almost touch. In polar coordinates, "is it a circle?" becomes "is r(theta) flat?", a question about one curve. Large r also reaches into neighbouring zones (the bright bumps at the top of the strip), which is why rmax matters.
 :::
 
-## Measuring the whole plate {.smaller}
+## The same steps measure every zone; fuzzy edges are less reliable {.smaller}
 
 The same three lines for every disk: centre → unwrap → profile → edge.
 
@@ -221,7 +221,7 @@ diam_mm <- 2 * edges / (26.8 / 6)
 Zones range from 15 mm (disk 7) to 35 mm (disk 4). Measurements are only as good as the scale (the disk is 6 mm; the 26.8-pixel width was measured once) and the threshold. Sharp edges barely move when the threshold changes (1 to 2 mm between thresholds 0.5 and 0.6); the fuzzy zone of disk 11 (partial inhibition at its rim) shifts by about 8 mm, which is exactly the situation where human readers also disagree. The disk centres were found once from the dark disks; finding them automatically is another image analysis step.
 :::
 
-## Polar coordinates elsewhere {.smaller}
+## Many round structures in biology are easier to measure from their centre {.smaller}
 
 The same move, "pick a centre, then use distance and angle", appears all over biology:
 

@@ -35,7 +35,7 @@ This is an **applied concept** day. R is shown but not run; the goal is to under
 The single mental image: the cell cycle is a smooth, strong program that turns on hundreds of genes as a cell prepares to divide. Because it is strong, it behaves like any other big axis of variation in the data — it can eat a whole principal component and pull apart a cluster. Everything today hangs off that: scoring the phase, seeing it in PCA, deciding whether to remove it. Emphasise the judgement call at the end — cell cycle is not always noise. This unit deliberately ties the Single-cell block back to the Applications block: PCA is not a black box; its components mean something biological or technical, and cell cycle is the cleanest example.
 :::
 
-## A biology picture first {.smaller}
+## Dividing cells can look like a separate cell type {.smaller}
 
 You sequence a tumour biopsy or a developing tissue. Many cells are **actively dividing**; others are **quiescent**.
 
@@ -51,7 +51,7 @@ The question for today: **how do we recognise this, measure it, and decide what 
 Anchor everything in a real situation before any method: proliferating tissue (tumour, bone marrow, embryo, regenerating gut) is full of cycling cells. The key biological fact is that division is a coordinated transcriptional program, so cells of one identity fan out along a "how far through the cycle am I" direction. Stress that this within-type spread is genuine biological signal about proliferation, but it is often not the signal we came for (we usually want cell identity). That tension — real signal, wrong question — is the whole motivation.
 :::
 
-## The cell cycle in one minute {.smaller}
+## Each cell-cycle phase switches on its own genes {.smaller}
 
 The division cycle runs through ordered phases, each with a characteristic transcriptional signature:
 
@@ -69,7 +69,7 @@ Key point: these are **sets of co-expressed genes** that rise and fall together 
 Keep the biology light and correct: G1 growth, S is DNA synthesis, G2/M is mitosis. Name a few canonical markers so students recognise them in loadings later (PCNA/MCM/TYMS for S; TOP2A/MKI67/CCNB/CDK1 for G2M). The pedagogical hook for the maths: because these genes are co-regulated, they move together across cells, which is precisely a direction of high covariance — the thing PCA finds. Do not over-detail checkpoints or cyclin biochemistry; three labels is all the downstream method needs.
 :::
 
-## Why this is a single-cell problem {.smaller}
+## Single cells reveal the cycle that bulk averages away {.smaller}
 
 In bulk RNA-seq you average over millions of cells, so the cycle mostly **washes out**. In single-cell data every cell is caught at its **own** moment in the cycle.
 
@@ -85,7 +85,7 @@ This is the classic **confounder**: a strong, unwanted axis of variation sitting
 Contrast bulk vs single-cell explicitly — this is why the problem is new here. In bulk, cell-cycle heterogeneity is averaged away; in single-cell it is front and centre because each cell has a definite phase. The magnitude point matters: cell-cycle variance can exceed subtype variance, so it wins in an unsupervised method that just chases the biggest variance. Frame it with the word confounder, which they know from the statistics course (covariates in lm): an axis correlated with the structure we see but not the structure we want.
 :::
 
-## Idea: score a phase from a gene set {.smaller}
+## A cell's phase score is the average of its marker genes {.smaller}
 
 We do not trust any **single** gene (dropouts, noise). Instead we use a **set** of phase markers and summarise them into one number per cell — a **module score**.
 
@@ -104,7 +104,7 @@ where $n_S$ is the number of genes in the set and $x_{gc}$ is the (log-normalise
 Motivate the set-based approach from noise: single-cell counts are sparse and any one marker is unreliable, so we pool a curated set and average. Present the plain mean as the intuition-level score. This connects to descriptive statistics they already have — it is just a mean over a chosen list of features. The next slide refines it with a background correction, but the core idea (one number per cell summarising a program) is the takeaway. Note the expression is log-normalised, not raw counts, so averaging is reasonable.
 :::
 
-## Making the score fair: a background control {.smaller}
+## Control genes keep sequencing depth out of the score {.smaller}
 
 A problem: some cells simply have **more counts** or more genes detected, inflating any average. We want a score that reflects the **program**, not sequencing depth.
 
@@ -171,7 +171,7 @@ Each cell gets two continuous scores and one phase label, stored in the metadata
 This is the canonical call and the students should recognise it. Point out the prerequisites: the object must be normalised first (LogNormalize), because the scores average log-normalised expression. cc.genes.updated.2019 is the built-in human set from the Tirosh melanoma paper; for other species you map orthologues. set.ident = FALSE keeps their original cell identities as the active identity. The printed metadata is the deliverable — two scores plus Phase per cell — and everything downstream uses these columns. Remind them this is static code; nothing runs at render time.
 :::
 
-## The link to PCA {.smaller}
+## The cell cycle often becomes a top principal component {.smaller}
 
 Recall from Principal component analysis: PCA finds the **directions of greatest variance** in the data (eigenvectors of the covariance matrix). It does not know or care what those directions **mean**.
 
@@ -187,7 +187,7 @@ PCA is doing exactly its job — capturing the biggest variation. It just happen
 This is the conceptual centre of the lecture and the payoff of the PCA units. Restate what PCA guarantees: it returns the top-variance orthogonal directions, agnostic to meaning. Because cell-cycle genes move together, they form a high-covariance bundle, so their shared direction is a leading eigenvector — a top PC. Hence colouring the PCA scatter by Phase reveals a gradient. Be careful and honest: say "one of the top PCs" or "often a leading PC", not "always PC1" — where it lands depends on how much other structure there is. The lesson: a PC is a direction, and its meaning is an empirical question.
 :::
 
-## Diagnosing what a PC means {.smaller}
+## Loadings and correlations show what a component means {.smaller}
 
 Because a PC is just a direction, we **interpret** it by looking at two things:
 
@@ -209,7 +209,7 @@ A high correlation says: this principal component is (largely) the cell cycle.
 Give them a concrete, reusable diagnostic recipe, because "interpret your components" is otherwise vague. Two complementary tools: read the loadings (top genes on the eigenvector — they met loadings in the PCA units) and correlate PC scores against a known covariate. High correlation between PC1 and the cell-cycle scores is direct evidence the axis is the cycle. Generalise: the same trick diagnoses batch (correlate PC with batch label), depth (with total counts), mitochondrial stress (with percent.mt). This is the transferable skill.
 :::
 
-## Cell cycle confounds clustering {.smaller}
+## The cell cycle can split or merge clusters {.smaller}
 
 Clustering and neighbour graphs are built **on top of** the PCA embedding. So if a top PC is the cell cycle:
 
@@ -236,7 +236,7 @@ A cluster that is **almost entirely one phase** is a red flag.
 Make the downstream damage concrete: clustering uses the PCA neighbour graph, so a cell-cycle PC propagates straight into the clusters. Two failure modes: one identity torn into resting vs cycling sub-clusters, or two identities fused because they share a proliferative signature. The cross-tab against Phase is a cheap, powerful diagnostic — a cluster that is ~100% G2M is probably a cell-cycle artefact, not a cell type. Caveat for honesty: sometimes a real cell type genuinely is highly proliferative (e.g. transit-amplifying cells), so the cross-tab is a flag to investigate, not an automatic verdict.
 :::
 
-## Removing the effect: regress it out {.smaller}
+## Regressing out the scores removes the cell cycle {.smaller}
 
 If the cell cycle is a **nuisance** here, we remove its contribution **before** PCA. The tool is one they already know: a **linear model per gene**.
 
@@ -280,7 +280,7 @@ cor(pc1, obj$S.Score)     # e.g. 0.05  -> cycle no longer drives PC1
 Connect the earlier lm slide to the actual API: vars.to.regress inside ScaleData does the per-gene regression and passes residuals forward; RunPCA then operates on the corrected matrix. The verification is the same diagnostic as before, now expected to be near zero — always check that a correction did what you intended rather than assuming. Mention the common alternate recipe (regress the single difference S.Score - G2M.Score) on the next slide, which preserves cycling-vs-noncycling while removing phase-within-cycling.
 :::
 
-## When NOT to regress it out {.smaller}
+## Keep the cell cycle when proliferation is the biology {.smaller}
 
 Correcting the cell cycle is a **choice**, not a default. Ask: *is proliferation part of the answer?*
 
@@ -295,7 +295,7 @@ A common middle path: regress the **difference** $\text{Score}_S - \text{Score}_
 This is the judgement slide and arguably the most important message. Regression is destructive: it removes a real signal, so only remove it when it is genuinely a nuisance for the current question. Give the two contrasting scenarios. Then the nuanced Seurat "alternate workflow": regressing S.Score minus G2M.Score collapses the within-cycle phase gradient but retains the cycling/non-cycling contrast — the right tool when proliferation status matters but exact phase does not. The meta-lesson: correction decisions must be driven by the biological question, not applied reflexively.
 :::
 
-## The broader point: PCs are axes of variation {.smaller}
+## A top component can be biology or a technical artefact {.smaller}
 
 Cell cycle is the cleanest example of a general truth from the PCA units: **a principal component is whatever varies most — and that can be anything.**
 

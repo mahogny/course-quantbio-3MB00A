@@ -52,7 +52,7 @@ This is the last unit of week 3 and it closes the design-matrix section with the
 The photo is a NovaSeq 6000, the workhorse of large sequencing centres: one run gives billions of reads. Walk the picture left to right. Cells, RNA extracted and cut into fragments, the fragments form a library, and the sequencer reads a random subset of them. Real libraries have billions of fragments and we read tens of millions, so it really is a random sample. Two consequences follow, and they are the two halves of today. First, the count depends on N, the depth, which is a technical choice; to compare samples we must undo it (size factors). Second, even with the same bag and the same N, a repeat gives a slightly different count, because the draw is random (counting noise). Ask: in a library of 10 million reads, gene G has 512 reads; in a library of 40 million, also 512. Is it the same? No: 51.2 per million versus 12.8 per million, a factor of 4.
 :::
 
-## A count needs its depth: size factors {.smaller}
+## Size factors correct counts for sequencing depth {.smaller}
 
 Sample 2 is the same RNA as sample 1, sequenced **twice as deep**:
 
@@ -75,7 +75,7 @@ cpm <- t(t(counts) / colSums(counts)) * 1e6    # divide each column by its total
 The by-hand version of normalization. The size factor is "how much did we sequence this sample", relative to the others. Dividing by the total is what CPM does, and what voom did internally in covariates-r. The R line: counts is genes by samples, colSums gives one total per sample; t() twice is the usual trick to divide each column by its own number. Next slide: why the total is not good enough.
 :::
 
-## Comparing compositions is tricky {.smaller}
+## One gene going up makes all the other genes look lower {.smaller}
 
 ![](fig02-composition.png){width="80%" fig-align="center"}
 
@@ -87,7 +87,7 @@ The by-hand version of normalization. The size factor is "how much did we sequen
 This is the reason DESeq2 does not use the total count. Read the left panel: the tube has 1000 molecules in sample 1 and 2000 in sample 2, all of the extra from gene A. The sequencer does not know how many molecules were in the tube; it reads 1000 from each. In the right panel A has 750 of 1000, so B, C and D are squeezed to half. Real examples: a tissue where a few secreted proteins dominate (pancreas, liver), or a treatment that switches on a very abundant gene. Ask: what should the size factor of sample 2 be, so that B, C and D come out unchanged? 0.5 relative to sample 1, not 1. The next slide gets that number without knowing in advance which genes changed.
 :::
 
-## Improving sample comparability: the median of ratios {.smaller}
+## The median of ratios ignores a few changed genes {.smaller}
 
 :::: {.columns}
 ::: {.column width="44%"}
@@ -122,7 +122,7 @@ dds <- estimateSizeFactors(dds);  sizeFactors(dds);  counts(dds, normalized = TR
 The idea: if most genes did not change, then for most genes the ratio sample 2 over sample 1 is just the depth ratio. A median ignores the few genes that really changed, as long as they are fewer than half. Do the table by hand: the five ratios, sorted 1.9, 2.0, 2.1, 2.2, 8.0, median 2.1. Compare with the totals: 568 over 220 is 2.58, too high, because gene D grabbed reads. The histogram shows the same with 3000 genes: 60 well-expressed genes went up 5-fold, the median ratio is 1.41 while the ratio of totals is 2.00. With more than two samples DESeq2 builds a reference sample, the geometric mean of each gene over all samples (on the log scale, the ordinary mean), and computes each sample's median ratio against it; the exercise does that by hand on a 5 by 3 table. The rule "leave out genes with a 0" is the first sign of today's main theme: small counts carry little information.
 :::
 
-## Same truth, different ratios {.smaller}
+## Genes with few reads give unreliable fold changes {.smaller}
 
 Two replicates: same RNA, same depth. Every difference below is **pure counting noise**.
 
@@ -169,7 +169,7 @@ The picture to remember. Each dot is a gene, x is its mean count on a log axis, 
 Interactive demo. The buttons set the expected count n for both replicates (1 to 1000). Panel (a) is a histogram of log2(x/y) for 2000 replicate pairs; pairs with a zero get their own bars (0, infinity, 0/0), and pairs at least 2-fold apart are red. Point at the header number "% of pairs at least 2-fold apart", not the SD (the SD only uses pairs without a zero, so it is misleading at n = 1 and 2). At the defaults it is 77% at n = 1, 65% at n = 2, 37% at 5, 17% at 10, 1.3% at 30 and 0% at 100: same truth, and at low counts most pairs look like a 2-fold change. Panel (b) is the fan for 2000 genes with averages from 0.5 to 5000: 56% of genes with average below 10 are at least 2-fold apart, 0% above 100, and the red circles (top 10 by fold change) are all genes with averages of about 3 to 5.5. Finally tick "add biological variation": even at n = 1000 the SD stays around 0.47 and about 3% of pairs are 2-fold apart. That extra spread is what the negative binomial adds in Error models.
 :::
 
-## DESeq2 in four calls {.smaller}
+## DESeq2 is used analogously to limma {.smaller}
 
 ![](fig05-deseq2-pipeline.svg){width="88%" fig-align="center"}
 

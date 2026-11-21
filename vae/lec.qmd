@@ -35,7 +35,7 @@ Pictures and intuition only: no training maths.
 This is a core week-5 unit, deliberately non-technical. Students know PCA (scores and loadings), UMAP, the negative binomial from Error models, and the words prior and posterior from the Bayesian block. Everything today is built from those pieces. The one new ingredient is a neural network (introduced in Beyond linear models), which we treat as "a flexible curved function with many knobs that a computer tunes". We never write down the training objective; one sentence in words is enough. The demo carries the main message: one latent point gives many cells.
 :::
 
-## Many genes, few real knobs
+## Cells vary along only a few hidden factors
 
 A cell is measured on **~20,000 genes**, but its expression is not 20,000 independent choices.
 
@@ -55,7 +55,7 @@ We have seen this already:
 Start from biology. The number of genes is huge, but the number of things a cell can "decide" is small. That is why PCA works at all: 30 PCs capture most of the structured variation in a scRNA-seq dataset. The table is the map of today. PCA can go both ways: scores summarise a cell, and scores times loadings rebuild an approximation of it. UMAP only goes one way: there is no formula that turns a UMAP position into an expression profile. An autoencoder has both directions as explicit, learned functions, and they may be curved.
 :::
 
-## The autoencoder: squeeze, then rebuild {.smaller}
+## An autoencoder compresses a cell, then rebuilds it {.smaller}
 
 ![](fig01-hourglass.svg){width="92%" fig-align="center"}
 
@@ -91,7 +91,7 @@ A neural network replaces both straight maps by **curved** ones: same hourglass,
 This is the key bridge. Everything on this slide is from Principal component analysis: the score is the dot product with the unit PC, and multiplying the score back by the PC gives the point on the PC line. The red dashed segment is what is lost by keeping one number instead of two. For centred data, keeping k PCs gives the smallest possible squared error among all linear encode/decode pairs with k numbers; a linear autoencoder trained to minimise squared error ends up spanning the same subspace as the PCs. So an autoencoder is "PCA with curved maps". The exercise works through this example and computes reconstruction error against the number of PCs in R.
 :::
 
-## Why curved maps help
+## Curved maps can follow a curved differentiation path
 
 A differentiation path is a **curve** in gene space: stem genes fade, progenitor genes rise and fall, erythroid genes switch on.
 
@@ -105,7 +105,7 @@ A neural network is just a **flexible function with many knobs** (weights). Here
 Point back to the UMAP lecture: PCA is linear, so curved structures get flattened or need extra dimensions. UMAP solves the visualisation part but cannot rebuild a cell. A decoder network can do both: put cells on a low-dimensional latent space and map back. Do not go into neurons, activations or back-propagation; "a curved function with many adjustable numbers" is the right level. The trained model in the demo has 32 hidden units in each network, about 2,600 numbers in total; scVI uses larger networks.
 :::
 
-## What a plain autoencoder lacks {.smaller}
+## A plain autoencoder leaves gaps and gives no uncertainty {.smaller}
 
 ![](fig03a-any-vs-nearby.svg){width="80%" fig-align="center"}
 
@@ -118,7 +118,7 @@ A plain autoencoder only has to rebuild the **training cells**. It may put them 
 Walk through the figure. The same ten cells from a stem → erythroid path are in both panels, coloured from blue (stem) to red (erythroid). Left: an encoder that puts each cell somewhere it can recognise it again. That is enough to rebuild every training cell, so a plain autoencoder has no reason to do better. But neighbouring stem and erythroid cells end up side by side, and most of the space is empty. Pick the open circle in a gap and decode it: the decoder was never tested there, so it can return anything, for example stem and erythroid genes both high, a profile no real cell has. Right: the encoder we want. Similar cells sit next to each other along a smooth path and the shaded band is filled; moving the open circle a little changes the cell a little, and a point between two cells decodes to an in-between cell (here: progenitor gene up, stem gene going down). A second gap: each cell is a single point, with no error bar, even though a cell with 500 counts is far less certain than one with 20,000. The next slide is the fix for both.
 :::
 
-## "Variational": a cloud instead of a point {.smaller}
+## A VAE turns each cell into a cloud, filling the space {.smaller}
 
 ![](fig03b-cloud-per-cell.svg){width="80%" fig-align="center"}
 
@@ -147,7 +147,7 @@ This is what **scVI** does for single-cell RNA-seq (Lopez et al. 2018).
 Connect to Error models: the negative binomial with mean mu and dispersion phi, variance mu plus phi mu squared, is exactly the error model DESeq2 and edgeR use. Here the mean of every gene is not a fixed number but a function of the cell's latent position. So the decoder separates two kinds of variation: biological (where the cell is in latent space) and technical/counting (the NB spread around the mean). The demo VAE was trained with an NB likelihood and a learned dispersion per gene. scVI also includes the library size of each cell, which we left out by giving all simulated cells the same depth. Reference: R. Lopez, J. Regier, M. B. Cole, M. I. Jordan, N. Yosef (2018), Deep generative modeling for single-cell transcriptomics, Nature Methods 15, 1053–1058.
 :::
 
-## Generating cells: one $z$, many cells {.smaller}
+## One latent point gives many different cells {.smaller}
 
 To **generate** a cell: pick a point $z$ → decode to expected counts → **draw** counts from the NB.
 
@@ -159,7 +159,7 @@ The **same** $z$ gives **different** cells every time. They differ only by sampl
 This is the main message of the lecture. The bars are the decoder's expected counts at one latent point (here from the hand-written decoder of the exercise, at z1 = −1: a stem-like cell). The dots and the heatmap rows are 12 cells drawn from the negative binomial around those means. Stem1 has mean 19.6 but the 12 cells range from 3 to 24. That spread is not a failure of the model; it is the model saying that cells in this state really do vary that much in their counts. Ask: if you sequenced 12 cells that are biologically identical, would you expect identical counts? No: Error models said counts are overdispersed. A generative model reproduces that.
 :::
 
-## A walk through latent space {.smaller}
+## A straight walk in latent space is curved in genes {.smaller}
 
 Different $z$ → different cell states. Moving $z$ along a line gives a **smooth transition**:
 
@@ -183,7 +183,7 @@ The lines are decoded means along a straight walk from z1 = −2 to z1 = 2; the 
 This is a real, small VAE, trained offline (plain JavaScript, fixed seed; the script is demos/src/vaegen/train.ts) on 1500 simulated cells × 36 genes: T cells, B cells, and a stem → progenitor → erythroid trajectory, with negative-binomial counts. Encoder and decoder have 32 hidden units each, the latent space has 2 dimensions, and the likelihood is negative binomial with a learned dispersion per gene. The faint dots are the encoder centres of the training cells. Drag z: the bars are the decoder's expected counts; the dots and rows are 8 cells drawn from the same z. Press "Sample again": the bars stay, the cells change. Set dispersion to 0 (Poisson) and the cells get more alike; at 3 they spread out. "between T and B" decodes to weak T and B genes together, a profile few real cells have. "far outside" decodes to stem and progenitor genes both high, higher than any training cell shows together: the decoder extrapolates, and nothing guarantees the result is biology. Walk mode: "stem → erythroid" shows the transition. Encode a cell: click any dot to see its cloud (±2 sd) and its reconstruction. Checks on this model: reconstruction error is about half that of a "same average cell for everyone" baseline (NB negative log-likelihood 52 vs 109 per cell) and much lower than PCA with 2 components on log counts; a 15-nearest-neighbour vote in the 2D latent space recovers the T/B/trajectory group of 100% of cells.
 :::
 
-## Try it: digits
+## Try it: a VAE on handwritten digits
 
 ```{=html}
 <link rel="stylesheet" href="../demos/dist/demo.css">
@@ -195,7 +195,7 @@ This is a real, small VAE, trained offline (plain JavaScript, fixed seed; the sc
 The same idea on images, where encoding and decoding are easy to see: a VAE with a 2D latent space trained on MNIST handwritten digits (60,000 images of 28 × 28 pixels; Y. LeCun, C. Cortes and C. J. C. Burges; the Keras documentation states the copyright holders as LeCun and Cortes and the licence as CC BY-SA 3.0). Trained offline with torch (demos/src/vaegen/train_mnist.py), weights stored as 8-bit integers. Draw a digit, press Encode: the cross is the cloud centre and the small orange ellipse its spread; the big image is the reconstruction. Tick "decoded grid" to see the classic map: every region decodes to a digit and they morph into each other. "walk 1 → 7" shows a smooth morph. Images and counts differ in one way: for images the variation lives almost entirely in z (the decoder outputs a smooth picture and the cloud is tiny), while for counts a second source of variation sits in the sampling step, the NB noise around the decoded mean. Some digits overlap in 2D (4 and 9, 3/5/8): two numbers are too few to keep ten classes apart, and a 15-nearest-neighbour vote recovers the digit of 72% of test images.
 :::
 
-## Uses in single-cell analysis {.smaller}
+## VAEs can correct batches and denoise single-cell data {.smaller}
 
 ![](fig06-scvi.svg){width="80%" fig-align="center"}
 
@@ -207,7 +207,7 @@ The same idea on images, where encoding and decoding are easy to see: a VAE with
 Keep this brief. The batch trick is the most used feature: if the decoder already knows which batch a cell came from, the latent space does not need to encode batch, so cells from different batches but the same type land in the same place. Decoding a cell's z with a different batch label gives "this cell as if measured in batch A". totalVI and MultiVI give each modality its own decoder and its own error model, all reading from one shared z: the same joint-latent-space idea as in the Multiome unit, but nonlinear. All three are in the scvi-tools Python package. References: A. Gayoso et al. (2021), Joint probabilistic modeling of single-cell multi-omic data with totalVI, Nature Methods 18, 272–282. T. Ashuach et al. (2023), MultiVI: deep generative model for the integration of multimodal data, Nature Methods 20, 1222–1231.
 :::
 
-## Caveats: do not over-interpret
+## Decoded cells far from the data are only guesses
 
 - **Latent axes have no fixed meaning.** Unlike PCA loadings, $z_1$ and $z_2$ are not ranked or interpretable by construction; a rotated or flipped latent space can fit about as well.
 - **Results depend on training**: random starting values, network size and training length all change the latent space. Retrain with another seed and the picture moves.

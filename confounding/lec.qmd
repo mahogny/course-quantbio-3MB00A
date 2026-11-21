@@ -103,7 +103,7 @@ The controls sit mostly in the **high** batch (B), the drug samples mostly in th
 Point at the dashed within-batch lines: both rise by 2. Then point at the black pooled means: they fall by 3. The batch difference of 10 is the culprit; because the two groups have very different batch compositions, part of that 10 is credited to the drug. Ask: if the batches had been balanced (2 and 2), what would the pooled comparison give? Answer: +2, which we show later.
 :::
 
-## The same thing as a linear model {.smaller}
+## Adding batch to the model reverses the drug effect {.smaller}
 
 ```r
 lm(expr ~ treatment)            # ignore batch
@@ -152,7 +152,7 @@ $$
 This decomposition is exact for an additive model with no noise, and it is the most useful by-hand tool in the unit: students can predict the unadjusted answer from the adjusted coefficients and the table of counts. It also tells you the two ways out: the confounder does not affect the outcome, or it is equally distributed in both groups. Randomisation and balancing aim at the second. Students may check: if batch effect were 10 and both groups were 50 percent B, the bias term vanishes.
 :::
 
-## Not wrong arithmetic — a different question
+## Both answers are correct but answer different questions
 
 Both numbers are **correct**. They answer **different questions**:
 
@@ -169,7 +169,7 @@ Both numbers are **correct**. They answer **different questions**:
 This is the message the teacher wants made explicit. The unadjusted model is not a calculation error; it is a valid summary of a confounded sample. The danger is reading it as a causal drug effect. Sometimes the marginal comparison is actually what you want (e.g. a description of two populations as they are), but in a designed experiment the conditional, within-batch effect is the scientific target. Drill the phrase "the question picks the columns".
 :::
 
-## A continuous Simpson's paradox {.smaller}
+## The same reversal happens with a continuous covariate {.smaller}
 
 Same story with a **continuous** covariate. Expression vs **BMI** in six people:
 
@@ -184,7 +184,7 @@ lm(expr ~ bmi + sex)    # bmi  1.00, sexM -20   "+1 per BMI unit, within each se
 Data: females BMI 20, 22, 24 with expression 20, 22, 24; males BMI 28, 30, 32 with expression 8, 10, 12. Within each sex expression rises 1 per BMI unit; overall the trend is negative (slope -8/7, about -1.14) because males are both heavier and lower-expressing. Adding sex as a column gives two parallel lines with common slope +1 and a vertical offset sexM = -20. Students can read the adjusted slope off the plot by hand. The same can happen with age (old animals in one cohort) or with batch as the grouping.
 :::
 
-## Confounders {.smaller}
+## A confounder affects both the treatment and the outcome {.smaller}
 
 :::: {.columns}
 ::: {.column width="52%"}
@@ -205,7 +205,7 @@ Leave a confounder out of $X$ and the coefficient you report is **biased**: it c
 Define precisely: associated with exposure and outcome, and not on the causal path from exposure to outcome. The diagram is a DAG (directed acyclic graph); students do not need the formal theory, only the picture: arrows mean "causes". Two arrows out of the same node into treatment and outcome are the signature of confounding. Point out that in a randomised experiment the arrow into treatment is cut by design, which is why randomisation works.
 :::
 
-## Adjustment: "holding the others constant" {.smaller}
+## Adjusting compares samples with equal covariate values {.smaller}
 
 Adding a covariate gives it its own column in $X$ and its own coefficient. The treatment coefficient then answers:
 
@@ -219,7 +219,7 @@ Adding a covariate gives it its own column in $X$ and its own coefficient. The t
 Geometric reading of adjustment. Each group gets its own line, the lines share a slope (age effect, estimated from within-group variation), and the vertical distance between them is beta_1. The unadjusted gap between raw group means is larger because the treated animals are older; part of that gap is the age slope times the age difference. Same decomposition as the weighted-average slide, now with a continuous covariate.
 :::
 
-## Interpreting adjusted effects {.smaller}
+## Each coefficient holds the other predictors constant {.smaller}
 
 In `expr ~ treatment + age` with fitted coefficients
 
@@ -238,7 +238,7 @@ Example: $\beta_0 = 5$, $\beta_1 = 3$, $\beta_2 = 0.1$. A treated mouse aged 30:
 Hammer "holding the others constant" — it is the sentence to remember. The hidden assumption in the additive model is that beta_1 is a single treatment effect, identical at every age, and beta_2 a single age slope, identical in both groups. That is what interactions relax, later in the deck. The worked numbers show why beta_1 is the difference at any fixed age: the age term cancels.
 :::
 
-## Covariates you will adjust for {.smaller}
+## Adjust for unbalanced covariates that affect the outcome {.smaller}
 
 | covariate | type → columns of $X$ | how it can confound |
 |---|---|---|
@@ -256,7 +256,7 @@ Even when it is balanced, adjusting for a strong batch or sex effect removes noi
 These are the covariates students meet in real omics tables. Remind them of column naming from the previous unit (F is the reference for sex, A for batch, 0h for time, which must be set with factor levels because R's alphabetical order would put 0h, 24h, 6h). The rule of thumb is the practical version of the confounder definition: an effect on the outcome times an imbalance between groups is exactly the bias term. The "measured before" clause guards against mediators and colliders, which come later. Also mention RIN and sequencing depth as omics-specific technical covariates.
 :::
 
-## Partial vs perfect confounding {.smaller}
+## Only partial confounding can be adjusted for {.smaller}
 
 ![](fig05-balanced-vs-confounded-batches.svg){width="92%" fig-align="center"}
 
@@ -297,7 +297,7 @@ qr(model.matrix(~ treatment + batch, data = p))$rank   # 2, not 3
 This is the link back to existence of solutions. Two identical columns mean X has rank 2 with 3 columns, so beta is not unique. lm drops the later column (batchB -> NA) and the treatmenttreat coefficient becomes "treatment plus batch", which is meaningless as a drug effect. No statistics can fix this after the fact: the information is not in the data. Contrast with the partial case, where the columns differ in two samples and that is enough.
 :::
 
-## The cure is in the design {.smaller}
+## Balance and randomise batches before the experiment {.smaller}
 
 You cannot adjust your way out of perfect confounding. Prevent it **before** the experiment:
 
@@ -335,7 +335,7 @@ expr ~ treatment * sex             # interaction: treatment effect may differ by
 Interaction = the effect of one predictor changes with the level of another. Parallel lines: no interaction; non-parallel lines: interaction. The star syntax includes both main effects and the product term; a common mistake is writing only treatment:sex. The product column was built by hand in the design-matrix unit. Biologically, sex-specific drug responses are common, so this is not an edge case.
 :::
 
-## Reading interaction coefficients {.smaller}
+## The treatment coefficient now applies to females only {.smaller}
 
 For `expr ~ treatment * sex` with reference levels `ctrl` and `F`:
 
@@ -380,7 +380,7 @@ A variable can be either, both, or neither. A **balanced** sex ratio removes con
 Students often merge these two ideas. In the Simpson data batch is a pure confounder: the within-batch effects are identical (+2 and +2), so there is no interaction. Conversely, in a perfectly balanced study sex cannot confound, but the drug can still work only in males; adding a treatment:sex column is the way to see that. An interaction is a property of the biology; confounding is a property of the design.
 :::
 
-## What not to adjust for {.smaller}
+## Do not adjust for mediators or colliders {.smaller}
 
 ![](fig11-confounder-mediator-collider.svg){width="90%" fig-align="center"}
 

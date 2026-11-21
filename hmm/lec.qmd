@@ -110,7 +110,7 @@ two layers — a hidden layer of region labels and a visible layer of bases — 
 that is precisely a hidden Markov model.
 :::
 
-## Why the visible chain is not enough
+## One letter cannot reveal the hidden state
 
 If the label "GC-rich vs normal" were written in the sequence, we would just
 read it — a plain Markov chain over labels (Markov chains).
@@ -134,7 +134,7 @@ only with different probabilities. One letter is nearly useless; it is the
 the HMM machinery is built to solve.
 :::
 
-## Two layers: the generative picture {.smaller}
+## A hidden chain emits one visible letter per position {.smaller}
 
 An HMM tells a **generative story** in two coupled layers:
 
@@ -252,7 +252,7 @@ H H L is invisible. The next slide multiplies all those probabilities together,
 which is the single most important by-hand skill of this unit.
 :::
 
-## Probability of ONE path with its emissions {.smaller}
+## A path's probability is a product of its steps {.smaller}
 
 The HMM is a product of independent choices, so multiply along the story.
 For path $\mathbf{z}=(H,H,L)$ and observations $\mathbf{x}=(G,C,A)$:
@@ -309,7 +309,7 @@ labels. Name the algorithm for each but do not derive them; that is beyond
 scope. The R functions in Fitting HMMs in R are forward, viterbi, baumWelch.
 :::
 
-## Why summing over paths matters (likelihood) {.smaller}
+## The likelihood adds up over every hidden path {.smaller}
 
 The path $(H,H,L)$ is **one** way to produce $\mathbf{x}=(G,C,A)$. But
 $(H,H,H)$, $(L,H,L)$, … could also produce it.
@@ -336,7 +336,7 @@ forward partial probabilities — conceptually like reusing work, not unlike the
 matrix iterations from Markov chains in R. We will only call it, not implement it.
 :::
 
-## Decoding: the most likely path (Viterbi) {.smaller}
+## Viterbi finds the most likely hidden path {.smaller}
 
 Decoding asks for the **single best** hidden path:
 
@@ -374,7 +374,7 @@ viterbi function does this in one line.
 The tiny H/L model from earlier, now generating 60 bases. Start with Clear and press Step: the first click draws the state z1 from pi, the second emits a base from that state's row of B, then move, emit, and so on, exactly the generative story. The readout multiplies the factors as on the path-probability slide: after four bases the path is H, H, H, L with bases G, G, C, A, and P(x, z) = 0.5 x 0.4 x 0.8 x 0.4 x 0.8 x 0.4 x 0.2 x 0.3 = 0.00123. Press Generate all. Now tick Hide states: this is all a biologist gets, the bases. Ask the room where the islands are. Press Viterbi: the orange runs are the predicted islands. Tick Posterior: the curve is P(H | all bases) at each position, computed by forward-backward (a forward pass plus a backward pass; we do not derive it). Press Reveal truth: for this sequence Viterbi gets 73% of positions right and the posterior (above or below 0.5) 80%. The black dots mark Viterbi's mistakes; they sit in short L stretches that Viterbi glues into a longer island. Then the presets. "Not sticky": the Viterbi path breaks into many tiny pieces, because neighbours no longer help; it just calls each C or G as H. "Low contrast": both states emit nearly the same bases, and Viterbi gives up and calls everything H. Moving a slider re-simulates with the same random numbers, and the decoder always uses the true parameters, so any failure comes from the data, not from a wrong model.
 :::
 
-## Learning: where do A, B, π come from? {.smaller}
+## Parameters are learned by counting, or by Baum–Welch {.smaller}
 
 So far we **assumed** the numbers in $A, B, \boldsymbol{\pi}$. Where do they
 come from?
@@ -400,7 +400,7 @@ are not surprised in Fitting HMMs in R: it only finds a local optimum, and it is
 sensitive to initialisation. (These warnings surface again there.)
 :::
 
-## HMM vs visible Markov chain — the contrast {.smaller}
+## An HMM adds hidden states and emissions to a Markov chain {.smaller}
 
 | | Visible Markov chain (Markov chains) | Hidden Markov Model (today) |
 |--|--|--|

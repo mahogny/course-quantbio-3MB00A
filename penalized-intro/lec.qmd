@@ -32,7 +32,7 @@ In the linear-algebra block we learned how to **solve** a linear system and when
 This is the motivation lecture for the whole penalized-models block. The single message: ordinary least squares assumes you have more samples than parameters and that the parameters are well-determined. In genomics that assumption is routinely violated — thousands of genes, dozens of samples. When it breaks, we do not get a slightly worse answer, we get no unique answer at all, or a wildly overfit one. Penalization is the fix. Keep it conceptual today; the ridge and lasso mechanics come in later units.
 :::
 
-## A biology picture first {.smaller}
+## Biological data typically have many dimensions and few samples {.smaller}
 
 A typical transcriptomics experiment: measure the expression of **20,000 genes** across **30 patients**, and predict a clinical outcome (say, drug response) from expression.
 
@@ -70,54 +70,47 @@ You have used this as `lm()` in the statistics block. Today we look **underneath
 Reconnect to what they already know: `lm()` fits exactly this. The novelty is not the model but the linear-algebra view of it — y is approximately X times beta, a single matrix equation. This links straight back to the Linear systems units: fitting a linear model is solving (a best-fit version of) a linear system. Keep the notation light; the point is only to set up X, beta, y so the next slide can talk about what "solve" means here.
 :::
 
-## Least squares only works when there is sufficient data {.smaller}
+## With more genes than samples, least squares has no single answer {.smaller}
 
-We can't hit every $y$ exactly (data is noisy), so **ordinary least squares (OLS)** picks the coefficients with the **smallest total squared error**:
+**Ordinary least squares** (what `lm()` does) picks the coefficients with the **smallest total squared error**: for each sample take the miss, observed $y$ minus predicted $y$, square it, and add them all up.
 
-- For each sample, take the miss: observed $y$ minus predicted $y$.
-- Square the misses and add them up.
-- Choose the $\boldsymbol{\beta}$ that makes this total as small as possible. That is what `lm()` does.
-
-This needs **enough data to pin down every coefficient**. Each sample gives one equation; each coefficient is one unknown. Fewer equations than unknowns, and there is no single best answer.
-
-::: notes
-State the least-squares objective in words only: find the coefficients that minimise the total squared gap between prediction and truth. lm() solves this for them. The one idea to plant: every sample is one equation and every coefficient is one unknown, so ordinary least squares needs at least as many samples as coefficients, and the coefficients must not be able to stand in for each other. The next two slides are the two ways this fails in genomics. The matrix formula (the normal equations and the inverse) is on the optional slide at the end, for those who want the linear-algebra view.
-:::
-
-## When p > n, there is no single answer {.smaller}
-
-Count equations and unknowns:
+Each sample gives one **equation**; each coefficient is one **unknown**.
 
 - **30 patients** = 30 equations. **20,000 genes** = 20,000 unknowns.
-- With more unknowns than equations, **infinitely many** sets of coefficients fit the data **perfectly**.
-- The data cannot tell them apart: the model is **unidentifiable**. In R, `lm()` gives up and returns `NA` for every gene beyond the 29th.
+- With more unknowns than equations, **infinitely many** sets of coefficients fit the data **perfectly**, and the data cannot tell them apart. `lm()` returns `NA` for every gene beyond the 29th.
 
-This is not "ordinary least squares does a bit worse". It cannot return **one** answer at all.
-
-![](fig05-underdetermined-many-fits.svg){width="55%" fig-align="center"}
+![](fig05-underdetermined-many-fits.svg){.nostretch width="50%" fig-align="center"}
 
 ::: notes
-The hard failure mode, by counting. Two points and a curve with many free parameters: every curve in the bundle goes through both points, so all fit perfectly, and they disagree everywhere else. Same with 30 patients and 20,000 genes: 30 equations, 20,000 unknowns, infinitely many perfect fits. This is the "infinitely many solutions" case from the Linear systems units. In R, lm() estimates the intercept plus as many genes as it can (29 here) and returns NA for the rest; the exercise shows this. In linear-algebra language the matrix in the ordinary least squares formula has no inverse; that is on the optional slide at the end.
+State the least-squares objective in words only: find the coefficients that minimise the total squared gap between prediction and truth; lm() solves this for them. Then the one idea to plant: every sample is one equation and every coefficient is one unknown, so ordinary least squares needs at least as many samples as coefficients. The figure: two points and a curve with many free parameters; every curve in the bundle goes through both points, so all fit perfectly, and they disagree everywhere else. Same with 30 patients and 20,000 genes: infinitely many perfect fits, so the model is unidentifiable. This is not "ordinary least squares does a bit worse": it cannot return one answer at all. It is the "infinitely many solutions" case from the Linear systems units. In R, lm() estimates the intercept plus as many genes as it can (29 here) and returns NA for the rest; the exercise shows this. The next slide is the second, softer way this fails: correlated genes. The matrix formula (the normal equations and the inverse) is on the optional slide at the end.
 :::
 
-## Even with enough samples, correlated genes are trouble {.smaller}
+## Correlated genes give large, unstable coefficients {.smaller}
 
-Genes in the same pathway move together. Take two genes A and B that are **almost identical**, and an outcome that is really $2 \times$ A. All of these predict almost the same:
+Genes in the same pathway move together. If gene A **activates** gene B, then B follows A, and B **also predicts** the outcome, even though only A does anything.
 
+![](fig09-correlated-genes.svg){.nostretch width="62%" fig-align="center"}
+
+Say the outcome is really $2 \times$ A. All of these predict almost the same:
+
+:::: {.columns}
+::: {.column width="45%"}
 | coefficient on A | coefficient on B | prediction |
 |---|---|---|
 | 2 | 0 | 2·A |
 | 1 | 1 | ≈ 2·A |
 | 100 | −98 | ≈ 2·A |
 | −50 | 52 | ≈ 2·A |
-
+:::
+::: {.column width="55%"}
 - The data pin down the **sum** of the two coefficients (about 2), but not the **split**.
 - A little noise decides which split ordinary least squares returns: **large, unstable** coefficients that flip sign from one sample to the next.
-
-This is **multicollinearity**, and in genomics it is the rule, not the exception.
+- This is **multicollinearity**, and in genomics it is the rule, not the exception.
+:::
+::::
 
 ::: notes
-The second, softer failure mode. Even with more samples than predictors, two highly correlated genes can stand in for each other. Read the table: 100 times A minus 98 times B is about 2 times A when A and B are almost the same, and so is minus 50 A plus 52 B. The data only see the sum of the two coefficients. Which split ordinary least squares returns is decided by the noise, so refitting on slightly different patients gives wildly different coefficients that cancel each other. The next slide shows exactly this with 50 resampled datasets. (Linear-algebra view, optional slide: the matrix that ordinary least squares inverts is nearly singular.)
+The second, softer failure mode. Start with the figure: A activates B, and A causes the outcome. B does nothing to the outcome, but because it follows A it predicts the outcome just as well, so the model has no way to know which of the two deserves the credit. Even with more samples than predictors, two highly correlated genes can stand in for each other. Read the table: 100 times A minus 98 times B is about 2 times A when A and B are almost the same, and so is minus 50 A plus 52 B. The data only see the sum of the two coefficients. Which split ordinary least squares returns is decided by the noise, so refitting on slightly different patients gives wildly different coefficients that cancel each other. The next slide shows exactly this with 50 resampled datasets. (Linear-algebra view, optional slide: the matrix that ordinary least squares inverts is nearly singular.)
 :::
 
 ## Try it: correlated genes, resampled
@@ -177,7 +170,7 @@ This is the conceptual heart of the lecture. Two sources of error pull in opposi
 Interactive demo. Expression of one gene at 16 doses, fitted with a very flexible curve; lambda is the penalty that makes it stiffer. Panel (a) is the fit, panel (b) the training error (blue) and test error on new points (red) for every lambda; click or drag in (b) to set lambda. Start at lambda 0.001: the curve wiggles through the points, training error 0.23 but test error 1.66, about three times the noise level of 0.6. That is overfitting. Click "best lambda" (about 0.79): test error drops to 0.68, while training error rises to 0.39. Drag to about 300: the curve is almost flat, training 1.42 and test 1.34, underfitting. Then tick "show 20 refits": the spread of the 20 fits is the variance (1.74 at lambda 0.001, 0.35 at the best lambda, 0.16 at 320) and the offset of their average from the true curve is the bias (0.24 at the best lambda, 1.21 at 320). Training error always goes down as lambda goes down; test error has a U. Cross-validation (later unit) finds the bottom of the U without a test set.
 :::
 
-## The idea: Penalizing large coefficients improves fit{.smaller}
+## Penalizing large coefficients trades fit for stability {.smaller}
 
 Instead of minimising only the fit error, add a **penalty** that grows with the size of the coefficients:
 
@@ -193,20 +186,20 @@ We deliberately move **away** from the perfect-fit solution to buy **stability**
 Here is the whole idea in one line of words, so the specific penalty (sum of squares for ridge, sum of absolute values for lasso) can come later. We add a term that charges for coefficient size. Lambda is the price. With lambda = 0 we are back to ordinary least squares; as lambda grows, coefficients are pulled toward zero. The intuition to leave them with: the model can no longer spend coefficient size freely; it must earn each unit by improving the fit more than the penalty costs. That is what stops it from chasing noise.
 :::
 
-## What the penalty buys {.smaller}
+## A penalty gives a single answer and steadier coefficients {.smaller}
 
-**One answer again.** Among all the coefficient sets that fit (almost) equally well, the penalty prefers the one with the **smallest** coefficients, and there is only one of those.
+Among all the coefficient sets that fit (almost) equally well, the penalty prefers the one with the **smallest** coefficients, and there is only one of those.
 
 - Correlated genes A and B: of 2·A, 1·A + 1·B, 100·A − 98·B, … the penalty picks **1·A + 1·B**, the smallest.
 - With $p > n$: of the infinitely many perfect fits, the penalty picks one. The model can be fitted even with 20,000 genes and 30 patients.
 
-**It calms the variance.** Shrinking coefficients toward zero makes them **less sensitive** to noise in any one sample. Estimates stop swinging, as the ridge cloud in the resampling demo showed.
+Shrinking coefficients toward zero also makes them **less sensitive** to noise in any one sample. Estimates stop swinging, as the ridge cloud in the resampling demo showed.
 
 ::: notes
 Two payoffs, one for each failure mode. First, the hard failure: when many coefficient sets fit equally well, the penalty breaks the tie by preferring small coefficients, and there is exactly one smallest. For two nearly identical genes that is splitting the effect evenly, 1 and 1, instead of 100 and -98. So p > n becomes solvable again. Second, the soft failure: shrinking directly reduces variance; smaller, steadier coefficients that do not lurch when you resample (the tight ridge blob in the demo). The linear-algebra reason (adding lambda to the diagonal makes the matrix invertible) is on the optional slide at the end.
 :::
 
-## The trade, made honest {.smaller}
+## The penalty adds bias, so $\lambda$ must balance bias against variance {.smaller}
 
 Penalization is not free. By pulling coefficients toward zero we introduce **bias**: the estimates are systematically shrunk, so they no longer match the true values on average.
 
@@ -224,7 +217,7 @@ Choosing $\lambda$ well (e.g. by **cross-validation**, in a later unit) is the w
 Be honest about the cost, per the course's "honest about what we defer" principle. Shrinkage biases the estimates — that is the price. So lambda is literally the bias–variance dial: turn it up and you move from the overfit ordinary least squares end toward the oversmoothed end. The sweet spot in the middle minimises total error. How to find it — cross-validation — is deferred to a later unit; name it, don't teach it today. The takeaway: penalization does not magically improve everything; it lets you *choose* a better point on the tradeoff than ordinary least squares forces on you.
 :::
 
-## Biological payoff {.smaller}
+## Penalized models give stable gene signatures from few patients {.smaller}
 
 Why this matters for the wide, short omics matrix we started with:
 

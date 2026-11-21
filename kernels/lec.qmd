@@ -76,7 +76,7 @@ The **same** 3 × 3 neighbourhood with other kernels:
 Work through the top figure on the board. The neighbourhood comes from the 5 by 5 image on the previous slide: dark in the top left corner, bright elsewhere. Products: 1, 10, 9, 10, 36, 18, 9, 18, 9, which add up to 120; divided by 16 this gives 7.5. Then the table: the box blur gives the plain average, 65/9 ≈ 7.2. The Gaussian gives 7.5 because it trusts the centre pixel (a 9) more than the corner (a 1). Sharpen gives 17, far above any input value: it exaggerates the difference between the centre and its neighbours. The Laplacian gives −8: a negative number, which cannot be shown directly as a grey level. That is the first hint that edge kernels need special care when we display them.
 :::
 
-## Blurring: box and Gaussian
+## Blurring averages neighbours and removes noise
 
 :::: {.columns}
 ::: {.column width="50%"}
@@ -112,7 +112,7 @@ $$\underbrace{\begin{bmatrix} 0 & -1 & 0\\ -1 & 5 & -1\\ 0 & -1 & 0 \end{bmatrix
 Kernels can be added and subtracted entry by entry, just like matrices, and filtering with the sum is the same as adding the two filtered images. So sharpen = original minus Laplacian. The Laplacian is large where a pixel stands out from its four neighbours; subtracting it pushes such pixels further away from their surroundings. In the by-hand example the centre 9 became 17. Microscope software often calls a softer version of this "unsharp masking": original plus a fraction of (original minus blurred). Warn about noise: noise is exactly "a pixel that differs from its neighbours", so sharpening a noisy image makes it look worse.
 :::
 
-## Finding edges: Laplacian and Sobel
+## Edge kernels respond only where brightness changes
 
 :::: {.columns}
 ::: {.column width="33%"}
@@ -178,7 +178,7 @@ On a flat region every pixel under the kernel has the same value, say 100. The w
 Left: the input; middle: the nine weights, which can be typed (press Enter to give the keyboard back to the slides) or changed with the − and + buttons; right: the output, updated live. Below: a click on either image selects a pixel, and the grey box shows its 3 by 3 neighbourhood, the weights and the products, just as on the by-hand slide. Suggested tour: Gaussian, then click "box blur" and raise "apply ×" to 5. Then Laplacian: the output switches to "0 = grey", because the sum of the weights is 0; try "as is" to see why that is needed (everything negative turns black). Then Sobel x versus Sobel y on the test pattern: the vertical lines light up in one, the horizontal ones in the other. Turn the noise up to about 30 and pick the Laplacian: the noise swamps everything. Then try "shift": the picture moves one pixel to the right; with apply × 5 it moves five. Finally edit the centre of the box blur to 3 and watch the sum update. The credit line is shown whenever the micrograph is used.
 :::
 
-## What happens at the border? {.smaller}
+## At the border, copying edge pixels is usually safest {.smaller}
 
 At the edge of the image, part of the 3 × 3 window falls **outside**. Three common choices:
 
@@ -192,7 +192,7 @@ At the edge of the image, part of the 3 × 3 window falls **outside**. Three com
 The figure is the top-left corner of the micrograph after 10 passes of the box blur. With zeros outside, a dark frame creeps in from the border, and it grows with every pass: the corner pixel drops from 209 to 12.6. Copying the edge keeps the corner at a sensible 150.9. Skipping is what many textbook definitions do, and it is common in neural networks ("valid" convolution), but it makes the output smaller, which is awkward when you want to compare input and output pixel by pixel. Other options exist (mirroring, wrapping around), and software packages differ in their default, so it is worth checking when results near the border matter. The demo offers "copy edge" and "zeros".
 :::
 
-## Caveats: lost detail and amplified noise {.smaller}
+## Blur before finding edges, but blurring loses detail {.smaller}
 
 ![](fig08-blur-then-edges.png){width="86%" fig-align="center"}
 

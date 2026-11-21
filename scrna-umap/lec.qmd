@@ -130,7 +130,7 @@ Choosing *how many* PCs is the **elbow / scree** decision from Choosing componen
 Reassure students that Step 1 is not new — it is the PCA they already built from the eigen-decomposition of a covariance matrix, applied to cells × genes. The single new idea is the *reason*: PCA here is a denoising and compression pre-step, not the final visualization. Counts are noisy and high-dimensional; distances computed directly in 2000-gene space are swamped by noise (a mild "curse of dimensionality" point). Reducing to ~30 PCs concentrates the signal. The number of PCs is a real choice with the same scree/elbow tools from the pitfalls unit; 30 is a common default, not a law.
 :::
 
-## Why PCA alone is not the picture {.smaller}
+## Two PCs flatten curves, so cell types overlap {.smaller}
 
 PCA already gives coordinates — why not just plot PC1 vs PC2?
 
@@ -200,7 +200,7 @@ Keep UMAP at the intuition level — the manifold assumption plus "preserve loca
 A live UMAP on toy data: 300 cells in 20 dimensions, standing in for 20 PCs. Left is PCA, PC1 against PC2: one fixed matrix, so any new cell could be projected the same way. Right is UMAP, which has no such formula: every cell's (x, y) is a free parameter, moved step by step. It starts paused from a random scatter. Press Run: edges of the kNN graph act as springs pulling neighbours together, and random pairs push apart; the learning rate shrinks until it stops at epoch 500. Tick "show kNN springs" and press Reset, then Run again, so they can see the graph being pulled into shape. On the four-cluster data, compare with the legend: A and B are close in high-D and D is far away, and B is tight while D is wide. In the UMAP, B ends up about as far from A as D does, although D is five times further away in high-D; and island size follows the number of cells, not the spread (D, the widest group, comes out small). Press "New random start": the same four islands, arranged differently. Switch to "Branching path" and drag n_neighbors from 15 down to 5: the continuous path breaks into separate pieces that look like clusters; at 50 it is one connected piece with a clear branch point. Then "Pure noise": UMAP still draws a filled shape with some texture, so a UMAP alone cannot tell you there is structure. The "spectral" start uses eigenvectors of the graph (link back to the eigen unit); it gives a better start but the same caveats. Click any cell to mark its k high-D neighbours in both panels.
 :::
 
-## UMAP vs PCA: two different jobs {.smaller}
+## PCA denoises; UMAP only draws the picture {.smaller}
 
 | | **PCA** | **UMAP** |
 |---|---|---|
@@ -217,7 +217,7 @@ They are **complementary**, not competitors: we run PCA **then** UMAP. PCA clean
 This table is the conceptual anchor of the lecture — worth pausing on. The single biggest misconception to kill: that UMAP "replaces" or "improves on" PCA. They do different jobs and we use both in sequence. PCA's axes and distances are interpretable (a PC is a weighted sum of genes; distance in PC space is real); UMAP's are not (the axes are unlabelled and the gaps between islands are not to scale). PCA is invertible via loadings back to genes; UMAP is a one-way picture. Have students copy this table — several conceptual questions come straight from it.
 :::
 
-## Reading a UMAP honestly {.smaller}
+## On a UMAP, trust local groups, not distances {.smaller}
 
 What you **may** read off a UMAP:
 
@@ -255,7 +255,7 @@ Crucially: clustering runs on the **graph**, *not* on the UMAP coordinates. The 
 Define clustering as community detection on the neighbour graph: partition the nodes so edges fall mostly within groups. Modularity is the score being optimized — within-community edge density above a random baseline; no need to write the formula. Emphasise Leiden over Louvain (Leiden fixes a known Louvain flaw where communities could be internally disconnected). The recurring point, stated a third time deliberately: clusters come from the graph, the UMAP is only a canvas to paint them on. That decoupling is why you sometimes see one colour split across the UMAP or two colours touching — the layout and the partition are separate computations.
 :::
 
-## The resolution parameter {.smaller}
+## Resolution sets how many clusters you get {.smaller}
 
 Community detection has a knob: **resolution**. It sets how fine-grained the partition is.
 
@@ -344,7 +344,7 @@ Each cell's two nearest neighbours are the **other two members of its own group*
 Demystify the pipeline by doing the neighbour step with dist() and sort() on six points — no special package. Students see that "kNN graph" is literally: compute Euclidean distances, take the k smallest per row. The toy coordinates are chosen so the two groups are obvious, and each cell's nearest neighbours are its own group-mates, so the resulting graph has two disconnected pieces = two clusters. This is exactly the by-hand exercise, so it doubles as a preview of the exercise sheet. Reinforce that the real pipeline does the same thing in 30 dimensions on thousands of cells, then lays it out with UMAP.
 :::
 
-## Caveats: do not over-interpret {.smaller}
+## Clusters and UMAPs are hypotheses, not proof {.smaller}
 
 Everything today is **exploratory**. It generates hypotheses; it does not test them.
 

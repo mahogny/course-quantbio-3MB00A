@@ -34,7 +34,7 @@ No new maths — fractions of counts, and the cells-as-vectors picture from *Cel
 Frame the unit as the rest of the QC toolbox. The core unit kept QC to counts and genes per cell plus empty droplets; here we add the two per-cell fractions every Seurat tutorial computes (mitochondrial, ribosomal) and the second failure of the one-cell-per-droplet ideal (doublets). The single idea to carry away: bad cells do not just add noise, they produce artefacts that look like biology — a dying cell can cluster as a "stressed" type, a doublet as a "hybrid" type.
 :::
 
-## Mitochondrial fraction {.smaller}
+## A high mitochondrial fraction marks dying cells {.smaller}
 
 Compute the fraction of each cell's counts coming from **mitochondrial genes** (in human, gene symbols starting `MT-`):
 
@@ -51,7 +51,7 @@ The threshold is dataset-dependent (a common starting point is ~5–20%), and so
 This is the classic third QC metric. Mechanism: membrane damage lets cytoplasmic RNA escape while mitochondrial RNA is retained inside mitochondria, so the *proportion* that is mitochondrial rises. High pct.mt therefore flags dying cells. Be honest that the cutoff varies — 5% is common for some cell lines, but cardiomyocytes and other metabolically active tissues legitimately have high mitochondrial content, so a fixed threshold can throw away good cells. The design principle: look at the distribution, pick a threshold for your data. Mouse mitochondrial genes start with lower-case `mt-`, a classic source of a silently all-zero pct.mt.
 :::
 
-## Ribosomal fraction {.smaller}
+## The ribosomal fraction is inspected, rarely filtered {.smaller}
 
 The same recipe with **ribosomal protein genes** (in human, symbols starting `RPS` or `RPL`):
 
@@ -92,7 +92,7 @@ The upper limit on genes detected is a crude guard against doublets — next sli
 PercentageFeatureSet computes the fraction for any gene-name pattern. Stress the order: plot first, threshold second. The numbers here are illustrative; pick them from the violin plots of your own data, per sample if samples differ. Note there is deliberately no percent.ribo filter. The nFeature_RNA < 6000 upper bound is the crude doublet filter that the dedicated tools improve on.
 :::
 
-## What is a doublet? {.smaller}
+## A doublet is two cells under one barcode {.smaller}
 
 A **doublet** is one barcode that captured **two cells**. Its expression is a **blend** of two profiles.
 
@@ -107,7 +107,7 @@ The doublet rate scales with how many cells you load — more cells per run mean
 Doublets are the second consequence of the one-cell-per-droplet ideal failing (the first is empty droplets). The conceptual danger is the important bit: a doublet does not look like noise, it looks like a plausible new cell expressing two programs, which can lead to invented cell types. Mention the practical trade-off: loading more cells increases throughput but raises the collision (doublet) rate — roughly linearly with the number of cells loaded for droplet platforms.
 :::
 
-## Spotting a doublet: two signatures {.smaller}
+## Doublets show very high counts and clashing markers {.smaller}
 
 Two cells' worth of RNA under one barcode leaves traces in the QC metrics:
 
@@ -120,7 +120,7 @@ Neither signature is proof on its own: some real cells are large (high counts), 
 Connect back to the counts-and-genes QC slide in the data & QC unit: very low counts and genes flag empty droplets, very high counts and genes are suspicious in the other direction. The marker clash is the more specific signal, but it only works for heterotypic doublets (two different types). Homotypic doublets (two cells of the same type) are nearly invisible — they mostly just look like a big cell — and are also less harmful, because they do not invent a new type. This is why a simple upper count threshold is a crude first pass, not a full solution.
 :::
 
-## Detection tools {.smaller}
+## Tools spot doublets by simulating them {.smaller}
 
 Dedicated tools (e.g. [`scDblFinder`](https://bioconductor.org/packages/scDblFinder/), `DoubletFinder`) do better than a count threshold:
 

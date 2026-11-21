@@ -34,7 +34,7 @@ In the Bayesian inference units you learned the *idea*: combine a **prior** with
 Set expectations clearly. Earlier Bayesian units built the concept — prior, likelihood, posterior, and the Bayesian-vs-frequentist distinction. Those were done on toy problems where the posterior could be written down by hand (conjugate priors). Today is the jump to a general-purpose engine: Stan writes and samples the posterior for almost any model you can specify. Emphasise this is a mechanics-and-fluency lecture, not a derivation lecture. Keep an R session open conceptually but remember nothing here is executed at render time — all code is static.
 :::
 
-## A biology problem first {.smaller}
+## Problem: With only 20 cells, we want all plausible fractions {.smaller}
 
 You stain a tissue and score cells for a marker gene. Out of **20 cells**, **13 express** it. What fraction $\theta$ of cells in this tissue express the marker?
 
@@ -70,7 +70,7 @@ The posterior is the prior *reshaped* by the data. Stan's job is to produce that
 Re-state Bayes in the proportional form, because the normalising constant is exactly what makes this hard by hand and what Stan sidesteps. Name each piece against the running example so the three abstract words become three concrete choices. The Binomial likelihood should feel familiar from the distributions block; the Beta prior is the natural companion on [0,1]. Beta(2,2) is a mild prior favouring the middle without excluding the extremes — contrast it mentally with Beta(1,1), the flat/uniform prior. Do not derive the Beta-Binomial conjugacy here; the point is that Stan does not need conjugacy at all.
 :::
 
-## Why we need a computer {.smaller}
+## Most posteriors have no formula, so we sample them {.smaller}
 
 For this one example the posterior happens to have a clean formula (Beta prior + Binomial likelihood is **conjugate**). But that is a lucky special case.
 
@@ -84,7 +84,7 @@ $$p(\theta \mid y) = \frac{p(y \mid \theta)\,p(\theta)}{\displaystyle\int p(y \m
 This is the motivating "why". Students may have solved conjugate posteriors by hand in the earlier units and could wonder why a whole software package is needed. The honest answer: conjugacy is rare, and the normalising integral in the denominator is intractable the moment the model has more than a couple of parameters — think of a regression with many coefficients, or a hierarchical model over many genes. The conceptual pivot is that we never need the normalised curve; a large sample of draws from the posterior lets us compute any summary we want. That reframing is the whole reason MCMC and Stan exist.
 :::
 
-## What is Stan? {.smaller}
+## Stan samples the posterior of a model you describe {.smaller}
 
 **Stan** is a probabilistic programming language: you *describe* a model, and Stan figures out how to **sample from its posterior**.
 
@@ -102,7 +102,7 @@ Today we write one model **by hand** with `rstan` to see the moving parts, then 
 Define Stan plainly: a language for describing statistical models, plus an engine that samples their posteriors. Stress the division of labour — you specify the model, Stan works out the sampling. Mention that under the hood it compiles to C++ and uses Hamiltonian Monte Carlo (the No-U-Turn Sampler), but do not go into HMC mechanics; the name is enough. The two front-ends matter pedagogically: rstan exposes the anatomy (our teaching goal), while brms hides it behind lm-style formulas they already know. We deliberately do the hand-written version first so the formula shortcut later is demystified, not magic.
 :::
 
-## The anatomy of a Stan model {.smaller}
+## A Stan model is built from named blocks {.smaller}
 
 A Stan model is organised into named **blocks**. The three essential ones:
 
@@ -242,7 +242,7 @@ $$\theta_1, \theta_2, \theta_3, \dots, \theta_{4000} \quad\longrightarrow\quad \
 This is the single most important conceptual slide and worth dwelling on. The output of Bayesian computation is not a point but a sample — a cloud of thousands of plausible theta values whose density reproduces the posterior. Everything downstream is descriptive statistics on that sample: the mean of the draws estimates the posterior mean, and the empirical 2.5%/97.5% quantiles give a 95% credible interval. Contrast a credible interval ("95% probability theta is in here", a direct probability statement) with a frequentist confidence interval, which students learned has a more contorted interpretation — this directness is a selling point of the Bayesian approach. The more draws, the sharper these estimates.
 :::
 
-## Chains, warmup, and convergence {.smaller}
+## Chains that agree are a check on the result {.smaller}
 
 Why **four** chains instead of one long run?
 
@@ -307,7 +307,7 @@ Two numbers tell you whether to **trust** the draws:
 These are the go/no-go gauges and students must build the habit of reading them first. Rhat, the potential scale reduction factor, formalises the four-chains-agree check into one number: at convergence between-chain and within-chain variance match and Rhat is 1; values above ~1.01 signal the chains have not mixed and the summaries are untrustworthy. Effective sample size acknowledges that consecutive MCMC draws are autocorrelated, so the real information content is less than the raw draw count; low n_eff means your posterior summaries are themselves noisy and you should sample more. The discipline to state: check Rhat and n_eff before you ever quote a posterior mean. This mirrors checking model diagnostics before trusting an lm fit.
 :::
 
-## The shortcut: `brms` {.smaller}
+## `brms` writes the Stan model for you {.smaller}
 
 For standard models you rarely hand-write Stan. [`brms`](https://paul-buerkner.github.io/brms/) takes an `lm`-style **formula** and generates the Stan model for you.
 

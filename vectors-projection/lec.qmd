@@ -104,7 +104,7 @@ c(3, 2) + c(1, 4)
 Vector addition is the tip-to-tail rule. The drug example makes it concrete: differences of expression vectors are themselves vectors, and adding them moves you to a new sample. R adds vectors elementwise with plain +, which matches the math exactly — no special function needed.
 :::
 
-## Scaling a vector
+## Scaling changes a vector's length, not its direction
 
 :::: {.columns}
 ::: {.column width="55%"}
@@ -135,7 +135,7 @@ $$2 \cdot \begin{pmatrix} 3 \\ 2 \end{pmatrix} = \begin{pmatrix} 6 \\ 4 \end{pma
 Scaling stretches/shrinks along the same line. The normalisation point is important and previews later material: when we divide each sample by its total counts (or library size) we are rescaling each expression vector. Direction = "what genes are high relative to each other"; length = "overall magnitude / depth".
 :::
 
-## Length of a vector (the norm)
+## A vector's length (norm) comes from Pythagoras
 
 The **length** (or **norm**) of $\mathbf{v}$ comes straight from Pythagoras:
 
@@ -157,7 +157,7 @@ sqrt(sum(v*v))   # same thing
 The norm is just the straight-line distance from the origin to the point — Pythagoras in n dimensions. Students already know Pythagoras, so this is a gentle on-ramp. Unit vectors matter because they isolate direction from size, which is exactly what cosine similarity will exploit in a few slides.
 :::
 
-## The dot product {.smaller}
+## The dot product multiplies matching entries and adds them up {.smaller}
 
 The **dot product** of two vectors multiplies matching components and sums:
 
@@ -181,7 +181,7 @@ u %*% v           # 11 (as a 1x1 matrix)
 Define the dot product mechanically first (multiply-and-add) before any geometry. Make them compute the 11 by hand. Two key facts to plant: (1) the result is a scalar, (2) dotting a vector with itself recovers length-squared, linking back to the previous slide. In R both sum(u*v) and u %*% v work; %*% returns a 1x1 matrix, sum(u*v) returns a plain number.
 :::
 
-## What does the dot product *mean*? {.smaller}
+## The dot product measures how much two vectors point the same way {.smaller}
 
 :::: {.columns}
 ::: {.column width="55%"}
@@ -212,7 +212,7 @@ So the dot product measures **how much two vectors point the same way**, scaled 
 This boxed identity is the conceptual climax. The two definitions — "multiply-and-add" and "lengths times cosine of angle" — are the same number, and that coincidence is what makes linear algebra powerful. Walk through the three cases (aligned, perpendicular, opposite) slowly. The sign of the dot product alone already tells you whether two profiles broadly agree or disagree.
 :::
 
-## Cosine similarity: comparing two samples {.smaller}
+## Cosine similarity compares samples while ignoring sequencing depth {.smaller}
 
 Rearrange the identity to solve for the angle:
 
@@ -233,7 +233,7 @@ cos_sim(c(12,0,7), c(6,0,3.5))   # 1  -> same direction, different depth
 Cosine similarity is THE payoff of the dot product for omics. Emphasise the depth-invariance: scaling a vector does not change its direction, so cosine similarity is unchanged. That is precisely why it is robust to sequencing-depth differences while raw Euclidean distance is not. The worked R example shows two profiles that differ only by a factor of 2 give cosine similarity exactly 1.
 :::
 
-## Orthogonality = a right angle
+## Vectors at a right angle have a dot product of zero
 
 Two vectors are **orthogonal** (perpendicular) when their dot product is zero:
 
@@ -288,7 +288,7 @@ Projection is "drop a perpendicular onto the line through v". Build it in two st
 Live demo; u and v are two cells' profiles over two genes. Start from the "lecture" preset (u = (3,2), v = (1,4)): read off u·v = 3·1 + 2·4 = 11 and point at the green shadow and the dashed perpendicular. Drag v slowly around u: the shadow shrinks, vanishes at 90° (u·v = 0, grey) and flips behind the origin when the angle passes 90° (u·v < 0, red). Click "x-axis shadow" to reproduce the previous slide's R example, (3,3) onto (4,0) gives (3,0). Then the depth slider: k·v is the same cell sequenced k times deeper. Drag k from 1 to 2.5 and back to 0.25 — the distance box jumps around, the cosine box does not move. Ask the room: which of the two would you trust for comparing cells of different depth? Also note the shadow of u stays put when v is rescaled: projection depends only on the direction of v.
 :::
 
-## Why projection matters biologically
+## Regression, batch removal and PCA are all built on projection
 
 - **Regression / deconvolution**: expressing a sample as "so much of profile A plus so much of profile B" is a sequence of projections.
 - **Removing an unwanted axis**: subtract the projection of every sample onto a technical-artifact direction (e.g. a batch effect) to "regress it out".

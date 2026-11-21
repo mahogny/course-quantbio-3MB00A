@@ -34,7 +34,7 @@ This is an **Applications** unit: it reuses **dot products**, **linear models**,
 The single mental shift for today: a spectrum looks like a picture (a wiggly curve), but to a computer it is a list of a few hundred to a few thousand numbers — a point in a high-dimensional space. Once students accept that, every tool from the linear-algebra and stats blocks transfers. Beer–Lambert is the physical reason the maths is linear; preprocessing is the practical reality of real instruments; PLS is the destination. Keep an R session mental-model only — no packages render here, so all code is illustrative. This is "Chemometrics I"; a second unit will go deeper into the multivariate models.
 :::
 
-## A biology picture first {.smaller}
+## Light spectra can measure glucose without sampling {.smaller}
 
 You have a bioreactor of cells and you want to know the **glucose concentration** in the medium — continuously, without pipetting out samples and running an assay every hour.
 
@@ -50,7 +50,7 @@ The task: **read the concentration off the spectrum**. Cheap, fast, non-destruct
 Anchor the abstraction in a concrete measurement problem before any maths. Spectroscopy is attractive to biologists precisely because it is fast and non-destructive: you can monitor a fermentation, grade fruit ripeness, or screen blood without consuming the sample. The catch is that the signal is a superposition of every absorbing species, so you cannot just "read off" glucose — you need to model the mixture. That modelling problem is what makes this a linear-algebra topic. Emphasise the words mixture and weighted by concentration; those two ideas become Beer–Lambert and linear calibration.
 :::
 
-## What is a spectrum? {.smaller}
+## A spectrum is the absorbance at each wavelength {.smaller}
 
 Pass light of many wavelengths through a sample and, for each wavelength $\lambda$, measure how much is absorbed.
 
@@ -89,7 +89,7 @@ Everything from **Vectors and dot products** applies: length, distance, angle, p
 This is the conceptual keystone of the unit. The curve the software draws is just a connect-the-dots of a numeric vector. Re-frame the plot: the horizontal axis (wavelength) indexes the vector's entries, the vertical axis is the entry's value. So a spectrum with 1000 wavelengths is a single point in 1000-dimensional space. This is exactly the high-dimensional setting where geometric intuition helps and where naive methods struggle. Point back to the dot-product unit: cosine similarity between spectra, Euclidean distance for "how different are these two samples" — the machinery is already in their hands.
 :::
 
-## The data matrix {.smaller}
+## Spectra stack into a samples-by-wavelengths matrix {.smaller}
 
 Measure $n$ samples, each on the same grid of $p$ wavelengths. Stack the spectra as **rows**:
 
@@ -111,7 +111,7 @@ matplot(t(X), type = "l")   # overlay all spectra: wavelength on x, absorbance o
 Promote the single spectrum to a dataset. The samples-as-rows, features-as-columns convention is identical to the gene-expression tables they already know, which lowers the barrier. Stress $p \gg n$: this "short and wide" shape is the defining difficulty of chemometrics and the reason ordinary regression fails later. The matplot idiom (transpose so each spectrum is a line) is the standard first look at spectral data; note we transpose because matplot draws columns as lines. Keep the code illustrative — nothing runs at render time.
 :::
 
-## Beer–Lambert law {.smaller}
+## Absorbance is proportional to concentration {.smaller}
 
 For a single absorbing substance, absorbance is **proportional to concentration**:
 
@@ -131,7 +131,7 @@ At a fixed path length, at one wavelength, $A$ is just a **straight line through
 This is the physical law that licenses everything linear we do. State it plainly: absorbance = molar absorptivity × path length × concentration. The proportionality to concentration is the crucial part — it means a calibration line (absorbance against known concentration) is straight, and its slope lets you invert an unknown absorbance back to a concentration. Mention the limits honestly but briefly: Beer–Lambert holds for dilute, non-scattering samples; at high concentration or with scattering it bends. That caveat motivates preprocessing later. Do not derive it from first principles; take it as the empirical law it is used as.
 :::
 
-## Mixtures add up {.smaller}
+## A mixture spectrum is a weighted sum of pure spectra {.smaller}
 
 Real samples contain **many** absorbing species. At each wavelength, their absorbances simply **add**:
 
@@ -152,7 +152,7 @@ $$\mathbf{x} = c_1\mathbf{s}_1 + c_2\mathbf{s}_2 + \dots + c_k\mathbf{s}_k$$
 This slide is the bridge from physics to linear algebra. Because absorbances are additive, a mixture spectrum is a weighted sum of the pure spectra — a linear combination, the central operation of the whole linear-algebra block. Read the vector equation aloud: the observed spectrum lives in the span of the pure-component spectra, and the concentrations are the coefficients. If you knew all pure spectra you could in principle solve for concentrations directly (a linear system). In practice you rarely know them all, which is why data-driven calibration (fit coefficients from samples with known concentrations) wins. This additivity is why linear methods dominate chemometrics.
 :::
 
-## Why raw spectra can't be used directly {.smaller}
+## Raw spectra carry artefacts unrelated to chemistry {.smaller}
 
 Beer–Lambert is clean; real instruments and samples are not. Raw spectra carry artefacts unrelated to chemistry:
 
@@ -258,7 +258,7 @@ X_d1 <- t(apply(X, 1, diff))      # one column shorter than X
 Derivatives are a clever two-for-one: they attack baselines and resolve overlap at once. The differentiation logic is worth stating explicitly — d/dλ of a constant offset is zero, so a first derivative is blind to constant baselines; a second derivative additionally kills any linear slope. And because a broad hump made of two overlapping bands has structure in its curvature, the second derivative separates them into distinct features. The catch is noise amplification: differencing noisy data makes it noisier, so derivatives are always computed with a smoothing polynomial (Savitzky–Golay), never as a raw difference in serious work. The diff() line is the toy version. Emphasise: derivative order and smoothing window are joint choices.
 :::
 
-## The calibration problem {.smaller}
+## Calibration predicts concentration from a spectrum {.smaller}
 
 We have $n$ **calibration samples** with spectra (matrix $X$, $n \times p$) *and* known reference concentrations (vector $\mathbf{y}$, measured by a slow gold-standard assay).
 
@@ -277,7 +277,7 @@ $$\hat{y} = b_0 + b_1 x_1 + b_2 x_2 + \dots + b_p x_p = b_0 + \mathbf{b}\cdot\ma
 Frame the supervised problem cleanly. You pay once for a set of samples measured both ways — fast spectrum and slow reference assay — and use them to learn a predictor, after which only the cheap spectrum is needed. Because Beer–Lambert makes concentration linear in absorbance, a linear predictor is principled, not just convenient. Highlight that the model is entirely a coefficient vector b plus an intercept, and that prediction is the dot product from the vectors unit. This connects the whole preprocessing pipeline to a familiar regression target. The next slide explains why we cannot just call lm() on this.
 :::
 
-## Why ordinary regression breaks {.smaller}
+## Many correlated wavelengths break ordinary least squares {.smaller}
 
 Ordinary least squares needs to invert $X^\top X$ (a $p\times p$ matrix). On spectra it fails on **two** counts:
 
@@ -292,7 +292,7 @@ We need a method that works when predictors are **many and correlated**. The ide
 Explain the failure concretely so PLS feels necessary, not arbitrary. Two distinct problems: dimensionality (more wavelengths than samples makes the normal equations singular — recall singular matrices from the linear-systems unit) and collinearity (neighbouring wavelengths carry nearly the same information, so the design matrix is ill-conditioned). Both make plain ordinary least squares coefficients meaningless — huge, unstable, over-fitted. The resolution is dimension reduction: instead of one weight per wavelength, first find a handful of informative combinations of wavelengths, then regress on those. This is exactly the principal-component idea, and it sets up PLS on the next slide.
 :::
 
-## From spectra to a few components {.smaller}
+## PLS picks components that track concentration {.smaller}
 
 Reduce the $p$ correlated wavelengths to a few **latent variables** — weighted combinations of wavelengths — then regress on those.
 
@@ -307,7 +307,7 @@ PLS is the **workhorse of chemometric calibration** because it aims its componen
 Position both dimension-reduction regressions side by side. PCR is the honest first idea: compress with PCA, regress on the scores — it fixes the singularity and collinearity problems in one move. Its weakness is that PCA looks only at X, so its leading components maximise total spectral variance, which may be dominated by water or scattering rather than the analyte. PLS repairs this by letting the response y steer the components: each latent variable is chosen to have high covariance with y, not just high variance in X. That is the one-sentence distinction to drill. Reference the PCA unit explicitly since students meet PCA there; PLS is PCA's supervised cousin.
 :::
 
-## Partial Least Squares, in words {.smaller}
+## PLS builds components one at a time {.smaller}
 
 PLS builds a **small number of latent variables** (components), one at a time:
 
@@ -351,7 +351,7 @@ predict(fit, newdata = new_df, ncomp = 4)
 Show the standard tooling so students know the real workflow exists, while keeping every line illustrative. The pls package's plsr() with validation = "CV" does the heavy lifting; validationplot with RMSEP is the canonical way to choose the number of components — you look for the elbow where adding components stops lowering cross-validated error and resist going further to avoid overfitting. Reinforce that preprocessing (the four earlier steps) happens before this and is itself part of what you validate. The biological payoff: once fit, predict() turns a two-second spectrum into a concentration, replacing a slow wet assay. Chemometrics II will treat the model and validation more carefully.
 :::
 
-## It was linear algebra all along {.smaller}
+## Every step here reuses a linear-algebra idea {.smaller}
 
 | Chemometrics idea | Course concept |
 |---|---|

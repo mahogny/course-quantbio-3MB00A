@@ -70,7 +70,7 @@ The model does not know which is which — *you* decide by how you interpret the
 The interest-vs-nuisance distinction is conceptual, not mathematical: the fitting procedure treats all predictors symmetrically. What differs is which coefficient you report and which you treat as "just cleaning up". Batch is the archetypal nuisance covariate in omics — students have all seen batch effects. Stress that "covariate" is an umbrella term; in some fields people reserve it for continuous nuisance variables, but here we use it for anything extra we add to the model.
 :::
 
-## The model formula {.smaller}
+## An R formula lists the outcome and the predictors {.smaller}
 
 R describes a model with a **formula**: outcome on the left, predictors on the right.
 
@@ -95,7 +95,7 @@ With one predictor this is the line $y = a + bx$ from Fitting equations: $\beta_
 Formulas are the interface students will actually type, so anchor here. The `+` means "also include this term", not arithmetic addition of the columns. Read each example aloud in words. The linear predictor is the same beta-dot-x you have seen throughout the course; a formula is a compact way to specify it. lm(), DESeq2 and limma all take this same syntax — learn it once. "Holding the others fixed" is unpacked properly in the Confounding deck; flag it now.
 :::
 
-## From formula to design matrix $X$ {.smaller}
+## A formula is a recipe for the design matrix {.smaller}
 
 A formula is a **recipe for building a matrix**. The outcome is $\mathbf{y}$; the predictors become the columns of the **design matrix** $X$:
 
@@ -191,7 +191,7 @@ By default R picks the reference level **alphabetically** (`F` before `M`, `ctrl
 This is where most confusion lives. A factor with k levels becomes k-1 dummy columns plus the intercept; you never get a column for the reference level because it is the baseline the others are measured against. The coefficient sexM is not "the effect of being male in absolute terms" — it is the difference from the reference (female). The alphabetical default silently makes "ctrl" the reference for treatment, which is usually what you want, but warn them to check: if levels were "drug" and "placebo", placebo would NOT be the reference. relevel() or factor(levels=...) fixes it. Why no column for F as well? That is the dummy-variable trap, later today.
 :::
 
-## One factor: coefficients are group means {.smaller}
+## One factor: a reference mean plus differences {.smaller}
 
 `expr ~ treatment` with 2 controls and 2 treated mice. Only **two distinct rows** exist:
 
@@ -319,7 +319,7 @@ Then the columns are `time6h` (6 h − 0 h) and `time24h` (24 h − 0 h), and 0 
 A practical trap that bites in every time-course experiment. "24h" sorts before "6h" because the character "2" comes before "6". With 0h present the reference happens to stay 0h, but the columns come out in a confusing order; with no 0h the reference silently becomes the wrong time point. The fix is one line: set levels explicitly. Same for doses like "10mg" and "5mg".
 :::
 
-## Time as a factor, or as a number? {.smaller}
+## Time as a factor allows any shape, not just a line {.smaller}
 
 ![](fig15-time-factor-vs-slope.svg){width="72%" fig-align="center"}
 
@@ -331,7 +331,7 @@ A practical trap that bites in every time-course experiment. "24h" sorts before 
 The same covariate can be coded two ways, and the choice changes X. As a factor it costs one column per extra time point but makes no assumption about shape. As a number it costs one column but assumes a constant rate of change per hour. In the figure the truth rises and falls, so the slope model averages it away. For age and BMI, a slope is usually the sensible choice; for 3 to 4 time points after a stimulus, a factor usually is.
 :::
 
-## An interaction column: product of dummies {.smaller}
+## An interaction lets the treatment effect differ by sex {.smaller}
 
 `expr ~ treatment * sex` expands to `treatment + sex + treatment:sex`. The new column is the **product** of the two dummies — it is 1 only for treated males. With $\boldsymbol\beta = (5,\ 2,\ 1,\ 3)$:
 
@@ -377,7 +377,7 @@ A treated male aged 40 in batch C has the row $(1,\ 1,\ 0,\ 1,\ 40,\ 1)$.
 This is the checklist to memorise. Counting columns matters because the number of columns p has to be compared with the number of samples n, and because each column costs data. Writing the row for one described sample is quick: walk through the columns in order. Remind them that the column order follows the formula order.
 :::
 
-## Does $\boldsymbol\beta$ have a unique answer? {.smaller}
+## $\boldsymbol\beta$ is unique only if the columns of $X$ are independent {.smaller}
 
 Fitting = solving $\mathbf y \approx X\boldsymbol\beta$ for $\boldsymbol\beta$ — a linear system, so the trichotomy from **Linear systems in R** applies: **one**, **none**, or **infinitely many**.
 
@@ -403,7 +403,7 @@ This is the link back to Linear systems in R: rank, singular systems, zero/one/i
 Three patterns cover almost every real case. The dummy trap is why R drops the reference level: k levels plus an intercept would be k + 1 columns carrying only k pieces of information. The batch case is the one that ruins real experiments: if batch and treatment are identical, no software can tell a batch effect from a drug effect. The empty cell is subtle: the interaction asks "how does the treatment effect differ in males?", but there is no treated male to answer it, so the column carries nothing. To spot a dependence, look for a column equal to another column, a sum of others, or all zeros.
 :::
 
-## Why "infinitely many": batch = treatment {.smaller}
+## Batch equal to treatment: effects cannot be separated {.smaller}
 
 :::: {.columns}
 ::: {.column width="62%"}
@@ -451,7 +451,7 @@ What to change when $\boldsymbol\beta$ is not unique:
 Two kinds of fixes. Some dependencies are a coding mistake and are fixed by removing a column — R already does this for the dummy trap. Others are a design mistake and cannot be fixed afterwards: if all treated samples went into one sequencing run, the experiment has to be redone with a balanced layout. The partly confounded middle panel uses the same counts as the Simpson's paradox example in the next deck, which is the cue to go there.
 :::
 
-## More columns than samples: $p > n$ {.smaller}
+## More columns than samples gives no unique answer {.smaller}
 
 $X$ has $n$ rows. With $n$ rows, at most $n$ columns can be independent, so if $p > n$ the columns **must** be dependent. Simplest case: a line $y = a + bx$ has $p = 2$ columns (intercept and $x$):
 

@@ -54,7 +54,7 @@ This is an **applications and vocabulary** day, built on the machinery from *PCA
 [REVIEW] Confirm this list. Keep learning objectives at the level of "can explain and set up", not "can derive"; the derivations live in PCA and the eigen units; this day is about applying and validating.
 :::
 
-## Why a biologist should care {.smaller}
+## Spectra are fast, cheap stand-ins for lab assays {.smaller}
 
 Spectroscopy gives a **fast, cheap, often non-destructive** read-out that stands in for a slow wet-lab assay. Some recurring biological uses:
 
@@ -70,7 +70,7 @@ In every case the raw signal is **many correlated numbers per sample**, and the 
 [REVIEW] Replace these with the lab's actual application areas and one real example spectrum. Keep the framing: the measured object is a curve/vector, the biological target is a scalar or a label. This is the method-biology pairing for the whole unit.
 :::
 
-## The data shape: wide and collinear {.smaller}
+## Wide, correlated spectra break ordinary least squares {.smaller}
 
 Stack $n$ samples, each measured at $p$ wavelengths, into a matrix $X$ ($n \times p$), with a target $\mathbf{y}$ (a property to predict, or a class):
 
@@ -89,7 +89,7 @@ Ordinary least squares (`lm`) **breaks** here: with $p \gg n$ and collinear colu
 [REVIEW] Tie back explicitly to the singular / non-invertible discussion in the Linear systems and PCA units — students met "no unique solution" there. The punchline: chemometrics is largely the art of regressing/classifying when the classical assumptions (n > p, independent predictors) fail. Verify the p >> n framing matches the datasets you plan to use; for some metabolomics setups n and p are closer.
 :::
 
-## Preprocessing comes first {.smaller}
+## Fix preprocessing on the training data only {.smaller}
 
 Raw spectra carry nuisance variation — scatter, baseline drift, path-length differences — that has nothing to do with the biology. Standard **preprocessing** steps (named here for recognition; details belong to *Chemometrics I* / an expert pass):
 
@@ -107,7 +107,7 @@ Preprocessing choices are **part of the model**. They must be **decided on the t
 [REVIEW] This slide is deliberately a checklist, not a tutorial. An expert should expand each item and, crucially, warn about the leakage trap: choosing preprocessing by peeking at validation performance inflates optimism. The centering/scaling point connects to mean-centering in PCA.
 :::
 
-## Two questions, two model families {.smaller}
+## Spectra answer either "how much?" or "which group?" {.smaller}
 
 Almost every spectral application is one of two supervised tasks:
 
@@ -129,7 +129,7 @@ We take them in turn.
 [REVIEW] Confirm the method lists are the ones the course wants to name. PLS regression and PLS-DA are the workhorses; PCR, LDA, SIMCA, kNN are worth naming for recognition. Do not over-promise depth — these are named, not derived, in a draft. The shared idea (latent projection) is the throughline from PCA / OPLS.
 :::
 
-## Multivariate calibration (regression) {.smaller}
+## PLS calibration aims its components at the target {.smaller}
 
 **Goal:** predict a continuous property $y$ (e.g. concentration) from a spectrum $\mathbf{x}$.
 
@@ -176,7 +176,7 @@ The single most important decision is **how many components** to keep — too fe
 [REVIEW] Keep this as a sketch; an expert should replace `train`/`test` with a real dataset and show a real RMSEP curve. Do not present the number 4 or 10 as meaningful — they are placeholders illustrating the workflow. Emphasise verbally that ncomp is the tuning knob everything hinges on.
 :::
 
-## Choosing model complexity {.smaller}
+## Too few components underfit; too many fit noise {.smaller}
 
 Every latent-variable model has a **complexity dial**: the number of components (latent variables) kept.
 
@@ -191,7 +191,7 @@ The training-set error alone **cannot** tell you where to stop — it always imp
 [REVIEW] This is the conceptual core of the day and should survive expert review largely intact. The bias-variance trade-off framed as "components dial". Students have seen overfitting informally; here it is tied to a concrete knob. The figure is the classic two-curve plot.
 :::
 
-## Validation: why a test set is non-negotiable {.smaller}
+## Only untouched test samples show real performance {.smaller}
 
 A model that has *seen* a sample can predict it well — that proves nothing about future samples.
 
@@ -210,7 +210,7 @@ The honest workflow: **train** to fit, **validate** to tune, **test** once to re
 [REVIEW] Hammer the leakage point; it is the most common real-world mistake. If the dataset is small, a single held-out test set is noisy — nested cross-validation is the rigorous answer, which an expert may want to add. Keep the three-way split language (train/validate/test) consistent with whatever the ML-adjacent units use.
 :::
 
-## Cross-validation {.smaller}
+## Each sample is predicted by a model that never saw it {.smaller}
 
 When data are scarce, holding out one fixed test set wastes samples. **$k$-fold cross-validation** reuses them:
 
@@ -228,7 +228,7 @@ When data are scarce, holding out one fixed test set wastes samples. **$k$-fold 
 [REVIEW] The correlated-samples warning matters a lot in practice (replicates, batches, time-adjacent scans) and an expert should sharpen it — naive random folds leak information and give too-rosy CV error. "Venetian blinds" and contiguous-block schemes are worth naming for someone who knows the field.
 :::
 
-## RMSEP and friends {.smaller}
+## RMSEP gives prediction error in the target's units {.smaller}
 
 The standard regression error is the **root-mean-square error of prediction**:
 
@@ -250,7 +250,7 @@ Pick the component count that **minimises RMSECV** (or the simplest model within
 [REVIEW] Formula is standard; confirm the department's preferred definition (some use n-1 or degrees-of-freedom corrections, some report SEP separately from bias). The "simplest model within one SE of the minimum" is a defensible default but an expert should confirm it is the convention taught elsewhere in the course. Units-of-y point is the intuition anchor.
 :::
 
-## Classification of spectra {.smaller}
+## Classification uses the same components and validation {.smaller}
 
 **Goal:** assign each spectrum to a class — tissue type, disease vs control, species of a microbial isolate, pass/fail.
 
@@ -269,7 +269,7 @@ Validate with the **same discipline**: cross-validated **misclassification rate*
 [REVIEW] Method roster to confirm. SIMCA's "none of the above" ability is genuinely useful for biology (novel/contaminant samples) and worth keeping. For imbalanced classes, plain accuracy misleads — an expert should add the caveat and preferred metrics. Cross-validation caveats from the previous slides apply identically.
 :::
 
-## Calibration transfer {.smaller}
+## A model may need adjusting for a new instrument {.smaller}
 
 A model calibrated on **instrument A** often **fails on instrument B** — different detector, different day, different temperature — because the *same sample* produces a slightly *different spectrum*.
 
@@ -287,7 +287,7 @@ For a biologist this is the difference between a model that lives only in the la
 [REVIEW] This is a genuine expert topic — DS/PDS details, robustness, and how many standardisation samples are needed all need a specialist. Keep the biological framing (portability of a model) as the motivation. Do not state specific sample counts or performance figures; none here are sourced.
 :::
 
-## Multivariate process / quality control {.smaller}
+## Two distance scores flag unusual samples {.smaller}
 
 Once a good latent-variable model exists, use it to **monitor** a process or screen samples in real time — *multivariate statistical process control (MSPC)*.
 
@@ -304,7 +304,7 @@ Plot these on **control charts** with limits; a point past a limit flags a sampl
 [REVIEW] T^2-vs-Q is the standard MSPC pairing and maps cleanly onto "distance within the model" vs "distance to the model". Control-limit derivations (distributional assumptions) need an expert; state them only qualitatively here. Biology hook: fermentation/bioprocess monitoring, or QC screening of incoming samples.
 :::
 
-## Variable selection {.smaller}
+## Select wavelengths inside cross-validation {.smaller}
 
 Spectra have hundreds of channels, but often only some carry the relevant signal. **Selecting variables** (wavelengths) can:
 

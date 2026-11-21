@@ -54,7 +54,7 @@ You met the same thing in *Bulk RNA-seq with DESeq2*: the noise depends on the c
 Anchor everything in a concrete count table before any distribution theory. The key observation students should feel: the group with the higher mean also has the higher spread. For counts this is not a nuisance to be scrubbed away — it is a law (Poisson: variance equals mean). So the standard t-test / Gaussian assumption of one common variance is violated from the start. This motivates the whole lecture: count data has its own error model. Link back to the bulk day: there the same fact showed up as the MA-plot fan (low counts give noisy ratios). Do not resolve the example yet; the payoff (Poisson, then negative binomial, then why it matters for the test) comes over the next slides.
 :::
 
-## What is an error model? {.smaller}
+## An error model is the assumed distribution of noise {.smaller}
 
 A measurement is **signal + noise**. The error model is the probability distribution you assume for the noise — equivalently, the distribution the data are drawn from given the underlying truth.
 
@@ -72,7 +72,7 @@ $$\text{data} \sim \text{Distribution}(\text{parameters})$$
 Make the abstraction explicit: whenever you compute a p-value or fit a curve, a distribution is assumed in the background. `lm` assumes Gaussian residuals; a Poisson GLM assumes Poisson counts. The likelihood is just this distribution read as a function of the parameters for fixed data — the same thing that, times the prior, gave the posterior in Bayesian vs frequentist. Today we stay frequentist-flavoured and focus only on *picking* the distribution. The recurring question for the rest of the lecture: what does my data type look like — continuous? counts? waiting times? — and which named distribution has that shape?
 :::
 
-## Gaussian: continuous measurements {.smaller}
+## Gaussian spread does not depend on the mean {.smaller}
 
 The **Gaussian** (normal) distribution fits measurements that are **continuous** and scatter **symmetrically** around a mean: the familiar bell.
 
@@ -105,7 +105,7 @@ A distribution built for counts should be discrete, non-negative, and let varian
 List the three ways count data violates Gaussian assumptions so students can recognise count data in the wild. The third point is the deepest and the one earlier stats courses rarely stress: for counts the variance is not a free parameter, it is welded to the mean. This is why you cannot just pool a single variance across genes of very different expression, and why naive constant-variance methods misbehave. The new bullet reconciles this with the bulk day: absolute spread grows with the mean, but relative spread (root n over n) shrinks, which is why ratios of small counts were noisy there. The next slide introduces the distribution that has exactly these properties baked in.
 :::
 
-## Poisson: the count distribution {.smaller}
+## Poisson counts have variance equal to their mean {.smaller}
 
 The **Poisson** distribution models the **number of independent events in a fixed window** (of time, of genome, of sequencing depth), when events happen at a constant average rate.
 
@@ -135,7 +135,7 @@ A gene gets on average 3 reads per sample: read the bars. In R, `dpois(0:8, 3)` 
 Frame it as reads: each 1-Mb window is "one sample", and on average 3 events fall in it. The strip at the top shows the first 10 Mb with the count written over each window; the histogram collects all 2000 windows. Read two bars aloud: about 5% of windows have 0 events (5.2% in this draw; dpois says 0.050) and about 22% have exactly 3 (22.8%; dpois says 0.224). The red dots are the Poisson probabilities, the same numbers dpois(0:8, 3) prints, so nobody needs the formula. The header shows mean 3.01 and variance 3.01: mean = variance, the Poisson signature, checked on simulated data. Point at the shape: piled up near zero with a tail to the right, nothing like a symmetric bell. Then drag the rate to 0.5 (mostly zeros, very skewed) and to 10 (more symmetric, wider). "Draw again" shows the bars wobble around the dots. This mean = variance check is exactly the diagnostic students will apply to real data to decide whether Poisson is adequate. In R: rpois(1e5, 3) simulates such counts; mean and var of the result both land near 3.
 :::
 
-## Where Poisson comes from: rare events {.smaller}
+## Many rare, independent events give Poisson counts {.smaller}
 
 Poisson is what you get from **many independent chances, each very unlikely**.
 
@@ -152,7 +152,7 @@ This same "stream of random events" also has a **waiting-time** description — 
 Give the mechanistic justification so Poisson is not a distribution pulled from a hat: a huge number of chances, each unlikely, expected count fixed. Sequencing is the textbook instance — millions of reads, a minuscule chance per gene. (The formal statement, a binomial limit, is on the optional maths slide.) Under idealised independence, counts are therefore Poisson; the fact that real data exceed Poisson variance (overdispersion) is a signal that some assumption — usually the same rate in every sample — is violated, which we reach shortly. End by teeing up the dual view: the same event stream, described by the gaps between events instead of the count, gives the exponential distribution.
 :::
 
-## Exponential: waiting times {.smaller}
+## Waiting times between random events are exponential {.smaller}
 
 The **exponential** distribution models the **waiting time** (or distance) until the next event, in a stream of random events at rate $\lambda$.
 
@@ -169,7 +169,7 @@ Biology: time between action-potential spikes, intervals between mutations along
 Exponential is the continuous partner to Poisson: Poisson counts events, exponential measures the gaps between them. Stress it is continuous and non-negative — a duration or a distance, never a count. One number to remember: the mean gap is 1 over the rate (2 per Mb, so 0.5 Mb apart on average). The memoryless property is the striking feature: an exponential process has no ageing; two slides on, the demo shows it. Biological examples worth naming: inter-spike intervals in neurons, spacing of mutations along a chromosome, dwell times of a molecule bound to DNA. The density formula and a worked tail probability are on the optional maths slide. The rate is the same rate as in the Poisson when both describe one underlying process — the next slide shows that.
 :::
 
-## Two views of one process {.smaller}
+## One process: counts are Poisson, gaps are exponential {.smaller}
 
 ```{=html}
 <link rel="stylesheet" href="../demos/dist/demo.css">
@@ -183,7 +183,7 @@ One stream of mutations: **count per window → Poisson** (mean = rate), **gap t
 This is the unifying slide. The strip is a 2000-Mb genome with mutations at 2 per Mb, first 10 Mb shown: ticks are mutations, the shaded windows carry their counts above, the coloured bars below are the gaps. Left: counts in 1-Mb windows, 4077 mutations in all, mean 2.04 and variance 2.00 — about equal, and the bars sit on the Poisson dots. Right: the gaps, mean 0.49 Mb, about 1/rate = 0.5; most gaps are short, long ones rarer, following the exponential curve. Same random events, two questions: if you tallied events per fixed interval you have counts and use Poisson; if you recorded the distance between consecutive events you have gaps and use exponential. Drag the rate up: counts move right, gaps get shorter (mean 1/rate). Change the window to 2 Mb: the counts double (Poisson with mean rate × window), the gaps do not change. The distinction is about the measurement, not the phenomenon — the same neuron gives Poisson spike counts per second or exponential inter-spike intervals depending on what you logged. Getting students to ask "did I measure a count or a gap?" is the transferable skill.
 :::
 
-## Memoryless: the wait does not age {.smaller}
+## Waiting longer does not bring the next event closer {.smaller}
 
 ```{=html}
 <div data-demo="poissonprocess" data-rate="2" data-window="1" data-view="gaps" data-memoryless="on"></div>
@@ -195,7 +195,7 @@ Keep only gaps longer than 0.5 Mb and look at what is left after 0.5: it looks j
 Same 2000-Mb genome, gaps only, with "memoryless" ticked. The demo takes every gap longer than "already waited" (0.5 Mb) and plots how much of it is left beyond 0.5. Header: 35% of the gaps are longer than 0.5 Mb, and what is left has mean 0.50 Mb — the same as all gaps (0.49). The outline (all gaps) and the filled bars (wait left) match. In words: having already gone 0.5 Mb without a mutation tells you nothing about how much further you have to go. For a protein bound to DNA: having stayed 4 s does not make it more likely to let go now. Drag "already waited" up to 1 or 1.5: fewer gaps qualify, the leftover still looks the same. Contrast with a bus timetable or a cell cycle, where waiting longer does make the event closer — those are not exponential. The clumped switch, a few slides on, breaks this.
 :::
 
-## When events clump {.smaller}
+## Clumped events make counts vary more than Poisson {.smaller}
 
 ```{=html}
 <div data-demo="poissonprocess" data-rate="2" data-window="1" data-view="both" data-clumped="on"></div>
@@ -225,7 +225,7 @@ Extra variation in $\lambda$ adds variance **on top of** the Poisson counting no
 This is the single most important practical fact for genomics count analysis. Poisson is the floor of variability — pure counting noise assuming a fixed rate. Real biological replicates carry additional variation because the rate itself fluctuates between samples (genetics, environment, cell state, batch). Letting the rate vary inflates the variance above the mean, just as the bursts did in the demo. The classic distinction: technical replicates (same sample resequenced) can be near-Poisson; biological replicates (different organisms/cultures) are overdispersed. Any method that assumes Poisson for biological replicates will understate the true variability — the consequence, quantified a few slides on, is too many false positives.
 :::
 
-## Negative binomial: overdispersed counts {.smaller}
+## The negative binomial allows extra spread in counts {.smaller}
 
 The **negative binomial (NB)** is a count distribution with a **separate** dispersion knob, letting variance exceed the mean.
 
@@ -258,7 +258,7 @@ NB is the fix for overdispersion: it is Poisson plus a dispersion parameter phi 
 The histogram is 1000 simulated counts (think: reads of one gene in 1000 cells) from a negative binomial with mean mu and dispersion phi, in this lecture's convention Var = mu + phi mu^2; the red dots are the NB probabilities, the dashed blue outline the Poisson with the same mean. Start at mu = 50, phi = 0.5 (exercise B5): the counts spread from near 0 to several hundred while the Poisson is a narrow bump around 50; the table shows theory and sample side by side, variance 1300, var/mean 26. Click "Poisson": phi = 0, histogram and dashed outline coincide, var/mean = 1. Then "mild" and "strong (many zeros)": the histogram flattens, piles up at zero (watch the zero count in the corner; the Poisson would give none) and grows a long right tail, while the mean stays at 50. "Low mean" with strong overdispersion shows the zero spike most clearly. "Draw again" shows that the sample variance jumps around much more than the sample mean. If time allows, tick the mean–variance plot: the Poisson line var = mu and the NB curve bending away above it — overdispersion grows with the mean.
 :::
 
-## Why the wrong model misleads {.smaller}
+## Too little assumed variance gives false positives {.smaller}
 
 Using an error model whose variance is **too small** makes you **overconfident** — you declare differences "significant" that are just noise.
 
@@ -282,7 +282,7 @@ Right shape, right conclusions. **The error model is not a technicality — it s
 This is the "so what". The direction of the error matters: assuming too little variance makes you anti-conservative — p-values shrink, and you call noise as signal. Poisson-on-biological-replicates is the canonical mistake, and it is why the field moved to negative binomial methods. The R makes it visceral: Poisson(50) has variance ~50; NB with the same mean and phi = 0.5 has variance about 1300, the number from the negative binomial slide and the demo. A Poisson test on the NB data would treat that huge spread as if it were only 50, and every borderline gene becomes a false positive. The size = 1/phi in the code is just R's spelling of the same knob; no need to dwell on it. Land the closing line: choosing the error model directly controls how many false discoveries you make.
 :::
 
-## Choosing the error model {.smaller}
+## Choose the error model from the data type {.smaller}
 
 Match the **data type** to the distribution:
 

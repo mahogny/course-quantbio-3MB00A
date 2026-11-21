@@ -52,7 +52,7 @@ That is precisely what PCA delivers. The first axis is the single direction alon
 Ground the abstraction in a real omics shape before any math: a samples-by-genes matrix that is far too wide to visualise. The biological bet behind PCA is that the thousands of measured genes are not independent — they are driven by a handful of coordinated programs, so the true dimensionality is small. PCA finds those few dominant directions. Emphasise the two payoffs students will get today: (1) a 2D picture that separates sample groups, and (2) the loadings, which name the genes responsible. This dual payoff — a map plus its legend — is the whole reason PCA is the first thing biologists run on a new dataset.
 :::
 
-## What PCA is, in one picture {.smaller}
+## PCA rotates the axes to line up with the data cloud {.smaller}
 
 Think of the data cloud from Eigenvalues & eigenvectors: samples plotted in gene-space form a tilted, elongated blob.
 
@@ -191,7 +191,7 @@ $$\text{scores} = X_{\text{centered, scaled}} \cdot \text{rotation}$$
 Scores answer where does each sample land on the new axes. Each sample's PC1 score is its position along the direction of greatest variation. Here the PC1 scores march monotonically from sample1 to sample4, recovering exactly the trend built into the toy data. Make the projection explicit: scores equal the preprocessed data matrix times the rotation matrix — a change of basis, the same matrix-times-vector operation from the linear algebra block. This is the object we visualise: a plot of PC1 vs PC2 scores is the map that separates sample groups. Rotation is the legend (genes), scores are the map (samples); students should keep the two straight.
 :::
 
-## The plot that starts every omics analysis {.smaller}
+## Plot PC1 against PC2 to see how samples group {.smaller}
 
 Plot **PC1 score vs PC2 score**, one point per sample. This 2D map often reveals the group structure hidden in thousands of genes.
 
@@ -218,7 +218,7 @@ If groups separate along PC1, then PC1's **loadings** name the genes that distin
 This slide is the practical climax. Every RNA-seq or single-cell analysis begins with a PC1-vs-PC2 scatter because it is the fastest sanity check and discovery tool at once. Axis labels should always carry the percent variance explained (from the sdev slide) so viewers know how much of the story each axis tells. The real move is colouring points by a known metadata label and asking: do my biological groups separate? If yes along PC1, you immediately jump to PC1's loadings to get the gene list — closing the loop from map to mechanism. Also flag the diagnostic use: if samples separate by batch or by which day they were processed rather than by biology, PCA just caught a confounder. Keep the code base-R and simple.
 :::
 
-## The biplot: scores and loadings together {.smaller}
+## A biplot links sample groups to the genes behind them {.smaller}
 
 A **biplot** overlays the two things we have been reading — sample **scores** (points) and gene **loadings** (arrows) — on one PC1–PC2 picture.
 
@@ -262,7 +262,7 @@ e$vectors        # eigenvectors == columns of pca$rotation (up to sign)
 This slide pays off the promise that PCA is not a new black box. Show the equivalence concretely: scale the data yourself, form the covariance matrix (which for scaled data equals the correlation matrix), and call eigen on it — the eigenvalues match pca$sdev squared and the eigenvectors match pca$rotation up to sign. Emphasise that scale() and cov() reproduce exactly prcomp's internal preprocessing. Two honest footnotes for the curious: prcomp actually uses the SVD of the data matrix rather than forming the covariance explicitly (numerically better), but the result is identical; and the eigenvalues here match sdev^2 exactly because cov uses the n-1 denominator, the same convention prcomp uses. The point for students: everything they proved by hand about symmetric matrices governs PCA.
 :::
 
-## Why centering is not optional {.smaller}
+## Without centering, PC1 points at the mean, not the spread {.smaller}
 
 PCA finds directions of **variation around the mean**. If you skip centering, "variation" is measured from the **origin** instead — and PC1 will chase the mean position of the cloud, not its shape.
 
@@ -277,7 +277,7 @@ $$\text{centered value} = x_{ij} - \overline{x_{\cdot j}}\quad(\text{subtract ge
 Centering is conceptually mandatory because variance is defined as spread about the mean; measuring spread about the origin conflates the mean with the variation and PC1 ends up pointing at the centroid. The count-data example makes it vivid: a highly expressed housekeeping gene sits far from zero, so an uncentered analysis wastes PC1 on that constant offset. prcomp defaults center to TRUE, so students rarely need to change it, but they must understand why it is there. Contrast with scaling, the next slide, which is a genuine judgement call. Keep the formula trivial: subtract each column's mean.
 :::
 
-## Why scaling usually matters {.smaller}
+## Without scaling, genes with big numbers dominate PC1 {.smaller}
 
 `scale. = TRUE` divides each gene by its standard deviation, so every gene contributes on an **equal footing**.
 

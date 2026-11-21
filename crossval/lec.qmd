@@ -64,7 +64,7 @@ This lecture is the machinery that would have caught both problems *before* publ
 This $p \gg n$ setting (20,000 features, 80 samples) is the canonical omics trap and exactly where penalties matter. With far more genes than patients you can *always* fit the training data perfectly, so a good-looking fit means nothing on its own. Two failures are bundled here: (1) $\lambda$ chosen to look good on the training data, and (2) performance reported on training data. CV fixes the first; a held-out test set fixes the second. Keep coming back to this 80-patient example through the lecture.
 :::
 
-## Training error always lies {.smaller}
+## Training error is always too optimistic {.smaller}
 
 Fit flexibility (here: *less* shrinkage, smaller $\lambda$) against error:
 
@@ -83,7 +83,7 @@ We cannot see the "new data" curve directly — so we **simulate having new data
 The bias–variance decomposition is the theoretical backbone; keep it light — one line, one picture, read as words. Students already played with the biasvar demo in the penalized-intro unit (training error 0.23 vs test error 1.66 at lambda 0.001, test error bottoming out at 0.68 near lambda 0.79); just remind them of it rather than re-running it. Give them a reflex: always compare training error to CV error, and a large gap means turn lambda up. The message students must leave with: a number computed on the data you fit on is not evidence. The U-shape of test error is why there is an optimal $\lambda$ in the middle — too much shrinkage underfits (high bias), too little overfits (high variance). CV is literally a way to draw that U-shaped curve using only the data you have.
 :::
 
-## The one honest idea: hold data out {.smaller}
+## Test a model only on data it never saw {.smaller}
 
 If you want to know how a model does on data it has **never seen**, then evaluate it on data it has never seen.
 
@@ -116,7 +116,7 @@ A single train/test split has two problems:
 Motivate k-fold as the cure for the two weaknesses of a single split. The small-$n$ point is deeply biological: recruiting 80 patients is expensive, so throwing away a quarter of them for one test is painful. Rotating the fold means every patient contributes to both training and testing (never simultaneously), so we use the data efficiently and average away the "unlucky split" noise.
 :::
 
-## k-fold cross-validation {.smaller}
+## k-fold cross-validation tests every sample once {.smaller}
 
 Split the samples into $k$ equal **folds** (typically $k = 5$ or $10$). Then, $k$ times:
 
@@ -211,7 +211,7 @@ p_new <- predict(cvfit, newx = x_new,
 Tie back to the disease-signature story: the lasso zeroes out almost every gene, and the survivors are the candidate biomarkers. This is where penalized regression doubles as feature selection. Remind them that `x_new` must be matched columns — a silent reordering of genes is a common and disastrous bug. But note this predicted performance is still not an honest estimate if $\lambda$ was tuned by CV on the same data — which motivates the next slide.
 :::
 
-## Train / validation / test: three jobs {.smaller}
+## Keep a test set untouched and use it only once {.smaller}
 
 CV that chooses $\lambda$ has already *used up* the held-out folds to make a decision. So its error is a mildly **optimistic** estimate of the final model. Three distinct roles:
 
@@ -229,7 +229,7 @@ The **test set** is locked away until the very end and used **exactly once**. If
 The subtlety: because CV picked $\lambda$ to minimise the CV error, that minimum is slightly better than reality — you optimised against it. For a truly honest headline number you need data that took part in *no* decision. Practical recipe: hold out a test set first; do all CV/tuning on the rest; report the test-set number once. The gold-standard alternative is nested CV (outer loop for estimation, inner loop for tuning) — name it, and the exercise sketches it. With only 80 patients an external validation cohort is ideal but rarely available.
 :::
 
-## Information leakage: the cardinal sin {.smaller}
+## Selecting genes before cross-validation inflates accuracy {.smaller}
 
 **Leakage** = letting information from the held-out data influence the model. The result is a performance number that is too good and does not replicate.
 
@@ -285,7 +285,7 @@ mean(err)                                        # honest mean CV Brier score
 Contrast the two blocks line by line. The only real difference is *where the split happens*: in the wrong version the split comes after the filter; in the right version it comes first, and everything data-dependent is recomputed per fold. Note that `cv.glmnet` handles the glmnet fitting honestly per fold on its own, but it cannot know about a filtering step you did beforehand — so any supervised preprocessing you add must be wrapped in your own outer loop (or a pipeline tool). This is why leakage is an easy accident even for careful people.
 :::
 
-## Choosing a metric {.smaller}
+## Choose an error measure that fits the outcome {.smaller}
 
 "Error" means different things for different outcomes. Match the metric to the biology and the model's error family:
 

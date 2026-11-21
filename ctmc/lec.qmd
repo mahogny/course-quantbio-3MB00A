@@ -53,7 +53,7 @@ One promoter, simulated over 40 minutes (numbers = how long each period lasted):
 Start with pictures, not equations. The trace is one simulated promoter that switches ON to OFF at rate 0.5 per minute and OFF to ON at 0.25 per minute; these numbers are the running example of the whole lecture. Point out the two things a step-based chain cannot show: switches happen at arbitrary times, and the periods have very different lengths, some a few seconds, some 9 minutes. Asking "what is the probability of switching in the next step?" depends on how long a step is. We need a description that does not depend on a step size: rates.
 :::
 
-## From per-step probabilities to rates {.smaller}
+## Continuous-time chains use rates, not step probabilities {.smaller}
 
 A **rate** is "expected number of events per unit of time", for example $0.5$ per minute.
 
@@ -74,7 +74,7 @@ With $q_{\text{ON}\to\text{OFF}} = 0.5$ /min: in 6 seconds ($\Delta t = 0.1$ min
 The table is the map for the whole lecture; come back to it at the end. The key sentence: a rate is not a probability. A rate can be larger than 1 (2 per minute is fine), and it has units. The approximation q times delta-t only holds for short intervals, where the product is small; for long intervals it would exceed 1. We will return to this approximation near the end, where it gives P ≈ I + QΔt. The "no self-loop" row often surprises students: in continuous time staying is not an event; it is simply time passing without a jump.
 :::
 
-## How long do you stay? Exponential waiting times {.smaller}
+## Time spent in a state is exponentially distributed {.smaller}
 
 Let $q_i$ be the **total rate of leaving** state $i$ (the sum of the rates on all arrows out of $i$). Then the time $T$ spent in $i$ before the next jump is **exponential** (see the exponential distribution in Error models):
 
@@ -97,7 +97,7 @@ Promoter: ON is left at $a = 0.5$ /min, so an ON period lasts on average $1/0.5 
 Link to Error models: there, the gaps between events in a stream of random events at rate lambda were exponential with mean 1/lambda. Here the "event" is leaving the current state, and the rate is the total leaving rate q_i. The histogram shows 2000 simulated ON periods with the curve a·exp(−a·t) on top; the dashed line is the mean of 2 minutes. Memorylessness is what makes the chain Markov: the future depends on the current state only, not on how long you have been there. This is also the main assumption that can fail, which we come back to on the last slides.
 :::
 
-## Where to jump next: the jump chain {.smaller}
+## The next state is picked in proportion to its rate {.smaller}
 
 When a state has **several** arrows out, two questions are answered separately:
 
@@ -113,7 +113,7 @@ The list of states visited, ignoring the times, is an ordinary discrete Markov c
 Example: a progenitor cell can go back to stem at 0.2 per day or forward to differentiated at 0.2 per day. It leaves at total rate 0.4 per day, so on average after 2.5 days, and then each direction is equally likely. If the rates were 0.1 and 0.3, it would still leave at 0.4 per day, but go forward 3 times out of 4. A useful picture: every arrow is its own exponential alarm clock; the first one to ring decides where you go. The fastest clock wins most often, in proportion to its rate. The jump chain connects to Markov chains: its rows sum to 1, but its diagonal is 0.
 :::
 
-## The rate matrix $Q$ {.smaller}
+## The rate matrix $Q$ has rows that sum to zero {.smaller}
 
 Collect the rates in a matrix, in the same **row = from, column = to** convention as $P$:
 
@@ -170,7 +170,7 @@ $$\text{change in } x_{\text{ON}} \text{ per minute} = \underbrace{-a\,x_{\text{
 Work through this on the board. Read Q off the diagram row by row: the ON row has the ON→OFF rate in the OFF column, and minus that on the diagonal. Then the OFF row. Check both row sums. The bottom line is the only "differential equation" in the lecture, and we keep it in words: the fraction ON goes down because ON cells leave at rate a, and up because OFF cells arrive at rate b. In symbols dx/dt = xQ, but students do not need calculus here: "change per minute" is enough. If all start OFF, the fraction ON initially grows at 0.25 per minute.
 :::
 
-## Simulating a chain: the Gillespie idea {.smaller}
+## Simulate by drawing a waiting time, then a jump {.smaller}
 
 To simulate one cell, alternate **how long** and **where to**:
 
@@ -205,7 +205,7 @@ The algorithm is exactly the two questions of the jump-chain slide put in a loop
 200 promoters, all starting OFF. Press Run. Unlike the discrete demo, there is no Step button: each walker jumps at its own random moment, so they leave one by one while the clock runs. The arrows show rates, not probabilities, and there are no self-loops. The ringed walker's timeline below the diagram is the most important picture: bars of random length, mostly short, a few long. These are exponential waiting times, mean 4 min in OFF and 2 min in ON. The bars: walker fractions next to the exact x(t); the dashed line is π = (1/3, 2/3), which we derive on the next slide. "Fast switching" (rates ×4) and "Slow switching" (rates ÷5) have the same π but reach it at very different speeds, and the timeline of the ringed walker looks completely different. "Absorbing" has a dead state with no way out, so in the end every walker is dead. Speed changes only how fast the clock runs on screen, not the chain.
 :::
 
-## Stationary distribution: balance the flows {.smaller}
+## At equilibrium, flow into each state equals flow out {.smaller}
 
 The distribution stops changing when the change per unit time is zero:
 
@@ -234,7 +234,7 @@ Same answer from the waiting times: mean ON 2 min, mean OFF 4 min, so ON a fract
 Flow balance is the intuitive route and avoids any matrix algebra. Picture many cells. Cells leave ON at rate a each, so the flow ON→OFF is π_ON times a cells per minute. The flow OFF→ON is π_OFF times b. At equilibrium these must be equal, otherwise one state would keep filling up. Writing out πQ = 0 gives exactly this equation twice (the two equations are the same, as in Markov chains in R), so we need the sum-to-1 constraint as well. The check with mean waiting times is a nice second view: in the long run the time is split in proportion to the mean lengths of the periods. For more than 2 states, πQ = 0 is a set of linear equations solved like any other; for a chain in a line (stem ↔ prog ↔ diff) balancing each pair of neighbours still works.
 :::
 
-## Relaxation: how fast is equilibrium reached? {.smaller}
+## The sum of the rates sets the speed to equilibrium {.smaller}
 
 For 2 states, the distance to $\boldsymbol\pi$ shrinks exponentially, with rate $a + b$:
 
@@ -298,7 +298,7 @@ $$Q = \begin{pmatrix} -3\alpha & \alpha & \alpha & \alpha\\ \alpha & -3\alpha & 
 This is the second big application, kept brief. Each site of an alignment is one walker; the tree tells you how long each walker had to change. Jukes and Cantor (1969) is the classical starting point. The formula 1/4 + 3/4 e^{−4t/3} is the relaxation formula of two slides ago for this chain; we only state it. The saturation at 3/4 is why the raw fraction of differing sites underestimates evolutionary distance for distantly related sequences. The demo has a Jukes–Cantor preset in the exercise page. Models such as Kimura's two-parameter model, HKY and GTR are the same idea with more rates.
 :::
 
-## Assumptions, and when they break {.smaller}
+## The model's assumptions can fail in real cells {.smaller}
 
 | Assumption | What it means | When it breaks |
 |---|---|---|

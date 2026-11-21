@@ -35,7 +35,7 @@ This is an optional unit under **Further reading**. It builds directly on Princi
 This lecture assumes students have already met PCA (covariance, eigenvectors as axes of variation, loadings and scores). The one new mental move today is: instead of one data matrix, we now have two or more matrices measured on the same samples, and we want a single low-dimensional summary that respects all of them. Keep the maths light — the learning objective is conceptual fluency (what each method tries to do, and what can go wrong), not the derivations of CCA or MOFA. Emphasise repeatedly that "same samples" is the whole premise: the rows of every matrix line up.
 :::
 
-## A biology picture first {.smaller}
+## CITE-seq measures RNA and protein in the same cells {.smaller}
 
 You run a CITE-seq experiment: for **each single cell** you measure
 
@@ -54,7 +54,7 @@ A T cell is a T cell in **both** views. The cell types, the activation states, t
 Anchor everything in one concrete paired assay before any method. CITE-seq (RNA + surface protein) or a true multiome kit (RNA + ATAC) are the canonical examples. The picture to plant: two matrices whose ROWS are the same cells, whose COLUMNS are completely different features. The biology (cell identity, state) is shared and is what we want; it shows up as correlated structure across the two views. Contrast with the wrong alternative: analysing each modality separately and trying to reconcile two independent clusterings afterwards. Integration means finding the shared structure once.
 :::
 
-## Why integrate: shared biology, separate noise {.smaller}
+## Combining modalities confirms signals and fills gaps {.smaller}
 
 Each modality on its own is an **incomplete, noisy** measurement of the same underlying state.
 
@@ -73,7 +73,7 @@ Two payoffs from combining them:
 The core justification for integration is statistical: if two noisy measurements share an underlying signal, combining them averages down the independent noise and reinforces the common structure. Make the biology concrete — RNA dropout is severe in single cell, so a gene reading zero may just be unmeasured; a corroborating protein signal rescues it. Complementarity is the second, equally important reason: some distinctions are only visible in one modality (surface protein isotypes, chromatin priming). The goal is a representation richer than either modality alone, not just a tidier version of one.
 :::
 
-## The premise: matched samples {.smaller}
+## Every matrix must have the same samples as rows {.smaller}
 
 Everything today rests on one condition:
 
@@ -91,7 +91,7 @@ If the samples are **not** matched (different cells measured by each assay), thi
 Draw a hard line here. Today's methods (concatenation-PCA, CCA, MOFA) all require paired observations: the same n samples measured by every modality. This is the "multiome" / "same-sample multi-omics" setting. Contrast explicitly with the un-paired case (two separate experiments on different cells, e.g. an RNA dataset and a separate ATAC dataset) which needs anchor/mutual-nearest-neighbour methods — mention it exists so students do not misapply CCA to unpaired data, but do not teach it. Reassure that bulk multi-omics (same patients, RNA + methylation + proteomics) fits the same paired template.
 :::
 
-## The obstacle: different scales and sizes {.smaller}
+## Scale each modality, or the largest one dominates {.smaller}
 
 The two matrices are not on speaking terms numerically:
 
@@ -111,7 +111,7 @@ So **before** any integration we must put the modalities on a **comparable footi
 This is the practical crux and where naive integration fails silently. Total variance scales with the number of features, so a 20,000-gene block carries orders of magnitude more raw variance than a 100-protein block. Concatenate without scaling and PCA will essentially ignore the protein block. The fix has two stages: (1) modality-appropriate normalisation WITHIN each block (count transforms for RNA, whatever is standard for the protein intensities) — you cannot z-score raw counts meaningfully; (2) block-level scaling so each modality contributes comparably to the joint analysis. Preview that "how to scale a block" is the recurring theme of every method today.
 :::
 
-## The big idea: a joint latent space {.smaller}
+## All modalities share one set of factors {.smaller}
 
 Recall from Principal component analysis: PCA replaces thousands of features with a few **latent axes** — directions along which samples vary.
 
@@ -196,7 +196,7 @@ Think of it as **PCA generalized to several matrices at once**, with the honesty
 MOFA is the cleanest realisation of the factor/loading abstraction from the central slide, so present it as the natural destination. Key selling points over the first two methods: (1) explicit shared score matrix Z with per-modality loadings, so factors are directly interpretable; (2) a factor can load on one modality and not another, which neither concatenation-PCA nor two-block CCA expresses cleanly — this is how MOFA distinguishes shared biology from modality-specific biology; (3) it scales to many modalities and tolerates missing samples in some blocks. Frame it honestly as (approximately) group factor analysis / a probabilistic matrix factorisation — do not overclaim mechanism. It is a Bioconductor/Python tool (MOFA2); students call it, they do not implement it.
 :::
 
-## The three at a glance {.smaller}
+## Only MOFA-style models see modality-specific signal {.smaller}
 
 | Method | Optimizes | Shared object | Sees modality-specific signal? |
 |---|---|---|---|
@@ -210,7 +210,7 @@ All three produce a **joint latent space** — a few shared coordinates per samp
 This is the summary table students should carry away. The distinguishing axis is what each method optimises and whether it can represent modality-specific structure. Reinforce the common denominator: every method reduces to "give each sample a handful of shared coordinates", and every method breaks without the pre-processing from the scales/sizes slide. If a student remembers only one comparison, make it: PCA = variance, CCA = cross-modal correlation, MOFA = per-block reconstruction with shared factors.
 :::
 
-## Reading the result: co-varying features {.smaller}
+## Genes and proteins on the same factor co-vary {.smaller}
 
 A joint factor is only useful once you **interpret its loadings back into biology**.
 
@@ -233,7 +233,7 @@ head( sort(loadings_prot[, 1],  decreasing = TRUE) )   # top proteins on factor 
 Interpretation is where the biology comes back. A factor is a direction; its meaning is read from which features load on it. The powerful move in multiome: line up the top RNA loadings and top protein loadings for the SAME factor. When a gene and its protein product both load strongly (CD3 mRNA and CD3 protein on a T-cell factor), you have cross-modal corroboration — the concordance case. Keep the R static and schematic; the point is the workflow (sort loadings per modality, compare across modalities on a shared factor), not a runnable pipeline.
 :::
 
-## When mRNA and protein disagree {.smaller}
+## mRNA–protein disagreement is a biological finding {.smaller}
 
 The **more interesting** cases are the **discordant** ones.
 
@@ -253,7 +253,7 @@ Multiome integration makes these mismatches **visible and quantifiable** — som
 This slide is the biological payoff and a genuine research use of integration. The empirical fact: across genes, steady-state mRNA and protein abundance correlate only moderately (well documented across many systems) because protein level is set by translation and degradation as well as transcription. So a shared-factor model that puts mRNA and protein on the same axes lets you spot where they part ways. Give the two directions of discordance and their standard interpretations (protein stability / transcript decay vs translational repression / protein turnover). Frame discordance as signal — it is only detectable because the modalities are matched and jointly modelled.
 :::
 
-## Caveats and failure modes {.smaller}
+## Scale with care; integration keeps batch effects {.smaller}
 
 - **Normalize within each modality first.** Counts, intensities, and peak accessibilities each need their **own** appropriate transform — you cannot treat them as one homogeneous table.
 - **Block-scale** so total variance is comparable; otherwise the biggest block dominates (the recurring trap).

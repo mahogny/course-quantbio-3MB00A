@@ -278,8 +278,8 @@ Quantitative biology and integrative omics
           display:block!important;
       }</style></aside>
 </section>
-<section id="what-the-data-look-like" class="slide level2 smaller">
-<h2>What the data look like</h2>
+<section id="the-data-are-a-table-one-row-per-cell-one-column-per-detector" class="slide level2 smaller">
+<h2>The data are a table: one row per cell, one column per detector</h2>
 <p>One real sample: 10 000 cells, one <strong>row per cell</strong>, one <strong>column per detector</strong>.</p>
 <pre><code>     FSC-H SSC-H FL1-H FL2-H     (first 4 of 10 000 cells)
 [1,]   382    77 259.5   1.0
@@ -325,8 +325,8 @@ Quantitative biology and integrative omics
           display:block!important;
       }</style></aside>
 </section>
-<section id="common-scenario-two-dyes-two-detectors" class="slide level2 smaller">
-<h2>Common scenario: two dyes, two detectors</h2>
+<section id="one-dyes-light-leaks-into-another-dyes-detector-spillover" class="slide level2 smaller">
+<h2>One dye’s light leaks into another dye’s detector: spillover</h2>
 
 <img data-src="fig02-spectra.png" class="quarto-figure quarto-figure-center r-stretch" style="width:78.0%"><ul>
 <li>Cells are labelled with antibodies carrying dyes, e.g.&nbsp;<strong>FITC</strong> (green) and <strong>PE</strong> (orange). Each dye marks one protein.</li>
@@ -347,8 +347,8 @@ Quantitative biology and integrative omics
           display:block!important;
       }</style></aside>
 </section>
-<section id="the-spillover-matrix" class="slide level2 smaller">
-<h2>The spillover matrix</h2>
+<section id="a-spillover-matrix-s-mixes-the-dyes-measured-s-true" class="slide level2 smaller">
+<h2>A spillover matrix <span class="math inline">S</span> mixes the dyes: measured = <span class="math inline">S</span> × true</h2>
 <p>Each detector sees a <strong>mix</strong> of the two dyes:</p>
 <p><span class="math display">\begin{pmatrix} \text{FITC detector} \\ \text{PE detector} \end{pmatrix} = \begin{pmatrix} 1 &amp; 0.02 \\ 0.25 &amp; 1 \end{pmatrix} \begin{pmatrix} \text{FITC dye} \\ \text{PE dye} \end{pmatrix}</span></p>
 <p>In words: measured = <span class="math inline">S</span> × true, where <span class="math inline">S</span> is the <strong>spillover matrix</strong>.</p>
@@ -375,8 +375,8 @@ Quantitative biology and integrative omics
           display:block!important;
       }</style></aside>
 </section>
-<section id="before-what-the-cytometer-records" class="slide level2 smaller">
-<h2>Before: what the cytometer records</h2>
+<section id="spillover-tilts-fitc-positive-cells-into-a-false-pe-signal" class="slide level2 smaller">
+<h2>Spillover tilts FITC-positive cells into a false PE signal</h2>
 <p>Four simulated populations, 1600 cells, one cell per <strong>column</strong> (like the pixels in Transforming images with matrices):</p>
 <div class="sourceCode" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a aria-hidden="true" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">1</span>)</span>
 <span id="cb3-2"><a aria-hidden="true" tabindex="-1"></a>make_pop <span class="ot">&lt;-</span> <span class="cf">function</span>(n, fitc, pe) {               <span class="co"># true dye amounts, one cell per COLUMN</span></span>
@@ -404,8 +404,8 @@ Quantitative biology and integrative omics
           display:block!important;
       }</style></aside>
 </section>
-<section id="estimating-the-spillover-from-a-control" class="slide level2 smaller">
-<h2>Estimating the spillover from a control</h2>
+<section id="a-single-stained-control-measures-the-spillover-directly" class="slide level2 smaller">
+<h2>A single-stained control measures the spillover directly</h2>
 <div class="columns">
 <div class="column" style="width:52%;">
 <p>How do we know the 0.25? Run a <strong>single-stained control</strong>: cells (or beads) carrying <strong>only FITC</strong>. Every PE-detector signal is then spillover.</p>
@@ -436,8 +436,8 @@ Quantitative biology and integrative omics
           display:block!important;
       }</style></aside>
 </section>
-<section id="compensation-undo-the-matrix" class="slide level2 smaller">
-<h2>Compensation: undo the matrix</h2>
+<section id="multiplying-by-the-inverse-of-s-removes-the-spillover" class="slide level2 smaller">
+<h2>Multiplying by the inverse of <span class="math inline">S</span> removes the spillover</h2>
 <p>If measured <span class="math inline">= S\,\text{true}</span>, then true <span class="math inline">= S^{-1}\,\text{measured}</span>: the same <code>solve()</code> as in Linear systems in R.</p>
 <div class="sourceCode" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a aria-hidden="true" tabindex="-1"></a><span class="fu">solve</span>(S)                          <span class="co"># [1.005 -0.020; -0.251 1.005]</span></span>
 <span id="cb5-2"><a aria-hidden="true" tabindex="-1"></a>comp <span class="ot">&lt;-</span> <span class="fu">solve</span>(S) <span class="sc">%*%</span> measured     <span class="co"># compensated: one %*% for all cells</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
@@ -476,8 +476,8 @@ Quantitative biology and integrative omics
           display:block!important;
       }</style></aside>
 </section>
-<section id="why-it-works-columns-and-the-inverse" class="slide level2 smaller">
-<h2>Why it works: columns and the inverse</h2>
+<section id="the-inverse-tilts-the-axes-back-but-detector-noise-remains" class="slide level2 smaller">
+<h2>The inverse tilts the axes back, but detector noise remains</h2>
 <ul>
 <li><span class="math inline">S^{-1}S = I</span>: undoing after doing changes nothing. Check: <code>solve(S) %*% S</code> is the identity.</li>
 <li>In pictures: <span class="math inline">S</span> <strong>tilts</strong> the FITC axis (column 1 points along <span class="math inline">(1, 0.25)</span>); <span class="math inline">S^{-1}</span> tilts it back to <span class="math inline">(1, 0)</span>.</li>
@@ -501,8 +501,8 @@ Quantitative biology and integrative omics
           display:block!important;
       }</style></aside>
 </section>
-<section id="when-compensation-fails-similar-dyes" class="slide level2 smaller">
-<h2>When compensation fails: similar dyes</h2>
+<section id="dyes-with-similar-colours-make-compensation-amplify-noise" class="slide level2 smaller">
+<h2>Dyes with similar colours make compensation amplify noise</h2>
 <div class="columns">
 <div class="column" style="width:44%;">
 <p>If two dyes have <strong>similar</strong> spectra, the columns of <span class="math inline">S</span> point almost the same way and <span class="math inline">\det(S)</span> is near 0:</p>

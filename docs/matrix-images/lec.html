@@ -292,8 +292,8 @@ Quantitative biology and integrative omics
           display:block!important;
       }</style></aside>
 </section>
-<section id="shear-read-it-from-the-columns" class="slide level2 smaller">
-<h2>Shear: read it from the columns</h2>
+<section id="a-shear-tips-one-axis-over-the-columns-show-which-one" class="slide level2 smaller">
+<h2>A shear tips one axis over; the columns show which one</h2>
 <p>A <strong>shear</strong> (skew) slides each row sideways in proportion to its height:</p>
 <p><span class="math display">H = \begin{pmatrix} 1 &amp; 0.5 \\ 0 &amp; 1 \end{pmatrix}: \quad H\begin{pmatrix} x \\ y \end{pmatrix} = \begin{pmatrix} x + 0.5\,y \\ y \end{pmatrix}</span></p>
 <div class="sourceCode" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a aria-hidden="true" tabindex="-1"></a>H <span class="ot">&lt;-</span> <span class="fu">matrix</span>(<span class="fu">c</span>(<span class="dv">1</span>, <span class="fl">0.5</span>,</span>
@@ -320,8 +320,8 @@ Quantitative biology and integrative omics
           display:block!important;
       }</style></aside>
 </section>
-<section id="a-gallery-of-2-2-matrices" class="slide level2 smaller">
-<h2>A gallery of 2 × 2 matrices</h2>
+<section id="a-matrixs-columns-predict-what-it-does-to-the-image" class="slide level2 smaller">
+<h2>A matrix’s columns predict what it does to the image</h2>
 <p>Every panel is <code>plot(t(A %*% xy), ...)</code> with a different <span class="math inline">A</span>. Predict each one from its columns first.</p>
 
 <img data-src="fig05-image-gallery.png" class="quarto-figure quarto-figure-center r-stretch" style="width:68.0%"><ul>
@@ -363,8 +363,8 @@ Quantitative biology and integrative omics
           display:block!important;
       }</style></aside>
 </section>
-<section id="order-matters-on-an-image" class="slide level2 smaller">
-<h2>Order matters — on an image</h2>
+<section id="rotating-then-shearing-gives-a-different-image-than-the-reverse" class="slide level2 smaller">
+<h2>Rotating then shearing gives a different image than the reverse</h2>
 <p>Same two matrices, <span class="math inline">R</span> (rotate 30°) and <span class="math inline">H</span> (shear), applied in the two possible orders:</p>
 <div class="sourceCode" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(<span class="fu">t</span>(H <span class="sc">%*%</span> R <span class="sc">%*%</span> xy), <span class="at">col =</span> col, <span class="at">pch =</span> <span class="dv">15</span>, <span class="at">asp =</span> <span class="dv">1</span>)   <span class="co"># rotate, then shear</span></span>
 <span id="cb4-2"><a aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(<span class="fu">t</span>(R <span class="sc">%*%</span> H <span class="sc">%*%</span> xy), <span class="at">col =</span> col, <span class="at">pch =</span> <span class="dv">15</span>, <span class="at">asp =</span> <span class="dv">1</span>)   <span class="co"># shear, then rotate</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
@@ -384,8 +384,8 @@ Quantitative biology and integrative omics
           display:block!important;
       }</style></aside>
 </section>
-<section id="why-multiply-matrices-a-pipeline-in-one-step" class="slide level2 smaller">
-<h2>Why multiply matrices? A pipeline in one step</h2>
+<section id="multiplying-the-matrices-first-moves-every-pixel-only-once" class="slide level2 smaller">
+<h2>Multiplying the matrices first moves every pixel only once</h2>
 <p>Rotate, then shear, then resize. Either move every pixel three times, or multiply the three <strong>small</strong> matrices first and move every pixel <strong>once</strong>:</p>
 <div class="sourceCode" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a aria-hidden="true" tabindex="-1"></a>S <span class="ot">&lt;-</span> <span class="fu">diag</span>(<span class="fu">c</span>(<span class="fl">1.5</span>, <span class="fl">0.75</span>))                 <span class="co"># resize: wider and flatter</span></span>
 <span id="cb5-2"><a aria-hidden="true" tabindex="-1"></a>out1 <span class="ot">&lt;-</span> S <span class="sc">%*%</span> (H <span class="sc">%*%</span> (R <span class="sc">%*%</span> xy))        <span class="co"># three passes over 19 200 pixels</span></span>
@@ -412,8 +412,8 @@ Quantitative biology and integrative omics
           display:block!important;
       }</style></aside>
 </section>
-<section id="biology-undoing-a-misalignment" class="slide level2 smaller">
-<h2>Biology: undoing a misalignment</h2>
+<section id="solvea-undoes-the-rotation-of-a-tilted-slide-scan" class="slide level2 smaller">
+<h2><code>solve(A)</code> undoes the rotation of a tilted slide scan</h2>
 <p>A slide was scanned at an angle: all we have is the tilted scan. The label should be horizontal, and it is tilted by 20°, so the scanner applied a rotation <span class="math inline">A = R(20°)</span> to every pixel. Its inverse undoes it — <code>solve(A)</code> from Linear systems in R.</p>
 <div class="sourceCode" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a aria-hidden="true" tabindex="-1"></a>theta <span class="ot">&lt;-</span> pi<span class="sc">/</span><span class="dv">9</span>                   <span class="co"># 20 degrees: read off from the tilted label</span></span>
 <span id="cb6-2"><a aria-hidden="true" tabindex="-1"></a>A <span class="ot">&lt;-</span> <span class="fu">matrix</span>(<span class="fu">c</span>(<span class="fu">cos</span>(theta), <span class="sc">-</span><span class="fu">sin</span>(theta),</span>

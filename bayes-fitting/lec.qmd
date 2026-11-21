@@ -112,7 +112,7 @@ Here $\theta = (a, b, \sigma)$. The output is the **posterior**: a distribution 
 State the philosophical switch cleanly, then immediately ground it in Bayes' theorem, which they met in the prior/likelihood/posterior unit. The key mental move: uncertainty about a parameter is itself represented by a distribution. Read the theorem in words - posterior is proportional to likelihood times prior. Stress that the posterior is joint over (a, b, sigma); we usually look at one coefficient at a time (a marginal), but the machinery handles their correlations. Keep the proportionality sign honest: the missing constant (the evidence) is just "divide by the total so it sums to 1", exactly as in the grid tables of the Bayes unit, and it is what MCMC lets us avoid computing directly.
 :::
 
-## Priors: what we believe before the data {.smaller}
+## A weak prior rules out only absurd values {.smaller}
 
 A prior encodes what is plausible for each parameter **before** seeing this dataset. Weakly-informative priors are a good default — wide enough not to force a conclusion, tight enough to rule out the absurd.
 
@@ -130,7 +130,7 @@ A centred prior on $b$ is **honest**, not a thumb on the scale: it lets the data
 Priors are where students get nervous, so demystify them: a weakly-informative prior states the scale of plausible values, not the answer. Justify each choice biologically. The slope prior centred at zero is important to explain - it is the sceptical, conservative choice; it does not assume the gene is flat, it just requires evidence to move away from flat, which regularises small-n fits. Emphasise sigma must be positive so its prior lives on the positive line (Exponential or half-Normal). Mention prior predictive checks in passing as the principled way to sanity-check priors (simulate lines from the prior and see if they are biologically ridiculous). Numbers here are illustrative for a centred, standardised-ish response. The brms names: normal(0, 5) for the intercept, normal(0, 0.1) for the slope (sd 0.1 per year, so about 95% of the prior within ±0.2 per year), exponential(1) for sigma. The "many plausible lines" demo two slides on has a slider for the slope prior width: with all 12 donors, narrowing it from ±1 to ±0.2 per 10 years pulls the slope from 0.30 to 0.18 per 10 years.
 :::
 
-## The likelihood: how data pull on the parameters {.smaller}
+## Points far from a line make that line less believable {.smaller}
 
 The **likelihood** asks: *if this candidate line were the truth, how probable would the points we actually saw be?*
 
@@ -158,7 +158,7 @@ Define likelihood concretely: plug a candidate line into the model and ask how p
 Interactive demo on 12 donors (age vs expression; the same data as the sampler demo later). Panel (a) is the likelihood slide made tangible. It starts with a flat line (height 6.2 at age 50, slope 0): the red sticks are the misses, total squared miss 10.3 against 7.1 for the best line, and the "believable" bar says this flat line is only about 20% as believable as the best line. Drag the handles or the sliders: every time a stick gets longer the bar drops. Press "best line" to jump to least squares (100%). Panel (b) is the posterior: press "show 50 posterior lines". Each line is one plausible line given the data and a slope prior; 48 of 50 rise (exact probability 96%), slope 0.30 per 10 years, 95% credible interval −0.03 to 0.64. That is "a coefficient is a distribution", drawn as lines. Then the slope prior slider: narrowing it to ±0.2 per 10 years pulls the slope to 0.18 and P(slope > 0) to 91%. With the donors slider at 3, the narrow prior pulls a lot harder (0.47 to 0.15, P from 95% to 82%): priors matter most when data are few. Leave the bands for the prediction slides.
 :::
 
-## The posterior: prior × likelihood {.smaller}
+## MCMC samples the posterior as many plausible lines {.smaller}
 
 Multiply prior and likelihood and normalise — the result is the **posterior** over $(a, b, \sigma)$: how plausible each combination is, given the data.
 
@@ -276,7 +276,7 @@ This is the payoff: coefficients you can **reason about probabilistically**.
 Show how trivially the posterior answers real questions: a probability is just a proportion of draws. For the 12 donors P(slope > 0) is 0.96 (as in the demo: 48 of 50 lines rise; the figure shows 24 of 25 draws), and P(slope > 0.01 per year) is about 0.88. P(slope > 0) is the fraction of the MCMC table with positive slope - report it directly as the probability the gene goes up with age. Contrast with the frequentist detour through a null hypothesis and p-value. Emphasise the flexibility: you can ask about any threshold, including a minimum biologically relevant effect size (a ROPE-style question), which a p-value cannot address. This is the slide that makes Bayesian regression feel useful rather than philosophical.
 :::
 
-## Prediction with uncertainty: two questions {.smaller}
+## A new donor's range is wider than the average line's {.smaller}
 
 For a new donor aged 70, "predict the expression" is really **two** questions:
 
@@ -315,7 +315,7 @@ This is the single most useful practical distinction and a frequent trap. Two so
 Same demo, now opened on panel (b) with the 50 posterior lines and both 95% bands. The blue mean band is where the average line is (what fitted() and conditional_effects(fit) give); the grey prediction band is where one new donor lands (what predict() and conditional_effects(fit, method = "posterior_predict") give). At age 70 the mean band is about 6.0 to 7.7, the prediction band about 4.7 to 9.0: the prediction band is always wider because it adds the donor-to-donor scatter sigma. Point out that the mean band is narrowest near age 50, the middle of the donors, and flares out towards the extremes — extrapolation is less certain. Press "draw again" or "hide the 50 lines" to show that the mean band is just a summary of where the lines go. Move the donors slider down to 3: both bands widen.
 :::
 
-## Bayesian vs least squares, side by side {.smaller}
+## With flat priors, Bayes peaks at the least-squares line {.smaller}
 
 | Aspect | Least squares (`lm`) | Bayesian (`brms`) |
 |---|---|---|

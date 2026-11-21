@@ -74,7 +74,7 @@ coef(fit, s = "lambda.1se")   # sparse: most genes have coefficient 0
 A one-slide refresher so the case is self-contained. Two things to stress. First, standardization: the $L_1$ penalty is scale-dependent, so genes must be put on a common scale or the penalty silently favours high-variance genes; glmnet standardizes internally and reports coefficients back on the original scale. Second, alpha = 1 is the lasso; we will vary alpha shortly. lambda.1se (the largest lambda within one standard error of the CV minimum) gives a sparser, more stable model than lambda.min — a point from Cross-validation & model selection we will lean on again.
 :::
 
-## The trap: biological predictors are correlated {.smaller}
+## Correlated genes make selection unstable {.smaller}
 
 Genes do not vary independently. They travel in **co-regulated groups**:
 
@@ -92,7 +92,7 @@ This is not a data-quality problem to be cleaned away. **Co-regulation is the bi
 This slide reframes correlation from "nuisance" to "the signal". Biologists intuitively know genes co-vary — that is the whole basis of pathways and modules — but they may not connect it to why a selection method misbehaves. Make the link explicit: co-expression means the columns of X are near-duplicates, and near-duplicate predictors are mathematically hard to tell apart. Everything on the next few slides follows from this one fact. Foreshadow: the lasso is forced to choose among interchangeable columns.
 :::
 
-## Identifiability: why the lasso picks just one {.smaller}
+## Among correlated genes, the lasso keeps just one {.smaller}
 
 Suppose genes $A$ and $B$ are almost perfectly correlated and each truly relates to the response.
 
@@ -108,7 +108,7 @@ The model's predictions are fine. The **selected gene list is not identifiable**
 This is the conceptual heart of the lecture. Walk the geometry verbally: with two collinear columns the loss surface has a long flat valley (many coefficient combinations fit equally well), and the L1 penalty's diamond geometry snaps the solution to a corner — a single nonzero coefficient. The choice of corner is decided by a vanishingly small difference in sample correlation, i.e. by noise. The key distinction to leave them with: prediction is stable, selection is not. Students routinely conflate "the model predicts well" with "these are the important genes" — that conflation is the error this whole lecture attacks.
 :::
 
-## Watch it happen: same data, tiny perturbation {.smaller}
+## Dropping one cell line can change the chosen genes {.smaller}
 
 Fit the lasso, then refit after dropping a **single** cell line, and compare which genes survive:
 
@@ -166,7 +166,7 @@ Position this as the menu of trade-offs, not a winner. Ridge: stable coefficient
 Two co-expressed genes with correlation 0.9: the RSS contours are long thin ellipses lying along the valley where beta-1 + beta-2 is roughly constant, so many splits of the weight fit almost equally well. With the lasso at lambda = 2.5, the solution sits on the corner of the diamond: gene 1 is kept and gene 2 is exactly zero (red mark). Now drag the ordinary least squares (OLS) point along the valley to about (0.5, 1.5): the choice flips to gene 2. Point out that with highly correlated genes the ordinary least squares point itself moves a lot along that valley from one sample to the next, so this drag is what dropping a single cell line can do; it is the MKI67/PCNA swap from the previous slides. Then click Ridge: both genes are kept with nearly equal, shrunk weights, and the drag barely changes them. Elastic net (alpha = 0.5) also keeps both, close to equal: the grouping effect. This sets up the question stability selection answers next: how often is each gene picked?
 :::
 
-## Stability selection: the idea {.smaller}
+## Keep genes the lasso picks in most subsamples {.smaller}
 
 If one fit is unstable, don't trust one fit. **Resample and count.**
 
@@ -215,7 +215,7 @@ stable
 Read the loop aloud: subsample half the cell lines, refit lasso with its own inner cross-validation, mark which genes survived, tally. The result is a frequency per gene. This is a static illustration but structurally identical to what they build in the exercise; keep B small in class for speed and note that real use wants B in the hundreds. Point at the output interpretation: high-frequency genes are keepers; the proliferation pair splitting near 0.5 is the module-splitting phenomenon, not a failure. Mention set.seed for reproducibility — resampling methods must be seeded or results are not repeatable, which matters for the reporting slide.
 :::
 
-## Reading the selection-frequency plot {.smaller}
+## A clear gap in selection frequency supports a signature {.smaller}
 
 Plot every gene's selection frequency, sorted:
 

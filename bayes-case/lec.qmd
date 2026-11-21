@@ -77,7 +77,7 @@ str(dat)
 Walk the columns: count is the response; treatment and age are the effects we care about and want to adjust for; patient labels the grouping for the hierarchy; n_cells is how many cells were assayed, and log_exp is its log, which becomes the offset. Point out that the raw counts are not comparable across samples until we account for n_cells — 41 out of 49k cells is very different from 41 out of 5k. This is exactly the library-size problem they met with RNA-seq counts. Twenty-four rows, twelve patients, two treatments each.
 :::
 
-## Why not a Gaussian linear model? {.smaller}
+## Counts need a count model, not a Gaussian {.smaller}
 
 A `lm(count ~ treatment)` assumes the response is **continuous, symmetric, and constant-variance**. Counts violate all three:
 
@@ -181,7 +181,7 @@ priors <- c(
 Priors are where students new to Bayes get nervous, so make the point that weakly informative priors encode common sense (a treatment is unlikely to change abundance a thousand-fold) without forcing a conclusion — the likelihood dominates once there is real data. Explain each: broad Normal on the intercept because we do not know the baseline rate; Normal(0,1) on effects because they live on the log scale where 1 is already a big fold change; a positive-only prior (exponential) on the standard deviation because SDs cannot be negative; a diffuse prior on the dispersion. Plant the forward link to penalized models: an L2 penalty is exactly a Gaussian prior on coefficients. This is the "explore similarity to Bayesian models" connection.
 :::
 
-## The full model on one slide {.smaller}
+## The full model is a recipe for generating each count {.smaller}
 
 The generative story, read top to bottom — *how a count is born*:
 
@@ -231,7 +231,7 @@ fit <- brm(
 The formula is the model: response on the left, fixed effects and offset in the middle, the (1 | patient) grouping on the right giving the random intercept. family = negbinomial() supplies the log link and the dispersion parameter. Point out that brms is a friendly front end that generates Stan code and runs Hamiltonian Monte Carlo — the same R-STAN engine from the fitting unit, without hand-writing the Stan blocks. Four chains started from different points let us check they agree. Nothing here executes at render time; in the exercise students run an analogous fit on a provided dataset.
 :::
 
-## Did the sampler work? {.smaller}
+## Check that the sampler worked before reading results {.smaller}
 
 Before interpreting anything, check that the MCMC actually converged. Diagnostics come before conclusions.
 
@@ -282,7 +282,7 @@ mean(post$b_treatmentdrug > 0)
 This is the Bayesian payoff and the place to contrast framings explicitly. The credible interval is a direct probability statement about the parameter: given the data and model, there is 95% posterior probability the rate ratio lies in [1.34, 1.92]. That is what people wrongly wish a confidence interval meant. The probability of direction, P(effect > 0), answers the biologist's question directly without a p-value or a null. Keep the interpretation multiplicative because of the log link: 1.6-fold more activated T cells on the drug. Age's interval straddles zero, so the data are inconclusive about age here.
 :::
 
-## Model checking — the idea {.smaller}
+## Check the model: does it simulate data like ours? {.smaller}
 
 A converged sampler only means we fitted *the model we wrote*. Is that model any good? **Posterior predictive checking** asks: if the model is right, would it generate data that look like ours?
 
@@ -321,7 +321,7 @@ pp_check(fit, type = "stat", stat = function(y) mean(y == 0))  # zero-inflation?
 Give students a concrete menu. The density overlay is the first look: observed distribution as a dark line, simulated datasets as a light band; the dark line should be unremarkable within the band. Then targeted statistics catch specific failures the overlay can blur: the max tests the tail (is dispersion adequate?), the proportion of zeros tests for zero-inflation common in single-cell data. The crucial habit: a failing check is diagnostic feedback about the model, so you iterate on the model — maybe a zero-inflated negative binomial, maybe a missing covariate — never by deleting inconvenient data points.
 :::
 
-## Frequentist vs Bayesian, on this case {.smaller}
+## Bayes makes uncertainty and assumptions explicit {.smaller}
 
 Same data, two philosophies — and this block chose the Bayesian one for concrete reasons.
 

@@ -244,8 +244,8 @@ Quantitative biology and integrative omics
           display:block!important;
       }</style></aside>
 </section>
-<section id="a-biology-picture-first" class="slide level2 smaller">
-<h2>A biology picture first</h2>
+<section id="biological-data-typically-have-many-dimensions-and-few-samples" class="slide level2 smaller">
+<h2>Biological data typically have many dimensions and few samples</h2>
 <p>A typical transcriptomics experiment: measure the expression of <strong>20,000 genes</strong> across <strong>30 patients</strong>, and predict a clinical outcome (say, drug response) from expression.</p>
 <ul>
 <li>Each patient is one <strong>row</strong>; each gene is one <strong>column</strong> (a predictor).</li>
@@ -295,41 +295,21 @@ Quantitative biology and integrative omics
           display:block!important;
       }</style></aside>
 </section>
-<section id="least-squares-only-works-when-there-is-sufficient-data" class="slide level2 smaller">
-<h2>Least squares only works when there is sufficient data</h2>
-<p>We can’t hit every <span class="math inline">y</span> exactly (data is noisy), so <strong>ordinary least squares (OLS)</strong> picks the coefficients with the <strong>smallest total squared error</strong>:</p>
-<ul>
-<li>For each sample, take the miss: observed <span class="math inline">y</span> minus predicted <span class="math inline">y</span>.</li>
-<li>Square the misses and add them up.</li>
-<li>Choose the <span class="math inline">\boldsymbol{\beta}</span> that makes this total as small as possible. That is what <code>lm()</code> does.</li>
-</ul>
-<p>This needs <strong>enough data to pin down every coefficient</strong>. Each sample gives one equation; each coefficient is one unknown. Fewer equations than unknowns, and there is no single best answer.</p>
-<aside class="notes">
-<p>State the least-squares objective in words only: find the coefficients that minimise the total squared gap between prediction and truth. lm() solves this for them. The one idea to plant: every sample is one equation and every coefficient is one unknown, so ordinary least squares needs at least as many samples as coefficients, and the coefficients must not be able to stand in for each other. The next two slides are the two ways this fails in genomics. The matrix formula (the normal equations and the inverse) is on the optional slide at the end, for those who want the linear-algebra view.</p>
-<style type="text/css">
-        span.MJX_Assistive_MathML {
-          position:absolute!important;
-          clip: rect(1px, 1px, 1px, 1px);
-          padding: 1px 0 0 0!important;
-          border: 0!important;
-          height: 1px!important;
-          width: 1px!important;
-          overflow: hidden!important;
-          display:block!important;
-      }</style></aside>
-</section>
-<section id="when-p-n-there-is-no-single-answer" class="slide level2 smaller">
-<h2>When p &gt; n, there is no single answer</h2>
-<p>Count equations and unknowns:</p>
+<section id="with-more-genes-than-samples-least-squares-has-no-single-answer" class="slide level2 smaller">
+<h2>With more genes than samples, least squares has no single answer</h2>
+<p><strong>Ordinary least squares</strong> (what <code>lm()</code> does) picks the coefficients with the <strong>smallest total squared error</strong>: for each sample take the miss, observed <span class="math inline">y</span> minus predicted <span class="math inline">y</span>, square it, and add them all up.</p>
+<p>Each sample gives one <strong>equation</strong>; each coefficient is one <strong>unknown</strong>.</p>
 <ul>
 <li><strong>30 patients</strong> = 30 equations. <strong>20,000 genes</strong> = 20,000 unknowns.</li>
-<li>With more unknowns than equations, <strong>infinitely many</strong> sets of coefficients fit the data <strong>perfectly</strong>.</li>
-<li>The data cannot tell them apart: the model is <strong>unidentifiable</strong>. In R, <code>lm()</code> gives up and returns <code>NA</code> for every gene beyond the 29th.</li>
+<li>With more unknowns than equations, <strong>infinitely many</strong> sets of coefficients fit the data <strong>perfectly</strong>, and the data cannot tell them apart. <code>lm()</code> returns <code>NA</code> for every gene beyond the 29th.</li>
 </ul>
-<p>This is not “ordinary least squares does a bit worse”. It cannot return <strong>one</strong> answer at all.</p>
-
-<img data-src="fig05-underdetermined-many-fits.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:55.0%"><aside class="notes">
-<p>The hard failure mode, by counting. Two points and a curve with many free parameters: every curve in the bundle goes through both points, so all fit perfectly, and they disagree everywhere else. Same with 30 patients and 20,000 genes: 30 equations, 20,000 unknowns, infinitely many perfect fits. This is the “infinitely many solutions” case from the Linear systems units. In R, lm() estimates the intercept plus as many genes as it can (29 here) and returns NA for the rest; the exercise shows this. In linear-algebra language the matrix in the ordinary least squares formula has no inverse; that is on the optional slide at the end.</p>
+<div class="quarto-figure quarto-figure-center">
+<figure>
+<p><img data-src="fig05-underdetermined-many-fits.svg" class="quarto-figure quarto-figure-center" style="width:50.0%"></p>
+</figure>
+</div>
+<aside class="notes">
+<p>State the least-squares objective in words only: find the coefficients that minimise the total squared gap between prediction and truth; lm() solves this for them. Then the one idea to plant: every sample is one equation and every coefficient is one unknown, so ordinary least squares needs at least as many samples as coefficients. The figure: two points and a curve with many free parameters; every curve in the bundle goes through both points, so all fit perfectly, and they disagree everywhere else. Same with 30 patients and 20,000 genes: infinitely many perfect fits, so the model is unidentifiable. This is not “ordinary least squares does a bit worse”: it cannot return one answer at all. It is the “infinitely many solutions” case from the Linear systems units. In R, lm() estimates the intercept plus as many genes as it can (29 here) and returns NA for the rest; the exercise shows this. The next slide is the second, softer way this fails: correlated genes. The matrix formula (the normal equations and the inverse) is on the optional slide at the end.</p>
 <style type="text/css">
         span.MJX_Assistive_MathML {
           position:absolute!important;
@@ -342,9 +322,17 @@ Quantitative biology and integrative omics
           display:block!important;
       }</style></aside>
 </section>
-<section id="even-with-enough-samples-correlated-genes-are-trouble" class="slide level2 smaller">
-<h2>Even with enough samples, correlated genes are trouble</h2>
-<p>Genes in the same pathway move together. Take two genes A and B that are <strong>almost identical</strong>, and an outcome that is really <span class="math inline">2 \times</span> A. All of these predict almost the same:</p>
+<section id="correlated-genes-give-large-unstable-coefficients" class="slide level2 smaller">
+<h2>Correlated genes give large, unstable coefficients</h2>
+<p>Genes in the same pathway move together. If gene A <strong>activates</strong> gene B, then B follows A, and B <strong>also predicts</strong> the outcome, even though only A does anything.</p>
+<div class="quarto-figure quarto-figure-center">
+<figure>
+<p><img data-src="fig09-correlated-genes.svg" class="quarto-figure quarto-figure-center" style="width:62.0%"></p>
+</figure>
+</div>
+<p>Say the outcome is really <span class="math inline">2 \times</span> A. All of these predict almost the same:</p>
+<div class="columns">
+<div class="column" style="width:45%;">
 <table class="caption-top">
 <thead>
 <tr class="header">
@@ -376,13 +364,15 @@ Quantitative biology and integrative omics
 </tr>
 </tbody>
 </table>
+</div><div class="column" style="width:55%;">
 <ul>
 <li>The data pin down the <strong>sum</strong> of the two coefficients (about 2), but not the <strong>split</strong>.</li>
 <li>A little noise decides which split ordinary least squares returns: <strong>large, unstable</strong> coefficients that flip sign from one sample to the next.</li>
+<li>This is <strong>multicollinearity</strong>, and in genomics it is the rule, not the exception.</li>
 </ul>
-<p>This is <strong>multicollinearity</strong>, and in genomics it is the rule, not the exception.</p>
+</div></div>
 <aside class="notes">
-<p>The second, softer failure mode. Even with more samples than predictors, two highly correlated genes can stand in for each other. Read the table: 100 times A minus 98 times B is about 2 times A when A and B are almost the same, and so is minus 50 A plus 52 B. The data only see the sum of the two coefficients. Which split ordinary least squares returns is decided by the noise, so refitting on slightly different patients gives wildly different coefficients that cancel each other. The next slide shows exactly this with 50 resampled datasets. (Linear-algebra view, optional slide: the matrix that ordinary least squares inverts is nearly singular.)</p>
+<p>The second, softer failure mode. Start with the figure: A activates B, and A causes the outcome. B does nothing to the outcome, but because it follows A it predicts the outcome just as well, so the model has no way to know which of the two deserves the credit. Even with more samples than predictors, two highly correlated genes can stand in for each other. Read the table: 100 times A minus 98 times B is about 2 times A when A and B are almost the same, and so is minus 50 A plus 52 B. The data only see the sum of the two coefficients. Which split ordinary least squares returns is decided by the noise, so refitting on slightly different patients gives wildly different coefficients that cancel each other. The next slide shows exactly this with 50 resampled datasets. (Linear-algebra view, optional slide: the matrix that ordinary least squares inverts is nearly singular.)</p>
 <style type="text/css">
         span.MJX_Assistive_MathML {
           position:absolute!important;
@@ -481,8 +471,8 @@ Quantitative biology and integrative omics
           display:block!important;
       }</style></aside>
 </section>
-<section id="the-idea-penalizing-large-coefficients-improves-fit" class="slide level2 smaller">
-<h2>The idea: Penalizing large coefficients improves fit</h2>
+<section id="penalizing-large-coefficients-trades-fit-for-stability" class="slide level2 smaller">
+<h2>Penalizing large coefficients trades fit for stability</h2>
 <p>Instead of minimising only the fit error, add a <strong>penalty</strong> that grows with the size of the coefficients:</p>
 <p><span class="math display">\text{what we minimise} \;=\; \underbrace{\text{fit error}}_{\text{fit the data}} \;+\; \lambda \times \underbrace{\text{(size of the coefficients)}}_{\text{stay small}}</span></p>
 <ul>
@@ -505,14 +495,14 @@ Quantitative biology and integrative omics
           display:block!important;
       }</style></aside>
 </section>
-<section id="what-the-penalty-buys" class="slide level2 smaller">
-<h2>What the penalty buys</h2>
-<p><strong>One answer again.</strong> Among all the coefficient sets that fit (almost) equally well, the penalty prefers the one with the <strong>smallest</strong> coefficients, and there is only one of those.</p>
+<section id="a-penalty-gives-a-single-answer-and-steadier-coefficients" class="slide level2 smaller">
+<h2>A penalty gives a single answer and steadier coefficients</h2>
+<p>Among all the coefficient sets that fit (almost) equally well, the penalty prefers the one with the <strong>smallest</strong> coefficients, and there is only one of those.</p>
 <ul>
 <li>Correlated genes A and B: of 2·A, 1·A + 1·B, 100·A − 98·B, … the penalty picks <strong>1·A + 1·B</strong>, the smallest.</li>
 <li>With <span class="math inline">p &gt; n</span>: of the infinitely many perfect fits, the penalty picks one. The model can be fitted even with 20,000 genes and 30 patients.</li>
 </ul>
-<p><strong>It calms the variance.</strong> Shrinking coefficients toward zero makes them <strong>less sensitive</strong> to noise in any one sample. Estimates stop swinging, as the ridge cloud in the resampling demo showed.</p>
+<p>Shrinking coefficients toward zero also makes them <strong>less sensitive</strong> to noise in any one sample. Estimates stop swinging, as the ridge cloud in the resampling demo showed.</p>
 <aside class="notes">
 <p>Two payoffs, one for each failure mode. First, the hard failure: when many coefficient sets fit equally well, the penalty breaks the tie by preferring small coefficients, and there is exactly one smallest. For two nearly identical genes that is splitting the effect evenly, 1 and 1, instead of 100 and -98. So p &gt; n becomes solvable again. Second, the soft failure: shrinking directly reduces variance; smaller, steadier coefficients that do not lurch when you resample (the tight ridge blob in the demo). The linear-algebra reason (adding lambda to the diagonal makes the matrix invertible) is on the optional slide at the end.</p>
 <style type="text/css">
@@ -527,8 +517,8 @@ Quantitative biology and integrative omics
           display:block!important;
       }</style></aside>
 </section>
-<section id="the-trade-made-honest" class="slide level2 smaller">
-<h2>The trade, made honest</h2>
+<section id="the-penalty-adds-bias-so-lambda-must-balance-bias-against-variance" class="slide level2 smaller">
+<h2>The penalty adds bias, so <span class="math inline">\lambda</span> must balance bias against variance</h2>
 <p>Penalization is not free. By pulling coefficients toward zero we introduce <strong>bias</strong>: the estimates are systematically shrunk, so they no longer match the true values on average.</p>
 <ul>
 <li>Small <span class="math inline">\lambda</span>: close to ordinary least squares — low bias, high variance (overfits).</li>
@@ -552,8 +542,8 @@ Quantitative biology and integrative omics
           display:block!important;
       }</style></aside>
 </section>
-<section id="biological-payoff" class="slide level2 smaller">
-<h2>Biological payoff</h2>
+<section id="penalized-models-give-stable-gene-signatures-from-few-patients" class="slide level2 smaller">
+<h2>Penalized models give stable gene signatures from few patients</h2>
 <p>Why this matters for the wide, short omics matrix we started with:</p>
 <ul>
 <li><strong>Solvable at all.</strong> With <span class="math inline">p \gg n</span>, penalization is what makes a gene-expression predictor computable in the first place.</li>

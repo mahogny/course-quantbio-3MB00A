@@ -49,7 +49,7 @@ Annotation is the bridge from *clusters the computer found* to *cell types the b
 Ground the abstraction in a concrete experiment before any method. A tumour biopsy is ideal because the audience already has the intuition that tissue is a mixture of cell types, and the whole point of single-cell is to pull that mixture apart. Emphasise that the clustering step is unsupervised and therefore label-free: the algorithm returns "cluster 0..11", not "T cell". The biological knowledge that CD3D marks T cells etc. lives in the literature and in the biologist's head; annotation is the disciplined way of injecting it. Do not yet say how we find that CD3D is high in a cluster — that is the DE step, coming up.
 :::
 
-## What a cluster is, in vector terms {.smaller}
+## A cluster is a cloud of cells; its mean is the centroid {.smaller}
 
 From PCA and clustering: each cell is a **vector** of measured genes,
 
@@ -67,7 +67,7 @@ So the question "what is cluster 3?" becomes "**on which gene coordinates does c
 This slide explicitly reconnects to the vector and PCA language the students already own. A cell is a point/vector; a cluster is a cloud; the centroid is the mean vector, coordinate by coordinate. Framing annotation as comparing centroids coordinate-by-coordinate sets up differential expression as nothing exotic — it is per-gene comparison of group means, exactly the sort of two-group comparison they met in the statistics course. Resist introducing the test yet; just plant that a "marker" will be a coordinate where one centroid is far above the others.
 :::
 
-## Marker genes: the core idea {.smaller}
+## A marker gene is high in one cluster, low in the rest {.smaller}
 
 A **marker gene** for a cluster is a gene that is **expressed much more highly in that cluster than in the rest** of the cells.
 
@@ -83,7 +83,7 @@ That ranking is a **differential expression** problem: for each gene, compare it
 Define a marker crisply: differentially high in one group. Two quality axes matter and map onto quantities we will see in the output table — specificity (expressed elsewhere or not, i.e. pct.2 low) and sensitivity (expressed in most of the cluster, i.e. pct.1 high). Make the point that with ~20000 genes you cannot eyeball this; you need a systematic score per gene. That score is a differential-expression statistic, which is the next block. Note that "marker" is relative — a gene is a marker with respect to a particular comparison (this cluster vs the rest).
 :::
 
-## Differential expression: one cluster vs the rest {.smaller}
+## Markers come from testing each cluster against the rest {.smaller}
 
 To find markers for cluster $k$, split the cells into two groups and test **every gene**:
 
@@ -105,7 +105,7 @@ Repeat for every cluster and you have candidate markers for all of them.
 One-vs-rest is the standard framing for marker discovery: cluster k against the pooled remainder. Contrast with a pairwise comparison (cluster k vs cluster j), which is also possible and sometimes needed to separate two similar types, but one-vs-rest is the default first pass. Emphasise the two outputs per gene: an effect size (log fold change, a difference of log means) and a significance (p-value). Both matter — a huge but noisy difference and a tiny but rock-solid difference are both misleading on their own. This is exactly the effect-size-plus-p-value thinking from their statistics course, now applied per gene across the transcriptome.
 :::
 
-## The statistic under the hood {.smaller}
+## A marker needs a big fold change and a small p-value {.smaller}
 
 For a single gene, we are comparing two sets of numbers (its expression in group 1 vs group 2). The default test in single-cell tools is the **Wilcoxon rank-sum test**:
 
@@ -189,7 +189,7 @@ Repeat for every cluster until the whole UMAP is named.
 This is the workflow the prompt asks us to make explicit: find markers, compare to known signatures, label. Databases (CellMarker, PanglaoDB) or a curated in-house list turn a gene list into a cell-type guess. Stress that this is human-in-the-loop and iterative: you propose a label, then check it makes biological sense (do the neighbouring clusters make a coherent lineage? does the fraction match expectation?). RenameIdents just attaches the human-readable name. Warn that top-10 lists can be dominated by housekeeping or ribosomal genes if normalisation was sloppy — another reason a human eye is in the loop.
 :::
 
-## Known cell-type signatures {.smaller}
+## Score a set of markers, not just one gene {.smaller}
 
 A **signature** is a small set of genes expected to be high in a given type. Matching a cluster's markers to signatures is the manual annotator's dictionary.
 
@@ -211,7 +211,7 @@ A **signature** is a small set of genes expected to be high in a given type. Mat
 Give them a real, standard marker table — these are all textbook and safe. The move from single markers to signatures matters: one gene is noisy (dropout means a real T cell may show zero CD3D reads), but the average over several markers is robust. Introduce module/signature scoring (AddModuleScore in Seurat) as averaging a gene set per cell. The linear-algebra payoff: a signature is a weighted direction in gene space and scoring a cell is a dot product / projection onto that direction — a callback to vectors and projection. Keep it conceptual; no need for the exact scoring algorithm.
 :::
 
-## Reference-based annotation {.smaller}
+## Reference methods copy labels from similar known cells {.smaller}
 
 Instead of curating markers by hand, borrow labels from an **already-annotated** dataset (a reference atlas).
 
@@ -227,7 +227,7 @@ Tools: **`SingleR`** (correlation to reference profiles), **`Azimuth`** (mapping
 Reference-based annotation automates the label transfer: given a trustworthy labelled dataset, assign each query cell the label of the reference it correlates with most. Frame the similarity as correlation between expression vectors — another vector-geometry callback (correlation is a centred, normalised dot product / cosine). Name the common tools truthfully and by what they do: SingleR correlates to reference profiles, Azimuth maps to a curated atlas, CellTypist is a logistic-regression classifier trained on labelled data. The key dependency to flag: the answer is only as good as the reference. A cell type absent from the reference cannot be labelled correctly — it will be forced onto the nearest wrong label.
 :::
 
-## Manual vs reference-based {.smaller}
+## Use a reference first, then check with markers {.smaller}
 
 | | Manual (markers) | Reference-based |
 |---|---|---|
