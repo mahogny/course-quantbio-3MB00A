@@ -237,14 +237,14 @@ Now mix the two column types. The design matrix is just the dummy and the raw BM
 
 ## Two factors: treatment and sex {.smaller}
 
-`expr ~ treatment + sex`: the intercept plus **one dummy per factor**. Four groups, four distinct rows:
+`expr ~ treatment + sex`: the intercept plus **one dummy per factor**. Four groups, four distinct rows. With $\boldsymbol\beta = (5,\ 2,\ 1)$:
 
-| group | (Intercept) | treatmenttreat | sexM | $\hat y$ for $\boldsymbol\beta = (5,\ 2,\ 1)$ |
-|---|---|---|---|---|
-| F, ctrl  | 1 | 0 | 0 | $5$ |
-| F, treat | 1 | 1 | 0 | $5 + 2 = 7$ |
-| M, ctrl  | 1 | 0 | 1 | $5 + 1 = 6$ |
-| M, treat | 1 | 1 | 1 | $5 + 2 + 1 = 8$ |
+| group | (Intercept) | treatmenttreat | sexM | equation for this group | $\hat y$ |
+|--------|-----------|-------------|------|----------------------------------|-------------|
+| F, ctrl  | 1 | 0 | 0 | expr = (Intercept) | $5$ |
+| F, treat | 1 | 1 | 0 | expr = (Intercept) + treatmenttreat | $5 + 2 = 7$ |
+| M, ctrl  | 1 | 0 | 1 | expr = (Intercept) + sexM | $5 + 1 = 6$ |
+| M, treat | 1 | 1 | 1 | expr = (Intercept) + treatmenttreat + sexM | $5 + 2 + 1 = 8$ |
 
 - The **reference group** is the one with all dummies 0: female controls, $\hat y = \beta_0$.
 - `treatmenttreat` $= 2$ is the treat − ctrl difference **in both sexes** ($7-5 = 8-6 = 2$).
@@ -405,6 +405,8 @@ Three patterns cover almost every real case. The dummy trap is why R drops the r
 
 ## Why "infinitely many": batch = treatment {.smaller}
 
+:::: {.columns}
+::: {.column width="62%"}
 Controls all in batch A (mean 10), treated all in batch B (mean 14). Columns: (Intercept), `batchB`, `treatmenttreat` — the last two are **identical**.
 
 Every group mean only involves $\beta_\text{batchB} + \beta_\text{treat}$:
@@ -421,9 +423,14 @@ $$
 | 10 | −6 | 10 | 10, 14 |
 
 Same fit every time. "All batch", "all drug", or anything in between — the data **cannot** decide.
+:::
+::: {.column width="38%"}
+![](fig20-batch-equals-treatment.svg){height="560px" fig-align="center"}
+:::
+::::
 
 ::: notes
-Make the abstract statement concrete. Two equations, three unknowns: a whole line of solutions, just as in Case 3 of Linear systems in R. Ask the room for another row of the table. The biological message is the important one: the difference of 4 between the groups is real, but whether it is caused by the drug or by the sequencing run is not identifiable from these data, by any method. The same thing happens for the dummy trap: means F 6, M 9 fit with (6, 0, 3), (9, -3, 0), (0, 6, 9) and so on.
+The figure shows the same six samples twice: coloured by batch on top, by treatment below. The two pictures are identical apart from the labels, so the jump of 4 can be read as a batch effect or as a drug effect with equal right. Make the abstract statement concrete. Two equations, three unknowns: a whole line of solutions, just as in Case 3 of Linear systems in R. Ask the room for another row of the table. The biological message is the important one: the difference of 4 between the groups is real, but whether it is caused by the drug or by the sequencing run is not identifiable from these data, by any method. The same thing happens for the dummy trap: means F 6, M 9 fit with (6, 0, 3), (9, -3, 0), (0, 6, 9) and so on.
 :::
 
 ## Fix it in the design, not the analysis {.smaller}
@@ -446,7 +453,9 @@ Two kinds of fixes. Some dependencies are a coding mistake and are fixed by remo
 
 ## More columns than samples: $p > n$ {.smaller}
 
-$X$ has $n$ rows. With $n$ rows, at most $n$ columns can be independent, so if $p > n$ the columns **must** be dependent.
+$X$ has $n$ rows. With $n$ rows, at most $n$ columns can be independent, so if $p > n$ the columns **must** be dependent. Simplest case: a line $y = a + bx$ has $p = 2$ columns (intercept and $x$):
+
+![](fig21-p-greater-than-n.svg){.nostretch width="62%" fig-align="center"}
 
 - 4 mice, `~ treatment + sex + batch + age + bmi` (batch A/B) → $p = 6 > n = 4$ → no unique $\boldsymbol\beta$.
 - Every factor level costs a column: a 10-level batch factor alone needs 9 dummies.
@@ -455,7 +464,7 @@ $X$ has $n$ rows. With $n$ rows, at most $n$ columns can be independent, so if $
 Rule: count $p$ before you collect data, and keep $n$ well above it. When you really have more predictors than samples (thousands of genes as predictors), you need a different tool: **Penalized linear models**.
 
 ::: notes
-The fourth way to lose uniqueness, and the quickest to check: count columns, count samples. With n = p the fit is perfect but useless for inference, because nothing is left over to estimate the noise. Many-level factors eat columns fast. The forward link is to the penalized block, where ridge and lasso give a unique answer even when p > n by adding a penalty.
+Start with the picture: a straight line has two numbers to choose, a and b. Through one point you can draw any number of lines, all fitting perfectly, so the data cannot pick one. With two points there is exactly one line, and it passes through both: the fit is exact, so there is nothing left over to judge the noise. The fourth way to lose uniqueness, and the quickest to check: count columns, count samples. With n = p the fit is perfect but useless for inference, because nothing is left over to estimate the noise. Many-level factors eat columns fast. The forward link is to the penalized block, where ridge and lasso give a unique answer even when p > n by adding a penalty.
 :::
 
 ## What R tells you {.smaller}

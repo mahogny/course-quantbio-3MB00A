@@ -690,16 +690,71 @@ Quantitative biology and integrative omics
           display:block!important;
       }</style></aside>
 </section>
+<section id="but-do-not-add-more-than-you-need" class="slide level2 smaller">
+<h2>But do not add more than you need</h2>
+<p>Same data, now with extra columns of <strong>random numbers</strong> that have nothing to do with expression:</p>
+<div class="sourceCode" id="cb12"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb12-1"><a aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> (k <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span><span class="dv">6</span>) samples[[<span class="fu">paste0</span>(<span class="st">"noise"</span>, k)]] <span class="ot">&lt;-</span> <span class="fu">rnorm</span>(<span class="dv">12</span>)</span>
+<span id="cb12-2"><a aria-hidden="true" tabindex="-1"></a>design <span class="ot">&lt;-</span> <span class="fu">model.matrix</span>(<span class="sc">~</span> batch <span class="sc">+</span> sex <span class="sc">+</span> treatment <span class="sc">+</span> noise1 <span class="sc">+</span> noise2, <span class="at">data =</span> samples)</span>
+<span id="cb12-3"><a aria-hidden="true" tabindex="-1"></a><span class="fu">topTable</span>(fit, <span class="at">coef =</span> <span class="st">"treatmenttreat"</span>, <span class="at">number =</span> <span class="cn">Inf</span>, <span class="at">confint =</span> <span class="cn">TRUE</span>)   <span class="co"># adds CI.L, CI.R</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="columns">
+<div class="column" style="width:62%;">
+<p><img data-src="fig03-extra-columns-ci.svg" class="" style="width:100.0%"></p>
+</div><div class="column" style="width:38%;">
+<table class="caption-top">
+<thead>
+<tr class="header">
+<th>extra columns</th>
+<th>genes called</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>none</td>
+<td>188</td>
+</tr>
+<tr class="even">
+<td>2</td>
+<td>180</td>
+</tr>
+<tr class="odd">
+<td>4</td>
+<td>28</td>
+</tr>
+<tr class="even">
+<td>6</td>
+<td>1</td>
+</tr>
+</tbody>
+</table>
+</div></div>
+<ul>
+<li>The <strong>confidence interval</strong> is the range of logFC values that fit the data. Each column uses up one sample, and with fewer samples left over the interval gets <strong>wider</strong>, until it covers 0 and the gene is no longer called.</li>
+<li>Add the covariates you need (confounders, strong sources of variation like batch), and no more.</li>
+</ul>
+<aside class="notes">
+<p>The other side of the previous slide. There, adding batch and sex helped: they explain a lot of the variation, so the estimate got sharper and the false calls went away. Here the extra columns explain nothing, but they still cost. Each column uses up one of the 12 samples; what is left over is what the model has to judge how noisy the gene is. With 8 left over the interval for g138 is 0.70 to 1.97, clearly above 0. With 2 left over it runs from -1.9 to 1.9 and the gene is lost; across all genes the list shrinks from 188 to 1. A second effect is visible too: in only 12 samples a column of random numbers can line up with treatment by chance, and then the estimate itself moves (with 4 random columns the g138 estimate drops to 0.03). The numbers come from the R1 simulation of the exercise; the random columns use set.seed(42) after the counts are made. No formula for the interval is needed here: wider interval = less certain, and an interval that covers 0 means “no evidence of change”.</p>
+<style type="text/css">
+        span.MJX_Assistive_MathML {
+          position:absolute!important;
+          clip: rect(1px, 1px, 1px, 1px);
+          padding: 1px 0 0 0!important;
+          border: 0!important;
+          height: 1px!important;
+          width: 1px!important;
+          overflow: hidden!important;
+          display:block!important;
+      }</style></aside>
+</section>
 <section id="coefficients-not-estimable" class="slide level2 smaller">
 <h2>“Coefficients not estimable”</h2>
 <p>If every control is in batch A and every treated sample in batch B:</p>
-<div class="sourceCode" id="cb12"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb12-1"><a aria-hidden="true" tabindex="-1"></a>design_conf <span class="ot">&lt;-</span> <span class="fu">model.matrix</span>(<span class="sc">~</span> batch <span class="sc">+</span> treatment, <span class="at">data =</span> samples_conf)</span>
-<span id="cb12-2"><a aria-hidden="true" tabindex="-1"></a>fit <span class="ot">&lt;-</span> <span class="fu">lmFit</span>(<span class="fu">voom</span>(counts, design_conf), design_conf)</span>
-<span id="cb12-3"><a aria-hidden="true" tabindex="-1"></a><span class="co"># Coefficients not estimable: treatmenttreat</span></span>
-<span id="cb12-4"><a aria-hidden="true" tabindex="-1"></a><span class="fu">head</span>(fit<span class="sc">$</span>coefficients, <span class="dv">2</span>)</span>
-<span id="cb12-5"><a aria-hidden="true" tabindex="-1"></a><span class="co">#    (Intercept) batchB treatmenttreat</span></span>
-<span id="cb12-6"><a aria-hidden="true" tabindex="-1"></a><span class="co"># g1        8.94   0.50             NA</span></span>
-<span id="cb12-7"><a aria-hidden="true" tabindex="-1"></a><span class="co"># g2       10.16  -1.17             NA</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode" id="cb13"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a aria-hidden="true" tabindex="-1"></a>design_conf <span class="ot">&lt;-</span> <span class="fu">model.matrix</span>(<span class="sc">~</span> batch <span class="sc">+</span> treatment, <span class="at">data =</span> samples_conf)</span>
+<span id="cb13-2"><a aria-hidden="true" tabindex="-1"></a>fit <span class="ot">&lt;-</span> <span class="fu">lmFit</span>(<span class="fu">voom</span>(counts, design_conf), design_conf)</span>
+<span id="cb13-3"><a aria-hidden="true" tabindex="-1"></a><span class="co"># Coefficients not estimable: treatmenttreat</span></span>
+<span id="cb13-4"><a aria-hidden="true" tabindex="-1"></a><span class="fu">head</span>(fit<span class="sc">$</span>coefficients, <span class="dv">2</span>)</span>
+<span id="cb13-5"><a aria-hidden="true" tabindex="-1"></a><span class="co">#    (Intercept) batchB treatmenttreat</span></span>
+<span id="cb13-6"><a aria-hidden="true" tabindex="-1"></a><span class="co"># g1        8.94   0.50             NA</span></span>
+<span id="cb13-7"><a aria-hidden="true" tabindex="-1"></a><span class="co"># g2       10.16  -1.17             NA</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <ul>
 <li>This is the identical-columns case: <code>qr(X)$rank</code> is 2 for 3 columns. limma, like <code>lm</code>, gives <code>NA</code>.</li>
 <li>Dropping <code>batch</code> makes the message go away, but the treatment estimate then <strong>includes</strong> the batch effect.</li>
@@ -722,9 +777,9 @@ Quantitative biology and integrative omics
 <section id="the-same-code-for-metabolomics" class="slide level2 smaller">
 <h2>The same code for metabolomics</h2>
 <p>Mass spectrometry gives <strong>log2 intensities</strong> directly, so there is no <code>voom</code>. In the exercise, 150 metabolites in 8 healthy and 8 disease samples; the patients have a <strong>higher BMI</strong>, and 20 metabolites truly change with disease.</p>
-<div class="sourceCode" id="cb13"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a aria-hidden="true" tabindex="-1"></a>design <span class="ot">&lt;-</span> <span class="fu">model.matrix</span>(<span class="sc">~</span> group <span class="sc">+</span> sex <span class="sc">+</span> bmi <span class="sc">+</span> day, <span class="at">data =</span> meta)</span>
-<span id="cb13-2"><a aria-hidden="true" tabindex="-1"></a>fit <span class="ot">&lt;-</span> <span class="fu">eBayes</span>(<span class="fu">lmFit</span>(logint, design))</span>
-<span id="cb13-3"><a aria-hidden="true" tabindex="-1"></a><span class="fu">topTable</span>(fit, <span class="at">coef =</span> <span class="st">"groupdisease"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode" id="cb14"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb14-1"><a aria-hidden="true" tabindex="-1"></a>design <span class="ot">&lt;-</span> <span class="fu">model.matrix</span>(<span class="sc">~</span> group <span class="sc">+</span> sex <span class="sc">+</span> bmi <span class="sc">+</span> day, <span class="at">data =</span> meta)</span>
+<span id="cb14-2"><a aria-hidden="true" tabindex="-1"></a>fit <span class="ot">&lt;-</span> <span class="fu">eBayes</span>(<span class="fu">lmFit</span>(logint, design))</span>
+<span id="cb14-3"><a aria-hidden="true" tabindex="-1"></a><span class="fu">topTable</span>(fit, <span class="at">coef =</span> <span class="st">"groupdisease"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <table class="caption-top">
 <thead>
 <tr class="header">

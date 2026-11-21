@@ -309,6 +309,37 @@ table(samples$batch, samples$treatment)
 The same story as the 8-sample lm example, now for 2000 genes. Because batch is unbalanced but not perfectly confounded, X has full rank and the adjusted model can separate batch and treatment. Without batch, half the list is wrong. The exercise has students reproduce this table.
 :::
 
+## But do not add more than you need {.smaller}
+
+Same data, now with extra columns of **random numbers** that have nothing to do with expression:
+
+```r
+for (k in 1:6) samples[[paste0("noise", k)]] <- rnorm(12)
+design <- model.matrix(~ batch + sex + treatment + noise1 + noise2, data = samples)
+topTable(fit, coef = "treatmenttreat", number = Inf, confint = TRUE)   # adds CI.L, CI.R
+```
+
+:::: {.columns}
+::: {.column width="62%"}
+![](fig03-extra-columns-ci.svg){.nostretch width="100%"}
+:::
+::: {.column width="38%"}
+| extra columns | genes called |
+|---|---|
+| none | 188 |
+| 2 | 180 |
+| 4 | 28 |
+| 6 | 1 |
+:::
+::::
+
+- The **confidence interval** is the range of logFC values that fit the data. Each column uses up one sample, and with fewer samples left over the interval gets **wider**, until it covers 0 and the gene is no longer called.
+- Add the covariates you need (confounders, strong sources of variation like batch), and no more.
+
+::: notes
+The other side of the previous slide. There, adding batch and sex helped: they explain a lot of the variation, so the estimate got sharper and the false calls went away. Here the extra columns explain nothing, but they still cost. Each column uses up one of the 12 samples; what is left over is what the model has to judge how noisy the gene is. With 8 left over the interval for g138 is 0.70 to 1.97, clearly above 0. With 2 left over it runs from -1.9 to 1.9 and the gene is lost; across all genes the list shrinks from 188 to 1. A second effect is visible too: in only 12 samples a column of random numbers can line up with treatment by chance, and then the estimate itself moves (with 4 random columns the g138 estimate drops to 0.03). The numbers come from the R1 simulation of the exercise; the random columns use set.seed(42) after the counts are made. No formula for the interval is needed here: wider interval = less certain, and an interval that covers 0 means "no evidence of change".
+:::
+
 ## "Coefficients not estimable" {.smaller}
 
 If every control is in batch A and every treated sample in batch B:
