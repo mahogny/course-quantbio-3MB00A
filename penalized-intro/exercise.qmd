@@ -27,7 +27,7 @@ A linear model predicts an outcome $y$ (say, drug response) as a weighted sum of
 
 Every sample gives **one equation**; every coefficient is **one unknown**. Two things go wrong in biology:
 
-1. **$p > n$ (more genes than samples).** More unknowns than equations, so **infinitely many** coefficient sets fit the data perfectly. There is no single answer.
+1. **$p > n$ (more genes than samples).** More unknowns than equations, so **infinitely many** coefficient sets achieve the same smallest squared error. They fit perfectly if the equations are consistent; full row rank guarantees this for any outcome. Otherwise the best fit has a nonzero error, but its coefficients are still not unique.
 2. **Correlated predictors** (co-regulated genes). Two genes that move together can stand in for each other, so very different coefficients give almost the same predictions. Which one ordinary least squares returns is decided by the noise: coefficients become **huge and unstable**.
 
 **Penalized regression** adds a price for coefficient size. In words:
@@ -39,7 +39,10 @@ With **ridge**, "size" is the sum of the squared coefficients. Among answers tha
 ::: {.callout-note collapse="true" title="Optional: the maths"}
 For a design matrix $X$ ($n$ samples × $p$ predictors), ordinary least squares minimises $\lVert\mathbf{y} - X\boldsymbol{\beta}\rVert^2$ and solves the **normal equations**
 
-$$X^\top X\,\boldsymbol{\beta} = X^\top \mathbf{y} \qquad\Longrightarrow\qquad \hat{\boldsymbol{\beta}} = (X^\top X)^{-1} X^\top \mathbf{y}.$$
+$$X^\top X\,\boldsymbol{\beta} = X^\top \mathbf{y}.$$
+
+If $X$ has independent columns, the unique solution is
+$\hat{\boldsymbol{\beta}} = (X^\top X)^{-1} X^\top \mathbf{y}$.
 
 This needs the $p \times p$ matrix $X^\top X$ to be invertible. With $p > n$, $\text{rank}(X^\top X) \le n < p$, so it is **singular**. With correlated predictors it is **nearly singular** (an eigenvalue close to 0) and the inverse blows up. Ridge minimises $\lVert\mathbf{y} - X\boldsymbol{\beta}\rVert^2 + \lambda\lVert\boldsymbol{\beta}\rVert^2$, which gives
 
@@ -50,13 +53,13 @@ Adding $\lambda I$ lifts every eigenvalue of $X^\top X$ by $\lambda$, so $X^\top
 
 ## By hand
 
-**B1.** For each experiment, count the equations (samples) and the unknowns (one coefficient per predictor). Can ordinary least squares find **one** best set of coefficients? Give the one-line reason.
+**B1.** For each experiment, count the equations (samples) and the unknowns (one coefficient per predictor). Can ordinary least squares find **one** best set of coefficients? Give the one-line reason, stating any independence assumption needed.
 
 (a) 200 patients, 5 clinical variables.
 (b) 30 patients, 20,000 genes.
-(c) 50 cells, 50 genes, all measurements distinct and uncorrelated.
+(c) 50 cells, 50 genes, with independent columns in the design matrix.
 
-**B2.** You have $n = 2$ samples and $p = 3$ predictors, so the model is 2 equations in 3 unknowns. Without computing anything, explain how many coefficient sets fit the data **exactly**, and connect this to "the model is unidentifiable." (Recall the solution-space language from the Linear systems units.)
+**B2.** You have $n = 2$ samples and $p = 3$ predictors, so the model is 2 equations in 3 unknowns. Assume the two rows of the design matrix are independent. Without computing anything, explain how many coefficient sets fit the data **exactly**, and connect this to "the model is unidentifiable." What could change if the rows were dependent? (Recall the solution-space language from the Linear systems units.)
 
 **B3. (two identical genes).** Genes A and B are perfectly correlated: in every patient, A and B have the same value. The true outcome is $y = 2 \times \text{A}$.
 
@@ -273,11 +276,11 @@ solve(XtX_ridge)                           # now invertible: diag(1/6, 1/2)
 ## Hints
 
 ::: {.callout-tip collapse="true" title="Hint 1 — counting equations and unknowns (B1, B2)"}
-Each sample is one equation, each coefficient is one unknown. With fewer equations than unknowns there are always infinitely many exact solutions. With more equations than unknowns, ordinary least squares finds one best compromise, as long as no predictor can stand in for another. Exactly as many is the knife-edge case.
+Each sample is one equation, each coefficient is one unknown. With fewer equations than unknowns, a consistent system has infinitely many exact solutions; full row rank guarantees consistency for any outcome. Without consistency, there are no exact solutions, but still infinitely many least-squares coefficient sets. With more equations than unknowns, ordinary least squares finds one best compromise if the predictor columns are independent. Exactly as many is the knife-edge case: uniqueness requires full rank.
 :::
 
 ::: {.callout-tip collapse="true" title="Hint 2 — infinitely many solutions (B2)"}
-Fewer independent equations than unknowns means the solution set is not a single point but a whole space of vectors, all fitting equally well. This is the same "infinitely many solutions" case you met when solving a linear system with free variables in the Linear systems units. "Unidentifiable" just means the data cannot single out one set of coefficients.
+For a consistent system with rank $r$ and $p$ unknowns, there are $p-r$ free variables. In B2 the two rows are independent, so $r=2$ and $p-r=1$: the exact solutions form a line. If the rows are dependent, first check consistency; exact fits may not exist. Even then, dependent predictor columns give multiple least-squares coefficient sets. "Unidentifiable" means the data cannot single out one set of coefficients.
 :::
 
 ::: {.callout-tip collapse="true" title="Hint 3 — identical genes (B3)"}
@@ -305,15 +308,15 @@ A diagonal matrix wears its eigenvalues on the diagonal. Adding $\lambda I$ adds
 ::: {.callout-note collapse="true" title="Solution"}
 
 **B1.**
-(a) 200 equations, 5 unknowns (6 with an intercept): many more equations than unknowns. Ordinary least squares finds **one** best fit (as long as the variables are not exact copies of each other). Ordinary least squares is fine.
-(b) 30 equations, 20,000 unknowns: far more unknowns than equations, so **infinitely many** coefficient sets fit perfectly. **No unique** answer.
-(c) 50 equations, 50 unknowns: just enough. If the measurements are genuinely distinct and uncorrelated there is one answer, which fits all 50 cells exactly (with an intercept there is one unknown too many). This is the knife-edge case: any correlation among the genes pushes it toward the unstable situation of B3.
+(a) 200 equations, 5 unknowns (6 with an intercept): many more equations than unknowns. Ordinary least squares finds **one** best coefficient set if the design columns are independent: no column is an exact linear combination of the others. The shape alone does not guarantee this.
+(b) 30 equations, 20,000 unknowns: far more unknowns than equations, so **infinitely many** coefficient sets achieve the same least-squares fit. They fit perfectly if the equations are consistent (guaranteed when the 30 rows are independent). Otherwise the minimum error is nonzero, but there is still **no unique** coefficient set.
+(c) 50 equations, 50 unknowns and independent columns: there is **one** answer, which fits all 50 cells exactly (adding an intercept makes 51 unknowns and loses uniqueness). This is the knife-edge case: strong near-dependence among the columns makes the coefficients unstable, as in B3.
 
-**B2.** Two equations in three unknowns: there are more free parameters (3) than constraints (2), so the exactly-fitting coefficient sets form a whole **line** (a one-dimensional solution space) — **infinitely many** fit perfectly. The data cannot pick one out, so the model is **unidentifiable**. This is the same "infinitely many solutions" case from the Linear systems units, and it is exactly what $p > n$ produces in general.
+**B2.** The two independent rows give rank 2, so every outcome vector can be fitted exactly. With three unknowns there is one free variable: the exactly-fitting coefficient sets form a whole **line** — **infinitely many** fit perfectly. The data cannot pick one out, so the model is **unidentifiable**. If the rows were dependent, there could instead be no exact fit, or a consistent system with two or more free variables. In general, $p>n$ guarantees non-unique least-squares coefficients, but an exact fit also requires consistency.
 
 **B3.**
 (a) For A = B = 3: choice 1 gives 2 × 3 + 0 × 3 = 6, choice 2 gives 0 × 3 + 2 × 3 = 6, choice 3 gives 10 × 3 − 8 × 3 = 30 − 24 = 6. For A = B = 5 all three give 10. The predictions are identical: because A = B, the prediction is (a + b) × A, and a + b = 2 for all three. Any choice with a + b = 2 works, e.g. a = 1, b = 1, or a = 3, b = −1, or a = −50, b = 52.
-(b) None of them is more "true" than the others, and **no** amount of data from these patients can tell them apart: they make identical predictions. The model is unidentifiable. With noise, ordinary least squares returns whichever split the noise happens to favour, which can be a wild one like a = 10, b = −8.
+(b) None of them is more "true" than the others, and **no** amount of data from these patients can tell them apart: they make identical predictions. The model is unidentifiable. Even with noise in the outcome, exactly identical predictor columns cannot identify the split: software must choose a convention (for example, `lm()` drops a redundant column). If the predictors are only nearly identical, small differences and noise can favour a wild split such as a = 10, b = −8.
 (c) Sizes: choice 1: 2² + 0² = 4; choice 2: 0² + 2² = 4; choice 3: 10² + (−8)² = 100 + 64 = 164; a = 1, b = 1: 1 + 1 = 2. The penalty picks a = 1, b = 1, the smallest: it splits the effect evenly between the two genes. (Any other choice with a + b = 2, such as a = 1.5, b = 0.5 → 2.5, is larger.) This is how the penalty turns "infinitely many answers" into one.
 (d) **(optional)** The columns $(1, 1)$ and $(1, 1.01)$ are almost identical — almost parallel — mirroring two almost-perfectly-correlated genes, so the matrix is **nearly singular**. Row reduction:
 $$
@@ -368,7 +371,7 @@ $$-\sum_i x_i y_i + \beta\Big(\sum_i x_i^2 + \lambda\Big) = 0 \quad\Longrightarr
 
 $\hat{\beta}$ decreases steadily toward **0** as $\lambda$ grows — the coefficient is shrunk ever harder and approaches zero without reaching it.
 
-**R3.** (a) No: at $\lambda = 0.01$ the grey genes range from about $-0.9$ to $0.9$ although their true value is 0. With so little penalty, ridge is one of the many perfect fits (the one with the smallest coefficients, which is why it differs from `lm()`), and it uses the no-effect genes to fit the noise. (b) As $\lambda$ grows all lines move smoothly toward 0, the grey ones first (at $\lambda = 5$ they are within about $\pm 0.4$), the three real genes later, so in the middle the real genes stand out from the grey bundle. By $\lambda = 1000$ everything is close to 0, but no line is exactly 0: ridge shrinks, it does not select (that is the lasso, next unit). (c) Genes 1–3: $(1.58, -1.27, 1.04)$ at $\lambda = 0.01$; $(0.88, -0.79, 0.62)$ at $\lambda = 5$; $(0.18, -0.19, 0.16)$ at $\lambda = 100$. The signs stay right; the sizes shrink, which is the bias.
+**R3.** (a) No: at $\lambda = 0.01$ the grey genes range from about $-0.9$ to $0.9$ although their true value is 0. With so little penalty, ridge is close to the perfect fit with the smallest coefficients (the limit as $\lambda$ approaches 0, which differs from `lm()`'s choice), and it uses the no-effect genes to fit the noise. At this positive $\lambda$ the training error is small but nonzero. (b) As $\lambda$ grows all lines move smoothly toward 0, the grey ones first (at $\lambda = 5$ they are within about $\pm 0.4$), the three real genes later, so in the middle the real genes stand out from the grey bundle. By $\lambda = 1000$ everything is close to 0, but no line is exactly 0: ridge shrinks, it does not select (that is the lasso, next unit). (c) Genes 1–3: $(1.58, -1.27, 1.04)$ at $\lambda = 0.01$; $(0.88, -0.79, 0.62)$ at $\lambda = 5$; $(0.18, -0.19, 0.16)$ at $\lambda = 100$. The signs stay right; the sizes shrink, which is the bias.
 
 **R4.** (a) At $\lambda = 0.01$ the training error is about 0.005 (an almost perfect fit) and the test error 2.60. (b) The best $\lambda$ is about **3.6**, with test error **1.97** (training error 0.61 there). At $\lambda = 1000$ both are large (training 2.47, test 2.67): underfitting. (c) A smaller penalty always lets the fit get closer to the training patients, noise included, so training error keeps falling. But the noise does not repeat in new patients, so below the best $\lambda$ the test error rises again: a U shape, as in E1–E2. The test error, not the training error, is what tells you which $\lambda$ to use; cross-validation (later unit) estimates it without a separate test set.
 

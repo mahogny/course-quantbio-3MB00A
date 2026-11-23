@@ -15,7 +15,7 @@ By the end of this exercise you should be able to:
 - call [`eigen`](https://rdrr.io/r/base/eigen.html) and read its `$values` and `$vectors`,
 - pull out the $k$-th eigenvector (a **column**) and pair it with its eigenvalue,
 - **verify** $A\mathbf{v} = \lambda\mathbf{v}$ in R, using [`all.equal`](https://rdrr.io/r/base/all.equal.html) for floating-point safety,
-- **reconstruct** a matrix as $A = V\Lambda V^{-1}$, and as $A = V\Lambda V^\top$ when it is symmetric,
+- **reconstruct** a matrix with a full set of independent eigenvectors as $A = V\Lambda V^{-1}$, and as $A = V\Lambda V^\top$ when it is real symmetric,
 - compute a **covariance matrix** with [`cov`](https://rdrr.io/r/stats/cor.html) and eigen-decompose it, and show the leading eigenvector points along the **main axis of variation**.
 
 This is an **R-heavy walkthrough day**. Run every block, change numbers, and look at the plots. The by-hand intuition from Eigenvalues & eigenvectors is what makes the output meaningful.
@@ -29,8 +29,11 @@ For a square matrix $A$, `eigen(A)` returns a list:
 
 Eigenvectors are unique only up to **scale and sign**, so R's unit-length vector may be the negative of your hand answer — same direction, still correct.
 
-**Reconstruction.** With $V$ = eigenvectors (columns) and $\Lambda = \text{diag}(\text{eigenvalues})$:
+**Reconstruction.** When $A$ has a full set of independent eigenvectors (it is **diagonalizable**), form $V$ from those eigenvectors as columns and $\Lambda = \text{diag}(\text{eigenvalues})$:
 $$A = V\,\Lambda\,V^{-1}, \qquad\text{and for symmetric } A:\quad A = V\,\Lambda\,V^\top .$$
+A real symmetric matrix always has an orthonormal eigenvector basis. A general
+square matrix need not have enough independent eigenvectors; then $V$ is
+singular and the inverse formula does not apply.
 
 **Biology.** The covariance matrix `cov(X)` (with samples in **rows**, features in **columns**) is symmetric. Its leading eigenvector is the direction of greatest variation — the engine of PCA.
 
@@ -79,7 +82,7 @@ all.equal(as.vector(A %*% v), lambda * v)   # TRUE
 V      <- e$vectors
 Lambda <- diag(e$values)
 
-# general formula
+# formula for a diagonalizable matrix (V must be invertible)
 V %*% Lambda %*% solve(V)      # rebuilds A
 
 # symmetric shortcut (A is symmetric here)
@@ -137,7 +140,7 @@ arrows(m[1], m[2], m[1] + 2*pc1[1], m[2] + 2*pc1[2],
 :::
 
 ::: {.callout-tip collapse="true" title="Hint 3 — building V and Lambda"}
-`V <- e$vectors` already has eigenvectors in columns. [`diag`](https://rdrr.io/r/base/diag.html)`(e$values)` turns the eigenvalue vector into the diagonal matrix $\Lambda$. The inverse is [`solve`](https://rdrr.io/r/base/solve.html)`(V)`; the transpose is [`t`](https://rdrr.io/r/base/t.html)`(V)`.
+`V <- e$vectors` already has eigenvectors in columns. [`diag`](https://rdrr.io/r/base/diag.html)`(e$values)` turns the eigenvalue vector into the diagonal matrix $\Lambda$. If those columns are independent, the inverse is [`solve`](https://rdrr.io/r/base/solve.html)`(V)`; the transpose is [`t`](https://rdrr.io/r/base/t.html)`(V)`. Independence is guaranteed for the real symmetric examples here, but not for every square matrix. For example, the shear $\begin{pmatrix}1&2\\0&1\end{pmatrix}$ has only one independent eigenvector, so it cannot be reconstructed with $V\Lambda V^{-1}$.
 :::
 
 ::: {.callout-tip collapse="true" title="Hint 4 — symmetric vs general"}
@@ -149,7 +152,7 @@ For symmetric $A$, eigenvectors are orthonormal, so $V^{-1} = V^\top$ and `cross
 :::
 
 ::: {.callout-tip collapse="true" title="Hint 6 — proportion of variance"}
-Total variance = `sum(ec$values)`. The share along the leading axis is `ec$values[1] / sum(ec$values)`. More noise makes the cloud rounder, so this share drops toward 0.5.
+Total variance = `sum(ec$values)`. The share along the leading axis is `ec$values[1] / sum(ec$values)`. Increasing gene 2's noise from `sd = 0.4` to `1.5` makes this example's cloud rounder and lowers the share. Because noise is added **only to gene 2**, increasing it much further makes that gene's variance dominate: the leading share eventually rises toward **1**, not 0.5.
 :::
 
 ## Solutions

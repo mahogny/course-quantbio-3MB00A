@@ -31,8 +31,8 @@ $$
 \underbrace{X}_{\text{cells × genes}}
 \xrightarrow{\text{PCA}}
 \underbrace{Z}_{\text{cells × }\sim 30}
-\xrightarrow{\text{kNN}}
-\underbrace{G}_{\text{graph}}
+\xrightarrow{\text{neighbours}}
+\underbrace{G_U,\ G_C}_{\text{neighbour graphs}}
 \xrightarrow{\begin{array}{c}\text{UMAP}\\\text{clustering}\end{array}}
 \text{2D map + labels}
 $$
@@ -42,8 +42,8 @@ $$
 $$
 \text{dist}(\mathbf{x}_i, \mathbf{x}_j) = \lVert \mathbf{x}_i - \mathbf{x}_j \rVert = \sqrt{\sum_{p} (x_{ip} - x_{jp})^2}.
 $$
-3. **UMAP** lays the graph out in 2D. It is **non-linear** and preserves **local** neighbourhoods only — its axes and inter-cluster distances are **not quantitative**.
-4. **Clustering** (Louvain / **Leiden**) cuts the **same graph** into densely connected **communities**; the **resolution** parameter controls how many. UMAP and clustering are two views of one graph, not one derived from the other.
+3. **UMAP** builds a weighted neighbour graph from the PC representation and lays it out in 2D. It is **non-linear** and aims to preserve **local** neighbourhoods — its axes and inter-cluster distances are **not quantitative**.
+4. **Clustering** (Louvain / **Leiden**) finds densely connected **communities** in a neighbour graph; the **resolution** parameter controls the granularity. In the Seurat recipe below, clustering uses a shared-nearest-neighbour (SNN) graph from `FindNeighbors`, while `RunUMAP(dims = ...)` builds its own neighbour graph. They use the same PC representation, but need not use identical graphs. Cluster labels are not derived from the 2D layout.
 
 **Key discipline:** *local structure is trustworthy, global geometry is decorative.*
 
@@ -75,7 +75,7 @@ Use this toy dataset throughout. Six cells have already been reduced to their **
 (d) "There are five clearly separated islands, so there are probably several cell populations."
 (e) "UMAP-1 is about 8 for these cells, which is biologically meaningful."
 
-**B6.** Conceptual — **resolution.** You cluster the same graph at resolution $0.2$, then at $0.8$, then at $2.0$. Order these three runs by the number of clusters they will produce (fewest to most), and explain the trend. Is there a "correct" number of clusters? What should you check a cluster against before believing it?
+**B6.** Conceptual — **resolution.** You cluster the same graph at resolution $0.2$, then at $0.8$, then at $2.0$. Give the expected order of these three runs by number of clusters (fewest to most), and explain the trend. Is that order guaranteed for every run of a heuristic clustering algorithm? Is there a "correct" number of clusters? What should you check a cluster against before believing it?
 
 ## Explore {#explore}
 
@@ -200,14 +200,14 @@ seu <- ScaleData(seu)
 seu <- RunPCA(seu, npcs = 50)
 ElbowPlot(seu)                       # how many PCs to keep? (scree/elbow)
 
-seu <- FindNeighbors(seu, dims = 1:30, k.param = 15)  # kNN graph in PC space
+seu <- FindNeighbors(seu, dims = 1:30, k.param = 15)  # neighbours and SNN graph in PC space
 seu <- FindClusters(seu, resolution = 0.5)            # Leiden/Louvain communities
-seu <- RunUMAP(seu, dims = 1:30)                      # 2D layout, display only
+seu <- RunUMAP(seu, dims = 1:30)                      # its own neighbour graph and 2D layout
 
 DimPlot(seu, reduction = "umap", label = TRUE)        # UMAP coloured by cluster
 ```
 
-Note the two calls that share `dims = 1:30`: `FindNeighbors` and `RunUMAP` both start from the **same top-30 PCs**, and `FindClusters` works on the **graph** that `FindNeighbors` built — **not** on the UMAP.
+Note the two calls that share `dims = 1:30`: `FindNeighbors` and `RunUMAP` both start from the **same top-30 PCs**. `FindClusters` uses the **SNN graph** from `FindNeighbors` — **not** the UMAP. `RunUMAP(dims = 1:30)` independently builds its own graph, with default `n.neighbors = 30`, whereas `FindNeighbors` here uses `k.param = 15`; changing one neighbour setting does not change the other.
 
 ### Reproduce the kNN step in base R
 
@@ -241,7 +241,7 @@ The distance between the points $(a, b)$ and $(c, d)$ is $\sqrt{(a-c)^2 + (b-d)^
 :::
 
 ::: {.callout-tip collapse="true" title="Hint 2 — nearest neighbours (B2)"}
-For each cell, compute its distance to the **other five** and keep the **two smallest**. The three "origin" cells (A, B, C) are all within distance $\le \sqrt{2}\approx1.41$ of each other, while any origin-to-far distance is $\ge\sqrt{50}\approx7.07$ — so a cell's nearest neighbours are always in its own group.
+For each cell, compute its distance to the **other five** and keep the **two smallest**. The three "origin" cells (A, B, C) are all within distance $\le \sqrt{2}\approx1.41$ of each other, while any origin-to-far distance is $\ge\sqrt{41}\approx6.40$ — so a cell's nearest neighbours are always in its own group.
 :::
 
 ::: {.callout-tip collapse="true" title="Hint 3 — communities (B3)"}
@@ -257,7 +257,7 @@ The rule from the lecture: **local grouping is trustworthy; axes, inter-cluster 
 :::
 
 ::: {.callout-tip collapse="true" title="Hint 6 — resolution (B6)"}
-Higher resolution gives **more, smaller** clusters; lower resolution gives **fewer, larger** clusters (monotone). There is **no true number of clusters** — the right granularity depends on the biological question. Validate a cluster against **known marker genes**, not against which picture looks tidiest (previewing cell-type annotation).
+Higher resolution generally favours **more, smaller** clusters; lower resolution generally favours **fewer, larger** clusters. Heuristic solutions need not have monotonic cluster counts or form nested partitions. There is **no true number of clusters** — the right granularity depends on the biological question. Validate a cluster against **known marker genes**, not against which picture looks tidiest (previewing cell-type annotation).
 :::
 
 ::: {.callout-tip collapse="true" title="Hint 7 — the R neighbour step (R1–R3)"}
@@ -305,18 +305,18 @@ The graph: A–B, A–C, B–C form a triangle; D–E, D–F, E–F form a secon
 - (d) **Legitimate.** Several clearly separated islands is reasonable evidence of several populations — a **qualitative, local** reading. (It still needs confirmation by marker genes.)
 - (e) **Not legitimate.** The UMAP **axes have no interpretation**; never report or reason from an axis value.
 
-**B6.** Fewest to most clusters: **resolution $0.2$ < $0.8$ < $2.0$**. Resolution and cluster count move **together** (monotone): raising it lets the community-detection algorithm split groups more finely, lowering it merges them. There is **no correct number of clusters** — the right granularity depends on the biological question (broad lineages vs fine subtypes), and pushing resolution too high eventually splits noise into fake "types". Before believing a cluster, check it against **known marker genes** (does it express a coherent, recognisable programme?), not against which resolution produced the tidiest picture. This is the handoff to cell-type annotation.
+**B6.** Expected fewest to most clusters: **resolution $0.2$ < $0.8$ < $2.0$**. Raising resolution generally favours finer communities and lowering it favours coarser ones, but this order is **not guaranteed**: heuristic solutions can have nonmonotonic cluster counts, and partitions at different resolutions need not be nested. There is **no correct number of clusters** — the right granularity depends on the biological question (broad lineages vs fine subtypes), and pushing resolution too high eventually splits noise into fake "types". Before believing a cluster, check it against **known marker genes** (does it express a coherent, recognisable programme?), not against which resolution produced the tidiest picture. This is the handoff to cell-type annotation.
 
 **R1.** `as.matrix(dist(Z))` gives (rounded):
 
 ```r
      A    B    C    D    E    F
 A 0.00 1.00 1.00 7.07 7.81 7.81
-B 1.00 0.00 1.41 6.40 7.07 7.81
-C 1.00 1.41 0.00 6.40 7.81 7.07
+B 1.00 0.00 1.41 6.40 7.07 7.21
+C 1.00 1.41 0.00 6.40 7.21 7.07
 D 7.07 6.40 6.40 0.00 1.00 1.00
-E 7.81 7.07 7.81 1.00 0.00 1.41
-F 7.81 7.81 7.07 1.00 1.41 0.00
+E 7.81 7.07 7.21 1.00 0.00 1.41
+F 7.81 7.21 7.07 1.00 1.41 0.00
 ```
 
 The A–B, A–C entries are $1$, B–C is $1.41=\sqrt2$, A–D is $7.07=\sqrt{50}$, D–E is $1$ — matching **B1** exactly.
@@ -336,8 +336,8 @@ Every cell's two neighbours are its own group-mates — identical to the hand an
 **R4.**
 
 - (a) keep more PCs → change **`npcs`** in `RunPCA` (and widen `dims = 1:30` in `FindNeighbors`/`RunUMAP` to use them).
-- (b) more clusters → **raise `resolution`** in `FindClusters`.
-- (c) more/fewer neighbours per cell → change **`k.param`** in `FindNeighbors`.
+- (b) generally more clusters → **raise `resolution`** in `FindClusters` (the count is not guaranteed to increase on every run).
+- (c) more/fewer neighbours for the clustering graph → change **`k.param`** in `FindNeighbors`; for UMAP’s independently constructed graph, change **`n.neighbors`** in `RunUMAP`.
 :::
 
 ## Where this leads

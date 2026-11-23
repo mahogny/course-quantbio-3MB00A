@@ -2117,7 +2117,7 @@ This material is not included in the course, but it is relevant if you want to l
 <p>The last two rows have the same true fold change. Which pseudocount reports it best, and for which counts? Why is a large <span class="math inline">\(\log_2\)</span> FC for 0 → 1 a problem?</p>
 <p><strong>B5.</strong> Compute <span class="math inline">\(\log(1 + x)\)</span> (natural log) and <span class="math inline">\(\log x\)</span> for <span class="math inline">\(x = 0\)</span>, <span class="math inline">\(0.01\)</span>, <span class="math inline">\(1\)</span> and <span class="math inline">\(1000\)</span>. Where does the +1 matter, and where does it not?</p>
 <p><strong>B6.</strong> A cell has <span class="math inline">\(n = 5{,}000\)</span> UMIs in total, of which <span class="math inline">\(x = 3\)</span> are of gene G. Compute <span class="math inline">\(\log(1 + \tfrac{x}{n} \cdot 10{,}000)\)</span>. Show that it equals <span class="math inline">\(\log 2 + \log(x + 0.5)\)</span>. What is the pseudocount in raw counts? Do the same for the same 3 UMIs in a cell with <span class="math inline">\(n = 20{,}000\)</span>.</p>
-<p><strong>B7. (concept)</strong> Five B cells have normalized expression <span class="math inline">\(0, 0, 0, 2, 8\)</span> for a T-cell marker. What is the median? You plot it with a log-scaled y axis, which drops the zeros: what median does the boxplot now show, and what would a reader conclude?</p>
+<p><strong>B7. (concept)</strong> Five B cells have normalized expression <span class="math inline">\(0, 0, 0, 2, 8\)</span> for a T-cell marker. What is the median? You plot it with <code>ggplot2::geom_boxplot()</code> and <code>scale_y_log10()</code>, which drops the zeros and computes the boxplot statistics on the log-transformed values: what median does the boxplot now show in the original expression units, and what would a reader conclude?</p>
 </section>
 <section id="explore" class="level2">
 <h2 class="anchored" data-anchor-id="explore">Explore: choose the pseudocount</h2>
@@ -2232,7 +2232,7 @@ Hint 4 — boxplot medians and log axes
 </div>
 <div id="callout-5" class="callout-5-contents callout-collapse collapse">
 <div class="callout-body-container callout-body">
-<p>For R5, <code>ggplot2::ggplot_build(p)$data[[1]]</code> holds the computed boxplot statistics (column <code>middle</code>). On a <code>scale_y_log10()</code> plot they are in <span class="math inline">\(\log_{10}\)</span> units, so take <code>10^middle</code>.</p>
+<p>For R5, <code>ggplot2::ggplot_build(p)$data[[1]]</code> holds the computed boxplot statistics (column <code>middle</code>). On a <code>scale_y_log10()</code> plot the statistics are computed on the log-transformed data and are in <span class="math inline">\(\log_{10}\)</span> units, so take <code>10^middle</code>. For an even number of retained values, backtransforming their median on the log scale gives the geometric mean of the two middle values, rather than their arithmetic mean.</p>
 </div>
 </div>
 </div>
@@ -2316,7 +2316,7 @@ Solution
 </table>
 <p>Near 0 the +1 dominates, and <span class="math inline">\(\log(1 + x) \approx x\)</span>. At 1000 it changes the value by 0.001.</p>
 <p><strong>B6.</strong> <span class="math inline">\(\tfrac{3}{5000} \cdot 10{,}000 = 6\)</span>, <span class="math inline">\(\log(1 + 6) = \log 7 = 1.946\)</span>. And <span class="math inline">\(\log 2 + \log 3.5 = 0.693 + 1.253 = 1.946\)</span>. In general <span class="math inline">\(1 + 2x = 2(x + 0.5)\)</span>, so the pseudocount in raw counts is <span class="math inline">\(0.5 = n / 10{,}000\)</span>. For <span class="math inline">\(n = 20{,}000\)</span>: <span class="math inline">\(\log(1 + 1.5) = 0.916 = \log 0.5 + \log(3 + 2)\)</span>, pseudocount 2. The same 3 UMIs are damped more in a bigger cell.</p>
-<p><strong>B7.</strong> The median of <span class="math inline">\(0, 0, 0, 2, 8\)</span> is 0: most B cells do not express the marker. Without the zeros the values are <span class="math inline">\(2, 8\)</span>, median 5. The plot suggests B cells express the T-cell marker at a moderate level, which is wrong.</p>
+<p><strong>B7.</strong> The median of <span class="math inline">\(0, 0, 0, 2, 8\)</span> is 0: most B cells do not express the marker. After dropping the zeros, <code>scale_y_log10()</code> computes the median of <span class="math inline">\(\log_{10}2\)</span> and <span class="math inline">\(\log_{10}8\)</span>. Backtransforming gives <span class="math inline">\(10^{(\log_{10}2+\log_{10}8)/2} = \sqrt{2\cdot8} = 4\)</span>. The arithmetic median of the retained raw values would be 5, but this is not the statistic computed by that plotting workflow. The plot suggests B cells express the T-cell marker at a moderate level while hiding the majority of zero-expression cells.</p>
 <p><strong>R1.</strong></p>
 <div class="sourceCode" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="fu">mean</span>(X <span class="sc">==</span> <span class="dv">0</span>)                          <span class="co"># 0.50</span></span>
 <span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>n <span class="ot">&lt;-</span> <span class="fu">rowSums</span>(X)</span>

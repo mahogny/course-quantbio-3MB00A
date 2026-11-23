@@ -80,7 +80,7 @@ The demo below adds up five waves, $a_f \sin(2\pi f\,t)$ for $f = 1, \dots, 5$ c
 
 **W2.** $a_1$ alone is one smooth swell. Adding the third harmonic flattens the tops and steepens the sides; adding the fifth flattens them further, with small ripples on the plateaus. The flat parts sit near $\pm\pi/4 \approx \pm 0.79$ (that is the limit of $\sin x + \tfrac13\sin 3x + \tfrac15\sin 5x + \dots$; with three terms the plateaus wiggle around this value). Steeper edges need **higher** odd harmonics: $f = 7, 9, 11, \dots$ with amplitudes $1/7, 1/9, \dots$. Sharp edges live at high frequencies.
 
-**W3.** The square wave uses only the odd frequencies; the sawtooth uses all five, with heights $1, 1/2, 1/3, 1/4, 1/5$. Flipping the signs of $a_2$ and $a_4$ gives the same sawtooth, moved by half a window: shifting $t$ by $1/2$ multiplies $\sin(2\pi f t)$ by $(-1)^f$, so it flips exactly the even frequencies. The spectrum is unchanged, as in B4: a time shift changes the phases, not the amplitudes. Flipping only $a_3$ is not a shift: the signal gets a clearly different shape, yet the bars are still the same. The amplitude spectrum leaves out the **phase** of each wave (here only its sign), so different signals can share the same amplitude spectrum. The full Fourier transform keeps the phase too, which is why the signal can be rebuilt from it.
+**W3.** The square wave uses only the odd frequencies; the sawtooth uses all five, with heights $1, 1/2, 1/3, 1/4, 1/5$. Flipping the signs of $a_2$ and $a_4$ gives the negative of the original sawtooth shifted by half a window: if the original is $x(t)$, the new signal is $-x(t + 1/2)$. A half-window shift alone multiplies each harmonic by $(-1)^f$, flipping the **odd** frequencies; the extra minus sign leaves the odd ones unchanged and flips the **even** ones. The amplitude spectrum is unchanged: both a time shift and an overall sign reversal change phases but preserve magnitudes. Flipping only $a_3$ is not a shift: the signal gets a clearly different shape, yet the bars are still the same. The amplitude spectrum leaves out the **phase** of each wave (here only its sign), so different signals can share the same amplitude spectrum. The full Fourier transform keeps the phase too, which is why the signal can be rebuilt from it.
 :::
 
 ## Explore: filter an image {#explore-filter}
@@ -131,7 +131,7 @@ x <- sin(2*pi*3*t) + 0.5*sin(2*pi*20*t) + rnorm(n, sd = 0.2)
 
 X   <- fft(x)          # discrete Fourier transform -> complex numbers
 mag <- Mod(X)          # magnitude = amount of each frequency
-mag <- mag[1:(n/2)]    # keep the lower half; the upper half mirrors it
+mag <- mag[1:(n/2 + 1)] # keep DC through Nyquist; negative frequencies mirror these
 
 plot(mag, type = "h", xlab = "frequency index", ylab = "amplitude")
 # expect two clear spikes: a tall one at R index 4 (frequency 3), another at index 21 (frequency 20)
@@ -158,7 +158,7 @@ x_lp <- Re(fft(X_lp, inverse = TRUE) / n)
 
 **R1.** In the first block, before looking: at which two frequency indices do you expect spikes, and which should be **taller**? (Match the amplitudes in the formula for `x`.)
 
-**R2.** Why do we take `Mod(X)` rather than plotting `X` directly, and why do we keep only the first half `mag[1:(n/2)]`? (Two short reasons — one about complex numbers, one about symmetry.)
+**R2.** Why do we take `Mod(X)` rather than plotting `X` directly, and why do we keep `mag[1:(n/2 + 1)]` (DC through Nyquist)? (Two short reasons — one about complex numbers, one about symmetry.)
 
 **R3.** In the low-pass block, predict what happens to `x_lp` if you **increase** `keep` from 6 to 30. Will it look more like the smooth trend or more like the original noisy signal? Explain in terms of which frequencies you are now keeping.
 
@@ -191,7 +191,7 @@ A perfectly periodic artefact is localised in frequency (a few bright dots), so 
 :::
 
 ::: {.callout-tip collapse="true" title="Hint 7 — reading fft() output (R1–R4)"}
-[`fft`](https://rdrr.io/r/stats/fft.html) returns **complex** numbers; use [`Mod`](https://rdrr.io/r/base/Mod.html) for amplitude and [`Arg`](https://rdrr.io/r/base/Mod.html) for phase. For a real input the spectrum is mirror-symmetric, so only the first half is informative. The transform is unnormalised, so the inverse must be divided by the length. The spike *height* tracks the amplitude in the formula for `x`.
+[`fft`](https://rdrr.io/r/stats/fft.html) returns **complex** numbers; use [`Mod`](https://rdrr.io/r/base/Mod.html) for amplitude and [`Arg`](https://rdrr.io/r/base/Mod.html) for phase. For a real input the negative-frequency coefficients are the complex conjugates of the positive-frequency ones. For even `n`, keep indices `1:(n/2 + 1)` to include both DC and Nyquist. The transform is unnormalised, so the inverse must be divided by the length. The spike *height* tracks the amplitude in the formula for `x`.
 :::
 
 ## Solutions
@@ -202,7 +202,7 @@ A perfectly periodic artefact is localised in frequency (a few bright dots), so 
 
 **B2.** A slow smooth trend is **low-frequency**; the fine texture on top is **high-frequency**. So the energy sits mostly at low frequencies with a small high-frequency contribution — *both*, but dominated by the low end. A **low-pass** filter keeps the low frequencies, i.e. it keeps the smooth trend and removes the fine texture.
 
-**B3.** (a) *Change of basis:* the signal is one object; in the standard basis its coordinates are its values at each time point (one axis per time point), and the Fourier transform re-expresses the same object in the Fourier basis, where the coordinates are the amounts of each frequency (one axis per frequency). Nothing but the coordinate system changed. (b) *Reversible:* the Fourier basis is a complete orthogonal basis, so the transform is an invertible rotation of coordinates — the inverse Fourier transform reconstructs the original signal exactly, so no information is lost.
+**B3.** (a) *Change of basis:* the signal is one object; in the standard basis its coordinates are its values at each time point (one axis per time point), and the Fourier transform re-expresses the same object in the Fourier basis, where the coordinates are the amounts of each frequency (one axis per frequency). Nothing but the coordinate system changed. (b) *Reversible:* the Fourier basis is a complete orthogonal basis, so the transform is an invertible change of coordinates — the inverse Fourier transform reconstructs the original signal exactly, so no information is lost.
 
 **B4.** Starting the recording later slides every constituent wave along in its cycle, which changes the **phase** of every frequency. The **frequencies** present and their **amplitudes** are unchanged (the same waves are there, equally strong). Therefore the **magnitude** spectrum (amplitudes only) is unaffected by *when* you started recording, while the phase spectrum is. That shift-invariance is a big reason amplitude-only summaries are often preferred for comparing signals.
 
@@ -220,7 +220,7 @@ A perfectly periodic artefact is localised in frequency (a few bright dots), so 
 
 **R1.** The spikes are at frequencies **3** and **20**. In this one-based R vector they appear at indices **4** and **21**, because index 1 is the zero-frequency (DC) term. The frequency-3 spike is **taller**, because that component has amplitude 1 versus 0.5 for the frequency-20 component. The noise contributes a low, roughly flat floor across all frequencies.
 
-**R2.** We take `Mod(X)` because `fft()` returns **complex** numbers (real + imaginary parts encoding amplitude *and* phase); `Mod()` extracts the amplitude, which is what we want to see. We keep only `mag[1:(n/2)]` because for a **real** input signal the spectrum is **mirror-symmetric** (the upper half is a redundant reflection of the lower half), so the first half contains all the information.
+**R2.** We take `Mod(X)` because `fft()` returns **complex** numbers (real + imaginary parts encoding amplitude *and* phase); `Mod()` extracts the amplitude, which is what we want to see. For a **real** input with even length `n`, we keep `mag[1:(n/2 + 1)]`: this includes the zero-frequency (DC) and Nyquist bins as well as the positive frequencies. The remaining negative-frequency coefficients are complex conjugates of their positive-frequency partners, so their magnitudes are redundant. Magnitudes alone still omit phase; reconstruction needs the complex coefficients.
 
 **R3.** Raising `keep` from 6 to 30 keeps more of the higher frequencies. At `keep = 6` you keep only the slowest components, so `x_lp` is a very smooth curve close to the 3-cycle trend. At `keep = 30` you now also retain the 20-cycle component (and more of the noise band), so `x_lp` looks **more like the original noisy signal** — less smoothing. More kept frequencies = less aggressive low-pass = closer to the original.
 

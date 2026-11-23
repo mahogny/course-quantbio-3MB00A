@@ -2077,8 +2077,8 @@ window.Quarto = {
 \underbrace{X}_{\text{cells × genes}}
 \xrightarrow{\text{PCA}}
 \underbrace{Z}_{\text{cells × }\sim 30}
-\xrightarrow{\text{kNN}}
-\underbrace{G}_{\text{graph}}
+\xrightarrow{\text{neighbours}}
+\underbrace{G_U,\ G_C}_{\text{neighbour graphs}}
 \xrightarrow{\begin{array}{c}\text{UMAP}\\\text{clustering}\end{array}}
 \text{2D map + labels}
 \]</span></p>
@@ -2087,8 +2087,8 @@ window.Quarto = {
 <li><strong>kNN graph:</strong> for each cell, connect it to its <span class="math inline">\(k\)</span> nearest neighbours (typical <span class="math inline">\(k \approx 15\)</span>) by <strong>Euclidean distance</strong> in PC space, <span class="math display">\[
 \text{dist}(\mathbf{x}_i, \mathbf{x}_j) = \lVert \mathbf{x}_i - \mathbf{x}_j \rVert = \sqrt{\sum_{p} (x_{ip} - x_{jp})^2}.
 \]</span></li>
-<li><strong>UMAP</strong> lays the graph out in 2D. It is <strong>non-linear</strong> and preserves <strong>local</strong> neighbourhoods only — its axes and inter-cluster distances are <strong>not quantitative</strong>.</li>
-<li><strong>Clustering</strong> (Louvain / <strong>Leiden</strong>) cuts the <strong>same graph</strong> into densely connected <strong>communities</strong>; the <strong>resolution</strong> parameter controls how many. UMAP and clustering are two views of one graph, not one derived from the other.</li>
+<li><strong>UMAP</strong> builds a weighted neighbour graph from the PC representation and lays it out in 2D. It is <strong>non-linear</strong> and aims to preserve <strong>local</strong> neighbourhoods — its axes and inter-cluster distances are <strong>not quantitative</strong>.</li>
+<li><strong>Clustering</strong> (Louvain / <strong>Leiden</strong>) finds densely connected <strong>communities</strong> in a neighbour graph; the <strong>resolution</strong> parameter controls the granularity. In the Seurat recipe below, clustering uses a shared-nearest-neighbour (SNN) graph from <code>FindNeighbors</code>, while <code>RunUMAP(dims = ...)</code> builds its own neighbour graph. They use the same PC representation, but need not use identical graphs. Cluster labels are not derived from the 2D layout.</li>
 </ol>
 <p><strong>Key discipline:</strong> <em>local structure is trustworthy, global geometry is decorative.</em></p>
 </section>
@@ -2141,7 +2141,7 @@ window.Quarto = {
 <p><strong>B3.</strong> How many <strong>connected groups</strong> does your graph split into? List which cells are in each. If a graph-based clustering algorithm ran on this graph, how many clusters would it return, and why?</p>
 <p><strong>B4.</strong> Conceptual — <strong>order of operations.</strong> A classmate proposes: “skip PCA, just build the kNN graph directly on all 2000 genes.” Give <strong>two</strong> reasons the pipeline runs PCA first.</p>
 <p><strong>B5.</strong> Conceptual — <strong>reading a UMAP.</strong> For each statement, say whether it is a <strong>legitimate</strong> reading of a UMAP or <strong>not</strong>, and why: (a) “Cells X and Y are in the same tight island, so they are similar.” (b) “Cluster 1 is twice as far from cluster 2 as from cluster 3, so it is twice as different from cluster 2.” (c) “The red island is much bigger than the blue one, so that cell type is more variable / more abundant.” (d) “There are five clearly separated islands, so there are probably several cell populations.” (e) “UMAP-1 is about 8 for these cells, which is biologically meaningful.”</p>
-<p><strong>B6.</strong> Conceptual — <strong>resolution.</strong> You cluster the same graph at resolution <span class="math inline">\(0.2\)</span>, then at <span class="math inline">\(0.8\)</span>, then at <span class="math inline">\(2.0\)</span>. Order these three runs by the number of clusters they will produce (fewest to most), and explain the trend. Is there a “correct” number of clusters? What should you check a cluster against before believing it?</p>
+<p><strong>B6.</strong> Conceptual — <strong>resolution.</strong> You cluster the same graph at resolution <span class="math inline">\(0.2\)</span>, then at <span class="math inline">\(0.8\)</span>, then at <span class="math inline">\(2.0\)</span>. Give the expected order of these three runs by number of clusters (fewest to most), and explain the trend. Is that order guaranteed for every run of a heuristic clustering algorithm? Is there a “correct” number of clusters? What should you check a cluster against before believing it?</p>
 </section>
 <section id="explore" class="level2">
 <h2 class="anchored" data-anchor-id="explore">Explore</h2>
@@ -2376,12 +2376,12 @@ Solutions
 <span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>seu <span class="ot">&lt;-</span> <span class="fu">RunPCA</span>(seu, <span class="at">npcs =</span> <span class="dv">50</span>)</span>
 <span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="fu">ElbowPlot</span>(seu)                       <span class="co"># how many PCs to keep? (scree/elbow)</span></span>
 <span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>seu <span class="ot">&lt;-</span> <span class="fu">FindNeighbors</span>(seu, <span class="at">dims =</span> <span class="dv">1</span><span class="sc">:</span><span class="dv">30</span>, <span class="at">k.param =</span> <span class="dv">15</span>)  <span class="co"># kNN graph in PC space</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>seu <span class="ot">&lt;-</span> <span class="fu">FindNeighbors</span>(seu, <span class="at">dims =</span> <span class="dv">1</span><span class="sc">:</span><span class="dv">30</span>, <span class="at">k.param =</span> <span class="dv">15</span>)  <span class="co"># neighbours and SNN graph in PC space</span></span>
 <span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>seu <span class="ot">&lt;-</span> <span class="fu">FindClusters</span>(seu, <span class="at">resolution =</span> <span class="fl">0.5</span>)            <span class="co"># Leiden/Louvain communities</span></span>
-<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>seu <span class="ot">&lt;-</span> <span class="fu">RunUMAP</span>(seu, <span class="at">dims =</span> <span class="dv">1</span><span class="sc">:</span><span class="dv">30</span>)                      <span class="co"># 2D layout, display only</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>seu <span class="ot">&lt;-</span> <span class="fu">RunUMAP</span>(seu, <span class="at">dims =</span> <span class="dv">1</span><span class="sc">:</span><span class="dv">30</span>)                      <span class="co"># its own neighbour graph and 2D layout</span></span>
 <span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a><span class="fu">DimPlot</span>(seu, <span class="at">reduction =</span> <span class="st">"umap"</span>, <span class="at">label =</span> <span class="cn">TRUE</span>)        <span class="co"># UMAP coloured by cluster</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<p>Note the two calls that share <code>dims = 1:30</code>: <code>FindNeighbors</code> and <code>RunUMAP</code> both start from the <strong>same top-30 PCs</strong>, and <code>FindClusters</code> works on the <strong>graph</strong> that <code>FindNeighbors</code> built — <strong>not</strong> on the UMAP.</p>
+<p>Note the two calls that share <code>dims = 1:30</code>: <code>FindNeighbors</code> and <code>RunUMAP</code> both start from the <strong>same top-30 PCs</strong>. <code>FindClusters</code> uses the <strong>SNN graph</strong> from <code>FindNeighbors</code> — <strong>not</strong> the UMAP. <code>RunUMAP(dims = 1:30)</code> independently builds its own graph, with default <code>n.neighbors = 30</code>, whereas <code>FindNeighbors</code> here uses <code>k.param = 15</code>; changing one neighbour setting does not change the other.</p>
 </section>
 <section id="reproduce-the-knn-step-in-base-r" class="level3">
 <h3 class="anchored" data-anchor-id="reproduce-the-knn-step-in-base-r">Reproduce the kNN step in base R</h3>
@@ -2434,7 +2434,7 @@ Hint 2 — nearest neighbours (B2)
 </div>
 <div id="callout-4" class="callout-4-contents callout-collapse collapse">
 <div class="callout-body-container callout-body">
-<p>For each cell, compute its distance to the <strong>other five</strong> and keep the <strong>two smallest</strong>. The three “origin” cells (A, B, C) are all within distance <span class="math inline">\(\le \sqrt{2}\approx1.41\)</span> of each other, while any origin-to-far distance is <span class="math inline">\(\ge\sqrt{50}\approx7.07\)</span> — so a cell’s nearest neighbours are always in its own group.</p>
+<p>For each cell, compute its distance to the <strong>other five</strong> and keep the <strong>two smallest</strong>. The three “origin” cells (A, B, C) are all within distance <span class="math inline">\(\le \sqrt{2}\approx1.41\)</span> of each other, while any origin-to-far distance is <span class="math inline">\(\ge\sqrt{41}\approx6.40\)</span> — so a cell’s nearest neighbours are always in its own group.</p>
 </div>
 </div>
 </div>
@@ -2498,7 +2498,7 @@ Hint 6 — resolution (B6)
 </div>
 <div id="callout-8" class="callout-8-contents callout-collapse collapse">
 <div class="callout-body-container callout-body">
-<p>Higher resolution gives <strong>more, smaller</strong> clusters; lower resolution gives <strong>fewer, larger</strong> clusters (monotone). There is <strong>no true number of clusters</strong> — the right granularity depends on the biological question. Validate a cluster against <strong>known marker genes</strong>, not against which picture looks tidiest (previewing cell-type annotation).</p>
+<p>Higher resolution generally favours <strong>more, smaller</strong> clusters; lower resolution generally favours <strong>fewer, larger</strong> clusters. Heuristic solutions need not have monotonic cluster counts or form nested partitions. There is <strong>no true number of clusters</strong> — the right granularity depends on the biological question. Validate a cluster against <strong>known marker genes</strong>, not against which picture looks tidiest (previewing cell-type annotation).</p>
 </div>
 </div>
 </div>
@@ -2587,15 +2587,15 @@ Solution
 <li><strong>Not legitimate.</strong> The UMAP <strong>axes have no interpretation</strong>; never report or reason from an axis value.</li>
 </ol></li>
 </ul>
-<p><strong>B6.</strong> Fewest to most clusters: <strong>resolution <span class="math inline">\(0.2\)</span> &lt; <span class="math inline">\(0.8\)</span> &lt; <span class="math inline">\(2.0\)</span></strong>. Resolution and cluster count move <strong>together</strong> (monotone): raising it lets the community-detection algorithm split groups more finely, lowering it merges them. There is <strong>no correct number of clusters</strong> — the right granularity depends on the biological question (broad lineages vs fine subtypes), and pushing resolution too high eventually splits noise into fake “types”. Before believing a cluster, check it against <strong>known marker genes</strong> (does it express a coherent, recognisable programme?), not against which resolution produced the tidiest picture. This is the handoff to cell-type annotation.</p>
+<p><strong>B6.</strong> Expected fewest to most clusters: <strong>resolution <span class="math inline">\(0.2\)</span> &lt; <span class="math inline">\(0.8\)</span> &lt; <span class="math inline">\(2.0\)</span></strong>. Raising resolution generally favours finer communities and lowering it favours coarser ones, but this order is <strong>not guaranteed</strong>: heuristic solutions can have nonmonotonic cluster counts, and partitions at different resolutions need not be nested. There is <strong>no correct number of clusters</strong> — the right granularity depends on the biological question (broad lineages vs fine subtypes), and pushing resolution too high eventually splits noise into fake “types”. Before believing a cluster, check it against <strong>known marker genes</strong> (does it express a coherent, recognisable programme?), not against which resolution produced the tidiest picture. This is the handoff to cell-type annotation.</p>
 <p><strong>R1.</strong> <code>as.matrix(dist(Z))</code> gives (rounded):</p>
 <div class="sourceCode" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>     A    B    C    D    E    F</span>
 <span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>A <span class="fl">0.00</span> <span class="fl">1.00</span> <span class="fl">1.00</span> <span class="fl">7.07</span> <span class="fl">7.81</span> <span class="fl">7.81</span></span>
-<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>B <span class="fl">1.00</span> <span class="fl">0.00</span> <span class="fl">1.41</span> <span class="fl">6.40</span> <span class="fl">7.07</span> <span class="fl">7.81</span></span>
-<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>C <span class="fl">1.00</span> <span class="fl">1.41</span> <span class="fl">0.00</span> <span class="fl">6.40</span> <span class="fl">7.81</span> <span class="fl">7.07</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>B <span class="fl">1.00</span> <span class="fl">0.00</span> <span class="fl">1.41</span> <span class="fl">6.40</span> <span class="fl">7.07</span> <span class="fl">7.21</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>C <span class="fl">1.00</span> <span class="fl">1.41</span> <span class="fl">0.00</span> <span class="fl">6.40</span> <span class="fl">7.21</span> <span class="fl">7.07</span></span>
 <span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>D <span class="fl">7.07</span> <span class="fl">6.40</span> <span class="fl">6.40</span> <span class="fl">0.00</span> <span class="fl">1.00</span> <span class="fl">1.00</span></span>
-<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>E <span class="fl">7.81</span> <span class="fl">7.07</span> <span class="fl">7.81</span> <span class="fl">1.00</span> <span class="fl">0.00</span> <span class="fl">1.41</span></span>
-<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>F <span class="fl">7.81</span> <span class="fl">7.81</span> <span class="fl">7.07</span> <span class="fl">1.00</span> <span class="fl">1.41</span> <span class="fl">0.00</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>E <span class="fl">7.81</span> <span class="fl">7.07</span> <span class="fl">7.21</span> <span class="fl">1.00</span> <span class="fl">0.00</span> <span class="fl">1.41</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>F <span class="fl">7.81</span> <span class="fl">7.21</span> <span class="fl">7.07</span> <span class="fl">1.00</span> <span class="fl">1.41</span> <span class="fl">0.00</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>The A–B, A–C entries are <span class="math inline">\(1\)</span>, B–C is <span class="math inline">\(1.41=\sqrt2\)</span>, A–D is <span class="math inline">\(7.07=\sqrt{50}\)</span>, D–E is <span class="math inline">\(1\)</span> — matching <strong>B1</strong> exactly.</p>
 <p><strong>R2.</strong> <code>apply(D2, 1, function(col) names(sort(col))[2:3])</code> returns, for each column (cell), its two nearest neighbours:</p>
 <div class="sourceCode" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>     A   B   C   D   E   F</span>
@@ -2609,10 +2609,10 @@ Solution
 <li>keep more PCs → change <strong><code>npcs</code></strong> in <code>RunPCA</code> (and widen <code>dims = 1:30</code> in <code>FindNeighbors</code>/<code>RunUMAP</code> to use them).</li>
 </ol></li>
 <li><ol start="2" type="a">
-<li>more clusters → <strong>raise <code>resolution</code></strong> in <code>FindClusters</code>.</li>
+<li>generally more clusters → <strong>raise <code>resolution</code></strong> in <code>FindClusters</code> (the count is not guaranteed to increase on every run).</li>
 </ol></li>
 <li><ol start="3" type="a">
-<li>more/fewer neighbours per cell → change <strong><code>k.param</code></strong> in <code>FindNeighbors</code>.</li>
+<li>more/fewer neighbours for the clustering graph → change <strong><code>k.param</code></strong> in <code>FindNeighbors</code>; for UMAP’s independently constructed graph, change <strong><code>n.neighbors</code></strong> in <code>RunUMAP</code>.</li>
 </ol></li>
 </ul>
 </div>

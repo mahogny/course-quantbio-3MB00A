@@ -181,7 +181,7 @@ summary(fit)     # posterior means + credible intervals
 
 **R2.** Compute the ICC for $\sigma^2 = 8, \tau^2 = 2$ (matches **B5**), then re-compute it for $\tau^2 = 32$. Which scenario makes grouping matter more?
 
-**R3.** Write, without running, the `lmer`/`brm` formula for a design with **cells nested in patients** where you want a treatment fixed effect. (Hint below.)
+**R3.** Write, without running, the `lmer`/`brm` formula for a Gaussian biomarker measured **once per cell, with cells nested in patients**, where you want a treatment fixed effect. How would you extend it if there were repeated measurements of each cell? (Hint below.)
 
 ## Hints
 
@@ -210,7 +210,7 @@ Substitute the extreme value of $\tau^2$ into the weight. For $\tau^2 \to 0$, th
 :::
 
 ::: {.callout-tip collapse="true" title="Hint 7 — R formulas"}
-In [`lme4::lmer`](https://rdrr.io/cran/lme4/man/lmer.html) and [`brms::brm`](https://paul-buerkner.github.io/brms/reference/brm.html) the syntax is identical. `(1 | group)` = a random intercept per level of `group`. Nesting is written `(1 | patient/cell)` (equivalently `(1 | patient) + (1 | patient:cell)`); crossed factors are separate terms `(1 | batch) + (1 | patient)`. Fixed effects (the ones you care about, with few chosen levels) go on the left, e.g. `treatment`.
+In [`lme4::lmer`](https://rdrr.io/cran/lme4/man/lmer.html) and [`brms::brm`](https://paul-buerkner.github.io/brms/reference/brm.html) the syntax is identical. `(1 | group)` = a random intercept per level of `group`. With one Gaussian response per cell, use `(1 | patient)` to account for cells sharing a patient; cell-to-cell variability is part of the residual. With repeated observations per cell, nesting can be written `(1 | patient/cell)` (equivalently `(1 | patient) + (1 | patient:cell)`). A cell intercept cannot be separated from residual variance with only one response per cell. Crossed factors are separate terms `(1 | batch) + (1 | patient)`. Fixed-effect predictors go on the **right-hand side** of `~`, e.g. `biomarker ~ treatment + (1 | patient)`.
 :::
 
 ## Solutions
@@ -268,14 +268,21 @@ icc(sigma2 = 8, tau2 = 32)   # 0.8
 ```
 $\tau^2 = 32$ gives ICC $= 0.8$: now 80% of variance is between groups, so grouping matters much more and the effective sample size is close to the number of groups.
 
-**R3.** Cells nested in patients, treatment as a fixed effect:
+**R3.** One Gaussian biomarker response per cell, with cells nested in patients:
+
+```r
+lmer(biomarker ~ treatment + (1 | patient), data = d)
+# Bayesian: brm(biomarker ~ treatment + (1 | patient), data = d)
+```
+`treatment` is the fixed effect of interest; `(1 | patient)` gives each patient a random intercept, accounting for correlation between their cells. The residual represents variation between cells within a patient.
+
+With **repeated measurements per cell**, add a cell-within-patient intercept:
 
 ```r
 lmer(biomarker ~ treatment + (1 | patient/cell), data = d)
 # equivalently: biomarker ~ treatment + (1 | patient) + (1 | patient:cell)
-# Bayesian: brm(biomarker ~ treatment + (1 | patient/cell), data = d)
 ```
-`treatment` is the fixed effect of interest; `(1 | patient/cell)` gives a random intercept for each patient *and* for each cell within a patient.
+The repeats allow cell-level variance to be distinguished from residual variance; with only one response per cell those two variances are confounded.
 :::
 
 ## Where this leads

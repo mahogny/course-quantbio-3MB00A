@@ -2061,7 +2061,7 @@ window.Quarto = {
 <li>call <a href="https://rdrr.io/r/base/eigen.html"><code>eigen</code></a> and read its <code>$values</code> and <code>$vectors</code>,</li>
 <li>pull out the <span class="math inline">\(k\)</span>-th eigenvector (a <strong>column</strong>) and pair it with its eigenvalue,</li>
 <li><strong>verify</strong> <span class="math inline">\(A\mathbf{v} = \lambda\mathbf{v}\)</span> in R, using <a href="https://rdrr.io/r/base/all.equal.html"><code>all.equal</code></a> for floating-point safety,</li>
-<li><strong>reconstruct</strong> a matrix as <span class="math inline">\(A = V\Lambda V^{-1}\)</span>, and as <span class="math inline">\(A = V\Lambda V^\top\)</span> when it is symmetric,</li>
+<li><strong>reconstruct</strong> a matrix with a full set of independent eigenvectors as <span class="math inline">\(A = V\Lambda V^{-1}\)</span>, and as <span class="math inline">\(A = V\Lambda V^\top\)</span> when it is real symmetric,</li>
 <li>compute a <strong>covariance matrix</strong> with <a href="https://rdrr.io/r/stats/cor.html"><code>cov</code></a> and eigen-decompose it, and show the leading eigenvector points along the <strong>main axis of variation</strong>.</li>
 </ul>
 <p>This is an <strong>R-heavy walkthrough day</strong>. Run every block, change numbers, and look at the plots. The by-hand intuition from Eigenvalues &amp; eigenvectors is what makes the output meaningful.</p>
@@ -2074,7 +2074,7 @@ window.Quarto = {
 <li><code>$vectors</code> — a matrix whose <strong>columns</strong> are the (unit-length) eigenvectors; column <span class="math inline">\(k\)</span> pairs with <code>$values[k]</code>.</li>
 </ul>
 <p>Eigenvectors are unique only up to <strong>scale and sign</strong>, so R’s unit-length vector may be the negative of your hand answer — same direction, still correct.</p>
-<p><strong>Reconstruction.</strong> With <span class="math inline">\(V\)</span> = eigenvectors (columns) and <span class="math inline">\(\Lambda = \text{diag}(\text{eigenvalues})\)</span>: <span class="math display">\[A = V\,\Lambda\,V^{-1}, \qquad\text{and for symmetric } A:\quad A = V\,\Lambda\,V^\top .\]</span></p>
+<p><strong>Reconstruction.</strong> When <span class="math inline">\(A\)</span> has a full set of independent eigenvectors (it is <strong>diagonalizable</strong>), form <span class="math inline">\(V\)</span> from those eigenvectors as columns and <span class="math inline">\(\Lambda = \text{diag}(\text{eigenvalues})\)</span>: <span class="math display">\[A = V\,\Lambda\,V^{-1}, \qquad\text{and for symmetric } A:\quad A = V\,\Lambda\,V^\top .\]</span> A real symmetric matrix always has an orthonormal eigenvector basis. A general square matrix need not have enough independent eigenvectors; then <span class="math inline">\(V\)</span> is singular and the inverse formula does not apply.</p>
 <p><strong>Biology.</strong> The covariance matrix <code>cov(X)</code> (with samples in <strong>rows</strong>, features in <strong>columns</strong>) is symmetric. Its leading eigenvector is the direction of greatest variation — the engine of PCA.</p>
 </section>
 <section id="by-hand" class="level2">
@@ -2114,7 +2114,7 @@ window.Quarto = {
 <div class="sourceCode" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>V      <span class="ot">&lt;-</span> e<span class="sc">$</span>vectors</span>
 <span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>Lambda <span class="ot">&lt;-</span> <span class="fu">diag</span>(e<span class="sc">$</span>values)</span>
 <span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="co"># general formula</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="co"># formula for a diagonalizable matrix (V must be invertible)</span></span>
 <span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>V <span class="sc">%*%</span> Lambda <span class="sc">%*%</span> <span class="fu">solve</span>(V)      <span class="co"># rebuilds A</span></span>
 <span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a><span class="co"># symmetric shortcut (A is symmetric here)</span></span>
@@ -2199,7 +2199,7 @@ Hint 3 — building V and Lambda
 </div>
 <div id="callout-3" class="callout-3-contents callout-collapse collapse">
 <div class="callout-body-container callout-body">
-<p><code>V &lt;- e$vectors</code> already has eigenvectors in columns. <a href="https://rdrr.io/r/base/diag.html"><code>diag</code></a><code>(e$values)</code> turns the eigenvalue vector into the diagonal matrix <span class="math inline">\(\Lambda\)</span>. The inverse is <a href="https://rdrr.io/r/base/solve.html"><code>solve</code></a><code>(V)</code>; the transpose is <a href="https://rdrr.io/r/base/t.html"><code>t</code></a><code>(V)</code>.</p>
+<p><code>V &lt;- e$vectors</code> already has eigenvectors in columns. <a href="https://rdrr.io/r/base/diag.html"><code>diag</code></a><code>(e$values)</code> turns the eigenvalue vector into the diagonal matrix <span class="math inline">\(\Lambda\)</span>. If those columns are independent, the inverse is <a href="https://rdrr.io/r/base/solve.html"><code>solve</code></a><code>(V)</code>; the transpose is <a href="https://rdrr.io/r/base/t.html"><code>t</code></a><code>(V)</code>. Independence is guaranteed for the real symmetric examples here, but not for every square matrix. For example, the shear <span class="math inline">\(\begin{pmatrix}1&amp;2\\0&amp;1\end{pmatrix}\)</span> has only one independent eigenvector, so it cannot be reconstructed with <span class="math inline">\(V\Lambda V^{-1}\)</span>.</p>
 </div>
 </div>
 </div>
@@ -2247,7 +2247,7 @@ Hint 6 — proportion of variance
 </div>
 <div id="callout-6" class="callout-6-contents callout-collapse collapse">
 <div class="callout-body-container callout-body">
-<p>Total variance = <code>sum(ec$values)</code>. The share along the leading axis is <code>ec$values[1] / sum(ec$values)</code>. More noise makes the cloud rounder, so this share drops toward 0.5.</p>
+<p>Total variance = <code>sum(ec$values)</code>. The share along the leading axis is <code>ec$values[1] / sum(ec$values)</code>. Increasing gene 2’s noise from <code>sd = 0.4</code> to <code>1.5</code> makes this example’s cloud rounder and lowers the share. Because noise is added <strong>only to gene 2</strong>, increasing it much further makes that gene’s variance dominate: the leading share eventually rises toward <strong>1</strong>, not 0.5.</p>
 </div>
 </div>
 </div>

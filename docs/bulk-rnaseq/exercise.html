@@ -2076,9 +2076,9 @@ window.Quarto = {
 <li>Leave out every gene with a 0 in any sample.</li>
 <li>For each gene, compute its <strong>geometric mean</strong> over the samples: the product of the counts, then the <span class="math inline">\(k\)</span>-th root for <span class="math inline">\(k\)</span> samples (for 3 samples, the cube root). This is the gene’s “typical value”.</li>
 <li>Divide every count by its gene’s geometric mean: one ratio per gene and sample.</li>
-<li>The size factor of a sample is the <strong>median</strong> of its ratios over the genes.</li>
+<li>Take the <strong>median of the log ratios</strong>, then exponentiate: <code>exp(median(log(ratios)))</code>. With an odd number of genes, this equals the median of the ratios. With an even number, it is the <strong>geometric mean</strong> of the two middle ratios, matching DESeq2’s implementation.</li>
 </ol>
-<p>The median ignores the few genes that really changed. With only two samples, the ratio of the two size factors is simply the median over genes of (sample 2 / sample 1).</p>
+<p>The median is robust to a minority of genes changing. With only two samples, the ratio of the two size factors is <code>exp(median(log(sample2 / sample1)))</code> over the retained genes. For an even number of genes, this need not equal the arithmetic median of the raw sample-to-sample ratios.</p>
 <p><strong>Counting noise.</strong> If you expect about <span class="math inline">\(n\)</span> reads, you get <span class="math inline">\(n \pm \sqrt{n}\)</span>. The relative noise is <span class="math inline">\(\sqrt{n} / n = 1/\sqrt{n}\)</span>: 70% at <span class="math inline">\(n = 2\)</span>, 10% at 100, 3% at 1000. A fold change between two small counts is therefore very noisy. (In <em>Error models</em>, week 4, this noise gets its name: Poisson. Real replicates spread more, which the negative binomial adds.)</p>
 <p><strong>DESeq2</strong> takes raw integer counts, a sample table and a design formula, exactly as in <em>Design matrices in R: limma</em>:</p>
 <div class="sourceCode" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>dds <span class="ot">&lt;-</span> <span class="fu">DESeqDataSetFromMatrix</span>(<span class="at">countData =</span> counts, <span class="at">colData =</span> samples, <span class="at">design =</span> <span class="sc">~</span> batch <span class="sc">+</span> sex <span class="sc">+</span> treatment)</span>
@@ -2167,7 +2167,7 @@ window.Quarto = {
 <ol type="a">
 <li><p>Compute the fraction of each gene in each sample, and the fold change of the fractions (sample 2 / sample 1).</p></li>
 <li><p>Which genes look “down”? Did they really go down? What fold change do you get for A, and what is the truth?</p></li>
-<li><p>Compute the ratio sample 2 / sample 1 for each gene, and take the median. Divide sample 2 by this number. What are the fold changes now?</p></li>
+<li><p>Compute the ratio sample 2 / sample 1 for each gene, and take the median on the log scale, then exponentiate (the geometric mean of the two middle ratios for these four genes). Divide sample 2 by this number. What are the fold changes now?</p></li>
 </ol>
 <p><strong>B3. Median of ratios.</strong> Five genes in three samples:</p>
 <table class="caption-top table">
@@ -2215,7 +2215,7 @@ window.Quarto = {
 <ol type="a">
 <li><p>Which gene is left out, and why?</p></li>
 <li><p>Compute the geometric mean of each remaining gene. (For gene A: <span class="math inline">\(100 \cdot 200 \cdot 400 = 8\,000\,000\)</span>, and the cube root of that is 200.)</p></li>
-<li><p>Divide each count by its gene’s geometric mean, and take the median per sample. These are the size factors. (With four genes, the median is the mean of the middle two.)</p></li>
+<li><p>Divide each count by its gene’s geometric mean, then take the median on the log scale and exponentiate, separately for each sample. These are the size factors. With four retained genes, this gives the geometric mean of the middle two ratios.</p></li>
 <li><p>Divide the counts of genes A and D by the size factors. Which gene changed, in which sample, and by how much?</p></li>
 <li><p>Now use the totals of the samples as size factors instead. Compute the totals, and the fraction of gene A in s1 and s3. What would you conclude about gene A, and why is it wrong?</p></li>
 </ol>
@@ -2269,7 +2269,7 @@ window.Quarto = {
 <ol type="a">
 <li><p>Compute the log2 fold change (treated / control) of each gene, and rank the genes by its size (largest first, ignoring the sign).</p></li>
 <li><p>Suppose a gene did <strong>not</strong> change. Then both counts come from the same expected value <span class="math inline">\(n\)</span>, roughly their mean. For each gene, compute <span class="math inline">\(n\)</span> and <span class="math inline">\(\sqrt{n}\)</span>, and how many <span class="math inline">\(\sqrt{n}\)</span> the counts are away from <span class="math inline">\(n\)</span>.</p></li>
-<li><p>Which genes would you believe are really changed? Which of your top 3 from (a) are likely noise?</p></li>
+<li><p>Which genes would you believe are really changed? Which highly ranked genes from (a) are likely noise? Account for any ties in your ranking.</p></li>
 <li><p>What would you need, in the experiment, to say more about gene G?</p></li>
 </ol>
 </section>
@@ -2294,7 +2294,7 @@ Solutions
 </div>
 <div id="callout-1" class="callout-1-contents callout-collapse collapse">
 <div class="callout-body-container callout-body">
-<p><strong>E1.</strong> At the defaults: 77% at <span class="math inline">\(n = 1\)</span>, 65% at 2, 37% at 5, 17% at 10, 1.3% at 30 and 0% at 100. Nothing changed between the replicates, yet at low counts most pairs look like a 2-fold change or more. At <span class="math inline">\(n = 1\)</span> and 2 many pairs contain a zero: their ratio is 0, <span class="math inline">\(\infty\)</span> or 0/0, so their log2 ratio is <span class="math inline">\(-\infty\)</span>, <span class="math inline">\(+\infty\)</span> or undefined. (That is also why the SD in the header, computed on zero-free pairs only, is not a good summary there.)</p>
+<p><strong>E1.</strong> At the defaults: 77% at <span class="math inline">\(n = 1\)</span>, 65% at 2, 37% at 5, 17% at 10, 1.5% at 30 and 0% at 100. Nothing changed between the replicates, yet at low counts most pairs look like a 2-fold change or more. At <span class="math inline">\(n = 1\)</span> and 2 many pairs contain a zero: their ratio is 0, <span class="math inline">\(\infty\)</span> or 0/0, so their log2 ratio is <span class="math inline">\(-\infty\)</span>, <span class="math inline">\(+\infty\)</span> or undefined. (That is also why the SD in the header, computed on zero-free pairs only, is not a good summary there.)</p>
 <p><strong>E2.</strong> The spread of the counts is close to <span class="math inline">\(\sqrt{n}\)</span>: about 10 at <span class="math inline">\(n = 100\)</span>, about 32 at <span class="math inline">\(n = 1000\)</span>. The relative spread goes as <span class="math inline">\(1/\sqrt{n}\)</span>, so <span class="math inline">\(n\)</span> must grow <strong>4 times</strong> to halve it. With biological variation on, the spread at <span class="math inline">\(n = 1000\)</span> no longer goes to zero: the SD of the log2 ratio stays around 0.47 and about 3% of pairs are still 2-fold apart. Real replicates differ by more than counting noise; <em>Error models</em> (week 4) adds this with the negative binomial.</p>
 <p><strong>E3.</strong> The 10 largest fold changes all belong to <strong>low-count</strong> genes (averages of about 3 to 5.5). Below an average of 10, 56% of the genes are at least 2-fold apart; above 100, none are. A list sorted by raw fold change is topped by noise; you need a test that knows the count (DESeq2’s <code>lfcSE</code> and <code>padj</code>), and a shrunken fold change for ranking (R4).</p>
 </div>
@@ -2381,7 +2381,7 @@ Solutions
 <ol type="a">
 <li><p>How does DESeq2 name the coefficients? Why is it safer to ask for one by <code>name =</code>?</p></li>
 <li><p>Compare the number of true and false calls with limma. Why are some <code>padj</code> values <code>NA</code>?</p></li>
-<li><p>Look at <code>sizeFactors(dds)</code>. Every sample was simulated with the same depth. Are the size factors close to 1? Check one by hand: <code>median(counts[, 1] / exp(rowMeans(log(counts))), na.rm = TRUE)</code> (genes with a 0 give <code>NaN</code> or <code>0</code> and need care: which genes does DESeq2 leave out?).</p></li>
+<li><p>Look at <code>sizeFactors(dds)</code>. Every sample was simulated with the same depth. Are the size factors close to 1? Check one by hand: first set <code>ok &lt;- rowSums(counts == 0) == 0</code>, then compute <code>exp(median(log(counts[ok, 1]) - rowMeans(log(counts[ok, ]))))</code>. Why does DESeq2 leave out genes with a 0 in any sample?</p></li>
 <li><p>Plot <code>plot(res$baseMean, res$lfcSE, log = "xy")</code>. Where is <code>lfcSE</code> largest? Relate it to the fan in R1.</p></li>
 <li><p>What does <code>DESeqDataSetFromMatrix(counts, samples_conf, design = ~ batch + treatment)</code> say, with the confounded <code>samples_conf</code> from covariates-r R5 (<code>samples_conf &lt;- samples; samples_conf$treatment &lt;- factor(ifelse(samples$batch == "A", "ctrl", "treat"))</code>)?</p></li>
 </ol>
@@ -2453,7 +2453,7 @@ Hint 2 — median of ratios (B2c, B3)
 </div>
 <div id="callout-3" class="callout-3-contents callout-collapse collapse">
 <div class="callout-body-container callout-body">
-<p>Follow the four steps in the Background. A geometric mean of 3 numbers is the cube root of their product; when the counts in a row are <span class="math inline">\(a\)</span>, <span class="math inline">\(2a\)</span>, <span class="math inline">\(4a\)</span>, the product is <span class="math inline">\(8a^3\)</span> and the geometric mean is <span class="math inline">\(2a\)</span>. The median of an even number of values is the mean of the middle two. See <a href="https://rdrr.io/bioc/DESeq2/man/estimateSizeFactors.html"><code>estimateSizeFactors</code></a> and the <a href="https://bioconductor.org/packages/release/bioc/vignettes/DESeq2/inst/doc/DESeq2.html">DESeq2 vignette</a>, section “Normalization”.</p>
+<p>Follow the four steps in the Background. A geometric mean of 3 numbers is the cube root of their product; when the counts in a row are <span class="math inline">\(a\)</span>, <span class="math inline">\(2a\)</span>, <span class="math inline">\(4a\)</span>, the product is <span class="math inline">\(8a^3\)</span> and the geometric mean is <span class="math inline">\(2a\)</span>. DESeq2 takes the median on the <strong>log scale</strong> and exponentiates: for an even number of ratios this gives the geometric mean of the middle two, not their arithmetic mean. In B2c and B3 those middle values happen to be equal. See <a href="https://rdrr.io/bioc/DESeq2/man/estimateSizeFactors.html"><code>estimateSizeFactors</code></a> and the <a href="https://bioconductor.org/packages/release/bioc/vignettes/DESeq2/inst/doc/DESeq2.html">DESeq2 vignette</a>, section “Normalization”.</p>
 </div>
 </div>
 </div>
@@ -2501,7 +2501,7 @@ Hint 5 — DESeq2 (R3, R4)
 </div>
 <div id="callout-6" class="callout-6-contents callout-collapse collapse">
 <div class="callout-body-container callout-body">
-<p><a href="https://rdrr.io/bioc/DESeq2/man/DESeqDataSet.html"><code>DESeqDataSetFromMatrix</code></a> takes raw integer counts, the sample table and the design. <a href="https://rdrr.io/bioc/DESeq2/man/DESeq.html"><code>DESeq</code></a> fits every gene. <a href="https://rdrr.io/bioc/DESeq2/man/results.html"><code>results</code></a><code>(dds, name = ...)</code> picks a coefficient by its name from <code>resultsNames(dds)</code>; without <code>name</code> it reports the last variable of the formula. <code>padj</code> is <code>NA</code> for genes DESeq2 does not test (too few reads, or an extreme outlier); see the vignette’s section “Independent filtering”. <a href="https://rdrr.io/bioc/DESeq2/man/plotMA.html"><code>plotMA</code></a> draws the fold change against <code>baseMean</code>.</p>
+<p><a href="https://rdrr.io/bioc/DESeq2/man/DESeqDataSet.html"><code>DESeqDataSetFromMatrix</code></a> takes raw integer counts, the sample table and the design. <a href="https://rdrr.io/bioc/DESeq2/man/DESeq.html"><code>DESeq</code></a> fits every gene. <a href="https://rdrr.io/bioc/DESeq2/man/results.html"><code>results</code></a><code>(dds, name = ...)</code> picks a coefficient by its name from <code>resultsNames(dds)</code>; without <code>name</code> it reports the last variable of the formula. <code>padj</code> can be <code>NA</code> even when the gene has a valid raw <code>pvalue</code>: <strong>independent filtering</strong> excludes low-mean genes from multiple-testing adjustment. All-zero genes and genes flagged for extreme outliers can instead have missing raw p-values as well. Check both columns; see the vignette’s section “Independent filtering”. <a href="https://rdrr.io/bioc/DESeq2/man/plotMA.html"><code>plotMA</code></a> draws the fold change against <code>baseMean</code>.</p>
 </div>
 </div>
 </div>
@@ -2581,7 +2581,7 @@ Solutions — by hand
 </table>
 <ol start="2" type="a">
 <li><p>B, C and D look 4 times down (log2 FC <span class="math inline">\(-2\)</span>), but nothing happened to them. A looks 1.75 times up, but truly went up 7 times. In the tube, sample 2 had <span class="math inline">\(7000 + 500 + 300 + 200 = 8000\)</span> units of RNA for every 2000 in sample 1, so each read of sample 2 stands for 4 times as much RNA: A took most of the reads.</p></li>
-<li><p>The ratios are 1.75, 0.25, 0.25, 0.25; the median is 0.25. Sample 2 divided by 0.25: A 7000, B 500, C 300, D 200. Now B, C and D are unchanged and A is 7 times up: the truth.</p></li>
+<li><p>The ratios are 1.75, 0.25, 0.25, 0.25; the two middle ratios are both 0.25, so the exponentiated median log ratio is 0.25. Sample 2 divided by 0.25: A 7000, B 500, C 300, D 200. Now B, C and D are unchanged and A is 7 times up: the truth.</p></li>
 </ol>
 <p><strong>B3.</strong> (a) Gene E: it has a 0 in s2, so its geometric mean is 0 and its ratios are useless (<span class="math inline">\(8/0\)</span>).</p>
 <ol start="2" type="a">
@@ -2623,7 +2623,7 @@ Solutions — by hand
 <td>8</td>
 </tr>
 <tr class="odd">
-<td><strong>median</strong></td>
+<td><strong>exp(median(log ratios))</strong></td>
 <td><strong>0.5</strong></td>
 <td><strong>1</strong></td>
 <td><strong>2</strong></td>
@@ -2639,7 +2639,7 @@ Solutions — by hand
 <span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>           <span class="at">D =</span> <span class="fu">c</span>(<span class="dv">100</span>, <span class="dv">200</span>, <span class="dv">3200</span>), <span class="at">E =</span> <span class="fu">c</span>(<span class="dv">8</span>, <span class="dv">0</span>, <span class="dv">32</span>))</span>
 <span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>ok <span class="ot">&lt;-</span> <span class="fu">rowSums</span>(m <span class="sc">==</span> <span class="dv">0</span>) <span class="sc">==</span> <span class="dv">0</span>                        <span class="co"># leave out genes with a 0</span></span>
 <span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>gm <span class="ot">&lt;-</span> <span class="fu">exp</span>(<span class="fu">rowMeans</span>(<span class="fu">log</span>(m[ok, ])))                 <span class="co"># geometric means: 200 100 60 400</span></span>
-<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a><span class="fu">apply</span>(m[ok, ] <span class="sc">/</span> gm, <span class="dv">2</span>, median)                    <span class="co"># 0.5 1 2</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a><span class="fu">apply</span>(m[ok, ] <span class="sc">/</span> gm, <span class="dv">2</span>, <span class="cf">function</span>(r) <span class="fu">exp</span>(<span class="fu">median</span>(<span class="fu">log</span>(r))))  <span class="co"># 0.5 1 2</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>DESeq2 gives the same: <code>sizeFactors(estimateSizeFactors(DESeqDataSetFromMatrix(m, data.frame(s = factor(1:3)), ~ 1)))</code> prints <code>0.5 1 2</code>.</p>
 <p><strong>B4.</strong> (a)</p>
 <table class="caption-top table">
@@ -2664,12 +2664,12 @@ Solutions — by hand
 <tr class="odd">
 <td>B, C</td>
 <td>2</td>
-<td>3–4</td>
+<td>tied 3–5</td>
 </tr>
 <tr class="even">
 <td>F</td>
 <td><span class="math inline">\(-2\)</span></td>
-<td>5</td>
+<td>tied 3–5</td>
 </tr>
 <tr class="odd">
 <td>G</td>
@@ -2741,7 +2741,7 @@ Solutions — by hand
 </tbody>
 </table>
 <ol start="3" type="a">
-<li><p>Trust <strong>B</strong> and <strong>F</strong>: their counts are 14–19 <span class="math inline">\(\sqrt{n}\)</span> apart, which counting noise cannot do. The top 3 by fold change, E, D and C, are all within 1–2 <span class="math inline">\(\sqrt{n}\)</span>: easily counting noise, even though their fold changes are the largest. A’s 10% change is also within the noise.</p></li>
+<li><p><strong>B</strong> and <strong>F</strong> have strong evidence of change: their counts are 14–19 <span class="math inline">\(\sqrt{n}\)</span> away from the common mean, extremely unlikely under counting noise alone. <strong>E</strong> and <strong>D</strong> have the largest absolute fold changes, but their deviations are only about 1–2 <span class="math inline">\(\sqrt{n}\)</span> and are compatible with counting noise. <strong>C</strong> is also compatible with noise, despite tying B and F at <span class="math inline">\(|\log_2\mathrm{FC}| = 2\)</span>. There is no unique top three: B, C and F tie for ranks 3–5, and their different counts give very different uncertainty. A’s 10% change is also compatible with noise.</p></li>
 <li><p>G is about 3 <span class="math inline">\(\sqrt{n}\)</span> away: probably real, but real replicates vary more than counting noise alone. You need <strong>biological replicates</strong> (several control and treated samples) to see how much G varies between samples of the same group; DESeq2 uses them to estimate that extra spread.</p></li>
 </ol>
 </div>
@@ -2833,7 +2833,7 @@ Solutions — R3 and R4 (DESeq2)
 <span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a><span class="co">#   FALSE   1751   15</span></span>
 <span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a><span class="co">#   TRUE      14  181</span></span>
 <span id="cb13-6"><a href="#cb13-6" aria-hidden="true" tabindex="-1"></a><span class="co">#   &lt;NA&gt;      35    4</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<p>195 calls: 181 true and 14 false, very close to limma’s 188 calls (177 true, 11 false). g138 gets LFC 1.37 (truth 1.5). DESeq2 does not test genes with very low counts, so their <code>padj</code> is <code>NA</code> (39 genes here). Same design matrix, nearly the same answer: for well-designed experiments with enough reads, limma-voom and DESeq2 mostly agree.</p>
+<p>195 calls: 181 true and 14 false, very close to limma’s 188 calls (177 true, 11 false). g138 gets LFC 1.37 (truth 1.5). Independent filtering gives <code>NA</code> adjusted p-values for 39 low-mean genes here, <strong>although all 39 were tested and have finite raw p-values</strong>. They were excluded from multiple-testing adjustment, rather than from the gene-wise tests. Same design matrix, nearly the same answer: for well-designed experiments with enough reads, limma-voom and DESeq2 mostly agree.</p>
 <ol start="3" type="a">
 <li></li>
 </ol>
@@ -2841,9 +2841,9 @@ Solutions — R3 and R4 (DESeq2)
 <span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a><span class="co">#   s1   s2   s3   s4   s5   s6   s7   s8   s9  s10  s11  s12</span></span>
 <span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a><span class="co"># 1.00 1.03 1.01 1.04 1.01 1.03 1.00 1.02 0.99 1.01 0.98 1.03</span></span>
 <span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a>ok <span class="ot">&lt;-</span> <span class="fu">rowSums</span>(counts <span class="sc">==</span> <span class="dv">0</span>) <span class="sc">==</span> <span class="dv">0</span>                   <span class="co"># 1995 of 2000 genes</span></span>
-<span id="cb14-5"><a href="#cb14-5" aria-hidden="true" tabindex="-1"></a><span class="fu">median</span>(counts[ok, <span class="dv">1</span>] <span class="sc">/</span> <span class="fu">exp</span>(<span class="fu">rowMeans</span>(<span class="fu">log</span>(counts[ok, ]))))</span>
+<span id="cb14-5"><a href="#cb14-5" aria-hidden="true" tabindex="-1"></a><span class="fu">exp</span>(<span class="fu">median</span>(<span class="fu">log</span>(counts[ok, <span class="dv">1</span>]) <span class="sc">-</span> <span class="fu">rowMeans</span>(<span class="fu">log</span>(counts[ok, ]))))</span>
 <span id="cb14-6"><a href="#cb14-6" aria-hidden="true" tabindex="-1"></a><span class="co"># [1] 1.002157</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<p>The size factors are all close to 1, because every sample was simulated with the same depth (<code>base</code> is the same for every sample); they are not exactly 1 because of counting noise and because the treatment, batch and sex genes change the composition a little. DESeq2 leaves out every gene with a 0 in <strong>any</strong> sample (its geometric mean is 0); in the by-hand check those genes give <code>NaN</code> or <code>Inf</code>, so use <code>ok &lt;- rowSums(counts == 0) == 0</code> and compute on <code>counts[ok, ]</code>.</p>
+<p>The size factors are all close to 1, because every sample was simulated with the same depth (<code>base</code> is the same for every sample); they are not exactly 1 because of counting noise and because the treatment, batch and sex genes change the composition a little. DESeq2 leaves out every gene with a 0 in <strong>any</strong> sample (its geometric mean is 0); in the by-hand check those genes can give non-finite log ratios, so use <code>ok &lt;- rowSums(counts == 0) == 0</code> and compute on <code>counts[ok, ]</code>.</p>
 <ol start="4" type="a">
 <li><p><code>lfcSE</code> is largest for genes with a small <code>baseMean</code> and falls steadily as <code>baseMean</code> grows. It is the fan of R1 in another form: the fold change of a low-count gene is uncertain, and DESeq2 knows it. That is why a huge fold change built on a few reads is not called.</p></li>
 <li></li>

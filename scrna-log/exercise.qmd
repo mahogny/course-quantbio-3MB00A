@@ -55,7 +55,7 @@ The last two rows have the same true fold change. Which pseudocount reports it b
 
 **B6.** A cell has $n = 5{,}000$ UMIs in total, of which $x = 3$ are of gene G. Compute $\log(1 + \tfrac{x}{n} \cdot 10{,}000)$. Show that it equals $\log 2 + \log(x + 0.5)$. What is the pseudocount in raw counts? Do the same for the same 3 UMIs in a cell with $n = 20{,}000$.
 
-**B7. (concept)** Five B cells have normalized expression $0, 0, 0, 2, 8$ for a T-cell marker. What is the median? You plot it with a log-scaled y axis, which drops the zeros: what median does the boxplot now show, and what would a reader conclude?
+**B7. (concept)** Five B cells have normalized expression $0, 0, 0, 2, 8$ for a T-cell marker. What is the median? You plot it with `ggplot2::geom_boxplot()` and `scale_y_log10()`, which drops the zeros and computes the boxplot statistics on the log-transformed values: what median does the boxplot now show in the original expression units, and what would a reader conclude?
 
 ## Explore: choose the pseudocount {#explore}
 
@@ -132,7 +132,7 @@ Cells are rows and genes are columns, so a per-gene summary works on columns: `c
 :::
 
 ::: {.callout-tip collapse="true" title="Hint 4 — boxplot medians and log axes"}
-For R5, `ggplot2::ggplot_build(p)$data[[1]]` holds the computed boxplot statistics (column `middle`). On a `scale_y_log10()` plot they are in $\log_{10}$ units, so take `10^middle`.
+For R5, `ggplot2::ggplot_build(p)$data[[1]]` holds the computed boxplot statistics (column `middle`). On a `scale_y_log10()` plot the statistics are computed on the log-transformed data and are in $\log_{10}$ units, so take `10^middle`. For an even number of retained values, backtransforming their median on the log scale gives the geometric mean of the two middle values, rather than their arithmetic mean.
 :::
 
 ## Solutions
@@ -166,7 +166,7 @@ Near 0 the +1 dominates, and $\log(1 + x) \approx x$. At 1000 it changes the val
 
 **B6.** $\tfrac{3}{5000} \cdot 10{,}000 = 6$, $\log(1 + 6) = \log 7 = 1.946$. And $\log 2 + \log 3.5 = 0.693 + 1.253 = 1.946$. In general $1 + 2x = 2(x + 0.5)$, so the pseudocount in raw counts is $0.5 = n / 10{,}000$. For $n = 20{,}000$: $\log(1 + 1.5) = 0.916 = \log 0.5 + \log(3 + 2)$, pseudocount 2. The same 3 UMIs are damped more in a bigger cell.
 
-**B7.** The median of $0, 0, 0, 2, 8$ is 0: most B cells do not express the marker. Without the zeros the values are $2, 8$, median 5. The plot suggests B cells express the T-cell marker at a moderate level, which is wrong.
+**B7.** The median of $0, 0, 0, 2, 8$ is 0: most B cells do not express the marker. After dropping the zeros, `scale_y_log10()` computes the median of $\log_{10}2$ and $\log_{10}8$. Backtransforming gives $10^{(\log_{10}2+\log_{10}8)/2} = \sqrt{2\cdot8} = 4$. The arithmetic median of the retained raw values would be 5, but this is not the statistic computed by that plotting workflow. The plot suggests B cells express the T-cell marker at a moderate level while hiding the majority of zero-expression cells.
 
 **R1.**
 

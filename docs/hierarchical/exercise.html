@@ -2201,7 +2201,7 @@ Solutions
 <h3 class="anchored" data-anchor-id="tasks">Tasks</h3>
 <p><strong>R1.</strong> Reproduce <strong>B3</strong> and <strong>B4</strong> with the base-R shrinkage snippet (change only <code>n</code>). Confirm the <span class="math inline">\(n = 1\)</span> group shrinks more.</p>
 <p><strong>R2.</strong> Compute the ICC for <span class="math inline">\(\sigma^2 = 8, \tau^2 = 2\)</span> (matches <strong>B5</strong>), then re-compute it for <span class="math inline">\(\tau^2 = 32\)</span>. Which scenario makes grouping matter more?</p>
-<p><strong>R3.</strong> Write, without running, the <code>lmer</code>/<code>brm</code> formula for a design with <strong>cells nested in patients</strong> where you want a treatment fixed effect. (Hint below.)</p>
+<p><strong>R3.</strong> Write, without running, the <code>lmer</code>/<code>brm</code> formula for a Gaussian biomarker measured <strong>once per cell, with cells nested in patients</strong>, where you want a treatment fixed effect. How would you extend it if there were repeated measurements of each cell? (Hint below.)</p>
 </section>
 </section>
 <section id="hints" class="level2">
@@ -2314,7 +2314,7 @@ Hint 7 — R formulas
 </div>
 <div id="callout-9" class="callout-9-contents callout-collapse collapse">
 <div class="callout-body-container callout-body">
-<p>In <a href="https://rdrr.io/cran/lme4/man/lmer.html"><code>lme4::lmer</code></a> and <a href="https://paul-buerkner.github.io/brms/reference/brm.html"><code>brms::brm</code></a> the syntax is identical. <code>(1 | group)</code> = a random intercept per level of <code>group</code>. Nesting is written <code>(1 | patient/cell)</code> (equivalently <code>(1 | patient) + (1 | patient:cell)</code>); crossed factors are separate terms <code>(1 | batch) + (1 | patient)</code>. Fixed effects (the ones you care about, with few chosen levels) go on the left, e.g.&nbsp;<code>treatment</code>.</p>
+<p>In <a href="https://rdrr.io/cran/lme4/man/lmer.html"><code>lme4::lmer</code></a> and <a href="https://paul-buerkner.github.io/brms/reference/brm.html"><code>brms::brm</code></a> the syntax is identical. <code>(1 | group)</code> = a random intercept per level of <code>group</code>. With one Gaussian response per cell, use <code>(1 | patient)</code> to account for cells sharing a patient; cell-to-cell variability is part of the residual. With repeated observations per cell, nesting can be written <code>(1 | patient/cell)</code> (equivalently <code>(1 | patient) + (1 | patient:cell)</code>). A cell intercept cannot be separated from residual variance with only one response per cell. Crossed factors are separate terms <code>(1 | batch) + (1 | patient)</code>. Fixed-effect predictors go on the <strong>right-hand side</strong> of <code>~</code>, e.g.&nbsp;<code>biomarker ~ treatment + (1 | patient)</code>.</p>
 </div>
 </div>
 </div>
@@ -2353,11 +2353,14 @@ Solution
 <span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a><span class="fu">icc</span>(<span class="at">sigma2 =</span> <span class="dv">8</span>, <span class="at">tau2 =</span> <span class="dv">2</span>)    <span class="co"># 0.2   (B5)</span></span>
 <span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a><span class="fu">icc</span>(<span class="at">sigma2 =</span> <span class="dv">8</span>, <span class="at">tau2 =</span> <span class="dv">32</span>)   <span class="co"># 0.8</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p><span class="math inline">\(\tau^2 = 32\)</span> gives ICC <span class="math inline">\(= 0.8\)</span>: now 80% of variance is between groups, so grouping matters much more and the effective sample size is close to the number of groups.</p>
-<p><strong>R3.</strong> Cells nested in patients, treatment as a fixed effect:</p>
-<div class="sourceCode" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="fu">lmer</span>(biomarker <span class="sc">~</span> treatment <span class="sc">+</span> (<span class="dv">1</span> <span class="sc">|</span> patient<span class="sc">/</span>cell), <span class="at">data =</span> d)</span>
-<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a><span class="co"># equivalently: biomarker ~ treatment + (1 | patient) + (1 | patient:cell)</span></span>
-<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Bayesian: brm(biomarker ~ treatment + (1 | patient/cell), data = d)</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<p><code>treatment</code> is the fixed effect of interest; <code>(1 | patient/cell)</code> gives a random intercept for each patient <em>and</em> for each cell within a patient.</p>
+<p><strong>R3.</strong> One Gaussian biomarker response per cell, with cells nested in patients:</p>
+<div class="sourceCode" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="fu">lmer</span>(biomarker <span class="sc">~</span> treatment <span class="sc">+</span> (<span class="dv">1</span> <span class="sc">|</span> patient), <span class="at">data =</span> d)</span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a><span class="co"># Bayesian: brm(biomarker ~ treatment + (1 | patient), data = d)</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p><code>treatment</code> is the fixed effect of interest; <code>(1 | patient)</code> gives each patient a random intercept, accounting for correlation between their cells. The residual represents variation between cells within a patient.</p>
+<p>With <strong>repeated measurements per cell</strong>, add a cell-within-patient intercept:</p>
+<div class="sourceCode" id="cb8"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="fu">lmer</span>(biomarker <span class="sc">~</span> treatment <span class="sc">+</span> (<span class="dv">1</span> <span class="sc">|</span> patient<span class="sc">/</span>cell), <span class="at">data =</span> d)</span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a><span class="co"># equivalently: biomarker ~ treatment + (1 | patient) + (1 | patient:cell)</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>The repeats allow cell-level variance to be distinguished from residual variance; with only one response per cell those two variances are confounded.</p>
 </div>
 </div>
 </div>

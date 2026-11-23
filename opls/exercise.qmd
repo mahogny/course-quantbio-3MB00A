@@ -33,8 +33,8 @@ $$X = t_p\, p_p^\top \;+\; T_o\, P_o^\top \;+\; E, \qquad \hat Y = t_p\, c + \te
 
 Three kinds of variation:
 
-- **Predictive** — correlated with $Y$ (what you want),
-- **Orthogonal** — structured but **uncorrelated** with $Y$ (nuisance: batch, age, sex, diet),
+- **Predictive** — correlated with $Y$ (including any confounding correlated with the outcome),
+- **Orthogonal** — structured but **uncorrelated** with $Y$ (for example batch, age, sex or diet when uncorrelated with the outcome),
 - **Residual** ($E$) — unstructured measurement noise.
 
 **The caution.** When features vastly outnumber samples ($p \gg n$), a supervised model can separate the groups **even with no real signal**. Trust the cross-validated **$Q^2$** and a **permutation test**, not a pretty score plot.
@@ -63,7 +63,7 @@ Code the class as $y = +1$ for case, $y = -1$ for control, so $y = (1, 1, -1, -1
 **B5. (classify the variation).** A metabolomics case/control study measures serum on an LC–MS platform. Label each source below as **predictive**, **orthogonal**, or **residual**:
 (a) a metabolite genuinely elevated in the disease;
 (b) signal drift because cases were mostly run on day 1 and controls on day 2;
-(c) differences driven by the subjects' ages;
+(c) differences driven by the subjects' ages, with age uncorrelated with case/control status;
 (d) random electronic noise in a single spectrum.
 
 **B6. (read a score plot).** An OPLS-DA model has one predictive component ($t_p$, horizontal) and one orthogonal component ($t_o$, vertical). In the score plot the cases sit on the **right** and controls on the **left**, but within each group the points are spread widely **up and down**. What does the horizontal separation tell you? What does the vertical spread represent, and does it distinguish the groups?
@@ -190,17 +190,17 @@ $A$ covaries with the class label; $B$ does not. So a **PLS/OPLS predictive comp
 
 **B5.**
 (a) **predictive** — genuinely tied to the disease, i.e. correlated with $Y$.
-(b) **orthogonal** — a real, systematic **batch** effect, but it is confounded structure, not the biology of interest (and here it is partly aliased with the label because of poor run design — a reason to randomise run order; still, as a *source*, it is nuisance structure, not the causal disease signal).
-(c) **orthogonal** — age is systematic but not the disease outcome.
+(b) **predictive contribution** — the batch effect is correlated with $Y$ because cases and controls were run on different days. OPLS puts that correlated contribution in the predictive component even though it is a technical nuisance; any batch variation uncorrelated with $Y$ can enter the orthogonal components.
+(c) **orthogonal** — age is systematic and, as specified, uncorrelated with the class label. If age were correlated with class, its correlated contribution would also be predictive.
 (d) **residual** — unstructured random noise, goes into $E$.
 
-*(Note on (b): if batch is perfectly confounded with class it becomes indistinguishable from signal — which is why run order should be randomised. This is a study-design warning, discussed further in the Chemometrics and Cross-validation units.)*
+*(Note on (b): even partial confounding contaminates the predictive component. With perfect confounding, batch and disease cannot be separated from these data. Randomise run order and balance classes across batches, as discussed further in the Chemometrics and Cross-validation units.)*
 
-**B6.** The **horizontal** separation on the predictive axis $t_p$ is the disease signal: cases and controls occupy different positions along the one axis OPLS built to carry $Y$-related variation. The **vertical** spread on the orthogonal axis $t_o$ is systematic variation *within* the data (batch, individual physiology) that OPLS has deliberately set aside; because it is orthogonal to $Y$, it does **not** distinguish the groups — both classes spread up and down similarly.
+**B6.** The **horizontal** separation on the predictive axis $t_p$ is the $Y$-related variation: cases and controls occupy different positions along the one axis OPLS built to carry it. This can include confounding, so separation alone does not establish a disease mechanism. The **vertical** spread on the orthogonal axis $t_o$ is systematic variation *within* the data (batch, individual physiology) that OPLS has deliberately set aside; because it is orthogonal to $Y$, it does **not** distinguish the groups — both classes spread up and down similarly.
 
 **B7.** **M2 is clearly overfit**: $R^2Y = 0.97$ (excellent in-sample fit) but $Q^2 = -0.05$ (worse than predicting the mean under cross-validation). The tell-tale is the large gap between a high $R^2Y$ and a near-zero/negative $Q^2$. **M1** ($0.88$ vs $0.80$) and **M3** ($0.70$ vs $0.55$) both have $Q^2$ comfortably positive and reasonably close to $R^2Y$, so they look trustworthy.
 
-**B8.** First study: the real $Q^2 = 0.62$ sits far above the permuted values (which top out at $0.25$), so the model performs much better than chance for data of this size — the separation is likely **real**. Second study: the real $Q^2 = 0.20$ is *within* the range the permuted (label-shuffled) models reach ($\le 0.30$), so it is **not** distinguishable from noise — the apparent separation is not trustworthy, despite $Q^2$ being positive. A positive $Q^2$ alone is not enough; it must beat the permutation null.
+**B8.** First study: none of the 200 permuted $Q^2$ values reaches the real value of $0.62$, so there is evidence of prediction beyond the permutation null. Using the usual plus-one estimate gives $p = (0+1)/(200+1) \approx 0.005$. This still depends on valid cross-validation and label permutations; confounding can also predict labels. Second study: **insufficient information**. Knowing only that the maximum permuted value is $0.30$ does not tell us how unusual $0.20$ is. Count the permutations with $Q^2 \ge 0.20$ and compute $p = (b+1)/(B+1)$, where $B$ is the number of permutations and $b$ the exceedance count. For example, one exceedance in 200 gives $p = 2/201 \approx 0.010$, while many exceedances would give little evidence against the null. A positive $Q^2$ alone is not enough; assess its position in the full permutation distribution.
 
 **R1.**
 ```r

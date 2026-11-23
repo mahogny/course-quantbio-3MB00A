@@ -31,9 +31,9 @@ After this exercise you will be able to:
 1. Leave out every gene with a 0 in any sample.
 2. For each gene, compute its **geometric mean** over the samples: the product of the counts, then the $k$-th root for $k$ samples (for 3 samples, the cube root). This is the gene's "typical value".
 3. Divide every count by its gene's geometric mean: one ratio per gene and sample.
-4. The size factor of a sample is the **median** of its ratios over the genes.
+4. Take the **median of the log ratios**, then exponentiate: `exp(median(log(ratios)))`. With an odd number of genes, this equals the median of the ratios. With an even number, it is the **geometric mean** of the two middle ratios, matching DESeq2’s implementation.
 
-The median ignores the few genes that really changed. With only two samples, the ratio of the two size factors is simply the median over genes of (sample 2 / sample 1).
+The median is robust to a minority of genes changing. With only two samples, the ratio of the two size factors is `exp(median(log(sample2 / sample1)))` over the retained genes. For an even number of genes, this need not equal the arithmetic median of the raw sample-to-sample ratios.
 
 **Counting noise.** If you expect about $n$ reads, you get $n \pm \sqrt{n}$. The relative noise is $\sqrt{n} / n = 1/\sqrt{n}$: 70% at $n = 2$, 10% at 100, 3% at 1000. A fold change between two small counts is therefore very noisy. (In *Error models*, week 4, this noise gets its name: Poisson. Real replicates spread more, which the negative binomial adds.)
 
@@ -80,7 +80,7 @@ Do these on paper. A calculator is fine.
 
 (b) Which genes look "down"? Did they really go down? What fold change do you get for A, and what is the truth?
 
-(c) Compute the ratio sample 2 / sample 1 for each gene, and take the median. Divide sample 2 by this number. What are the fold changes now?
+(c) Compute the ratio sample 2 / sample 1 for each gene, and take the median on the log scale, then exponentiate (the geometric mean of the two middle ratios for these four genes). Divide sample 2 by this number. What are the fold changes now?
 
 **B3. Median of ratios.** Five genes in three samples:
 
@@ -96,7 +96,7 @@ Do these on paper. A calculator is fine.
 
 (b) Compute the geometric mean of each remaining gene. (For gene A: $100 \cdot 200 \cdot 400 = 8\,000\,000$, and the cube root of that is 200.)
 
-(c) Divide each count by its gene's geometric mean, and take the median per sample. These are the size factors. (With four genes, the median is the mean of the middle two.)
+(c) Divide each count by its gene's geometric mean, then take the median on the log scale and exponentiate, separately for each sample. These are the size factors. With four retained genes, this gives the geometric mean of the middle two ratios.
 
 (d) Divide the counts of genes A and D by the size factors. Which gene changed, in which sample, and by how much?
 
@@ -118,7 +118,7 @@ Do these on paper. A calculator is fine.
 
 (b) Suppose a gene did **not** change. Then both counts come from the same expected value $n$, roughly their mean. For each gene, compute $n$ and $\sqrt{n}$, and how many $\sqrt{n}$ the counts are away from $n$.
 
-(c) Which genes would you believe are really changed? Which of your top 3 from (a) are likely noise?
+(c) Which genes would you believe are really changed? Which highly ranked genes from (a) are likely noise? Account for any ties in your ranking.
 
 (d) What would you need, in the experiment, to say more about gene G?
 
@@ -140,7 +140,7 @@ The demo draws 2000 pairs of replicate counts with the same expected value $n$ (
 
 ::: {.callout-note collapse="true" title="Solutions"}
 
-**E1.** At the defaults: 77% at $n = 1$, 65% at 2, 37% at 5, 17% at 10, 1.3% at 30 and 0% at 100. Nothing changed between the replicates, yet at low counts most pairs look like a 2-fold change or more. At $n = 1$ and 2 many pairs contain a zero: their ratio is 0, $\infty$ or 0/0, so their log2 ratio is $-\infty$, $+\infty$ or undefined. (That is also why the SD in the header, computed on zero-free pairs only, is not a good summary there.)
+**E1.** At the defaults: 77% at $n = 1$, 65% at 2, 37% at 5, 17% at 10, 1.5% at 30 and 0% at 100. Nothing changed between the replicates, yet at low counts most pairs look like a 2-fold change or more. At $n = 1$ and 2 many pairs contain a zero: their ratio is 0, $\infty$ or 0/0, so their log2 ratio is $-\infty$, $+\infty$ or undefined. (That is also why the SD in the header, computed on zero-free pairs only, is not a good summary there.)
 
 **E2.** The spread of the counts is close to $\sqrt{n}$: about 10 at $n = 100$, about 32 at $n = 1000$. The relative spread goes as $1/\sqrt{n}$, so $n$ must grow **4 times** to halve it. With biological variation on, the spread at $n = 1000$ no longer goes to zero: the SD of the log2 ratio stays around 0.47 and about 3% of pairs are still 2-fold apart. Real replicates differ by more than counting noise; *Error models* (week 4) adds this with the negative binomial.
 
@@ -245,7 +245,7 @@ table(called = res$padj < 0.05, truly_DE = truth_de, useNA = "ifany")
 
 (b) Compare the number of true and false calls with limma. Why are some `padj` values `NA`?
 
-(c) Look at `sizeFactors(dds)`. Every sample was simulated with the same depth. Are the size factors close to 1? Check one by hand: `median(counts[, 1] / exp(rowMeans(log(counts))), na.rm = TRUE)` (genes with a 0 give `NaN` or `0` and need care: which genes does DESeq2 leave out?).
+(c) Look at `sizeFactors(dds)`. Every sample was simulated with the same depth. Are the size factors close to 1? Check one by hand: first set `ok <- rowSums(counts == 0) == 0`, then compute `exp(median(log(counts[ok, 1]) - rowMeans(log(counts[ok, ]))))`. Why does DESeq2 leave out genes with a 0 in any sample?
 
 (d) Plot `plot(res$baseMean, res$lfcSE, log = "xy")`. Where is `lfcSE` largest? Relate it to the fan in R1.
 
@@ -307,7 +307,7 @@ Fraction = count / total of that sample. CPM = fraction $\times 10^6$. A fold ch
 :::
 
 ::: {.callout-tip collapse="true" title="Hint 2 — median of ratios (B2c, B3)"}
-Follow the four steps in the Background. A geometric mean of 3 numbers is the cube root of their product; when the counts in a row are $a$, $2a$, $4a$, the product is $8a^3$ and the geometric mean is $2a$. The median of an even number of values is the mean of the middle two. See [`estimateSizeFactors`](https://rdrr.io/bioc/DESeq2/man/estimateSizeFactors.html) and the [DESeq2 vignette](https://bioconductor.org/packages/release/bioc/vignettes/DESeq2/inst/doc/DESeq2.html), section "Normalization".
+Follow the four steps in the Background. A geometric mean of 3 numbers is the cube root of their product; when the counts in a row are $a$, $2a$, $4a$, the product is $8a^3$ and the geometric mean is $2a$. DESeq2 takes the median on the **log scale** and exponentiates: for an even number of ratios this gives the geometric mean of the middle two, not their arithmetic mean. In B2c and B3 those middle values happen to be equal. See [`estimateSizeFactors`](https://rdrr.io/bioc/DESeq2/man/estimateSizeFactors.html) and the [DESeq2 vignette](https://bioconductor.org/packages/release/bioc/vignettes/DESeq2/inst/doc/DESeq2.html), section "Normalization".
 :::
 
 ::: {.callout-tip collapse="true" title="Hint 3 — log2 fold changes and the $\\sqrt{n}$ rule (B4)"}
@@ -319,7 +319,7 @@ $\log_2 4 = 2$, $\log_2 8 = 3$, $\log_2 0.25 = -2$, and $\log_2 1.1 \approx 0.14
 :::
 
 ::: {.callout-tip collapse="true" title="Hint 5 — DESeq2 (R3, R4)"}
-[`DESeqDataSetFromMatrix`](https://rdrr.io/bioc/DESeq2/man/DESeqDataSet.html) takes raw integer counts, the sample table and the design. [`DESeq`](https://rdrr.io/bioc/DESeq2/man/DESeq.html) fits every gene. [`results`](https://rdrr.io/bioc/DESeq2/man/results.html)`(dds, name = ...)` picks a coefficient by its name from `resultsNames(dds)`; without `name` it reports the last variable of the formula. `padj` is `NA` for genes DESeq2 does not test (too few reads, or an extreme outlier); see the vignette's section "Independent filtering". [`plotMA`](https://rdrr.io/bioc/DESeq2/man/plotMA.html) draws the fold change against `baseMean`.
+[`DESeqDataSetFromMatrix`](https://rdrr.io/bioc/DESeq2/man/DESeqDataSet.html) takes raw integer counts, the sample table and the design. [`DESeq`](https://rdrr.io/bioc/DESeq2/man/DESeq.html) fits every gene. [`results`](https://rdrr.io/bioc/DESeq2/man/results.html)`(dds, name = ...)` picks a coefficient by its name from `resultsNames(dds)`; without `name` it reports the last variable of the formula. `padj` can be `NA` even when the gene has a valid raw `pvalue`: **independent filtering** excludes low-mean genes from multiple-testing adjustment. All-zero genes and genes flagged for extreme outliers can instead have missing raw p-values as well. Check both columns; see the vignette's section "Independent filtering". [`plotMA`](https://rdrr.io/bioc/DESeq2/man/plotMA.html) draws the fold change against `baseMean`.
 :::
 
 ::: {.callout-tip collapse="true" title="Hint 6 — shrinkage (R4e)"}
@@ -349,7 +349,7 @@ $\log_2 4 = 2$, $\log_2 8 = 3$, $\log_2 0.25 = -2$, and $\log_2 1.1 \approx 0.14
 
 (b) B, C and D look 4 times down (log2 FC $-2$), but nothing happened to them. A looks 1.75 times up, but truly went up 7 times. In the tube, sample 2 had $7000 + 500 + 300 + 200 = 8000$ units of RNA for every 2000 in sample 1, so each read of sample 2 stands for 4 times as much RNA: A took most of the reads.
 
-(c) The ratios are 1.75, 0.25, 0.25, 0.25; the median is 0.25. Sample 2 divided by 0.25: A 7000, B 500, C 300, D 200. Now B, C and D are unchanged and A is 7 times up: the truth.
+(c) The ratios are 1.75, 0.25, 0.25, 0.25; the two middle ratios are both 0.25, so the exponentiated median log ratio is 0.25. Sample 2 divided by 0.25: A 7000, B 500, C 300, D 200. Now B, C and D are unchanged and A is 7 times up: the truth.
 
 **B3.** (a) Gene E: it has a 0 in s2, so its geometric mean is 0 and its ratios are useless ($8/0$).
 
@@ -363,7 +363,7 @@ $\log_2 4 = 2$, $\log_2 8 = 3$, $\log_2 0.25 = -2$, and $\log_2 1.1 \approx 0.14
 | B | 0.5 | 1 | 2 |
 | C | 0.5 | 1 | 2 |
 | D | 0.25 | 0.5 | 8 |
-| **median** | **0.5** | **1** | **2** |
+| **exp(median(log ratios))** | **0.5** | **1** | **2** |
 
 The size factors are 0.5, 1 and 2: s3 was sequenced 4 times deeper than s1.
 
@@ -376,7 +376,7 @@ m <- rbind(A = c(100, 200, 400), B = c(50, 100, 200), C = c(30, 60, 120),
            D = c(100, 200, 3200), E = c(8, 0, 32))
 ok <- rowSums(m == 0) == 0                        # leave out genes with a 0
 gm <- exp(rowMeans(log(m[ok, ])))                 # geometric means: 200 100 60 400
-apply(m[ok, ] / gm, 2, median)                    # 0.5 1 2
+apply(m[ok, ] / gm, 2, function(r) exp(median(log(r))))  # 0.5 1 2
 ```
 
 DESeq2 gives the same: `sizeFactors(estimateSizeFactors(DESeqDataSetFromMatrix(m, data.frame(s = factor(1:3)), ~ 1)))` prints `0.5 1 2`.
@@ -387,8 +387,8 @@ DESeq2 gives the same: `sizeFactors(estimateSizeFactors(DESeqDataSetFromMatrix(m
 |---|---|---|
 | E | $-\infty$ (3 → 0) | 1 |
 | D | 3 | 2 |
-| B, C | 2 | 3–4 |
-| F | $-2$ | 5 |
+| B, C | 2 | tied 3–5 |
+| F | $-2$ | tied 3–5 |
 | G | $-1$ | 6 |
 | A | 0.14 | 7 |
 
@@ -404,7 +404,7 @@ DESeq2 gives the same: `sizeFactors(estimateSizeFactors(DESeqDataSetFromMatrix(m
 | F | 562.5 | 24 | 337.5, about **14** $\sqrt{n}$ |
 | G | 75 | 8.7 | 25, about **2.9** $\sqrt{n}$ |
 
-(c) Trust **B** and **F**: their counts are 14–19 $\sqrt{n}$ apart, which counting noise cannot do. The top 3 by fold change, E, D and C, are all within 1–2 $\sqrt{n}$: easily counting noise, even though their fold changes are the largest. A's 10% change is also within the noise.
+(c) **B** and **F** have strong evidence of change: their counts are 14–19 $\sqrt{n}$ away from the common mean, extremely unlikely under counting noise alone. **E** and **D** have the largest absolute fold changes, but their deviations are only about 1–2 $\sqrt{n}$ and are compatible with counting noise. **C** is also compatible with noise, despite tying B and F at $|\log_2\mathrm{FC}| = 2$. There is no unique top three: B, C and F tie for ranks 3–5, and their different counts give very different uncertainty. A's 10% change is also compatible with noise.
 
 (d) G is about 3 $\sqrt{n}$ away: probably real, but real replicates vary more than counting noise alone. You need **biological replicates** (several control and treated samples) to see how much G varies between samples of the same group; DESeq2 uses them to estimate that extra spread.
 :::
@@ -485,7 +485,7 @@ table(called = res$padj < 0.05, truly_DE = truth_de, useNA = "ifany")
 #   TRUE      14  181
 #   <NA>      35    4
 ```
-195 calls: 181 true and 14 false, very close to limma's 188 calls (177 true, 11 false). g138 gets LFC 1.37 (truth 1.5). DESeq2 does not test genes with very low counts, so their `padj` is `NA` (39 genes here). Same design matrix, nearly the same answer: for well-designed experiments with enough reads, limma-voom and DESeq2 mostly agree.
+195 calls: 181 true and 14 false, very close to limma's 188 calls (177 true, 11 false). g138 gets LFC 1.37 (truth 1.5). Independent filtering gives `NA` adjusted p-values for 39 low-mean genes here, **although all 39 were tested and have finite raw p-values**. They were excluded from multiple-testing adjustment, rather than from the gene-wise tests. Same design matrix, nearly the same answer: for well-designed experiments with enough reads, limma-voom and DESeq2 mostly agree.
 
 (c)
 ```r
@@ -493,10 +493,10 @@ round(sizeFactors(dds), 2)
 #   s1   s2   s3   s4   s5   s6   s7   s8   s9  s10  s11  s12
 # 1.00 1.03 1.01 1.04 1.01 1.03 1.00 1.02 0.99 1.01 0.98 1.03
 ok <- rowSums(counts == 0) == 0                   # 1995 of 2000 genes
-median(counts[ok, 1] / exp(rowMeans(log(counts[ok, ]))))
+exp(median(log(counts[ok, 1]) - rowMeans(log(counts[ok, ]))))
 # [1] 1.002157
 ```
-The size factors are all close to 1, because every sample was simulated with the same depth (`base` is the same for every sample); they are not exactly 1 because of counting noise and because the treatment, batch and sex genes change the composition a little. DESeq2 leaves out every gene with a 0 in **any** sample (its geometric mean is 0); in the by-hand check those genes give `NaN` or `Inf`, so use `ok <- rowSums(counts == 0) == 0` and compute on `counts[ok, ]`.
+The size factors are all close to 1, because every sample was simulated with the same depth (`base` is the same for every sample); they are not exactly 1 because of counting noise and because the treatment, batch and sex genes change the composition a little. DESeq2 leaves out every gene with a 0 in **any** sample (its geometric mean is 0); in the by-hand check those genes can give non-finite log ratios, so use `ok <- rowSums(counts == 0) == 0` and compute on `counts[ok, ]`.
 
 (d) `lfcSE` is largest for genes with a small `baseMean` and falls steadily as `baseMean` grows. It is the fan of R1 in another form: the fold change of a low-count gene is uncertain, and DESeq2 knows it. That is why a huge fold change built on a few reads is not called.
 
