@@ -7,7 +7,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 
-<title>Exercise: Design matrices in R — limma – Quantitative biology and integrative omics</title>
+<title>Exercise: Many genes at once — limma – Quantitative biology and integrative omics</title>
 <style>
 code{white-space: pre-wrap;}
 span.smallcaps{font-variant: small-caps;}
@@ -179,7 +179,7 @@ window.Quarto = {
       <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" role="button" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
         <i class="bi bi-layout-text-sidebar-reverse"></i>
       </button>
-        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../videos/intro-week-3.html">Week 3: Linear models &amp; differential expression</a></li><li class="breadcrumb-item"><a href="../covariates-r/lec.html">Design matrices in R: limma</a></li><li class="breadcrumb-item"><a href="../covariates-r/exercise.html">Exercise</a></li></ol></nav>
+        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../videos/intro-week-3.html">Week 3: Linear models &amp; differential expression</a></li><li class="breadcrumb-item"><a href="../covariates-r/lec.html">Many genes at once: limma</a></li><li class="breadcrumb-item"><a href="../covariates-r/exercise.html">Exercise</a></li></ol></nav>
         <a class="flex-grow-1" role="navigation" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
         </a>
       <button type="button" class="btn quarto-search-button" aria-label="Search" onclick="window.quartoOpenSearch();">
@@ -1024,7 +1024,7 @@ window.Quarto = {
           <li class="sidebar-item sidebar-item-section">
       <div class="sidebar-item-container"> 
             <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-23" role="navigation" aria-expanded="true">
- <span class="menu-text">Design matrices in R: limma</span></a>
+ <span class="menu-text">Many genes at once: limma</span></a>
           <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-23" role="navigation" aria-expanded="true" aria-label="Toggle section">
             <i class="bi bi-chevron-right ms-2"></i>
           </a> 
@@ -2036,9 +2036,9 @@ window.Quarto = {
 <!-- main -->
 <main class="content" id="quarto-document-content">
 
-<header id="title-block-header" class="quarto-title-block default"><nav class="quarto-page-breadcrumbs quarto-title-breadcrumbs d-none d-lg-block" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../videos/intro-week-3.html">Week 3: Linear models &amp; differential expression</a></li><li class="breadcrumb-item"><a href="../covariates-r/lec.html">Design matrices in R: limma</a></li><li class="breadcrumb-item"><a href="../covariates-r/exercise.html">Exercise</a></li></ol></nav>
+<header id="title-block-header" class="quarto-title-block default"><nav class="quarto-page-breadcrumbs quarto-title-breadcrumbs d-none d-lg-block" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../videos/intro-week-3.html">Week 3: Linear models &amp; differential expression</a></li><li class="breadcrumb-item"><a href="../covariates-r/lec.html">Many genes at once: limma</a></li><li class="breadcrumb-item"><a href="../covariates-r/exercise.html">Exercise</a></li></ol></nav>
 <div class="quarto-title">
-<h1 class="title">Exercise: Design matrices in R — limma</h1>
+<h1 class="title">Exercise: Many genes at once — limma</h1>
 </div>
 
 
@@ -2060,7 +2060,6 @@ window.Quarto = {
 <p>After this exercise you will be able to:</p>
 <ul>
 <li>Predict the output of <a href="https://rdrr.io/r/stats/model.matrix.html"><code>model.matrix</code></a> (column names, entries, rank) <strong>before</strong> running it.</li>
-<li>Set reference levels and level order with <a href="https://rdrr.io/r/stats/relevel.html"><code>relevel</code></a> and <a href="https://rdrr.io/r/base/factor.html"><code>factor</code></a>.</li>
 <li>Check a design with <a href="https://rdrr.io/r/base/qr.html"><code>qr</code></a><code>(X)$rank</code> and explain an <code>NA</code> coefficient from <a href="https://rdrr.io/r/stats/lm.html"><code>lm</code></a>.</li>
 <li>Run a <strong>limma</strong> analysis of bulk RNA-seq counts with <code>design = ~ batch + sex + treatment</code>, read log2 fold changes and <code>adj.P.Val</code>, and compare designs against a known truth.</li>
 <li>Do the same for log2 intensities from mass-spectrometry metabolomics, with a continuous covariate (BMI).</li>
@@ -2170,25 +2169,19 @@ window.Quarto = {
 <li><p>Write the full <span class="math inline">\(6 \times 5\)</span> matrix.</p></li>
 <li><p>Samples 5 and 6 fail quality control and are removed. Write <span class="math inline">\(X\)</span> for the four remaining samples. Which two columns are now identical? What are <code>ncol(X)</code> and <code>qr(X)$rank</code>? Which coefficient does <code>lm</code> report as <code>NA</code>?</p></li>
 </ol>
-<p><strong>B2. The order of levels.</strong> A time course has <code>time</code> stored as text: <code>"0h"</code>, <code>"6h"</code>, <code>"24h"</code>, <code>"48h"</code>.</p>
-<ol type="a">
-<li><p>Which column names does <code>model.matrix(~ time)</code> give, and in which order?</p></li>
-<li><p>Write the line of R that puts the levels in time order. Which columns do you get then?</p></li>
-<li><p>If you instead code time as a number of hours, <code>time_h</code>, how many columns does <span class="math inline">\(X\)</span> have? What does that model assume that the factor model does not?</p></li>
-</ol>
-<p><strong>B3. Confounded batches.</strong> Eight samples: samples 1–4 are controls sequenced in batch A, samples 5–8 are treated samples sequenced in batch B.</p>
+<p><strong>B2. Confounded batches.</strong> Eight samples: samples 1–4 are controls sequenced in batch A, samples 5–8 are treated samples sequenced in batch B.</p>
 <ol type="a">
 <li><p>Write <span class="math inline">\(X\)</span> for <code>~ batch + treatment</code>. What is its rank, and how many coefficients are there?</p></li>
 <li><p>What does <code>lm</code> return? What does limma’s <code>lmFit</code> say?</p></li>
 <li><p>Propose a new layout of the same eight samples over the two batches that gives a full-rank <span class="math inline">\(X\)</span>. Which layout is best, and why?</p></li>
 </ol>
-<p><strong>B4. limma coefficients and fold changes.</strong> A limma analysis uses <code>design &lt;- model.matrix(~ batch + sex + treatment)</code> with <code>batch</code> (A, B, C), <code>sex</code> (F, M) and <code>treatment</code> (ctrl, treat).</p>
+<p><strong>B3. limma coefficients and fold changes.</strong> A limma analysis uses <code>design &lt;- model.matrix(~ batch + sex + treatment)</code> with <code>batch</code> (A, B, C), <code>sex</code> (F, M) and <code>treatment</code> (ctrl, treat).</p>
 <ol type="a">
 <li><p>What does <code>colnames(design)</code> print? Which name do you give to <code>topTable(fit, coef = ...)</code> to get the treatment effect?</p></li>
 <li><p>A colleague writes <code>topTable(fit, coef = 2)</code>. Which comparison does that report? Why is a name safer than a number?</p></li>
 <li><p>A gene has a mean log2 expression of 6.64 in the controls (about 100 on the original scale). Its <code>logFC</code> for <code>treatmenttreat</code> is 2. What is its expected value in the treated samples (same batch and sex), on the log2 scale and on the original scale? And if the logFC were <span class="math inline">\(-1\)</span>?</p></li>
 </ol>
-<p><strong>B5. Reading <code>lm</code> output.</strong> For the drug/batch example from <em>Confounding &amp; Simpson’s paradox</em>, R prints:</p>
+<p><strong>B4. Reading <code>lm</code> output.</strong> For the drug/batch example from <em>Confounding &amp; Simpson’s paradox</em>, R prints:</p>
 <div class="sourceCode" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="fu">coef</span>(<span class="fu">lm</span>(expr <span class="sc">~</span> treatment, <span class="at">data =</span> g))</span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="co">#    (Intercept) treatmenttreat</span></span>
 <span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="co">#           17.5           -3.0</span></span>
@@ -2199,7 +2192,7 @@ window.Quarto = {
 <li><p>From the second model, compute the predicted expression of a control in batch B and of a treated sample in batch A.</p></li>
 <li><p>In one sentence: why are the two <code>treatmenttreat</code> coefficients different, and which one is the drug effect?</p></li>
 </ol>
-<p><strong>B6. A continuous covariate in limma.</strong> A limma fit of one metabolite’s log2 intensity with <code>design &lt;- model.matrix(~ group + bmi)</code> gives coefficients <code>(Intercept)</code> 10, <code>groupdisease</code> 1, <code>bmi</code> 0.1.</p>
+<p><strong>B5. A continuous covariate in limma.</strong> A limma fit of one metabolite’s log2 intensity with <code>design &lt;- model.matrix(~ group + bmi)</code> gives coefficients <code>(Intercept)</code> 10, <code>groupdisease</code> 1, <code>bmi</code> 0.1.</p>
 <ol type="a">
 <li><p>Predict the log2 intensity for a healthy person with BMI 20 and for a disease patient with BMI 30.</p></li>
 <li><p>The two differ by 2 on the log2 scale, that is a factor 4. How much of that difference is due to disease and how much to BMI?</p></li>
@@ -2259,7 +2252,7 @@ window.Quarto = {
 <span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>tt  <span class="ot">&lt;-</span> <span class="fu">topTable</span>(fit, <span class="at">coef =</span> <span class="st">"treatmenttreat"</span>, <span class="at">number =</span> <span class="cn">Inf</span>)</span>
 <span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a><span class="fu">head</span>(tt)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <ol type="a">
-<li><p>Which coefficient names can you give to <code>coef =</code>? Did you predict them in B4?</p></li>
+<li><p>Which coefficient names can you give to <code>coef =</code>? Did you predict them in B3?</p></li>
 <li><p>Look at <code>tt["g138", ]</code>. Compare its <code>logFC</code> with your <code>lm</code> estimate in R2 and with the truth.</p></li>
 <li><p>How many genes have <code>adj.P.Val &lt; 0.05</code>? How many of them are truly DE, and how many are false positives? <code>topTable</code> sorts the genes, so put them back in order first: <code>called &lt;- tt[rownames(counts), "adj.P.Val"] &lt; 0.05</code>, then <code>table(called, truly_DE = truth_de)</code>.</p></li>
 </ol>
@@ -2339,29 +2332,29 @@ window.Quarto = {
 </section>
 <section id="hints" class="level2">
 <h2 class="anchored" data-anchor-id="hints">Hints</h2>
-<div class="callout callout-style-default callout-tip callout-titled" title="Hint 1 — column names and the reference (B1, B2)">
+<div class="callout callout-style-default callout-tip callout-titled" title="Hint 1 — column names and the reference (B1)">
 <div class="callout-header d-flex align-content-center" data-bs-toggle="collapse" data-bs-target=".callout-1-contents" aria-controls="callout-1" aria-expanded="false" aria-label="Toggle callout">
 <div class="callout-icon-container">
 <i class="callout-icon"></i>
 </div>
 <div class="callout-title-container flex-fill">
-Hint 1 — column names and the reference (B1, B2)
+Hint 1 — column names and the reference (B1)
 </div>
 <div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
 </div>
 <div id="callout-1" class="callout-1-contents callout-collapse collapse">
 <div class="callout-body-container callout-body">
-<p>Each factor gives one column per level <strong>except</strong> the reference, which is the alphabetically first level (<a href="https://rdrr.io/r/base/factor.html"><code>factor</code></a>, <a href="https://rdrr.io/r/stats/relevel.html"><code>relevel</code></a>). The column name is the variable name followed by the level: <code>batchB</code>, <code>sexM</code>. Text is sorted character by character, so <code>"24h"</code> comes before <code>"6h"</code>. See <a href="https://rdrr.io/r/stats/model.matrix.html"><code>model.matrix</code></a>.</p>
+<p>Each factor gives one column per level <strong>except</strong> the reference, which is the alphabetically first level (<a href="https://rdrr.io/r/base/factor.html"><code>factor</code></a>, <a href="https://rdrr.io/r/stats/relevel.html"><code>relevel</code></a>). The column name is the variable name followed by the level: <code>batchB</code>, <code>sexM</code>. See <a href="https://rdrr.io/r/stats/model.matrix.html"><code>model.matrix</code></a>.</p>
 </div>
 </div>
 </div>
-<div class="callout callout-style-default callout-tip callout-titled" title="Hint 2 — rank (B1c, B3, R5)">
+<div class="callout callout-style-default callout-tip callout-titled" title="Hint 2 — rank (B1c, B2, R5)">
 <div class="callout-header d-flex align-content-center" data-bs-toggle="collapse" data-bs-target=".callout-2-contents" aria-controls="callout-2" aria-expanded="false" aria-label="Toggle callout">
 <div class="callout-icon-container">
 <i class="callout-icon"></i>
 </div>
 <div class="callout-title-container flex-fill">
-Hint 2 — rank (B1c, B3, R5)
+Hint 2 — rank (B1c, B2, R5)
 </div>
 <div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
 </div>
@@ -2371,13 +2364,13 @@ Hint 2 — rank (B1c, B3, R5)
 </div>
 </div>
 </div>
-<div class="callout callout-style-default callout-tip callout-titled" title="Hint 3 — limma coefficient names (B4, R3)">
+<div class="callout callout-style-default callout-tip callout-titled" title="Hint 3 — limma coefficient names (B3, R3)">
 <div class="callout-header d-flex align-content-center" data-bs-toggle="collapse" data-bs-target=".callout-3-contents" aria-controls="callout-3" aria-expanded="false" aria-label="Toggle callout">
 <div class="callout-icon-container">
 <i class="callout-icon"></i>
 </div>
 <div class="callout-title-container flex-fill">
-Hint 3 — limma coefficient names (B4, R3)
+Hint 3 — limma coefficient names (B3, R3)
 </div>
 <div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
 </div>
@@ -2387,13 +2380,13 @@ Hint 3 — limma coefficient names (B4, R3)
 </div>
 </div>
 </div>
-<div class="callout callout-style-default callout-tip callout-titled" title="Hint 4 — log2 fold changes (B4c)">
+<div class="callout callout-style-default callout-tip callout-titled" title="Hint 4 — log2 fold changes (B3c)">
 <div class="callout-header d-flex align-content-center" data-bs-toggle="collapse" data-bs-target=".callout-4-contents" aria-controls="callout-4" aria-expanded="false" aria-label="Toggle callout">
 <div class="callout-icon-container">
 <i class="callout-icon"></i>
 </div>
 <div class="callout-title-container flex-fill">
-Hint 4 — log2 fold changes (B4c)
+Hint 4 — log2 fold changes (B3c)
 </div>
 <div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
 </div>
@@ -2491,12 +2484,7 @@ Solutions — by hand
 <span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a><span class="fu">coef</span>(<span class="fu">lm</span>(<span class="fu">c</span>(<span class="dv">5</span>, <span class="dv">9</span>, <span class="dv">7</span>, <span class="dv">11</span>) <span class="sc">~</span> batch <span class="sc">+</span> sex <span class="sc">+</span> treatment, <span class="at">data =</span> b1[<span class="dv">1</span><span class="sc">:</span><span class="dv">4</span>, ]))</span>
 <span id="cb10-9"><a href="#cb10-9" aria-hidden="true" tabindex="-1"></a><span class="co">#  (Intercept)  batchB  sexM  treatmenttreat</span></span>
 <span id="cb10-10"><a href="#cb10-10" aria-hidden="true" tabindex="-1"></a><span class="co">#            5       2     4              NA</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<p><strong>B2.</strong> (a) <code>(Intercept)</code>, <code>time24h</code>, <code>time48h</code>, <code>time6h</code>: alphabetical, because <code>"2"</code> &lt; <code>"4"</code> &lt; <code>"6"</code>. The reference <code>0h</code> is first by luck.</p>
-<ol start="2" type="a">
-<li><p><code>time &lt;- factor(time, levels = c("0h", "6h", "24h", "48h"))</code> gives <code>time6h</code>, <code>time24h</code>, <code>time48h</code>.</p></li>
-<li><p>Two columns, <code>(Intercept)</code> and <code>time_h</code>. The numeric model assumes the expression changes <strong>linearly</strong> with hours (the step from 24 h to 48 h must be 4 times the step from 0 h to 6 h); the factor model lets each time point have its own mean.</p></li>
-</ol>
-<p><strong>B3.</strong> (a)</p>
+<p><strong>B2.</strong> (a)</p>
 <pre><code>  (Intercept) batchB treatmenttreat
 1-4         1      0              0
 5-8         1      1              1</code></pre>
@@ -2505,16 +2493,16 @@ Solutions — by hand
 <li><p><code>lm</code> gives <code>NA</code> for <code>treatmenttreat</code>; its <code>batchB</code> estimate is batch and treatment together. <code>lmFit</code> does the same and prints “Coefficients not estimable: treatmenttreat”.</p></li>
 <li><p>Any layout where both batches contain both conditions gives rank 3. The best is <strong>balanced</strong>: 2 controls and 2 treated in each batch. Then batch and treatment are not related at all, and the treatment effect is estimated as precisely as possible.</p></li>
 </ol>
-<p><strong>B4.</strong> (a) <code>"(Intercept)"</code>, <code>"batchB"</code>, <code>"batchC"</code>, <code>"sexM"</code>, <code>"treatmenttreat"</code>. Use <code>coef = "treatmenttreat"</code>.</p>
+<p><strong>B3.</strong> (a) <code>"(Intercept)"</code>, <code>"batchB"</code>, <code>"batchC"</code>, <code>"sexM"</code>, <code>"treatmenttreat"</code>. Use <code>coef = "treatmenttreat"</code>.</p>
 <ol start="2" type="a">
 <li><p>Column 2 is <code>batchB</code>, so <code>coef = 2</code> reports <strong>batch B vs A</strong>, not the treatment. If someone reorders the formula, the position of every column changes, but the name <code>treatmenttreat</code> still points to the treatment.</p></li>
 <li><p>On the log2 scale: <span class="math inline">\(6.64 + 2 = 8.64\)</span>. On the original scale: <span class="math inline">\(100 \times 2^2 = 400\)</span>. With logFC <span class="math inline">\(-1\)</span>: <span class="math inline">\(6.64 - 1 = 5.64\)</span>, that is <span class="math inline">\(100 \times 2^{-1} = 50\)</span>.</p></li>
 </ol>
-<p><strong>B5.</strong> (a) Control in batch B: <span class="math inline">\(10 + 10 = 20\)</span>. Treated in batch A: <span class="math inline">\(10 + 2 = 12\)</span>. (These are the data values.)</p>
+<p><strong>B4.</strong> (a) Control in batch B: <span class="math inline">\(10 + 10 = 20\)</span>. Treated in batch A: <span class="math inline">\(10 + 2 = 12\)</span>. (These are the data values.)</p>
 <ol start="2" type="a">
 <li>The treated samples are mostly in the low batch A and the controls mostly in the high batch B, so <code>~ treatment</code> mixes the batch difference into the treatment column; the adjusted model compares within batches, and <strong>+2</strong> is the drug effect.</li>
 </ol>
-<p><strong>B6.</strong> (a) Healthy, BMI 20: <span class="math inline">\(10 + 0.1 \cdot 20 = 12\)</span>. Disease, BMI 30: <span class="math inline">\(10 + 1 + 0.1 \cdot 30 = 14\)</span>.</p>
+<p><strong>B5.</strong> (a) Healthy, BMI 20: <span class="math inline">\(10 + 0.1 \cdot 20 = 12\)</span>. Disease, BMI 30: <span class="math inline">\(10 + 1 + 0.1 \cdot 30 = 14\)</span>.</p>
 <ol start="2" type="a">
 <li>Disease contributes 1 and the 10 extra BMI units contribute <span class="math inline">\(0.1 \cdot 10 = 1\)</span>. Half of the log2 difference of 2 is BMI, not disease.</li>
 </ol>

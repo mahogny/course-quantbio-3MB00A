@@ -1,6 +1,6 @@
 ---
-title: "Design matrices in R: limma"
-subtitle: "Week 3 — Design matrices in R"
+title: "Many genes at once: limma"
+subtitle: "Week 3 — Many genes at once: limma"
 author: "Quantitative biology and integrative omics"
 format:
   revealjs:
@@ -19,39 +19,73 @@ format:
     html-math-method: katex
 ---
 
-## About this lecture
+## Problem: which of 20 000 genes respond to the treatment? {.smaller}
 
-In *Design matrices for covariates* you built $X$ by hand, and in *Confounding & Simpson's paradox* you saw why the columns you put in decide the answer. Today R builds $X$ for us, and we hand the same $X$ to the tools used for real omics data. You will be able to:
+![](fig01-one-design-many-genes.svg){width="95%" fig-align="center"}
 
-- Turn a formula into $X$ with [`model.matrix`](https://rdrr.io/r/stats/model.matrix.html), and control the reference level with [`relevel`](https://rdrr.io/r/stats/relevel.html) and [`factor`](https://rdrr.io/r/base/factor.html).
-- **Check the rank** of $X$ before fitting, and recognise the `NA` that [`lm`](https://rdrr.io/r/stats/lm.html) returns for a column it cannot estimate.
-- Run **limma** on a whole omics table with `design = ~ batch + sex + treatment`, and read log2 fold changes and adjusted p-values.
-- Recognise "coefficients not estimable", and know that only the **experiment** can fix it.
-- Know that the next unit, *Bulk RNA-seq with DESeq2*, starts one step earlier: from the raw counts.
+- An omics experiment gives a table: one row per gene (or protein, metabolite), one column per sample, on a **log2 scale**. Plus a sample sheet: batch, sex, treatment.
+- For **one** gene you already know what to do: fit `lm(expr ~ batch + sex + treatment)` and read the treatment coefficient. On the log2 scale it is a **log2 fold change** (logFC): 1 = doubled, $-1$ = halved.
+- Now we need that answer for **every** gene, and a list of genes we can trust.
 
 ::: notes
-This is the R day for the covariates section. Nothing conceptually new: the design matrix, the dummy columns, the reference level and the rank condition are all from the two previous units. What is new is the tooling. First base R (model.matrix, lm), then limma, which fits the same linear model to every gene of a log-scale omics table. limma works for RNA-seq (after voom), proteomics, metabolomics and microarrays, and it needs nothing beyond the Gaussian linear model they already know. DESeq2, which works on the raw counts, is the next unit (Bulk RNA-seq with DESeq2); here it is only a forward pointer. Keep it practical: the students should leave knowing how to write the design, how to check it, and which coefficient to ask for.
+Start from the problem, not the tool. Everything about the design matrix is from Design matrices for covariates and Confounding: the same X serves every gene, since the samples are the same; only y changes from row to row. The question of the day is what goes wrong when we simply repeat the one-gene analysis 20 000 times, and how limma fixes it. The data in the next slides are simulated (2000 genes, 12 samples, 200 genes truly respond), the same data as in the exercise, so we know the right answer.
 :::
 
-## Recap: a formula is a recipe for $X$ {.smaller}
+## A loop of `lm` over the genes runs, but gives poor answers {.smaller}
 
-$$
-\mathbf{y} = X\boldsymbol\beta + \boldsymbol\varepsilon
-$$
+Simulated RNA-seq: 2000 genes, 12 samples, and we know that **200 genes truly respond** to treatment.
 
-- One **row** of $X$ per sample, one **column** per coefficient.
-- `(Intercept)` is a column of 1s; it holds $\beta_0$, the mean of the **reference** group.
-- A factor with $k$ levels gives $k-1$ dummy columns: "difference from the reference".
-- A continuous covariate (age, BMI) gives one column of numbers: a slope.
-- $\boldsymbol\beta$ is unique only if the columns of $X$ are **linearly independent** (full column rank).
+```r
+y <- log2(counts + 1)                       # genes x samples, log2 scale
+coef(summary(lm(y["g5", ] ~ batch + sex + treatment, data = samples)))["treatmenttreat", ]
+#   Estimate Std. Error    t value   Pr(>|t|)
+#       2.27       0.20      11.27    3.5e-06       # one gene: clearly up
 
-In R you never type $X$ yourself. You write the formula and R builds $X$, with the same rules you used by hand.
+p <- apply(y, 1, function(yg)               # the same fit for every row
+  coef(summary(lm(yg ~ batch + sex + treatment, data = samples)))["treatmenttreat", 4])
+sum(p < 0.05)
+# [1] 277
+```
+
+277 genes with $p < 0.05$, but only 200 genes respond. Two problems:
+
+1. **Many false hits**: testing many genes lets chance through.
+2. **Each gene's noise is badly estimated**: 12 samples is too few to know how noisy one gene is.
 
 ::: notes
-One slide of recap so that the code that follows has something to hang on. The last bullet is the existence-of-solutions result from Design matrices for covariates and ties back to the zero, one or infinitely many solutions of Linear systems in R. Today we will see what each tool does when that condition fails.
+The loop is correct code and students could write it themselves; apply runs the function on every row. The numbers: of the 277, 186 truly respond and 91 do not. Both problems have nothing to do with the design matrix, which is fine here (full rank, batch included). They come from doing 2000 tests with few samples each. The next two slides take one problem each. limma's three functions are exactly this loop plus the two fixes.
 :::
 
-## `model.matrix()` builds $X$ {.smaller}
+## Testing many genes at once gives many false hits {.smaller}
+
+- $p < 0.05$ means: a gene with **no real change** still passes 5% of the time.
+- 1800 genes do not respond, so about $1800 \times 0.05 = 90$ pass by chance. We got 91. With 20 000 genes it would be about 1000.
+- Fix: **adjust** the p-values for the number of tests, `p.adjust(p, "BH")`. Then among the genes called at `< 0.05`, only about 5% are false. limma reports this as `adj.P.Val`.
+
+| cut-off | genes called | truly respond | false |
+|---|---|---|---|
+| `p < 0.05` | 277 | 186 | 91 |
+| adjusted `< 0.05` | 131 | 124 | 7 |
+
+- The list is now trustworthy, but only 124 of the 200 responding genes are found. Can we find more?
+
+::: notes
+One idea, no formula: 5% of a big number is a big number. BH (Benjamini–Hochberg) is the adjustment limma uses; students do not need its rule, only what the cut-off promises: about 5% of the list is wrong, not 5% of all genes. 7 of 131 is 5%. The price is that weaker true genes fall below the line, which motivates the next slide.
+:::
+
+## With few samples, each gene's noise is badly estimated {.smaller}
+
+![](fig06-shared-noise.svg){width="68%" fig-align="center"}
+
+- Each gene's noise comes from only 12 samples. By chance some genes look **far too quiet** (false hits) or **too noisy** (real changes missed).
+- limma's `eBayes` uses that most genes are about equally noisy: each gene's noise is **pulled towards the typical gene**. Each gene borrows information from all the others.
+- With adjusted p-values: the `lm` loop finds **124** of the 200 genes (7 false), limma finds **181** (10 false).
+
+::: notes
+The top histogram is the noise (residual standard deviation) of each of the 2000 genes, each estimated on its own from 12 samples with 4 coefficients, so only 8 values left over to judge the noise. The spread is mostly chance. The bottom histogram is the same genes after eBayes: each estimate is a weighted average of the gene's own value and the typical value. The red gene, g1034, does not respond at all; its own noise estimate is 0.13 against a typical 0.37, so its small difference of 0.6 looks significant (lm p = 0.0005, called even after adjustment). With the shared noise it is not called. The same pull helps true genes whose noise was overestimated, which is where the extra 57 true calls come from. Both comparisons use log2(counts + 1) and the same design; the name empirical Bayes and the idea of shrinkage come back in week 4 (Hierarchical models). No formula needed here.
+:::
+
+## `model.matrix()` builds the design limma needs {.smaller}
 
 ```r
 d <- data.frame(
@@ -92,120 +126,11 @@ X <- model.matrix(~ treatment + sex, data = d)
 :::
 ::::
 
-- Column names are the variable name glued to the level: `treatmenttreat`, `sexM`.
-- The **reference** levels (`ctrl`, `F`) get no column: they are in the intercept.
+- Column names are the variable name glued to the level: `treatmenttreat`, `sexM`. limma asks for a coefficient by this name.
+- The **reference** levels (`ctrl`, `F`) get no column. Check `levels()` first: real data often has `trt` and `untrt`, and `trt` sorts first. Fix with `relevel(x, ref = "untrt")`.
 
 ::: notes
-model.matrix is exactly what lm and limma use; limma even takes its output directly. Read the column names aloud, because students will need them later to pick coefficients: treatmenttreat is "treatment, level treat". The reference is the alphabetically first level, ctrl and F here. Ask: which sample is the reference group? Sample 1 and 3 are ctrl and F, so their row is just 1, 0, 0 and their predicted mean is beta 0.
-:::
-
-## A continuous covariate: one column of numbers {.smaller}
-
-```r
-model.matrix(~ treatment + bmi, data = d)
-#   (Intercept) treatmenttreat bmi
-# 1           1              0  22
-# 2           1              0  25
-# 3           1              0  28
-# 4           1              1  24
-# 5           1              1  27
-# 6           1              1  30
-```
-
-- `bmi` is copied in as it is. Its coefficient is the change in $y$ **per BMI unit**, holding treatment fixed.
-- The intercept is now "control at BMI 0". To make it readable, centre: `~ treatment + I(bmi - mean(bmi))`. The slope does not change.
-- Age works the same way.
-
-::: notes
-Continuous covariates are the easy case in R. Point at the BMI column: the numbers go straight in. Remind them of centring from Design matrices for covariates; in R the I() wrapper means "compute this and use it as a column". In omics tools people often centre or scale continuous covariates before fitting, for the same readability reason.
-:::
-
-## Choosing the reference with `relevel()` {.smaller}
-
-R sorts the levels of a factor **alphabetically**, and the first one becomes the reference.
-
-```r
-d$treatment <- factor(d$treatment)
-levels(d$treatment)
-# [1] "ctrl"  "treat"          # ctrl is the reference: good
-
-d$treatment <- relevel(d$treatment, ref = "treat")
-colnames(model.matrix(~ treatment, data = d))
-# [1] "(Intercept)"   "treatmentctrl"   # now the column is "ctrl vs treat"
-```
-
-- Changing the reference does **not** change the fit or the predictions. It changes what each coefficient **means**: the sign of the treatment effect flips.
-- Real data often has levels like `trt` and `untrt`. Alphabetically `trt` comes first, so `untrt` vs `trt` is what you get unless you relevel.
-
-::: notes
-The relevel point matters most in practice. Many public datasets, including the airway dataset in the exercise, have treatment levels where the alphabetical first one is the treated group, so every fold change comes out with the wrong sign. Always check levels() before fitting. Rule: set the reference to the control or baseline condition.
-:::
-
-## R sorts time levels as text, not as numbers {.smaller}
-
-```r
-d$time <- c("0h", "6h", "24h", "0h", "6h", "24h")
-colnames(model.matrix(~ time, data = d))
-# [1] "(Intercept)" "time24h"     "time6h"      # alphabetical: "24h" < "6h"
-
-d$time <- factor(d$time, levels = c("0h", "6h", "24h"))
-colnames(model.matrix(~ time, data = d))
-# [1] "(Intercept)" "time6h"      "time24h"     # the order you meant
-```
-
-- Text is sorted character by character: `"2"` comes before `"6"`, so `24h` comes before `6h`.
-- Here the reference `0h` happens to stay first, but the columns are in a confusing order. With `day3`, `day7`, `day14` the reference itself goes wrong: R picks `day14`.
-- Fix: give the levels explicitly with `factor(x, levels = ...)`.
-
-::: notes
-This bites everyone once. R sorts strings as text, not as numbers. The output here is still a valid model, but plots and tables come out in the order 0, 24, 6, and it is easy to read the wrong column. Always set the levels by hand for anything ordered: time points, doses, stages. With day3, day7, day14 the levels sort as day14, day3, day7, so day14 silently becomes the reference and every coefficient is "compared with day 14".
-:::
-
-## Time as a factor or as a number {.smaller}
-
-```r
-d$time_h <- c(0, 6, 24, 0, 6, 24)
-colnames(model.matrix(~ time_h, data = d))
-# [1] "(Intercept)" "time_h"        # one slope per hour
-```
-
-| formula | columns for time | what it assumes |
-|---|---|---|
-| `~ time` (factor) | `time6h`, `time24h` | any shape: each time point has its own mean |
-| `~ time_h` (number) | `time_h` | a straight line in time |
-
-:::: {.columns}
-::: {.column width="50%"}
-`model.matrix(~ time, data = d)`
-
-| | (Intercept) | time6h | time24h |
-|---|---|---|---|
-| 0 h  | 1 | 0 | 0 |
-| 6 h  | 1 | 1 | 0 |
-| 24 h | 1 | 0 | 1 |
-| 0 h  | 1 | 0 | 0 |
-| 6 h  | 1 | 1 | 0 |
-| 24 h | 1 | 0 | 1 |
-:::
-::: {.column width="50%"}
-`model.matrix(~ time_h, data = d)`
-
-| | (Intercept) | time_h |
-|---|---|---|
-| 0 h  | 1 | 0 |
-| 6 h  | 1 | 6 |
-| 24 h | 1 | 24 |
-| 0 h  | 1 | 0 |
-| 6 h  | 1 | 6 |
-| 24 h | 1 | 24 |
-:::
-::::
-
-- The factor version costs one column more, but makes no assumption about the shape.
-- With only a few time points, the factor version is the usual choice in omics.
-
-::: notes
-Same data, two designs. As a factor, time gets k minus 1 dummy columns and each time point is free. As a number, time is a single slope, which assumes the response grows linearly with hours: from 6 h to 24 h it would have to grow three times as much as from 0 h to 6 h. With three time points that is rarely what you believe, so the factor is the safer default. This matches the time slide in Design matrices for covariates.
+Same rules as in Design matrices for covariates; this slide only shows R doing it. model.matrix is exactly what lm and limma use; limma takes its output directly as the design. Read the column names aloud, because students will need them later to pick coefficients: treatmenttreat is "treatment, level treat". The reference is the alphabetically first level, ctrl and F here. Ask: which sample is the reference group? Sample 1 and 3 are ctrl and F, so their row is just 1, 0, 0 and their predicted mean is beta 0. The relevel bullet matters in practice: in the airway dataset of the next unit the alphabetical order makes the treated group the reference, so every fold change gets the wrong sign.
 :::
 
 ## Check the rank before you fit {.smaller}
@@ -232,73 +157,15 @@ Matrix::rankMatrix(X)   # 2   (Matrix package, comes with R)
 limma::is.fullrank(X)   # FALSE  -> rank < ncol(X): no unique solution
 ```
 
-- `batchB` and `treatmenttreat` are **identical** columns: perfect confounding.
+- `batchB` and `treatmenttreat` are **identical** columns: perfect confounding (*Confounding & Simpson's paradox*).
+- limma then warns `Coefficients not estimable: treatmenttreat` and gives `NA`. Dropping batch silences it but does not fix it: only a new **experiment** with both conditions in every batch can.
 - Rank $<$ `ncol(X)` means infinitely many $\boldsymbol\beta$ fit equally well, as in *Linear systems in R*. Use whichever function you like: [`qr`](https://rdrr.io/r/base/qr.html)`(X)$rank`, [`Matrix::rankMatrix`](https://rdrr.io/cran/Matrix/man/rankMatrix.html), or limma's yes/no version [`is.fullrank`](https://rdrr.io/bioc/limma/man/is.fullrank.html).
 
 ::: notes
-This is the rank check from Linear systems in R applied to a design matrix. The rule to remember: rank equal to the number of columns means a unique beta, rank smaller means infinitely many. Here batch and treatment carry exactly the same information, so any split of the difference between the two coefficients fits equally well. X[, ] just prints the matrix without the attr lines. The three rank functions agree; students only need one. qr is just the name of the base-R function, there is no need to explain the QR decomposition. rankMatrix also prints a few attr lines (method, tol) below the number; they can be ignored. is.fullrank answers the question directly: TRUE means a unique beta.
+This is the rank check from Linear systems in R applied to a design matrix. The rule to remember: rank equal to the number of columns means a unique beta, rank smaller means infinitely many. Here batch and treatment carry exactly the same information, so any split of the difference between the two coefficients fits equally well. X[, ] just prints the matrix without the attr lines. The three rank functions agree; students only need one. qr is just the name of the base-R function, there is no need to explain the QR decomposition. rankMatrix also prints a few attr lines (method, tol) below the number; they can be ignored. is.fullrank answers the question directly: TRUE means a unique beta. The limma message is what students will see in practice; voom prints it too because it fits the model once internally. The exercise (R5) runs this case on the simulated counts.
 :::
 
-## Two identical columns: `lm` gives `NA` {.smaller}
-
-```r
-d$y <- c(10, 11, 12, 14, 15, 16)
-coef(lm(y ~ batch + treatment, data = d))
-#  (Intercept)         batchB treatmenttreat
-#           11              4             NA
-
-coef(lm(y ~ treatment + batch, data = d))      # same model, other order
-#  (Intercept) treatmenttreat         batchB
-#           11              4             NA
-```
-
-- `lm` does not stop with an error. It goes through the columns in order and drops any column that copies the earlier ones: here `treatmenttreat`, which equals `batchB`. The dropped column gets `NA`.
-- The 4 is **batch and drug together**. Swap the order and the 4 moves to the other column.
-- An `NA` coefficient is a warning sign: your design cannot separate these effects.
-
-::: notes
-lm is forgiving: it drops the redundant column and carries on. Students must not read the 4 as a batch effect. It is the combined difference between the two groups, and we cannot say how much is batch and how much is treatment. Show that changing the order of the formula moves the NA, which proves that the split is arbitrary. limma behaves the same way, as we will see.
-:::
-
-## One gene with `lm`: the Simpson example {.smaller}
-
-The batch example from *Confounding & Simpson's paradox*: drug vs control in two batches, with the drug mostly in batch A.
-
-```r
-g <- data.frame(
-  batch     = c("A", "A", "A", "A", "B", "B", "B", "B"),
-  treatment = c("ctrl", "treat", "treat", "treat", "ctrl", "ctrl", "ctrl", "treat"),
-  expr      = c(10, 12, 12, 12, 20, 20, 20, 22))
-
-coef(lm(expr ~ treatment, data = g))
-#    (Intercept) treatmenttreat
-#           17.5           -3.0           # drug looks harmful
-
-coef(lm(expr ~ batch + treatment, data = g))
-#    (Intercept)         batchB treatmenttreat
-#             10             10              2     # +2 within each batch
-```
-
-- Adding the `batchB` column turns $-3$ into $+2$. The rank is 3 = number of columns, so $\boldsymbol\beta$ is unique: batch is **partly** confounded, not perfectly.
-- Check one prediction: treated in batch B $= 10 + 10 + 2 = 22$. ✓
-
-::: notes
-These are exactly the numbers students computed by hand in the confounding unit, so they can check that R agrees. The data fit the adjusted model exactly, which is why the coefficients are round numbers. The important contrast with the previous slide: here every batch contains both conditions, so the design matrix has full rank and adjustment works. Next: do this for 20 000 genes at once.
-:::
-
-## Limma lets you fit a model for many genes at once {.smaller}
-
-![](fig01-one-design-many-genes.svg){width="95%" fig-align="center"}
-
-- An omics experiment gives a table: one row per gene (or protein, metabolite), one column per sample, on a **log2 scale**.
-- [limma](https://bioconductor.org/packages/release/bioc/html/limma.html) fits every row with the **same design matrix** $X$: 20 000 ordinary linear models.
-- On the log2 scale a coefficient is a **log2 fold change** (logFC): 1 = doubled, $-1$ = halved, 0 = no change.
-
-::: notes
-The key picture of the day. The samples are the same for every gene, so the design matrix is the same; only y changes from row to row. limma is in effect 20 000 lm calls with one shared X. Because the data are on the log2 scale, differences of log2 values are log2 fold changes, which is why we spent a unit on the log. limma adds one important trick, eBayes, on the next slide.
-:::
-
-## `lmFit`, `eBayes`, `topTable` {.smaller}
+## Limma fits all genes with one design in three calls {.smaller}
 
 ```r
 library(limma)
@@ -306,7 +173,7 @@ library(limma)
 design <- model.matrix(~ batch + sex + treatment, data = samples)
 v   <- voom(counts, design)       # RNA-seq counts -> log2 scale, with weights
 fit <- lmFit(v, design)           # one linear model per gene
-fit <- eBayes(fit)                # share variance information across genes
+fit <- eBayes(fit)                # share noise information across genes
 topTable(fit, coef = "treatmenttreat", number = 3)
 #      logFC AveExpr     t  P.Value adj.P.Val
 # g5    2.20   10.83  8.05  1.0e-12   2.0e-09
@@ -314,13 +181,13 @@ topTable(fit, coef = "treatmenttreat", number = 3)
 # g145 -1.87   11.57 -6.86  4.2e-10   2.2e-07
 ```
 
-- limma takes $X$ itself, and `coef =` is a **column name of $X$**: `treatmenttreat`.
+- `lmFit` is the loop, `eBayes` the shared noise, `topTable` the adjusted list. `coef =` is a **column name of $X$**: `treatmenttreat`.
 - [`voom`](https://rdrr.io/bioc/limma/man/voom.html) is only needed for RNA-seq counts: it takes the log2 and records how noisy each value is. Data that are already log2 intensities (proteomics, metabolomics) go straight into `lmFit`.
 
 ![](fig04-limma-workflow.svg){.nostretch width="85%" fig-align="center"}
 
 ::: notes
-The workflow in three calls, four with voom. voom computes log2 counts per million and a weight per value, because low counts are noisier on the log scale; students do not need the details. The next unit, Bulk RNA-seq with DESeq2, shows why small counts are noisy. eBayes is an empirical Bayes step: with 12 samples each gene's variance is poorly estimated, so it is pulled towards a common value across genes. That is the shrinkage idea from Hierarchical models, met again in week 4. Column B (log-odds) is left out of the printout.
+The workflow in three calls, four with voom. voom computes log2 counts per million and a weight per value, because low counts are noisier on the log scale; students do not need the details. The next unit, Bulk RNA-seq with DESeq2, shows why small counts are noisy. eBayes is the shared-noise step from the previous slides; the name (empirical Bayes) and the idea of shrinkage come back in week 4, Hierarchical models. With voom, limma calls 188 genes, 177 true; on log2(counts + 1) without voom (the earlier slides) 191, 181 true. On this simulation voom changes little; it matters most for genes with low counts. Column B (log-odds) is left out of the printout.
 :::
 
 ## Reading the results table {.smaller}
@@ -343,36 +210,13 @@ sum(tt$adj.P.Val < 0.05)
 | `logFC` | the treatment coefficient: treat vs ctrl, holding batch and sex fixed |
 | `AveExpr` | the gene's average log2 expression |
 | `t`, `P.Value` | the test of "coefficient = 0" for this gene |
-| `adj.P.Val` | p-value adjusted for testing 2000 genes: among genes called at `adj.P.Val < 0.05`, about 5% are expected to be false |
+| `adj.P.Val` | adjusted for testing 2000 genes: about 5% of the genes called at `< 0.05` are false |
 
 - g188: logFC $-1.97$, so about **four times lower** in treated samples ($2^{-2} = 1/4$).
 - This is simulated data with a known truth: 200 genes respond. The 188 calls are **177 true** and 11 false.
 
 ::: notes
-The top of the table: genes are sorted by p-value, smallest first (column B, the log-odds, is left out of the printout). Read one row aloud. g5 has logFC 2.2, about 4.6 times higher with treatment, and a tiny adjusted p-value. Explain adj.P.Val in one sentence: with 2000 tests, raw p-values below 0.05 would give about 100 false hits by chance alone, so limma adjusts them (Benjamini–Hochberg) so that the cut-off controls the fraction of false calls instead. 11 of 188 is 6%, close to the promised 5%.
-:::
-
-## Leaving out an unbalanced batch gives wrong gene lists {.smaller}
-
-In this experiment the treatment is **unbalanced** across batches. Gene g138 truly goes up (logFC 1.5) and is also higher in batch B.
-
-```r
-table(samples$batch, samples$treatment)
-#     ctrl treat
-#   A    1     5
-#   B    5     1
-```
-
-| design | g138 logFC | g138 adj.P.Val | genes called | false calls |
-|---|---|---|---|---|
-| `~ treatment` | $-0.16$ | 0.90 | 304 | 154 |
-| `~ batch + sex + treatment` | $1.34$ | 0.001 | 188 | 11 |
-
-- Without batch, g138's up-regulation is hidden: Simpson's paradox in a real-sized dataset.
-- And 151 of the 154 false calls are genes that only differ **between batches**.
-
-::: notes
-The same story as the 8-sample lm example, now for 2000 genes. Because batch is unbalanced but not perfectly confounded, X has full rank and the adjusted model can separate batch and treatment. Without batch, half the list is wrong. The exercise has students reproduce this table.
+The top of the table: genes are sorted by p-value, smallest first (column B, the log-odds, is left out of the printout). Read one row aloud. g5 has logFC 2.2, about 4.6 times higher with treatment, and a tiny adjusted p-value. adj.P.Val was introduced on the false-hits slide; here just check the promise: 11 of 188 is 6%, close to 5%.
 :::
 
 ## Do not add more covariates than you need to the model {.smaller}
@@ -407,34 +251,7 @@ confint(fit1); confint(fit2)   # 95% intervals
 - Yet its two columns use up 2 of the 8 samples. The **confidence interval** (the range of values that fit the data) for treatment gets wider and now covers 0. Without batch, the treatment effect is clear. If batch explains nothing, leave it out.
 
 ::: notes
-Contrast with the previous slide: there, batch explained a lot (and was unbalanced), so leaving it out was the mistake. Here batch does nothing for this gene, but it still costs. Each column uses up one sample; with 8 mice and 6 columns only 2 are left to judge how noisy the gene is, so every interval gets wide. The treatment interval goes from 0.49 to 1.79 (clear effect) to -0.17 to 2.29 (could be nothing). This is one simulated dataset (true treatment effect 1.5, sex 1, BMI 0.1 per unit, batch 0, noise sd 0.4); across 500 such datasets the interval without batch was narrower in 83% of them, median width 1.5 vs 2.4. The intervals come from confint() on an lm fit; limma reports the same with topTable(..., confint = TRUE). A practical caveat: decide which covariates to keep from what they explain and from how the experiment was run, not by trying models until the treatment p-value looks good. No formula for the interval is needed: wider = less certain, covering 0 = no evidence of a change.
-:::
-
-## When batch equals treatment, limma cannot separate them {.smaller}
-
-If every control is in batch A and every treated sample in batch B:
-
-```r
-table(samples_conf$batch, samples_conf$treatment)
-#     ctrl treat
-#   A    6     0
-#   B    0     6
-
-design_conf <- model.matrix(~ batch + treatment, data = samples_conf)
-fit <- lmFit(voom(counts, design_conf), design_conf)
-# Coefficients not estimable: treatmenttreat
-head(fit$coefficients, 2)
-#    (Intercept) batchB treatmenttreat
-# g1        8.94   0.50             NA
-# g2       10.16  -1.17             NA
-```
-
-- This is the identical-columns case: `qr(X)$rank` is 2 for 3 columns. limma, like `lm`, gives `NA`.
-- Dropping `batch` makes the message go away, but the treatment estimate then **includes** the batch effect.
-- The only real fix is in the **experiment**: put both conditions in every batch, ideally balanced. No code can recover what the design did not measure.
-
-::: notes
-Stress the honest message: removing batch silences the message but does not remove the problem; you get a number you cannot interpret. Planning the batches before sequencing is the fix. If a confounded dataset has already been produced, all you can do is report that treatment and batch cannot be separated. DESeq2 refuses outright with "the model matrix is not full rank", which students will meet on forums.
+Contrast with Confounding & Simpson's paradox: there, batch explained a lot and was unbalanced, so leaving it out was the mistake. Here batch does nothing for this gene, but it still costs. Each column uses up one sample; with 8 mice and 6 columns only 2 are left to judge how noisy the gene is, so every interval gets wide. The treatment interval goes from 0.49 to 1.79 (clear effect) to -0.17 to 2.29 (could be nothing). This is one simulated dataset (true treatment effect 1.5, sex 1, BMI 0.1 per unit, batch 0, noise sd 0.4); across 500 such datasets the interval without batch was narrower in 83% of them, median width 1.5 vs 2.4. The intervals come from confint() on an lm fit; limma reports the same with topTable(..., confint = TRUE). A practical caveat: decide which covariates to keep from what they explain and from how the experiment was run, not by trying models until the treatment p-value looks good. No formula for the interval is needed: wider = less certain, covering 0 = no evidence of a change.
 :::
 
 ## Limma also works for metabolomics, and beyond {.smaller}
@@ -472,15 +289,15 @@ The pictures: a liquid chromatography / mass spectrometry setup, and two spectra
 
 ## Summary {.smaller}
 
-- [`model.matrix`](https://rdrr.io/r/stats/model.matrix.html)`(~ ...)` builds $X$; column names are variable + level (`treatmenttreat`, `sexM`, `batchB`, `bmi`).
-- The reference is the alphabetically first level: check `levels()`, use [`relevel`](https://rdrr.io/r/stats/relevel.html) or `factor(x, levels = ...)` (0 h / 6 h / 24 h!).
-- Check `qr(X)$rank == ncol(X)`. If not: `lm` and limma give `NA`. Fix the **design of the experiment**.
-- limma: log2 data (`voom` for counts) + `design` → `lmFit()` → `eBayes()` → `topTable(coef = ...)`.
-- Read `logFC` (1 = doubled) and `adj.P.Val` (adjusted for testing many genes).
-- Leaving out a covariate that is unbalanced across groups gives false and missed calls: Simpson's paradox at genome scale.
+- An omics table is many genes with **one design**: the same $X$ for every row, built with [`model.matrix`](https://rdrr.io/r/stats/model.matrix.html)`(~ ...)`.
+- A plain loop of `lm` has two problems: **many false hits** and **badly estimated noise** per gene.
+- limma: log2 data (`voom` for counts) + `design` → `lmFit()` (the loop) → `eBayes()` (shared noise) → `topTable(coef = ...)` (adjusted list).
+- Read `logFC` (1 = doubled) and `adj.P.Val` (about 5% of the calls at `< 0.05` are false).
+- Before fitting: check `levels()` and the rank of $X$. "Coefficients not estimable" can only be fixed by the **experiment**.
+- Include the covariates that explain the data; each extra one costs precision.
 
 **Next:** *Bulk RNA-seq with DESeq2*: the same design, but starting from the raw counts.
 
 ::: notes
-Recap the workflow and the two checks students should always do: levels and rank. The forward link: the next unit keeps the same design formula and starts from the raw counts instead of log2 values.
+Recap the problem and the three steps that fix it, plus the two checks students should always do: levels and rank. The forward link: the next unit keeps the same design formula and starts from the raw counts instead of log2 values.
 :::

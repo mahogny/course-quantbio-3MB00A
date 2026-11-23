@@ -10,7 +10,7 @@
   <meta name="generator" content="quarto-1.7.30">
 
   <meta name="author" content="Quantitative biology and integrative omics">
-  <title>Quantitative biology and integrative omics – Design matrices in R: limma</title>
+  <title>Quantitative biology and integrative omics – Many genes at once: limma</title>
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, minimal-ui">
@@ -209,8 +209,8 @@
     <div class="slides">
 
 <section id="title-slide" class="quarto-title-block center">
-  <h1 class="title">Design matrices in R: limma</h1>
-  <p class="subtitle">Week 3 — Design matrices in R</p>
+  <h1 class="title">Many genes at once: limma</h1>
+  <p class="subtitle">Week 3 — Many genes at once: limma</p>
 
 <div class="quarto-title-authors">
 <div class="quarto-title-author">
@@ -221,18 +221,16 @@ Quantitative biology and integrative omics
 </div>
 
 </section>
-<section id="about-this-lecture" class="slide level2">
-<h2>About this lecture</h2>
-<p>In <em>Design matrices for covariates</em> you built <span class="math inline">X</span> by hand, and in <em>Confounding &amp; Simpson’s paradox</em> you saw why the columns you put in decide the answer. Today R builds <span class="math inline">X</span> for us, and we hand the same <span class="math inline">X</span> to the tools used for real omics data. You will be able to:</p>
-<ul>
-<li>Turn a formula into <span class="math inline">X</span> with <a href="https://rdrr.io/r/stats/model.matrix.html"><code>model.matrix</code></a>, and control the reference level with <a href="https://rdrr.io/r/stats/relevel.html"><code>relevel</code></a> and <a href="https://rdrr.io/r/base/factor.html"><code>factor</code></a>.</li>
-<li><strong>Check the rank</strong> of <span class="math inline">X</span> before fitting, and recognise the <code>NA</code> that <a href="https://rdrr.io/r/stats/lm.html"><code>lm</code></a> returns for a column it cannot estimate.</li>
-<li>Run <strong>limma</strong> on a whole omics table with <code>design = ~ batch + sex + treatment</code>, and read log2 fold changes and adjusted p-values.</li>
-<li>Recognise “coefficients not estimable”, and know that only the <strong>experiment</strong> can fix it.</li>
-<li>Know that the next unit, <em>Bulk RNA-seq with DESeq2</em>, starts one step earlier: from the raw counts.</li>
+<section id="problem-which-of-20-000-genes-respond-to-the-treatment" class="slide level2 smaller">
+<h2>Problem: which of 20 000 genes respond to the treatment?</h2>
+
+<img data-src="fig01-one-design-many-genes.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:95.0%"><ul>
+<li>An omics experiment gives a table: one row per gene (or protein, metabolite), one column per sample, on a <strong>log2 scale</strong>. Plus a sample sheet: batch, sex, treatment.</li>
+<li>For <strong>one</strong> gene you already know what to do: fit <code>lm(expr ~ batch + sex + treatment)</code> and read the treatment coefficient. On the log2 scale it is a <strong>log2 fold change</strong> (logFC): 1 = doubled, <span class="math inline">-1</span> = halved.</li>
+<li>Now we need that answer for <strong>every</strong> gene, and a list of genes we can trust.</li>
 </ul>
 <aside class="notes">
-<p>This is the R day for the covariates section. Nothing conceptually new: the design matrix, the dummy columns, the reference level and the rank condition are all from the two previous units. What is new is the tooling. First base R (model.matrix, lm), then limma, which fits the same linear model to every gene of a log-scale omics table. limma works for RNA-seq (after voom), proteomics, metabolomics and microarrays, and it needs nothing beyond the Gaussian linear model they already know. DESeq2, which works on the raw counts, is the next unit (Bulk RNA-seq with DESeq2); here it is only a forward pointer. Keep it practical: the students should leave knowing how to write the design, how to check it, and which coefficient to ask for.</p>
+<p>Start from the problem, not the tool. Everything about the design matrix is from Design matrices for covariates and Confounding: the same X serves every gene, since the samples are the same; only y changes from row to row. The question of the day is what goes wrong when we simply repeat the one-gene analysis 20 000 times, and how limma fixes it. The data in the next slides are simulated (2000 genes, 12 samples, 200 genes truly respond), the same data as in the exercise, so we know the right answer.</p>
 <style type="text/css">
         span.MJX_Assistive_MathML {
           position:absolute!important;
@@ -245,41 +243,115 @@ Quantitative biology and integrative omics
           display:block!important;
       }</style></aside>
 </section>
-<section id="recap-a-formula-is-a-recipe-for-x" class="slide level2 smaller">
-<h2>Recap: a formula is a recipe for <span class="math inline">X</span></h2>
-<p><span class="math display">
-\mathbf{y} = X\boldsymbol\beta + \boldsymbol\varepsilon
-</span></p>
-<ul>
-<li>One <strong>row</strong> of <span class="math inline">X</span> per sample, one <strong>column</strong> per coefficient.</li>
-<li><code>(Intercept)</code> is a column of 1s; it holds <span class="math inline">\beta_0</span>, the mean of the <strong>reference</strong> group.</li>
-<li>A factor with <span class="math inline">k</span> levels gives <span class="math inline">k-1</span> dummy columns: “difference from the reference”.</li>
-<li>A continuous covariate (age, BMI) gives one column of numbers: a slope.</li>
-<li><span class="math inline">\boldsymbol\beta</span> is unique only if the columns of <span class="math inline">X</span> are <strong>linearly independent</strong> (full column rank).</li>
-</ul>
-<p>In R you never type <span class="math inline">X</span> yourself. You write the formula and R builds <span class="math inline">X</span>, with the same rules you used by hand.</p>
-<aside class="notes">
-<p>One slide of recap so that the code that follows has something to hang on. The last bullet is the existence-of-solutions result from Design matrices for covariates and ties back to the zero, one or infinitely many solutions of Linear systems in R. Today we will see what each tool does when that condition fails.</p>
-<style type="text/css">
-        span.MJX_Assistive_MathML {
-          position:absolute!important;
-          clip: rect(1px, 1px, 1px, 1px);
-          padding: 1px 0 0 0!important;
-          border: 0!important;
-          height: 1px!important;
-          width: 1px!important;
-          overflow: hidden!important;
-          display:block!important;
-      }</style></aside>
-</section>
-<section id="model.matrix-builds-x" class="slide level2 smaller">
-<h2><code>model.matrix()</code> builds <span class="math inline">X</span></h2>
-<div class="sourceCode" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a aria-hidden="true" tabindex="-1"></a>d <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(</span>
-<span id="cb1-2"><a aria-hidden="true" tabindex="-1"></a>  <span class="at">treatment =</span> <span class="fu">c</span>(<span class="st">"ctrl"</span>, <span class="st">"ctrl"</span>, <span class="st">"ctrl"</span>, <span class="st">"treat"</span>, <span class="st">"treat"</span>, <span class="st">"treat"</span>),</span>
-<span id="cb1-3"><a aria-hidden="true" tabindex="-1"></a>  <span class="at">sex       =</span> <span class="fu">c</span>(<span class="st">"F"</span>, <span class="st">"M"</span>, <span class="st">"F"</span>, <span class="st">"M"</span>, <span class="st">"F"</span>, <span class="st">"M"</span>),</span>
-<span id="cb1-4"><a aria-hidden="true" tabindex="-1"></a>  <span class="at">bmi       =</span> <span class="fu">c</span>(<span class="dv">22</span>, <span class="dv">25</span>, <span class="dv">28</span>, <span class="dv">24</span>, <span class="dv">27</span>, <span class="dv">30</span>))</span>
+<section id="a-loop-of-lm-over-the-genes-runs-but-gives-poor-answers" class="slide level2 smaller">
+<h2>A loop of <code>lm</code> over the genes runs, but gives poor answers</h2>
+<p>Simulated RNA-seq: 2000 genes, 12 samples, and we know that <strong>200 genes truly respond</strong> to treatment.</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a aria-hidden="true" tabindex="-1"></a>y <span class="ot">&lt;-</span> <span class="fu">log2</span>(counts <span class="sc">+</span> <span class="dv">1</span>)                       <span class="co"># genes x samples, log2 scale</span></span>
+<span id="cb1-2"><a aria-hidden="true" tabindex="-1"></a><span class="fu">coef</span>(<span class="fu">summary</span>(<span class="fu">lm</span>(y[<span class="st">"g5"</span>, ] <span class="sc">~</span> batch <span class="sc">+</span> sex <span class="sc">+</span> treatment, <span class="at">data =</span> samples)))[<span class="st">"treatmenttreat"</span>, ]</span>
+<span id="cb1-3"><a aria-hidden="true" tabindex="-1"></a><span class="co">#   Estimate Std. Error    t value   Pr(&gt;|t|)</span></span>
+<span id="cb1-4"><a aria-hidden="true" tabindex="-1"></a><span class="co">#       2.27       0.20      11.27    3.5e-06       # one gene: clearly up</span></span>
 <span id="cb1-5"><a aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-6"><a aria-hidden="true" tabindex="-1"></a>X <span class="ot">&lt;-</span> <span class="fu">model.matrix</span>(<span class="sc">~</span> treatment <span class="sc">+</span> sex, <span class="at">data =</span> d)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb1-6"><a aria-hidden="true" tabindex="-1"></a>p <span class="ot">&lt;-</span> <span class="fu">apply</span>(y, <span class="dv">1</span>, <span class="cf">function</span>(yg)               <span class="co"># the same fit for every row</span></span>
+<span id="cb1-7"><a aria-hidden="true" tabindex="-1"></a>  <span class="fu">coef</span>(<span class="fu">summary</span>(<span class="fu">lm</span>(yg <span class="sc">~</span> batch <span class="sc">+</span> sex <span class="sc">+</span> treatment, <span class="at">data =</span> samples)))[<span class="st">"treatmenttreat"</span>, <span class="dv">4</span>])</span>
+<span id="cb1-8"><a aria-hidden="true" tabindex="-1"></a><span class="fu">sum</span>(p <span class="sc">&lt;</span> <span class="fl">0.05</span>)</span>
+<span id="cb1-9"><a aria-hidden="true" tabindex="-1"></a><span class="co"># [1] 277</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>277 genes with <span class="math inline">p &lt; 0.05</span>, but only 200 genes respond. Two problems:</p>
+<ol type="1">
+<li><strong>Many false hits</strong>: testing many genes lets chance through.</li>
+<li><strong>Each gene’s noise is badly estimated</strong>: 12 samples is too few to know how noisy one gene is.</li>
+</ol>
+<aside class="notes">
+<p>The loop is correct code and students could write it themselves; apply runs the function on every row. The numbers: of the 277, 186 truly respond and 91 do not. Both problems have nothing to do with the design matrix, which is fine here (full rank, batch included). They come from doing 2000 tests with few samples each. The next two slides take one problem each. limma’s three functions are exactly this loop plus the two fixes.</p>
+<style type="text/css">
+        span.MJX_Assistive_MathML {
+          position:absolute!important;
+          clip: rect(1px, 1px, 1px, 1px);
+          padding: 1px 0 0 0!important;
+          border: 0!important;
+          height: 1px!important;
+          width: 1px!important;
+          overflow: hidden!important;
+          display:block!important;
+      }</style></aside>
+</section>
+<section id="testing-many-genes-at-once-gives-many-false-hits" class="slide level2 smaller">
+<h2>Testing many genes at once gives many false hits</h2>
+<ul>
+<li><span class="math inline">p &lt; 0.05</span> means: a gene with <strong>no real change</strong> still passes 5% of the time.</li>
+<li>1800 genes do not respond, so about <span class="math inline">1800 \times 0.05 = 90</span> pass by chance. We got 91. With 20 000 genes it would be about 1000.</li>
+<li>Fix: <strong>adjust</strong> the p-values for the number of tests, <code>p.adjust(p, "BH")</code>. Then among the genes called at <code>&lt; 0.05</code>, only about 5% are false. limma reports this as <code>adj.P.Val</code>.</li>
+</ul>
+<table class="caption-top">
+<thead>
+<tr class="header">
+<th>cut-off</th>
+<th>genes called</th>
+<th>truly respond</th>
+<th>false</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>p &lt; 0.05</code></td>
+<td>277</td>
+<td>186</td>
+<td>91</td>
+</tr>
+<tr class="even">
+<td>adjusted <code>&lt; 0.05</code></td>
+<td>131</td>
+<td>124</td>
+<td>7</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li>The list is now trustworthy, but only 124 of the 200 responding genes are found. Can we find more?</li>
+</ul>
+<aside class="notes">
+<p>One idea, no formula: 5% of a big number is a big number. BH (Benjamini–Hochberg) is the adjustment limma uses; students do not need its rule, only what the cut-off promises: about 5% of the list is wrong, not 5% of all genes. 7 of 131 is 5%. The price is that weaker true genes fall below the line, which motivates the next slide.</p>
+<style type="text/css">
+        span.MJX_Assistive_MathML {
+          position:absolute!important;
+          clip: rect(1px, 1px, 1px, 1px);
+          padding: 1px 0 0 0!important;
+          border: 0!important;
+          height: 1px!important;
+          width: 1px!important;
+          overflow: hidden!important;
+          display:block!important;
+      }</style></aside>
+</section>
+<section id="with-few-samples-each-genes-noise-is-badly-estimated" class="slide level2 smaller">
+<h2>With few samples, each gene’s noise is badly estimated</h2>
+
+<img data-src="fig06-shared-noise.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:68.0%"><ul>
+<li>Each gene’s noise comes from only 12 samples. By chance some genes look <strong>far too quiet</strong> (false hits) or <strong>too noisy</strong> (real changes missed).</li>
+<li>limma’s <code>eBayes</code> uses that most genes are about equally noisy: each gene’s noise is <strong>pulled towards the typical gene</strong>. Each gene borrows information from all the others.</li>
+<li>With adjusted p-values: the <code>lm</code> loop finds <strong>124</strong> of the 200 genes (7 false), limma finds <strong>181</strong> (10 false).</li>
+</ul>
+<aside class="notes">
+<p>The top histogram is the noise (residual standard deviation) of each of the 2000 genes, each estimated on its own from 12 samples with 4 coefficients, so only 8 values left over to judge the noise. The spread is mostly chance. The bottom histogram is the same genes after eBayes: each estimate is a weighted average of the gene’s own value and the typical value. The red gene, g1034, does not respond at all; its own noise estimate is 0.13 against a typical 0.37, so its small difference of 0.6 looks significant (lm p = 0.0005, called even after adjustment). With the shared noise it is not called. The same pull helps true genes whose noise was overestimated, which is where the extra 57 true calls come from. Both comparisons use log2(counts + 1) and the same design; the name empirical Bayes and the idea of shrinkage come back in week 4 (Hierarchical models). No formula needed here.</p>
+<style type="text/css">
+        span.MJX_Assistive_MathML {
+          position:absolute!important;
+          clip: rect(1px, 1px, 1px, 1px);
+          padding: 1px 0 0 0!important;
+          border: 0!important;
+          height: 1px!important;
+          width: 1px!important;
+          overflow: hidden!important;
+          display:block!important;
+      }</style></aside>
+</section>
+<section id="model.matrix-builds-the-design-limma-needs" class="slide level2 smaller">
+<h2><code>model.matrix()</code> builds the design limma needs</h2>
+<div class="sourceCode" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a aria-hidden="true" tabindex="-1"></a>d <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(</span>
+<span id="cb2-2"><a aria-hidden="true" tabindex="-1"></a>  <span class="at">treatment =</span> <span class="fu">c</span>(<span class="st">"ctrl"</span>, <span class="st">"ctrl"</span>, <span class="st">"ctrl"</span>, <span class="st">"treat"</span>, <span class="st">"treat"</span>, <span class="st">"treat"</span>),</span>
+<span id="cb2-3"><a aria-hidden="true" tabindex="-1"></a>  <span class="at">sex       =</span> <span class="fu">c</span>(<span class="st">"F"</span>, <span class="st">"M"</span>, <span class="st">"F"</span>, <span class="st">"M"</span>, <span class="st">"F"</span>, <span class="st">"M"</span>),</span>
+<span id="cb2-4"><a aria-hidden="true" tabindex="-1"></a>  <span class="at">bmi       =</span> <span class="fu">c</span>(<span class="dv">22</span>, <span class="dv">25</span>, <span class="dv">28</span>, <span class="dv">24</span>, <span class="dv">27</span>, <span class="dv">30</span>))</span>
+<span id="cb2-5"><a aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-6"><a aria-hidden="true" tabindex="-1"></a>X <span class="ot">&lt;-</span> <span class="fu">model.matrix</span>(<span class="sc">~</span> treatment <span class="sc">+</span> sex, <span class="at">data =</span> d)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="columns">
 <div class="column" style="width:40%;">
 <p><strong>Input:</strong> the table <code>d</code></p>
@@ -387,240 +459,11 @@ Quantitative biology and integrative omics
 </table>
 </div></div>
 <ul>
-<li>Column names are the variable name glued to the level: <code>treatmenttreat</code>, <code>sexM</code>.</li>
-<li>The <strong>reference</strong> levels (<code>ctrl</code>, <code>F</code>) get no column: they are in the intercept.</li>
+<li>Column names are the variable name glued to the level: <code>treatmenttreat</code>, <code>sexM</code>. limma asks for a coefficient by this name.</li>
+<li>The <strong>reference</strong> levels (<code>ctrl</code>, <code>F</code>) get no column. Check <code>levels()</code> first: real data often has <code>trt</code> and <code>untrt</code>, and <code>trt</code> sorts first. Fix with <code>relevel(x, ref = "untrt")</code>.</li>
 </ul>
 <aside class="notes">
-<p>model.matrix is exactly what lm and limma use; limma even takes its output directly. Read the column names aloud, because students will need them later to pick coefficients: treatmenttreat is “treatment, level treat”. The reference is the alphabetically first level, ctrl and F here. Ask: which sample is the reference group? Sample 1 and 3 are ctrl and F, so their row is just 1, 0, 0 and their predicted mean is beta 0.</p>
-<style type="text/css">
-        span.MJX_Assistive_MathML {
-          position:absolute!important;
-          clip: rect(1px, 1px, 1px, 1px);
-          padding: 1px 0 0 0!important;
-          border: 0!important;
-          height: 1px!important;
-          width: 1px!important;
-          overflow: hidden!important;
-          display:block!important;
-      }</style></aside>
-</section>
-<section id="a-continuous-covariate-one-column-of-numbers" class="slide level2 smaller">
-<h2>A continuous covariate: one column of numbers</h2>
-<div class="sourceCode" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a aria-hidden="true" tabindex="-1"></a><span class="fu">model.matrix</span>(<span class="sc">~</span> treatment <span class="sc">+</span> bmi, <span class="at">data =</span> d)</span>
-<span id="cb2-2"><a aria-hidden="true" tabindex="-1"></a><span class="co">#   (Intercept) treatmenttreat bmi</span></span>
-<span id="cb2-3"><a aria-hidden="true" tabindex="-1"></a><span class="co"># 1           1              0  22</span></span>
-<span id="cb2-4"><a aria-hidden="true" tabindex="-1"></a><span class="co"># 2           1              0  25</span></span>
-<span id="cb2-5"><a aria-hidden="true" tabindex="-1"></a><span class="co"># 3           1              0  28</span></span>
-<span id="cb2-6"><a aria-hidden="true" tabindex="-1"></a><span class="co"># 4           1              1  24</span></span>
-<span id="cb2-7"><a aria-hidden="true" tabindex="-1"></a><span class="co"># 5           1              1  27</span></span>
-<span id="cb2-8"><a aria-hidden="true" tabindex="-1"></a><span class="co"># 6           1              1  30</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<ul>
-<li><code>bmi</code> is copied in as it is. Its coefficient is the change in <span class="math inline">y</span> <strong>per BMI unit</strong>, holding treatment fixed.</li>
-<li>The intercept is now “control at BMI 0”. To make it readable, centre: <code>~ treatment + I(bmi - mean(bmi))</code>. The slope does not change.</li>
-<li>Age works the same way.</li>
-</ul>
-<aside class="notes">
-<p>Continuous covariates are the easy case in R. Point at the BMI column: the numbers go straight in. Remind them of centring from Design matrices for covariates; in R the I() wrapper means “compute this and use it as a column”. In omics tools people often centre or scale continuous covariates before fitting, for the same readability reason.</p>
-<style type="text/css">
-        span.MJX_Assistive_MathML {
-          position:absolute!important;
-          clip: rect(1px, 1px, 1px, 1px);
-          padding: 1px 0 0 0!important;
-          border: 0!important;
-          height: 1px!important;
-          width: 1px!important;
-          overflow: hidden!important;
-          display:block!important;
-      }</style></aside>
-</section>
-<section id="choosing-the-reference-with-relevel" class="slide level2 smaller">
-<h2>Choosing the reference with <code>relevel()</code></h2>
-<p>R sorts the levels of a factor <strong>alphabetically</strong>, and the first one becomes the reference.</p>
-<div class="sourceCode" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a aria-hidden="true" tabindex="-1"></a>d<span class="sc">$</span>treatment <span class="ot">&lt;-</span> <span class="fu">factor</span>(d<span class="sc">$</span>treatment)</span>
-<span id="cb3-2"><a aria-hidden="true" tabindex="-1"></a><span class="fu">levels</span>(d<span class="sc">$</span>treatment)</span>
-<span id="cb3-3"><a aria-hidden="true" tabindex="-1"></a><span class="co"># [1] "ctrl"  "treat"          # ctrl is the reference: good</span></span>
-<span id="cb3-4"><a aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-5"><a aria-hidden="true" tabindex="-1"></a>d<span class="sc">$</span>treatment <span class="ot">&lt;-</span> <span class="fu">relevel</span>(d<span class="sc">$</span>treatment, <span class="at">ref =</span> <span class="st">"treat"</span>)</span>
-<span id="cb3-6"><a aria-hidden="true" tabindex="-1"></a><span class="fu">colnames</span>(<span class="fu">model.matrix</span>(<span class="sc">~</span> treatment, <span class="at">data =</span> d))</span>
-<span id="cb3-7"><a aria-hidden="true" tabindex="-1"></a><span class="co"># [1] "(Intercept)"   "treatmentctrl"   # now the column is "ctrl vs treat"</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<ul>
-<li>Changing the reference does <strong>not</strong> change the fit or the predictions. It changes what each coefficient <strong>means</strong>: the sign of the treatment effect flips.</li>
-<li>Real data often has levels like <code>trt</code> and <code>untrt</code>. Alphabetically <code>trt</code> comes first, so <code>untrt</code> vs <code>trt</code> is what you get unless you relevel.</li>
-</ul>
-<aside class="notes">
-<p>The relevel point matters most in practice. Many public datasets, including the airway dataset in the exercise, have treatment levels where the alphabetical first one is the treated group, so every fold change comes out with the wrong sign. Always check levels() before fitting. Rule: set the reference to the control or baseline condition.</p>
-<style type="text/css">
-        span.MJX_Assistive_MathML {
-          position:absolute!important;
-          clip: rect(1px, 1px, 1px, 1px);
-          padding: 1px 0 0 0!important;
-          border: 0!important;
-          height: 1px!important;
-          width: 1px!important;
-          overflow: hidden!important;
-          display:block!important;
-      }</style></aside>
-</section>
-<section id="r-sorts-time-levels-as-text-not-as-numbers" class="slide level2 smaller">
-<h2>R sorts time levels as text, not as numbers</h2>
-<div class="sourceCode" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a aria-hidden="true" tabindex="-1"></a>d<span class="sc">$</span>time <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">"0h"</span>, <span class="st">"6h"</span>, <span class="st">"24h"</span>, <span class="st">"0h"</span>, <span class="st">"6h"</span>, <span class="st">"24h"</span>)</span>
-<span id="cb4-2"><a aria-hidden="true" tabindex="-1"></a><span class="fu">colnames</span>(<span class="fu">model.matrix</span>(<span class="sc">~</span> time, <span class="at">data =</span> d))</span>
-<span id="cb4-3"><a aria-hidden="true" tabindex="-1"></a><span class="co"># [1] "(Intercept)" "time24h"     "time6h"      # alphabetical: "24h" &lt; "6h"</span></span>
-<span id="cb4-4"><a aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-5"><a aria-hidden="true" tabindex="-1"></a>d<span class="sc">$</span>time <span class="ot">&lt;-</span> <span class="fu">factor</span>(d<span class="sc">$</span>time, <span class="at">levels =</span> <span class="fu">c</span>(<span class="st">"0h"</span>, <span class="st">"6h"</span>, <span class="st">"24h"</span>))</span>
-<span id="cb4-6"><a aria-hidden="true" tabindex="-1"></a><span class="fu">colnames</span>(<span class="fu">model.matrix</span>(<span class="sc">~</span> time, <span class="at">data =</span> d))</span>
-<span id="cb4-7"><a aria-hidden="true" tabindex="-1"></a><span class="co"># [1] "(Intercept)" "time6h"      "time24h"     # the order you meant</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<ul>
-<li>Text is sorted character by character: <code>"2"</code> comes before <code>"6"</code>, so <code>24h</code> comes before <code>6h</code>.</li>
-<li>Here the reference <code>0h</code> happens to stay first, but the columns are in a confusing order. With <code>day3</code>, <code>day7</code>, <code>day14</code> the reference itself goes wrong: R picks <code>day14</code>.</li>
-<li>Fix: give the levels explicitly with <code>factor(x, levels = ...)</code>.</li>
-</ul>
-<aside class="notes">
-<p>This bites everyone once. R sorts strings as text, not as numbers. The output here is still a valid model, but plots and tables come out in the order 0, 24, 6, and it is easy to read the wrong column. Always set the levels by hand for anything ordered: time points, doses, stages. With day3, day7, day14 the levels sort as day14, day3, day7, so day14 silently becomes the reference and every coefficient is “compared with day 14”.</p>
-<style type="text/css">
-        span.MJX_Assistive_MathML {
-          position:absolute!important;
-          clip: rect(1px, 1px, 1px, 1px);
-          padding: 1px 0 0 0!important;
-          border: 0!important;
-          height: 1px!important;
-          width: 1px!important;
-          overflow: hidden!important;
-          display:block!important;
-      }</style></aside>
-</section>
-<section id="time-as-a-factor-or-as-a-number" class="slide level2 smaller">
-<h2>Time as a factor or as a number</h2>
-<div class="sourceCode" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a aria-hidden="true" tabindex="-1"></a>d<span class="sc">$</span>time_h <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="dv">6</span>, <span class="dv">24</span>, <span class="dv">0</span>, <span class="dv">6</span>, <span class="dv">24</span>)</span>
-<span id="cb5-2"><a aria-hidden="true" tabindex="-1"></a><span class="fu">colnames</span>(<span class="fu">model.matrix</span>(<span class="sc">~</span> time_h, <span class="at">data =</span> d))</span>
-<span id="cb5-3"><a aria-hidden="true" tabindex="-1"></a><span class="co"># [1] "(Intercept)" "time_h"        # one slope per hour</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<table class="caption-top">
-<colgroup>
-<col style="width: 33%">
-<col style="width: 33%">
-<col style="width: 33%">
-</colgroup>
-<thead>
-<tr class="header">
-<th>formula</th>
-<th>columns for time</th>
-<th>what it assumes</th>
-</tr>
-</thead>
-<tbody>
-<tr class="odd">
-<td><code>~ time</code> (factor)</td>
-<td><code>time6h</code>, <code>time24h</code></td>
-<td>any shape: each time point has its own mean</td>
-</tr>
-<tr class="even">
-<td><code>~ time_h</code> (number)</td>
-<td><code>time_h</code></td>
-<td>a straight line in time</td>
-</tr>
-</tbody>
-</table>
-<div class="columns">
-<div class="column" style="width:50%;">
-<p><code>model.matrix(~ time, data = d)</code></p>
-<table class="caption-top">
-<thead>
-<tr class="header">
-<th></th>
-<th>(Intercept)</th>
-<th>time6h</th>
-<th>time24h</th>
-</tr>
-</thead>
-<tbody>
-<tr class="odd">
-<td>0 h</td>
-<td>1</td>
-<td>0</td>
-<td>0</td>
-</tr>
-<tr class="even">
-<td>6 h</td>
-<td>1</td>
-<td>1</td>
-<td>0</td>
-</tr>
-<tr class="odd">
-<td>24 h</td>
-<td>1</td>
-<td>0</td>
-<td>1</td>
-</tr>
-<tr class="even">
-<td>0 h</td>
-<td>1</td>
-<td>0</td>
-<td>0</td>
-</tr>
-<tr class="odd">
-<td>6 h</td>
-<td>1</td>
-<td>1</td>
-<td>0</td>
-</tr>
-<tr class="even">
-<td>24 h</td>
-<td>1</td>
-<td>0</td>
-<td>1</td>
-</tr>
-</tbody>
-</table>
-</div><div class="column" style="width:50%;">
-<p><code>model.matrix(~ time_h, data = d)</code></p>
-<table class="caption-top">
-<thead>
-<tr class="header">
-<th></th>
-<th>(Intercept)</th>
-<th>time_h</th>
-</tr>
-</thead>
-<tbody>
-<tr class="odd">
-<td>0 h</td>
-<td>1</td>
-<td>0</td>
-</tr>
-<tr class="even">
-<td>6 h</td>
-<td>1</td>
-<td>6</td>
-</tr>
-<tr class="odd">
-<td>24 h</td>
-<td>1</td>
-<td>24</td>
-</tr>
-<tr class="even">
-<td>0 h</td>
-<td>1</td>
-<td>0</td>
-</tr>
-<tr class="odd">
-<td>6 h</td>
-<td>1</td>
-<td>6</td>
-</tr>
-<tr class="even">
-<td>24 h</td>
-<td>1</td>
-<td>24</td>
-</tr>
-</tbody>
-</table>
-</div></div>
-<ul>
-<li>The factor version costs one column more, but makes no assumption about the shape.</li>
-<li>With only a few time points, the factor version is the usual choice in omics.</li>
-</ul>
-<aside class="notes">
-<p>Same data, two designs. As a factor, time gets k minus 1 dummy columns and each time point is free. As a number, time is a single slope, which assumes the response grows linearly with hours: from 6 h to 24 h it would have to grow three times as much as from 0 h to 6 h. With three time points that is rarely what you believe, so the factor is the safer default. This matches the time slide in Design matrices for covariates.</p>
+<p>Same rules as in Design matrices for covariates; this slide only shows R doing it. model.matrix is exactly what lm and limma use; limma takes its output directly as the design. Read the column names aloud, because students will need them later to pick coefficients: treatmenttreat is “treatment, level treat”. The reference is the alphabetically first level, ctrl and F here. Ask: which sample is the reference group? Sample 1 and 3 are ctrl and F, so their row is just 1, 0, 0 and their predicted mean is beta 0. The relevel bullet matters in practice: in the airway dataset of the next unit the alphabetical order makes the treated group the reference, so every fold change gets the wrong sign.</p>
 <style type="text/css">
         span.MJX_Assistive_MathML {
           position:absolute!important;
@@ -636,29 +479,30 @@ Quantitative biology and integrative omics
 <section id="check-the-rank-before-you-fit" class="slide level2 smaller">
 <h2>Check the rank before you fit</h2>
 <p>Now suppose all controls were sequenced in batch A and all treated samples in batch B.</p>
-<div class="sourceCode" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a aria-hidden="true" tabindex="-1"></a>d<span class="sc">$</span>batch <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">"A"</span>, <span class="st">"A"</span>, <span class="st">"A"</span>, <span class="st">"B"</span>, <span class="st">"B"</span>, <span class="st">"B"</span>)</span>
-<span id="cb6-2"><a aria-hidden="true" tabindex="-1"></a>X <span class="ot">&lt;-</span> <span class="fu">model.matrix</span>(<span class="sc">~</span> batch <span class="sc">+</span> treatment, <span class="at">data =</span> d)</span>
-<span id="cb6-3"><a aria-hidden="true" tabindex="-1"></a>X[, ]</span>
-<span id="cb6-4"><a aria-hidden="true" tabindex="-1"></a><span class="co">#   (Intercept) batchB treatmenttreat</span></span>
-<span id="cb6-5"><a aria-hidden="true" tabindex="-1"></a><span class="co"># 1           1      0              0</span></span>
-<span id="cb6-6"><a aria-hidden="true" tabindex="-1"></a><span class="co"># 2           1      0              0</span></span>
-<span id="cb6-7"><a aria-hidden="true" tabindex="-1"></a><span class="co"># 3           1      0              0</span></span>
-<span id="cb6-8"><a aria-hidden="true" tabindex="-1"></a><span class="co"># 4           1      1              1</span></span>
-<span id="cb6-9"><a aria-hidden="true" tabindex="-1"></a><span class="co"># 5           1      1              1</span></span>
-<span id="cb6-10"><a aria-hidden="true" tabindex="-1"></a><span class="co"># 6           1      1              1</span></span>
-<span id="cb6-11"><a aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb6-12"><a aria-hidden="true" tabindex="-1"></a><span class="fu">ncol</span>(X)                 <span class="co"># 3 coefficients to estimate</span></span>
-<span id="cb6-13"><a aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb6-14"><a aria-hidden="true" tabindex="-1"></a><span class="co"># the rank: how many columns are independent? Three ways, same answer</span></span>
-<span id="cb6-15"><a aria-hidden="true" tabindex="-1"></a><span class="fu">qr</span>(X)<span class="sc">$</span>rank              <span class="co"># 2   (base R, as in Linear systems in R)</span></span>
-<span id="cb6-16"><a aria-hidden="true" tabindex="-1"></a>Matrix<span class="sc">::</span><span class="fu">rankMatrix</span>(X)   <span class="co"># 2   (Matrix package, comes with R)</span></span>
-<span id="cb6-17"><a aria-hidden="true" tabindex="-1"></a>limma<span class="sc">::</span><span class="fu">is.fullrank</span>(X)   <span class="co"># FALSE  -&gt; rank &lt; ncol(X): no unique solution</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a aria-hidden="true" tabindex="-1"></a>d<span class="sc">$</span>batch <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">"A"</span>, <span class="st">"A"</span>, <span class="st">"A"</span>, <span class="st">"B"</span>, <span class="st">"B"</span>, <span class="st">"B"</span>)</span>
+<span id="cb3-2"><a aria-hidden="true" tabindex="-1"></a>X <span class="ot">&lt;-</span> <span class="fu">model.matrix</span>(<span class="sc">~</span> batch <span class="sc">+</span> treatment, <span class="at">data =</span> d)</span>
+<span id="cb3-3"><a aria-hidden="true" tabindex="-1"></a>X[, ]</span>
+<span id="cb3-4"><a aria-hidden="true" tabindex="-1"></a><span class="co">#   (Intercept) batchB treatmenttreat</span></span>
+<span id="cb3-5"><a aria-hidden="true" tabindex="-1"></a><span class="co"># 1           1      0              0</span></span>
+<span id="cb3-6"><a aria-hidden="true" tabindex="-1"></a><span class="co"># 2           1      0              0</span></span>
+<span id="cb3-7"><a aria-hidden="true" tabindex="-1"></a><span class="co"># 3           1      0              0</span></span>
+<span id="cb3-8"><a aria-hidden="true" tabindex="-1"></a><span class="co"># 4           1      1              1</span></span>
+<span id="cb3-9"><a aria-hidden="true" tabindex="-1"></a><span class="co"># 5           1      1              1</span></span>
+<span id="cb3-10"><a aria-hidden="true" tabindex="-1"></a><span class="co"># 6           1      1              1</span></span>
+<span id="cb3-11"><a aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-12"><a aria-hidden="true" tabindex="-1"></a><span class="fu">ncol</span>(X)                 <span class="co"># 3 coefficients to estimate</span></span>
+<span id="cb3-13"><a aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-14"><a aria-hidden="true" tabindex="-1"></a><span class="co"># the rank: how many columns are independent? Three ways, same answer</span></span>
+<span id="cb3-15"><a aria-hidden="true" tabindex="-1"></a><span class="fu">qr</span>(X)<span class="sc">$</span>rank              <span class="co"># 2   (base R, as in Linear systems in R)</span></span>
+<span id="cb3-16"><a aria-hidden="true" tabindex="-1"></a>Matrix<span class="sc">::</span><span class="fu">rankMatrix</span>(X)   <span class="co"># 2   (Matrix package, comes with R)</span></span>
+<span id="cb3-17"><a aria-hidden="true" tabindex="-1"></a>limma<span class="sc">::</span><span class="fu">is.fullrank</span>(X)   <span class="co"># FALSE  -&gt; rank &lt; ncol(X): no unique solution</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <ul>
-<li><code>batchB</code> and <code>treatmenttreat</code> are <strong>identical</strong> columns: perfect confounding.</li>
+<li><code>batchB</code> and <code>treatmenttreat</code> are <strong>identical</strong> columns: perfect confounding (<em>Confounding &amp; Simpson’s paradox</em>).</li>
+<li>limma then warns <code>Coefficients not estimable: treatmenttreat</code> and gives <code>NA</code>. Dropping batch silences it but does not fix it: only a new <strong>experiment</strong> with both conditions in every batch can.</li>
 <li>Rank <span class="math inline">&lt;</span> <code>ncol(X)</code> means infinitely many <span class="math inline">\boldsymbol\beta</span> fit equally well, as in <em>Linear systems in R</em>. Use whichever function you like: <a href="https://rdrr.io/r/base/qr.html"><code>qr</code></a><code>(X)$rank</code>, <a href="https://rdrr.io/cran/Matrix/man/rankMatrix.html"><code>Matrix::rankMatrix</code></a>, or limma’s yes/no version <a href="https://rdrr.io/bioc/limma/man/is.fullrank.html"><code>is.fullrank</code></a>.</li>
 </ul>
 <aside class="notes">
-<p>This is the rank check from Linear systems in R applied to a design matrix. The rule to remember: rank equal to the number of columns means a unique beta, rank smaller means infinitely many. Here batch and treatment carry exactly the same information, so any split of the difference between the two coefficients fits equally well. X[, ] just prints the matrix without the attr lines. The three rank functions agree; students only need one. qr is just the name of the base-R function, there is no need to explain the QR decomposition. rankMatrix also prints a few attr lines (method, tol) below the number; they can be ignored. is.fullrank answers the question directly: TRUE means a unique beta.</p>
+<p>This is the rank check from Linear systems in R applied to a design matrix. The rule to remember: rank equal to the number of columns means a unique beta, rank smaller means infinitely many. Here batch and treatment carry exactly the same information, so any split of the difference between the two coefficients fits equally well. X[, ] just prints the matrix without the attr lines. The three rank functions agree; students only need one. qr is just the name of the base-R function, there is no need to explain the QR decomposition. rankMatrix also prints a few attr lines (method, tol) below the number; they can be ignored. is.fullrank answers the question directly: TRUE means a unique beta. The limma message is what students will see in practice; voom prints it too because it fits the model once internally. The exercise (R5) runs this case on the simulated counts.</p>
 <style type="text/css">
         span.MJX_Assistive_MathML {
           position:absolute!important;
@@ -671,105 +515,21 @@ Quantitative biology and integrative omics
           display:block!important;
       }</style></aside>
 </section>
-<section id="two-identical-columns-lm-gives-na" class="slide level2 smaller">
-<h2>Two identical columns: <code>lm</code> gives <code>NA</code></h2>
-<div class="sourceCode" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a aria-hidden="true" tabindex="-1"></a>d<span class="sc">$</span>y <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="dv">10</span>, <span class="dv">11</span>, <span class="dv">12</span>, <span class="dv">14</span>, <span class="dv">15</span>, <span class="dv">16</span>)</span>
-<span id="cb7-2"><a aria-hidden="true" tabindex="-1"></a><span class="fu">coef</span>(<span class="fu">lm</span>(y <span class="sc">~</span> batch <span class="sc">+</span> treatment, <span class="at">data =</span> d))</span>
-<span id="cb7-3"><a aria-hidden="true" tabindex="-1"></a><span class="co">#  (Intercept)         batchB treatmenttreat</span></span>
-<span id="cb7-4"><a aria-hidden="true" tabindex="-1"></a><span class="co">#           11              4             NA</span></span>
-<span id="cb7-5"><a aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-6"><a aria-hidden="true" tabindex="-1"></a><span class="fu">coef</span>(<span class="fu">lm</span>(y <span class="sc">~</span> treatment <span class="sc">+</span> batch, <span class="at">data =</span> d))      <span class="co"># same model, other order</span></span>
-<span id="cb7-7"><a aria-hidden="true" tabindex="-1"></a><span class="co">#  (Intercept) treatmenttreat         batchB</span></span>
-<span id="cb7-8"><a aria-hidden="true" tabindex="-1"></a><span class="co">#           11              4             NA</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<section id="limma-fits-all-genes-with-one-design-in-three-calls" class="slide level2 smaller">
+<h2>Limma fits all genes with one design in three calls</h2>
+<div class="sourceCode" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(limma)</span>
+<span id="cb4-2"><a aria-hidden="true" tabindex="-1"></a><span class="co"># counts: 2000 genes x 12 samples; samples: one row per sample (batch, sex, treatment)</span></span>
+<span id="cb4-3"><a aria-hidden="true" tabindex="-1"></a>design <span class="ot">&lt;-</span> <span class="fu">model.matrix</span>(<span class="sc">~</span> batch <span class="sc">+</span> sex <span class="sc">+</span> treatment, <span class="at">data =</span> samples)</span>
+<span id="cb4-4"><a aria-hidden="true" tabindex="-1"></a>v   <span class="ot">&lt;-</span> <span class="fu">voom</span>(counts, design)       <span class="co"># RNA-seq counts -&gt; log2 scale, with weights</span></span>
+<span id="cb4-5"><a aria-hidden="true" tabindex="-1"></a>fit <span class="ot">&lt;-</span> <span class="fu">lmFit</span>(v, design)           <span class="co"># one linear model per gene</span></span>
+<span id="cb4-6"><a aria-hidden="true" tabindex="-1"></a>fit <span class="ot">&lt;-</span> <span class="fu">eBayes</span>(fit)                <span class="co"># share noise information across genes</span></span>
+<span id="cb4-7"><a aria-hidden="true" tabindex="-1"></a><span class="fu">topTable</span>(fit, <span class="at">coef =</span> <span class="st">"treatmenttreat"</span>, <span class="at">number =</span> <span class="dv">3</span>)</span>
+<span id="cb4-8"><a aria-hidden="true" tabindex="-1"></a><span class="co">#      logFC AveExpr     t  P.Value adj.P.Val</span></span>
+<span id="cb4-9"><a aria-hidden="true" tabindex="-1"></a><span class="co"># g5    2.20   10.83  8.05  1.0e-12   2.0e-09</span></span>
+<span id="cb4-10"><a aria-hidden="true" tabindex="-1"></a><span class="co"># g188 -1.97   10.02 -6.88  3.8e-10   2.2e-07</span></span>
+<span id="cb4-11"><a aria-hidden="true" tabindex="-1"></a><span class="co"># g145 -1.87   11.57 -6.86  4.2e-10   2.2e-07</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <ul>
-<li><code>lm</code> does not stop with an error. It goes through the columns in order and drops any column that copies the earlier ones: here <code>treatmenttreat</code>, which equals <code>batchB</code>. The dropped column gets <code>NA</code>.</li>
-<li>The 4 is <strong>batch and drug together</strong>. Swap the order and the 4 moves to the other column.</li>
-<li>An <code>NA</code> coefficient is a warning sign: your design cannot separate these effects.</li>
-</ul>
-<aside class="notes">
-<p>lm is forgiving: it drops the redundant column and carries on. Students must not read the 4 as a batch effect. It is the combined difference between the two groups, and we cannot say how much is batch and how much is treatment. Show that changing the order of the formula moves the NA, which proves that the split is arbitrary. limma behaves the same way, as we will see.</p>
-<style type="text/css">
-        span.MJX_Assistive_MathML {
-          position:absolute!important;
-          clip: rect(1px, 1px, 1px, 1px);
-          padding: 1px 0 0 0!important;
-          border: 0!important;
-          height: 1px!important;
-          width: 1px!important;
-          overflow: hidden!important;
-          display:block!important;
-      }</style></aside>
-</section>
-<section id="one-gene-with-lm-the-simpson-example" class="slide level2 smaller">
-<h2>One gene with <code>lm</code>: the Simpson example</h2>
-<p>The batch example from <em>Confounding &amp; Simpson’s paradox</em>: drug vs control in two batches, with the drug mostly in batch A.</p>
-<div class="sourceCode" id="cb8"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a aria-hidden="true" tabindex="-1"></a>g <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(</span>
-<span id="cb8-2"><a aria-hidden="true" tabindex="-1"></a>  <span class="at">batch     =</span> <span class="fu">c</span>(<span class="st">"A"</span>, <span class="st">"A"</span>, <span class="st">"A"</span>, <span class="st">"A"</span>, <span class="st">"B"</span>, <span class="st">"B"</span>, <span class="st">"B"</span>, <span class="st">"B"</span>),</span>
-<span id="cb8-3"><a aria-hidden="true" tabindex="-1"></a>  <span class="at">treatment =</span> <span class="fu">c</span>(<span class="st">"ctrl"</span>, <span class="st">"treat"</span>, <span class="st">"treat"</span>, <span class="st">"treat"</span>, <span class="st">"ctrl"</span>, <span class="st">"ctrl"</span>, <span class="st">"ctrl"</span>, <span class="st">"treat"</span>),</span>
-<span id="cb8-4"><a aria-hidden="true" tabindex="-1"></a>  <span class="at">expr      =</span> <span class="fu">c</span>(<span class="dv">10</span>, <span class="dv">12</span>, <span class="dv">12</span>, <span class="dv">12</span>, <span class="dv">20</span>, <span class="dv">20</span>, <span class="dv">20</span>, <span class="dv">22</span>))</span>
-<span id="cb8-5"><a aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb8-6"><a aria-hidden="true" tabindex="-1"></a><span class="fu">coef</span>(<span class="fu">lm</span>(expr <span class="sc">~</span> treatment, <span class="at">data =</span> g))</span>
-<span id="cb8-7"><a aria-hidden="true" tabindex="-1"></a><span class="co">#    (Intercept) treatmenttreat</span></span>
-<span id="cb8-8"><a aria-hidden="true" tabindex="-1"></a><span class="co">#           17.5           -3.0           # drug looks harmful</span></span>
-<span id="cb8-9"><a aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb8-10"><a aria-hidden="true" tabindex="-1"></a><span class="fu">coef</span>(<span class="fu">lm</span>(expr <span class="sc">~</span> batch <span class="sc">+</span> treatment, <span class="at">data =</span> g))</span>
-<span id="cb8-11"><a aria-hidden="true" tabindex="-1"></a><span class="co">#    (Intercept)         batchB treatmenttreat</span></span>
-<span id="cb8-12"><a aria-hidden="true" tabindex="-1"></a><span class="co">#             10             10              2     # +2 within each batch</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<ul>
-<li>Adding the <code>batchB</code> column turns <span class="math inline">-3</span> into <span class="math inline">+2</span>. The rank is 3 = number of columns, so <span class="math inline">\boldsymbol\beta</span> is unique: batch is <strong>partly</strong> confounded, not perfectly.</li>
-<li>Check one prediction: treated in batch B <span class="math inline">= 10 + 10 + 2 = 22</span>. ✓</li>
-</ul>
-<aside class="notes">
-<p>These are exactly the numbers students computed by hand in the confounding unit, so they can check that R agrees. The data fit the adjusted model exactly, which is why the coefficients are round numbers. The important contrast with the previous slide: here every batch contains both conditions, so the design matrix has full rank and adjustment works. Next: do this for 20 000 genes at once.</p>
-<style type="text/css">
-        span.MJX_Assistive_MathML {
-          position:absolute!important;
-          clip: rect(1px, 1px, 1px, 1px);
-          padding: 1px 0 0 0!important;
-          border: 0!important;
-          height: 1px!important;
-          width: 1px!important;
-          overflow: hidden!important;
-          display:block!important;
-      }</style></aside>
-</section>
-<section id="limma-lets-you-fit-a-model-for-many-genes-at-once" class="slide level2 smaller">
-<h2>Limma lets you fit a model for many genes at once</h2>
-
-<img data-src="fig01-one-design-many-genes.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:95.0%"><ul>
-<li>An omics experiment gives a table: one row per gene (or protein, metabolite), one column per sample, on a <strong>log2 scale</strong>.</li>
-<li><a href="https://bioconductor.org/packages/release/bioc/html/limma.html">limma</a> fits every row with the <strong>same design matrix</strong> <span class="math inline">X</span>: 20 000 ordinary linear models.</li>
-<li>On the log2 scale a coefficient is a <strong>log2 fold change</strong> (logFC): 1 = doubled, <span class="math inline">-1</span> = halved, 0 = no change.</li>
-</ul>
-<aside class="notes">
-<p>The key picture of the day. The samples are the same for every gene, so the design matrix is the same; only y changes from row to row. limma is in effect 20 000 lm calls with one shared X. Because the data are on the log2 scale, differences of log2 values are log2 fold changes, which is why we spent a unit on the log. limma adds one important trick, eBayes, on the next slide.</p>
-<style type="text/css">
-        span.MJX_Assistive_MathML {
-          position:absolute!important;
-          clip: rect(1px, 1px, 1px, 1px);
-          padding: 1px 0 0 0!important;
-          border: 0!important;
-          height: 1px!important;
-          width: 1px!important;
-          overflow: hidden!important;
-          display:block!important;
-      }</style></aside>
-</section>
-<section id="lmfit-ebayes-toptable" class="slide level2 smaller">
-<h2><code>lmFit</code>, <code>eBayes</code>, <code>topTable</code></h2>
-<div class="sourceCode" id="cb9"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(limma)</span>
-<span id="cb9-2"><a aria-hidden="true" tabindex="-1"></a><span class="co"># counts: 2000 genes x 12 samples; samples: one row per sample (batch, sex, treatment)</span></span>
-<span id="cb9-3"><a aria-hidden="true" tabindex="-1"></a>design <span class="ot">&lt;-</span> <span class="fu">model.matrix</span>(<span class="sc">~</span> batch <span class="sc">+</span> sex <span class="sc">+</span> treatment, <span class="at">data =</span> samples)</span>
-<span id="cb9-4"><a aria-hidden="true" tabindex="-1"></a>v   <span class="ot">&lt;-</span> <span class="fu">voom</span>(counts, design)       <span class="co"># RNA-seq counts -&gt; log2 scale, with weights</span></span>
-<span id="cb9-5"><a aria-hidden="true" tabindex="-1"></a>fit <span class="ot">&lt;-</span> <span class="fu">lmFit</span>(v, design)           <span class="co"># one linear model per gene</span></span>
-<span id="cb9-6"><a aria-hidden="true" tabindex="-1"></a>fit <span class="ot">&lt;-</span> <span class="fu">eBayes</span>(fit)                <span class="co"># share variance information across genes</span></span>
-<span id="cb9-7"><a aria-hidden="true" tabindex="-1"></a><span class="fu">topTable</span>(fit, <span class="at">coef =</span> <span class="st">"treatmenttreat"</span>, <span class="at">number =</span> <span class="dv">3</span>)</span>
-<span id="cb9-8"><a aria-hidden="true" tabindex="-1"></a><span class="co">#      logFC AveExpr     t  P.Value adj.P.Val</span></span>
-<span id="cb9-9"><a aria-hidden="true" tabindex="-1"></a><span class="co"># g5    2.20   10.83  8.05  1.0e-12   2.0e-09</span></span>
-<span id="cb9-10"><a aria-hidden="true" tabindex="-1"></a><span class="co"># g188 -1.97   10.02 -6.88  3.8e-10   2.2e-07</span></span>
-<span id="cb9-11"><a aria-hidden="true" tabindex="-1"></a><span class="co"># g145 -1.87   11.57 -6.86  4.2e-10   2.2e-07</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<ul>
-<li>limma takes <span class="math inline">X</span> itself, and <code>coef =</code> is a <strong>column name of <span class="math inline">X</span></strong>: <code>treatmenttreat</code>.</li>
+<li><code>lmFit</code> is the loop, <code>eBayes</code> the shared noise, <code>topTable</code> the adjusted list. <code>coef =</code> is a <strong>column name of <span class="math inline">X</span></strong>: <code>treatmenttreat</code>.</li>
 <li><a href="https://rdrr.io/bioc/limma/man/voom.html"><code>voom</code></a> is only needed for RNA-seq counts: it takes the log2 and records how noisy each value is. Data that are already log2 intensities (proteomics, metabolomics) go straight into <code>lmFit</code>.</li>
 </ul>
 <div class="quarto-figure quarto-figure-center">
@@ -778,7 +538,7 @@ Quantitative biology and integrative omics
 </figure>
 </div>
 <aside class="notes">
-<p>The workflow in three calls, four with voom. voom computes log2 counts per million and a weight per value, because low counts are noisier on the log scale; students do not need the details. The next unit, Bulk RNA-seq with DESeq2, shows why small counts are noisy. eBayes is an empirical Bayes step: with 12 samples each gene’s variance is poorly estimated, so it is pulled towards a common value across genes. That is the shrinkage idea from Hierarchical models, met again in week 4. Column B (log-odds) is left out of the printout.</p>
+<p>The workflow in three calls, four with voom. voom computes log2 counts per million and a weight per value, because low counts are noisier on the log scale; students do not need the details. The next unit, Bulk RNA-seq with DESeq2, shows why small counts are noisy. eBayes is the shared-noise step from the previous slides; the name (empirical Bayes) and the idea of shrinkage come back in week 4, Hierarchical models. With voom, limma calls 188 genes, 177 true; on log2(counts + 1) without voom (the earlier slides) 191, 181 true. On this simulation voom changes little; it matters most for genes with low counts. Column B (log-odds) is left out of the printout.</p>
 <style type="text/css">
         span.MJX_Assistive_MathML {
           position:absolute!important;
@@ -793,16 +553,16 @@ Quantitative biology and integrative omics
 </section>
 <section id="reading-the-results-table" class="slide level2 smaller">
 <h2>Reading the results table</h2>
-<div class="sourceCode" id="cb10"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a aria-hidden="true" tabindex="-1"></a>tt <span class="ot">&lt;-</span> <span class="fu">topTable</span>(fit, <span class="at">coef =</span> <span class="st">"treatmenttreat"</span>, <span class="at">number =</span> <span class="cn">Inf</span>)   <span class="co"># all genes, best first</span></span>
-<span id="cb10-2"><a aria-hidden="true" tabindex="-1"></a><span class="fu">head</span>(tt, <span class="dv">5</span>)</span>
-<span id="cb10-3"><a aria-hidden="true" tabindex="-1"></a><span class="co">#      logFC AveExpr     t  P.Value adj.P.Val</span></span>
-<span id="cb10-4"><a aria-hidden="true" tabindex="-1"></a><span class="co"># g5    2.20   10.83  8.05 1.01e-12  2.03e-09</span></span>
-<span id="cb10-5"><a aria-hidden="true" tabindex="-1"></a><span class="co"># g188 -1.97   10.02 -6.88 3.84e-10  2.19e-07</span></span>
-<span id="cb10-6"><a aria-hidden="true" tabindex="-1"></a><span class="co"># g145 -1.87   11.57 -6.86 4.19e-10  2.19e-07</span></span>
-<span id="cb10-7"><a aria-hidden="true" tabindex="-1"></a><span class="co"># g144  1.94    9.82  6.83 4.90e-10  2.19e-07</span></span>
-<span id="cb10-8"><a aria-hidden="true" tabindex="-1"></a><span class="co"># g17   1.96    9.64  6.80 5.51e-10  2.19e-07</span></span>
-<span id="cb10-9"><a aria-hidden="true" tabindex="-1"></a><span class="fu">sum</span>(tt<span class="sc">$</span>adj.P.Val <span class="sc">&lt;</span> <span class="fl">0.05</span>)</span>
-<span id="cb10-10"><a aria-hidden="true" tabindex="-1"></a><span class="co"># [1] 188</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a aria-hidden="true" tabindex="-1"></a>tt <span class="ot">&lt;-</span> <span class="fu">topTable</span>(fit, <span class="at">coef =</span> <span class="st">"treatmenttreat"</span>, <span class="at">number =</span> <span class="cn">Inf</span>)   <span class="co"># all genes, best first</span></span>
+<span id="cb5-2"><a aria-hidden="true" tabindex="-1"></a><span class="fu">head</span>(tt, <span class="dv">5</span>)</span>
+<span id="cb5-3"><a aria-hidden="true" tabindex="-1"></a><span class="co">#      logFC AveExpr     t  P.Value adj.P.Val</span></span>
+<span id="cb5-4"><a aria-hidden="true" tabindex="-1"></a><span class="co"># g5    2.20   10.83  8.05 1.01e-12  2.03e-09</span></span>
+<span id="cb5-5"><a aria-hidden="true" tabindex="-1"></a><span class="co"># g188 -1.97   10.02 -6.88 3.84e-10  2.19e-07</span></span>
+<span id="cb5-6"><a aria-hidden="true" tabindex="-1"></a><span class="co"># g145 -1.87   11.57 -6.86 4.19e-10  2.19e-07</span></span>
+<span id="cb5-7"><a aria-hidden="true" tabindex="-1"></a><span class="co"># g144  1.94    9.82  6.83 4.90e-10  2.19e-07</span></span>
+<span id="cb5-8"><a aria-hidden="true" tabindex="-1"></a><span class="co"># g17   1.96    9.64  6.80 5.51e-10  2.19e-07</span></span>
+<span id="cb5-9"><a aria-hidden="true" tabindex="-1"></a><span class="fu">sum</span>(tt<span class="sc">$</span>adj.P.Val <span class="sc">&lt;</span> <span class="fl">0.05</span>)</span>
+<span id="cb5-10"><a aria-hidden="true" tabindex="-1"></a><span class="co"># [1] 188</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <table class="caption-top">
 <colgroup>
 <col style="width: 50%">
@@ -829,7 +589,7 @@ Quantitative biology and integrative omics
 </tr>
 <tr class="even">
 <td><code>adj.P.Val</code></td>
-<td>p-value adjusted for testing 2000 genes: among genes called at <code>adj.P.Val &lt; 0.05</code>, about 5% are expected to be false</td>
+<td>adjusted for testing 2000 genes: about 5% of the genes called at <code>&lt; 0.05</code> are false</td>
 </tr>
 </tbody>
 </table>
@@ -838,59 +598,7 @@ Quantitative biology and integrative omics
 <li>This is simulated data with a known truth: 200 genes respond. The 188 calls are <strong>177 true</strong> and 11 false.</li>
 </ul>
 <aside class="notes">
-<p>The top of the table: genes are sorted by p-value, smallest first (column B, the log-odds, is left out of the printout). Read one row aloud. g5 has logFC 2.2, about 4.6 times higher with treatment, and a tiny adjusted p-value. Explain adj.P.Val in one sentence: with 2000 tests, raw p-values below 0.05 would give about 100 false hits by chance alone, so limma adjusts them (Benjamini–Hochberg) so that the cut-off controls the fraction of false calls instead. 11 of 188 is 6%, close to the promised 5%.</p>
-<style type="text/css">
-        span.MJX_Assistive_MathML {
-          position:absolute!important;
-          clip: rect(1px, 1px, 1px, 1px);
-          padding: 1px 0 0 0!important;
-          border: 0!important;
-          height: 1px!important;
-          width: 1px!important;
-          overflow: hidden!important;
-          display:block!important;
-      }</style></aside>
-</section>
-<section id="leaving-out-an-unbalanced-batch-gives-wrong-gene-lists" class="slide level2 smaller">
-<h2>Leaving out an unbalanced batch gives wrong gene lists</h2>
-<p>In this experiment the treatment is <strong>unbalanced</strong> across batches. Gene g138 truly goes up (logFC 1.5) and is also higher in batch B.</p>
-<div class="sourceCode" id="cb11"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a aria-hidden="true" tabindex="-1"></a><span class="fu">table</span>(samples<span class="sc">$</span>batch, samples<span class="sc">$</span>treatment)</span>
-<span id="cb11-2"><a aria-hidden="true" tabindex="-1"></a><span class="co">#     ctrl treat</span></span>
-<span id="cb11-3"><a aria-hidden="true" tabindex="-1"></a><span class="co">#   A    1     5</span></span>
-<span id="cb11-4"><a aria-hidden="true" tabindex="-1"></a><span class="co">#   B    5     1</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<table class="caption-top">
-<thead>
-<tr class="header">
-<th>design</th>
-<th>g138 logFC</th>
-<th>g138 adj.P.Val</th>
-<th>genes called</th>
-<th>false calls</th>
-</tr>
-</thead>
-<tbody>
-<tr class="odd">
-<td><code>~ treatment</code></td>
-<td><span class="math inline">-0.16</span></td>
-<td>0.90</td>
-<td>304</td>
-<td>154</td>
-</tr>
-<tr class="even">
-<td><code>~ batch + sex + treatment</code></td>
-<td><span class="math inline">1.34</span></td>
-<td>0.001</td>
-<td>188</td>
-<td>11</td>
-</tr>
-</tbody>
-</table>
-<ul>
-<li>Without batch, g138’s up-regulation is hidden: Simpson’s paradox in a real-sized dataset.</li>
-<li>And 151 of the 154 false calls are genes that only differ <strong>between batches</strong>.</li>
-</ul>
-<aside class="notes">
-<p>The same story as the 8-sample lm example, now for 2000 genes. Because batch is unbalanced but not perfectly confounded, X has full rank and the adjusted model can separate batch and treatment. Without batch, half the list is wrong. The exercise has students reproduce this table.</p>
+<p>The top of the table: genes are sorted by p-value, smallest first (column B, the log-odds, is left out of the printout). Read one row aloud. g5 has logFC 2.2, about 4.6 times higher with treatment, and a tiny adjusted p-value. adj.P.Val was introduced on the false-hits slide; here just check the promise: 11 of 188 is 6%, close to 5%.</p>
 <style type="text/css">
         span.MJX_Assistive_MathML {
           position:absolute!important;
@@ -977,9 +685,9 @@ Quantitative biology and integrative omics
 </tr>
 </tbody>
 </table>
-<div class="sourceCode" id="cb12"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb12-1"><a aria-hidden="true" tabindex="-1"></a>fit1 <span class="ot">&lt;-</span> <span class="fu">lm</span>(expr <span class="sc">~</span> treatment <span class="sc">+</span> sex <span class="sc">+</span> bmi <span class="sc">+</span> batch, <span class="at">data =</span> d)</span>
-<span id="cb12-2"><a aria-hidden="true" tabindex="-1"></a>fit2 <span class="ot">&lt;-</span> <span class="fu">lm</span>(expr <span class="sc">~</span> treatment <span class="sc">+</span> sex <span class="sc">+</span> bmi, <span class="at">data =</span> d)</span>
-<span id="cb12-3"><a aria-hidden="true" tabindex="-1"></a><span class="fu">confint</span>(fit1); <span class="fu">confint</span>(fit2)   <span class="co"># 95% intervals</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a aria-hidden="true" tabindex="-1"></a>fit1 <span class="ot">&lt;-</span> <span class="fu">lm</span>(expr <span class="sc">~</span> treatment <span class="sc">+</span> sex <span class="sc">+</span> bmi <span class="sc">+</span> batch, <span class="at">data =</span> d)</span>
+<span id="cb6-2"><a aria-hidden="true" tabindex="-1"></a>fit2 <span class="ot">&lt;-</span> <span class="fu">lm</span>(expr <span class="sc">~</span> treatment <span class="sc">+</span> sex <span class="sc">+</span> bmi, <span class="at">data =</span> d)</span>
+<span id="cb6-3"><a aria-hidden="true" tabindex="-1"></a><span class="fu">confint</span>(fit1); <span class="fu">confint</span>(fit2)   <span class="co"># 95% intervals</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div><div class="column" style="width:58%;">
 <p><img data-src="fig03-unneeded-batch-ci.svg" class="" style="width:100.0%"></p>
 </div></div>
@@ -988,41 +696,7 @@ Quantitative biology and integrative omics
 <li>Yet its two columns use up 2 of the 8 samples. The <strong>confidence interval</strong> (the range of values that fit the data) for treatment gets wider and now covers 0. Without batch, the treatment effect is clear. If batch explains nothing, leave it out.</li>
 </ul>
 <aside class="notes">
-<p>Contrast with the previous slide: there, batch explained a lot (and was unbalanced), so leaving it out was the mistake. Here batch does nothing for this gene, but it still costs. Each column uses up one sample; with 8 mice and 6 columns only 2 are left to judge how noisy the gene is, so every interval gets wide. The treatment interval goes from 0.49 to 1.79 (clear effect) to -0.17 to 2.29 (could be nothing). This is one simulated dataset (true treatment effect 1.5, sex 1, BMI 0.1 per unit, batch 0, noise sd 0.4); across 500 such datasets the interval without batch was narrower in 83% of them, median width 1.5 vs 2.4. The intervals come from confint() on an lm fit; limma reports the same with topTable(…, confint = TRUE). A practical caveat: decide which covariates to keep from what they explain and from how the experiment was run, not by trying models until the treatment p-value looks good. No formula for the interval is needed: wider = less certain, covering 0 = no evidence of a change.</p>
-<style type="text/css">
-        span.MJX_Assistive_MathML {
-          position:absolute!important;
-          clip: rect(1px, 1px, 1px, 1px);
-          padding: 1px 0 0 0!important;
-          border: 0!important;
-          height: 1px!important;
-          width: 1px!important;
-          overflow: hidden!important;
-          display:block!important;
-      }</style></aside>
-</section>
-<section id="when-batch-equals-treatment-limma-cannot-separate-them" class="slide level2 smaller">
-<h2>When batch equals treatment, limma cannot separate them</h2>
-<p>If every control is in batch A and every treated sample in batch B:</p>
-<div class="sourceCode" id="cb13"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a aria-hidden="true" tabindex="-1"></a><span class="fu">table</span>(samples_conf<span class="sc">$</span>batch, samples_conf<span class="sc">$</span>treatment)</span>
-<span id="cb13-2"><a aria-hidden="true" tabindex="-1"></a><span class="co">#     ctrl treat</span></span>
-<span id="cb13-3"><a aria-hidden="true" tabindex="-1"></a><span class="co">#   A    6     0</span></span>
-<span id="cb13-4"><a aria-hidden="true" tabindex="-1"></a><span class="co">#   B    0     6</span></span>
-<span id="cb13-5"><a aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb13-6"><a aria-hidden="true" tabindex="-1"></a>design_conf <span class="ot">&lt;-</span> <span class="fu">model.matrix</span>(<span class="sc">~</span> batch <span class="sc">+</span> treatment, <span class="at">data =</span> samples_conf)</span>
-<span id="cb13-7"><a aria-hidden="true" tabindex="-1"></a>fit <span class="ot">&lt;-</span> <span class="fu">lmFit</span>(<span class="fu">voom</span>(counts, design_conf), design_conf)</span>
-<span id="cb13-8"><a aria-hidden="true" tabindex="-1"></a><span class="co"># Coefficients not estimable: treatmenttreat</span></span>
-<span id="cb13-9"><a aria-hidden="true" tabindex="-1"></a><span class="fu">head</span>(fit<span class="sc">$</span>coefficients, <span class="dv">2</span>)</span>
-<span id="cb13-10"><a aria-hidden="true" tabindex="-1"></a><span class="co">#    (Intercept) batchB treatmenttreat</span></span>
-<span id="cb13-11"><a aria-hidden="true" tabindex="-1"></a><span class="co"># g1        8.94   0.50             NA</span></span>
-<span id="cb13-12"><a aria-hidden="true" tabindex="-1"></a><span class="co"># g2       10.16  -1.17             NA</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<ul>
-<li>This is the identical-columns case: <code>qr(X)$rank</code> is 2 for 3 columns. limma, like <code>lm</code>, gives <code>NA</code>.</li>
-<li>Dropping <code>batch</code> makes the message go away, but the treatment estimate then <strong>includes</strong> the batch effect.</li>
-<li>The only real fix is in the <strong>experiment</strong>: put both conditions in every batch, ideally balanced. No code can recover what the design did not measure.</li>
-</ul>
-<aside class="notes">
-<p>Stress the honest message: removing batch silences the message but does not remove the problem; you get a number you cannot interpret. Planning the batches before sequencing is the fix. If a confounded dataset has already been produced, all you can do is report that treatment and batch cannot be separated. DESeq2 refuses outright with “the model matrix is not full rank”, which students will meet on forums.</p>
+<p>Contrast with Confounding &amp; Simpson’s paradox: there, batch explained a lot and was unbalanced, so leaving it out was the mistake. Here batch does nothing for this gene, but it still costs. Each column uses up one sample; with 8 mice and 6 columns only 2 are left to judge how noisy the gene is, so every interval gets wide. The treatment interval goes from 0.49 to 1.79 (clear effect) to -0.17 to 2.29 (could be nothing). This is one simulated dataset (true treatment effect 1.5, sex 1, BMI 0.1 per unit, batch 0, noise sd 0.4); across 500 such datasets the interval without batch was narrower in 83% of them, median width 1.5 vs 2.4. The intervals come from confint() on an lm fit; limma reports the same with topTable(…, confint = TRUE). A practical caveat: decide which covariates to keep from what they explain and from how the experiment was run, not by trying models until the treatment p-value looks good. No formula for the interval is needed: wider = less certain, covering 0 = no evidence of a change.</p>
 <style type="text/css">
         span.MJX_Assistive_MathML {
           position:absolute!important;
@@ -1040,9 +714,9 @@ Quantitative biology and integrative omics
 <div class="columns">
 <div class="column" style="width:60%;">
 <p>Mass spectrometry gives <strong>log2 intensities</strong> directly, so there is no <code>voom</code>. In the exercise, 150 metabolites in 8 healthy and 8 disease samples; the patients have a <strong>higher BMI</strong>, and 20 metabolites truly change with disease.</p>
-<div class="sourceCode" id="cb14"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb14-1"><a aria-hidden="true" tabindex="-1"></a>design <span class="ot">&lt;-</span> <span class="fu">model.matrix</span>(<span class="sc">~</span> group <span class="sc">+</span> sex <span class="sc">+</span> bmi <span class="sc">+</span> day, <span class="at">data =</span> meta)</span>
-<span id="cb14-2"><a aria-hidden="true" tabindex="-1"></a>fit <span class="ot">&lt;-</span> <span class="fu">eBayes</span>(<span class="fu">lmFit</span>(logint, design))</span>
-<span id="cb14-3"><a aria-hidden="true" tabindex="-1"></a><span class="fu">topTable</span>(fit, <span class="at">coef =</span> <span class="st">"groupdisease"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a aria-hidden="true" tabindex="-1"></a>design <span class="ot">&lt;-</span> <span class="fu">model.matrix</span>(<span class="sc">~</span> group <span class="sc">+</span> sex <span class="sc">+</span> bmi <span class="sc">+</span> day, <span class="at">data =</span> meta)</span>
+<span id="cb7-2"><a aria-hidden="true" tabindex="-1"></a>fit <span class="ot">&lt;-</span> <span class="fu">eBayes</span>(<span class="fu">lmFit</span>(logint, design))</span>
+<span id="cb7-3"><a aria-hidden="true" tabindex="-1"></a><span class="fu">topTable</span>(fit, <span class="at">coef =</span> <span class="st">"groupdisease"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <table class="caption-top">
 <thead>
 <tr class="header">
@@ -1097,16 +771,16 @@ Quantitative biology and integrative omics
 <section id="summary" class="slide level2 smaller">
 <h2>Summary</h2>
 <ul>
-<li><a href="https://rdrr.io/r/stats/model.matrix.html"><code>model.matrix</code></a><code>(~ ...)</code> builds <span class="math inline">X</span>; column names are variable + level (<code>treatmenttreat</code>, <code>sexM</code>, <code>batchB</code>, <code>bmi</code>).</li>
-<li>The reference is the alphabetically first level: check <code>levels()</code>, use <a href="https://rdrr.io/r/stats/relevel.html"><code>relevel</code></a> or <code>factor(x, levels = ...)</code> (0 h / 6 h / 24 h!).</li>
-<li>Check <code>qr(X)$rank == ncol(X)</code>. If not: <code>lm</code> and limma give <code>NA</code>. Fix the <strong>design of the experiment</strong>.</li>
-<li>limma: log2 data (<code>voom</code> for counts) + <code>design</code> → <code>lmFit()</code> → <code>eBayes()</code> → <code>topTable(coef = ...)</code>.</li>
-<li>Read <code>logFC</code> (1 = doubled) and <code>adj.P.Val</code> (adjusted for testing many genes).</li>
-<li>Leaving out a covariate that is unbalanced across groups gives false and missed calls: Simpson’s paradox at genome scale.</li>
+<li>An omics table is many genes with <strong>one design</strong>: the same <span class="math inline">X</span> for every row, built with <a href="https://rdrr.io/r/stats/model.matrix.html"><code>model.matrix</code></a><code>(~ ...)</code>.</li>
+<li>A plain loop of <code>lm</code> has two problems: <strong>many false hits</strong> and <strong>badly estimated noise</strong> per gene.</li>
+<li>limma: log2 data (<code>voom</code> for counts) + <code>design</code> → <code>lmFit()</code> (the loop) → <code>eBayes()</code> (shared noise) → <code>topTable(coef = ...)</code> (adjusted list).</li>
+<li>Read <code>logFC</code> (1 = doubled) and <code>adj.P.Val</code> (about 5% of the calls at <code>&lt; 0.05</code> are false).</li>
+<li>Before fitting: check <code>levels()</code> and the rank of <span class="math inline">X</span>. “Coefficients not estimable” can only be fixed by the <strong>experiment</strong>.</li>
+<li>Include the covariates that explain the data; each extra one costs precision.</li>
 </ul>
 <p><strong>Next:</strong> <em>Bulk RNA-seq with DESeq2</em>: the same design, but starting from the raw counts.</p>
 <aside class="notes">
-<p>Recap the workflow and the two checks students should always do: levels and rank. The forward link: the next unit keeps the same design formula and starts from the raw counts instead of log2 values.</p>
+<p>Recap the problem and the three steps that fix it, plus the two checks students should always do: levels and rank. The forward link: the next unit keeps the same design formula and starts from the raw counts instead of log2 values.</p>
 <style type="text/css">
         span.MJX_Assistive_MathML {
           position:absolute!important;

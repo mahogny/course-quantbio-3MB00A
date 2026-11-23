@@ -1,5 +1,5 @@
 ---
-title: "Exercise: Design matrices in R — limma"
+title: "Exercise: Many genes at once — limma"
 format:
   html:
     toc: true
@@ -13,7 +13,6 @@ format:
 After this exercise you will be able to:
 
 - Predict the output of [`model.matrix`](https://rdrr.io/r/stats/model.matrix.html) (column names, entries, rank) **before** running it.
-- Set reference levels and level order with [`relevel`](https://rdrr.io/r/stats/relevel.html) and [`factor`](https://rdrr.io/r/base/factor.html).
 - Check a design with [`qr`](https://rdrr.io/r/base/qr.html)`(X)$rank` and explain an `NA` coefficient from [`lm`](https://rdrr.io/r/stats/lm.html).
 - Run a **limma** analysis of bulk RNA-seq counts with `design = ~ batch + sex + treatment`, read log2 fold changes and `adj.P.Val`, and compare designs against a known truth.
 - Do the same for log2 intensities from mass-spectrometry metabolomics, with a continuous covariate (BMI).
@@ -56,15 +55,7 @@ Do these on paper first. Then check each one in R (the code is in the solutions)
 
 (c) Samples 5 and 6 fail quality control and are removed. Write $X$ for the four remaining samples. Which two columns are now identical? What are `ncol(X)` and `qr(X)$rank`? Which coefficient does `lm` report as `NA`?
 
-**B2. The order of levels.** A time course has `time` stored as text: `"0h"`, `"6h"`, `"24h"`, `"48h"`.
-
-(a) Which column names does `model.matrix(~ time)` give, and in which order?
-
-(b) Write the line of R that puts the levels in time order. Which columns do you get then?
-
-(c) If you instead code time as a number of hours, `time_h`, how many columns does $X$ have? What does that model assume that the factor model does not?
-
-**B3. Confounded batches.** Eight samples: samples 1–4 are controls sequenced in batch A, samples 5–8 are treated samples sequenced in batch B.
+**B2. Confounded batches.** Eight samples: samples 1–4 are controls sequenced in batch A, samples 5–8 are treated samples sequenced in batch B.
 
 (a) Write $X$ for `~ batch + treatment`. What is its rank, and how many coefficients are there?
 
@@ -72,7 +63,7 @@ Do these on paper first. Then check each one in R (the code is in the solutions)
 
 (c) Propose a new layout of the same eight samples over the two batches that gives a full-rank $X$. Which layout is best, and why?
 
-**B4. limma coefficients and fold changes.** A limma analysis uses `design <- model.matrix(~ batch + sex + treatment)` with `batch` (A, B, C), `sex` (F, M) and `treatment` (ctrl, treat).
+**B3. limma coefficients and fold changes.** A limma analysis uses `design <- model.matrix(~ batch + sex + treatment)` with `batch` (A, B, C), `sex` (F, M) and `treatment` (ctrl, treat).
 
 (a) What does `colnames(design)` print? Which name do you give to `topTable(fit, coef = ...)` to get the treatment effect?
 
@@ -80,7 +71,7 @@ Do these on paper first. Then check each one in R (the code is in the solutions)
 
 (c) A gene has a mean log2 expression of 6.64 in the controls (about 100 on the original scale). Its `logFC` for `treatmenttreat` is 2. What is its expected value in the treated samples (same batch and sex), on the log2 scale and on the original scale? And if the logFC were $-1$?
 
-**B5. Reading `lm` output.** For the drug/batch example from *Confounding & Simpson's paradox*, R prints:
+**B4. Reading `lm` output.** For the drug/batch example from *Confounding & Simpson's paradox*, R prints:
 
 ```r
 coef(lm(expr ~ treatment, data = g))
@@ -95,7 +86,7 @@ coef(lm(expr ~ batch + treatment, data = g))
 
 (b) In one sentence: why are the two `treatmenttreat` coefficients different, and which one is the drug effect?
 
-**B6. A continuous covariate in limma.** A limma fit of one metabolite's log2 intensity with `design <- model.matrix(~ group + bmi)` gives coefficients `(Intercept)` 10, `groupdisease` 1, `bmi` 0.1.
+**B5. A continuous covariate in limma.** A limma fit of one metabolite's log2 intensity with `design <- model.matrix(~ group + bmi)` gives coefficients `(Intercept)` 10, `groupdisease` 1, `bmi` 0.1.
 
 (a) Predict the log2 intensity for a healthy person with BMI 20 and for a disease patient with BMI 30.
 
@@ -167,7 +158,7 @@ tt  <- topTable(fit, coef = "treatmenttreat", number = Inf)
 head(tt)
 ```
 
-(a) Which coefficient names can you give to `coef =`? Did you predict them in B4?
+(a) Which coefficient names can you give to `coef =`? Did you predict them in B3?
 
 (b) Look at `tt["g138", ]`. Compare its `logFC` with your `lm` estimate in R2 and with the truth.
 
@@ -264,19 +255,19 @@ DESeq2 on the same counts, and on the real `airway` dataset, is in the next unit
 
 ## Hints
 
-::: {.callout-tip collapse="true" title="Hint 1 — column names and the reference (B1, B2)"}
-Each factor gives one column per level **except** the reference, which is the alphabetically first level ([`factor`](https://rdrr.io/r/base/factor.html), [`relevel`](https://rdrr.io/r/stats/relevel.html)). The column name is the variable name followed by the level: `batchB`, `sexM`. Text is sorted character by character, so `"24h"` comes before `"6h"`. See [`model.matrix`](https://rdrr.io/r/stats/model.matrix.html).
+::: {.callout-tip collapse="true" title="Hint 1 — column names and the reference (B1)"}
+Each factor gives one column per level **except** the reference, which is the alphabetically first level ([`factor`](https://rdrr.io/r/base/factor.html), [`relevel`](https://rdrr.io/r/stats/relevel.html)). The column name is the variable name followed by the level: `batchB`, `sexM`. See [`model.matrix`](https://rdrr.io/r/stats/model.matrix.html).
 :::
 
-::: {.callout-tip collapse="true" title="Hint 2 — rank (B1c, B3, R5)"}
+::: {.callout-tip collapse="true" title="Hint 2 — rank (B1c, B2, R5)"}
 The rank is the number of linearly independent columns ([`qr`](https://rdrr.io/r/base/qr.html)). Two identical columns, or one column that is a sum of others, lower the rank by one. `lm` then reports `NA` for the later column ([`lm`](https://rdrr.io/r/stats/lm.html), "aliased coefficients"), and limma's `lmFit` does the same with the message "Coefficients not estimable".
 :::
 
-::: {.callout-tip collapse="true" title="Hint 3 — limma coefficient names (B4, R3)"}
+::: {.callout-tip collapse="true" title="Hint 3 — limma coefficient names (B3, R3)"}
 In limma, `coef =` takes a **column of the design matrix**, by name (`"treatmenttreat"`) or by position. The position depends on the order of the formula, so the name is safer. See [`topTable`](https://rdrr.io/bioc/limma/man/toptable.html).
 :::
 
-::: {.callout-tip collapse="true" title="Hint 4 — log2 fold changes (B4c)"}
+::: {.callout-tip collapse="true" title="Hint 4 — log2 fold changes (B3c)"}
 On the log2 scale you **add** the logFC. Back on the original scale that **multiplies** by $2^{\text{logFC}}$: logFC 1 doubles, 2 quadruples, $-1$ halves.
 :::
 
@@ -325,13 +316,7 @@ coef(lm(c(5, 9, 7, 11) ~ batch + sex + treatment, data = b1[1:4, ]))
 #            5       2     4              NA
 ```
 
-**B2.** (a) `(Intercept)`, `time24h`, `time48h`, `time6h`: alphabetical, because `"2"` < `"4"` < `"6"`. The reference `0h` is first by luck.
-
-(b) `time <- factor(time, levels = c("0h", "6h", "24h", "48h"))` gives `time6h`, `time24h`, `time48h`.
-
-(c) Two columns, `(Intercept)` and `time_h`. The numeric model assumes the expression changes **linearly** with hours (the step from 24 h to 48 h must be 4 times the step from 0 h to 6 h); the factor model lets each time point have its own mean.
-
-**B3.** (a)
+**B2.** (a)
 ```
   (Intercept) batchB treatmenttreat
 1-4         1      0              0
@@ -343,17 +328,17 @@ coef(lm(c(5, 9, 7, 11) ~ batch + sex + treatment, data = b1[1:4, ]))
 
 (c) Any layout where both batches contain both conditions gives rank 3. The best is **balanced**: 2 controls and 2 treated in each batch. Then batch and treatment are not related at all, and the treatment effect is estimated as precisely as possible.
 
-**B4.** (a) `"(Intercept)"`, `"batchB"`, `"batchC"`, `"sexM"`, `"treatmenttreat"`. Use `coef = "treatmenttreat"`.
+**B3.** (a) `"(Intercept)"`, `"batchB"`, `"batchC"`, `"sexM"`, `"treatmenttreat"`. Use `coef = "treatmenttreat"`.
 
 (b) Column 2 is `batchB`, so `coef = 2` reports **batch B vs A**, not the treatment. If someone reorders the formula, the position of every column changes, but the name `treatmenttreat` still points to the treatment.
 
 (c) On the log2 scale: $6.64 + 2 = 8.64$. On the original scale: $100 \times 2^2 = 400$. With logFC $-1$: $6.64 - 1 = 5.64$, that is $100 \times 2^{-1} = 50$.
 
-**B5.** (a) Control in batch B: $10 + 10 = 20$. Treated in batch A: $10 + 2 = 12$. (These are the data values.)
+**B4.** (a) Control in batch B: $10 + 10 = 20$. Treated in batch A: $10 + 2 = 12$. (These are the data values.)
 
 (b) The treated samples are mostly in the low batch A and the controls mostly in the high batch B, so `~ treatment` mixes the batch difference into the treatment column; the adjusted model compares within batches, and **+2** is the drug effect.
 
-**B6.** (a) Healthy, BMI 20: $10 + 0.1 \cdot 20 = 12$. Disease, BMI 30: $10 + 1 + 0.1 \cdot 30 = 14$.
+**B5.** (a) Healthy, BMI 20: $10 + 0.1 \cdot 20 = 12$. Disease, BMI 30: $10 + 1 + 0.1 \cdot 30 = 14$.
 
 (b) Disease contributes 1 and the 10 extra BMI units contribute $0.1 \cdot 10 = 1$. Half of the log2 difference of 2 is BMI, not disease.
 :::
