@@ -31,10 +31,10 @@ In [Design matrices for covariates](../covariates/lec.qmd) you learned how a for
 - **What not to adjust for**: mediators, colliders, collinear pairs.
 
 ::: notes
-Position this deck right after the design-matrix deck. Students already know how to build X by hand, how to read a main-effect coefficient as a difference from the reference, and that identical columns give infinitely many solutions. Today is about the consequences of choosing the columns. The headline is Simpson's paradox with real (tiny) numbers that they will reproduce by hand in the exercise. Everything here is plain linear-model machinery; the Bayesian connection is one slide at the end.
+Position this deck right after the design-matrix deck. Students already know how to build X by hand, how to read a main-effect coefficient as a difference from the reference, and that identical columns give infinitely many solutions. Today is about the consequences of choosing the columns. The headline is Simpson's paradox with real (tiny) numbers that they will reproduce by hand in the exercise. Everything here is plain linear-model machinery.
 :::
 
-## A biology picture first {.smaller}
+## Problem: is the difference due to treatment or to age? {.smaller}
 
 You run an RNA-seq experiment: **treated** vs **control** mice, measuring one gene. Treated mice show **higher** expression. Success?
 
@@ -402,23 +402,6 @@ Over-adjustment. The mediator case: if you want the total drug effect, holding t
 
 ::: notes
 A short checklist. Collinearity links to rank and to the penalized-model block, where ridge regression handles it. Weight and BMI is the example students recognise: the model cannot tell which of two near-identical columns deserves the credit, so the coefficients seesaw between fits. The counts-table check is cheap: table(treatment, batch) in R, look for zeros.
-:::
-
-## Looking ahead: the same $X$ in a Bayesian model {.smaller}
-
-Everything today lives in the design matrix, so it carries over unchanged to a Bayesian fit: same formula, same $X$, same "holding the others constant". The only addition is a **prior on each $\beta$**, and the result is a **posterior distribution** per coefficient.
-
-```r
-rstanarm::stan_glm(expr ~ treatment + batch, data = d,
-                   prior = rstanarm::normal(0, 5))   # prior on each beta
-```
-
-![](fig14-prior-posterior-coefficients.svg){width="56%" fig-align="center"}
-
-A prior does **not** rescue a confounded design: with identical columns the data still only fix $\beta_1 + \beta_2$, and how that sum is split between $\beta_1$ and $\beta_2$ is decided by the priors, not by the data.
-
-::: notes
-One-slide preview of week 4 (Bayesian statistics); keep it short, priors and posteriors are introduced there. Same X, priors on beta, posterior per coefficient. The last point is worth making: with perfect confounding a Bayesian fit runs without an error because the prior makes the problem well-posed, but the answer for the treatment effect is driven by the prior, not by the data. The design lesson still holds.
 :::
 
 ## Summary {.smaller}
